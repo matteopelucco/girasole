@@ -1,4 +1,4 @@
-// Requisito: specs/02 - password-recovery.md — piano di test: tests/02 - password-recovery.md
+// Requisito: specs/02 - password-recovery.md
 import { test, expect } from '@playwright/test';
 import { nessunaViolazioneA11yGrave } from './helpers';
 

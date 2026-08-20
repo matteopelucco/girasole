@@ -1,4 +1,4 @@
-// Requisito: specs/01 - ux.md — piano di test: tests/01 - ux.md
+// Requisito: specs/01 - ux.md
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
 

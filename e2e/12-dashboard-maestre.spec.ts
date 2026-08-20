@@ -1,4 +1,4 @@
-// Requisito: specs/12 - dashboard-maestre.md — piano di test: tests/12 - dashboard-maestre.md
+// Requisito: specs/12 - dashboard-maestre.md
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
 

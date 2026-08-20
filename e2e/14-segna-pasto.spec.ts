@@ -1,4 +1,4 @@
-// Requisito: specs/14 - segna-pasto.md — piano di test: tests/14 - segna-pasto.md
+// Requisito: specs/14 - segna-pasto.md
 //
 // ATTENZIONE: questi test scrivono davvero in `pasti` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.

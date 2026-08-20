@@ -65,17 +65,10 @@ autorizzati (impostato quando l'hai creato) — assicurati che includa sia
 il dominio di produzione su Vercel sia, se vuoi vedere il widget anche in
 sviluppo, `localhost`.
 
-## Test-first
-- [x] Un file `tests/xxx.md` per ogni `specs/xxx.md` (tranne l'overview),
-      con casi di test derivati dagli scenari — vedi `CLAUDE.md`.
-- [x] Prima esecuzione: tutto ciò che è eseguibile senza sessioni
-      autenticate è Pass (login, guardie di accesso, recupero password
-      anti-enumeration, revisioni di codice su RLS/validazioni). I casi
-      che richiedono sessioni admin/maestra/genitore reali sono
-      "Bloccato" nei singoli file — servono account di test per
-      completarli (vedi richiesta fatta in conversazione).
-
-## Test end-to-end (Playwright)
+## Test-first — solo Playwright
+- [x] I piani di test in Markdown (`tests/xxx.md`) sono stati dismessi:
+      l'unica suite di test è quella eseguibile in `e2e/`. Vedi
+      `CLAUDE.md`.
 - [x] Playwright + `@axe-core/playwright` installati come devDependency,
       configurati per `http://localhost:3000` (`playwright.config.ts`).
 - [x] Un file `e2e/xxx.spec.ts` per ogni `specs/xxx.md`, uno scenario di

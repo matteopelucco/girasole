@@ -1,4 +1,4 @@
-// Requisito: specs/11 - login.md — piano di test: tests/11 - login.md
+// Requisito: specs/11 - login.md
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
 

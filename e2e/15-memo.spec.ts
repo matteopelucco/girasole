@@ -1,4 +1,4 @@
-// Requisito: specs/15 - memo.md — piano di test: tests/15 - memo.md
+// Requisito: specs/15 - memo.md
 //
 // ATTENZIONE: questi test scrivono davvero in `promemoria` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.

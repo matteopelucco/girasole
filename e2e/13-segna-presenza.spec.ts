@@ -1,4 +1,4 @@
-// Requisito: specs/13 - segna-presenza.md — piano di test: tests/13 - segna-presenza.md
+// Requisito: specs/13 - segna-presenza.md
 //
 // ATTENZIONE: questi test scrivono davvero in `presenze` sul progetto
 // Supabase puntato da NEXT_PUBLIC_SUPABASE_URL (di test in locale, quello

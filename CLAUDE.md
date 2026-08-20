@@ -40,42 +40,29 @@ Contesto operativo per Claude Code su questo progetto.
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
-## Test-first (importantissimo)
-- Ogni file di requisiti in `specs/xxx.md` deve avere un corrispondente
-  file `tests/xxx.md` con gli stessi identici nome e numero (es.
-  `specs/13 - segna-presenza.md` → `tests/13 - segna-presenza.md`), che
-  traduce ogni scenario del requisito in casi di test concreti (dato/
-  quando/allora, precondizioni, dati di prova, esito atteso) sufficienti
-  a verificarlo efficacemente. `specs/00 - overview.md` fa eccezione: è
-  un indice, non un requisito testabile, quindi non ha un file test
-  corrispondente.
+## Test-first (importantissimo) — solo Playwright
+- Niente piani di test in Markdown: l'unica suite di test è quella
+  eseguibile in `e2e/`. Ogni file di requisiti in `specs/xxx.md` deve
+  avere un corrispondente `e2e/xxx.spec.ts` con gli stessi identici nome
+  e numero (es. `specs/13 - segna-presenza.md` →
+  `e2e/13-segna-presenza.spec.ts`), con uno scenario di test Playwright
+  per ogni `## Scenario:` del requisito, più un controllo di
+  accessibilità axe-core (`nessunaViolazioneA11yGrave`, in
+  `e2e/helpers.ts`) su ogni pagina toccata. `specs/00 - overview.md` fa
+  eccezione: è un indice, non un requisito testabile, quindi non ha un
+  file di test corrispondente.
 - **Ad ogni ri-lettura o modifica di un file in `specs/`, aggiornare
-  subito il file `tests/` corrispondente** — aggiungere casi per gli
+  subito il file `e2e/` corrispondente** — aggiungere test per gli
   scenari nuovi, correggere quelli cambiati, rimuovere quelli non più
   validi. I due file non devono mai divergere.
-- Quando si esegue la suite (manualmente o via agente), annotare l'esito
-  di ogni caso direttamente nel file `tests/xxx.md` (Pass / Fail /
-  Bloccato, con nota sul motivo se Bloccato o Fail), così il file resta
-  anche il registro dell'ultima esecuzione.
-- Oltre al piano di test in Markdown, ogni `specs/xxx.md` ha anche un
-  file `e2e/xxx.spec.ts` con test Playwright automatizzati (stesso nome/
-  numero, es. `specs/13 - segna-presenza.md` →
-  `e2e/13-segna-presenza.spec.ts`) — uno scenario di test per ogni
-  `## Scenario:` del requisito, più un controllo di accessibilità axe-core
-  (`nessunaViolazioneA11yGrave`, in `e2e/helpers.ts`) su ogni pagina
-  toccata. Stessa regola del punto sopra: quando cambia uno scenario in
-  `specs/`, aggiornare anche il test Playwright corrispondente, non solo
-  il piano in Markdown.
-- I test che richiedono una sessione autenticata (admin/maestra/genitore)
-  leggono le credenziali da variabili d'ambiente `E2E_<RUOLO>_EMAIL` /
-  `E2E_<RUOLO>_PASSWORD` (vedi `.env.example` ed `e2e/helpers.ts`) e si
-  saltano da soli (`test.skip`) se non configurate — non devono mai
-  fallire per un secret mancante, solo per una regressione reale.
-
-## Test end-to-end (Playwright)
+- I test che richiedono una sessione autenticata (admin/maestra/
+  genitore) leggono le credenziali da variabili d'ambiente
+  `E2E_<RUOLO>_EMAIL` / `E2E_<RUOLO>_PASSWORD` (vedi `.env.example` ed
+  `e2e/helpers.ts`) e si saltano da soli (`test.skip`) se non
+  configurate — non devono mai fallire per un secret mancante, solo per
+  una regressione reale.
 - Suite in `e2e/`, configurazione in `playwright.config.ts`. Include
-  `@axe-core/playwright` per un controllo di accessibilità automatico su
-  ogni pagina visitata dai test.
+  `@axe-core/playwright` per il controllo di accessibilità.
 - **Eseguirli in locale (gratis, nessun servizio esterno)**: in un
   terminale `npm run dev`, in un altro `npx playwright test` (oppure
   `npx playwright test --ui` per la modalità interattiva con

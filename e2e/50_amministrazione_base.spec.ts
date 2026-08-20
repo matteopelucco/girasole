@@ -1,4 +1,4 @@
-// Requisito: specs/50_amministrazione_base.md — piano di test: tests/50_amministrazione_base.md
+// Requisito: specs/50_amministrazione_base.md
 //
 // ATTENZIONE: questi test scrivono davvero in `sezioni`/`bambini`/
 // `maestre_sezioni`/`profili` sul progetto Supabase di test — vedi la
