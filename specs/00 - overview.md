@@ -24,6 +24,8 @@ della maestra, `5x` amministrazione.
 
 - [01 - ux.md](01%20-%20ux.md) — specifiche non funzionali di User
   Experience, trasversali a tutti gli scenari
+- [02 - password-recovery.md](02%20-%20password-recovery.md) — recupero
+  password dimenticata
 - [11 - login.md](11%20-%20login.md) — login e schermata di login
 - [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
   maestra: lista bambini della sezione con stato presenza/pasto del

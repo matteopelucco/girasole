@@ -1,10 +1,16 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { login } from './actions';
+
+const MESSAGGI_ERRORE: Record<string, string> = {
+  credenziali: 'Credenziali non valide. Riprova.',
+  'link-non-valido': 'Il link non è più valido o è scaduto. Richiedine uno nuovo.',
+};
 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { errore?: string };
+  searchParams: { errore?: string; reset?: string };
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -48,8 +54,21 @@ export default function LoginPage({
             />
           </div>
 
+          {searchParams?.reset === 'ok' && (
+            <p className="text-sm text-green-700">
+              Password aggiornata. Accedi con la nuova password.
+            </p>
+          )}
+
           {searchParams?.errore && (
-            <p className="text-sm text-red-600">Credenziali non valide. Riprova.</p>
+            <div className="space-y-1">
+              <p className="text-sm text-red-600">
+                {MESSAGGI_ERRORE[searchParams.errore] ?? MESSAGGI_ERRORE.credenziali}
+              </p>
+              <Link href="/recupera-password" className="text-sm text-stone-500 underline">
+                Non ricordi la password?
+              </Link>
+            </div>
           )}
 
           <button

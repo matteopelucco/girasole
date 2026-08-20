@@ -26,6 +26,14 @@ usare le pagine admin — senza quella migration le maestre non riescono a
 vedere i bambini della propria sezione (bug corretto nella stessa
 migration: mancava la policy di select su `maestre_sezioni`).
 
+## Da fare — requisiti aggiunti dopo lo scaffold iniziale
+- [x] Recupero password (specs/02 - password-recovery.md): richiesta via
+      `/recupera-password`, reset via `/reimposta-password`, rate limit
+      (1/min per email, 5/5min per IP) e anti-enumeration. Applica
+      `supabase/migrations/0003_password_recovery.sql` prima di usarlo.
+      **Captcha non implementato** — serve una decisione su provider
+      (Turnstile consigliato) e relativa configurazione in Supabase.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione
