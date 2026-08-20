@@ -16,8 +16,15 @@ export default function LoginPage({
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         {/* SVG: next/image non lo ottimizza senza abilitare dangerouslyAllowSVG
             in next.config.mjs — per un logo vettoriale di poche decine di KB
-            un <img> semplice va benissimo, nessun bisogno di quel toggle. */}
-        <img src="/girasole.svg" alt="Girasole" className="mx-auto mb-4 h-auto w-4/5 max-w-xs" />
+            un <img> semplice va benissimo, nessun bisogno di quel toggle.
+            Il wrapper con margine negativo "sconfina" oltre il padding
+            della card (solo per il logo, il resto del contenuto resta
+            allineato al padding normale) per rispettare il requisito di
+            un logo grande — almeno l'80% della larghezza utile della card
+            su smartphone, vedi specs/11 - login.md. */}
+        <div className="-mx-6 mb-4">
+          <img src="/girasole.svg" alt="Girasole" className="h-auto w-full" />
+        </div>
         <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>
         <p className="mb-6 text-center text-sm text-stone-500">
           Registro elettronico — Asilo Sartorio
