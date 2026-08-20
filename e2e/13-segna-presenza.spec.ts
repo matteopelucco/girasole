@@ -4,12 +4,14 @@
 // Supabase puntato da NEXT_PUBLIC_SUPABASE_URL (di test in locale, quello
 // configurato nei secret in CI) — mai contro un progetto di produzione.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, loginCome } from './helpers';
+import { hasCredenziali, statoAutenticazione } from './helpers';
 
 test.describe('13 — Segna presenza', () => {
+  test.use({ storageState: statoAutenticazione('maestra') });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
-    await loginCome(page, 'maestra');
+    await page.goto('/dashboard');
   });
 
   test('segnare un bambino presente evidenzia il pulsante corretto', async ({ page }) => {

@@ -1,20 +1,26 @@
 // Requisito: specs/12 - dashboard-maestre.md
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('12 — Dashboard maestra', () => {
-  test('la maestra vede i bambini delle proprie sezioni con stato di oggi', async ({ page }) => {
-    test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+  test.describe('come maestra', () => {
+    test.use({ storageState: statoAutenticazione('maestra') });
 
-    await loginCome(page, 'maestra');
-    await expect(page.getByRole('heading', { name: 'Presenze e pasti di oggi' })).toBeVisible();
+    test('la maestra vede i bambini delle proprie sezioni con stato di oggi', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
-    await nessunaViolazioneA11yGrave(page);
+      await page.goto('/dashboard');
+      await expect(page.getByRole('heading', { name: 'Presenze e pasti di oggi' })).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
   });
 
   test('maestra senza sezioni assegnate vede il messaggio corretto, non un errore', async ({
     page,
   }) => {
+    // Account distinto da E2E_MAESTRA_*, usato solo qui: niente sessione
+    // precalcolata, un login in più non pesa sul rate limiting.
     test.skip(
       !process.env.E2E_MAESTRA_SENZA_SEZIONE_EMAIL || !process.env.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD,
       'richiede un secondo account maestra di test SENZA sezioni assegnate (E2E_MAESTRA_SENZA_SEZIONE_*)'
@@ -31,27 +37,35 @@ test.describe('12 — Dashboard maestra', () => {
     ).toBeVisible();
   });
 
-  test('l\'admin apre la dashboard: rimando alle pagine di amministrazione', async ({ page }) => {
-    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+  test.describe('come admin', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
 
-    await loginCome(page, 'admin');
-    await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Maestre' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
+    test('l\'admin apre la dashboard: rimando alle pagine di amministrazione', async ({ page }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
-    await nessunaViolazioneA11yGrave(page);
+      await page.goto('/dashboard');
+      await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Maestre' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
   });
 
-  test('un genitore apre la dashboard: solo il placeholder, nessun dato di bambini', async ({
-    page,
-  }) => {
-    test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
+  test.describe('come genitore', () => {
+    test.use({ storageState: statoAutenticazione('genitore') });
 
-    await loginCome(page, 'genitore');
-    await expect(
-      page.getByText('Il portale genitori è in arrivo in una fase successiva.')
-    ).toBeVisible();
+    test('un genitore apre la dashboard: solo il placeholder, nessun dato di bambini', async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
 
-    await nessunaViolazioneA11yGrave(page);
+      await page.goto('/dashboard');
+      await expect(
+        page.getByText('Il portale genitori è in arrivo in una fase successiva.')
+      ).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
   });
 });

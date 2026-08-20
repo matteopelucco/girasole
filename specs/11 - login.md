@@ -14,6 +14,9 @@ Accedere all'app con email e password.
   semplice e leggibile da smartphone).
 - In alto, il logo Girasole (`public/girasole.svg`), seguito dal titolo
   "Girasole" e dal sottotitolo "Registro elettronico — Asilo Sartorio".
+  Il logo è grande, non un'iconcina: almeno l'80% della larghezza utile
+  del box di login (non del viewport intero, per non sconfinare dai
+  margini della card), con altezza proporzionale (rapporto 1:1).
 - Campo **Email** (tipo email, obbligatorio).
 - Campo **Password** (tipo password, obbligatorio).
 - Pulsante **Accedi** che invia il form.

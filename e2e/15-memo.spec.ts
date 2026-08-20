@@ -3,12 +3,14 @@
 // ATTENZIONE: questi test scrivono davvero in `promemoria` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('15 — Promemoria', () => {
+  test.use({ storageState: statoAutenticazione('maestra') });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
-    await loginCome(page, 'maestra');
+    await page.goto('/dashboard');
   });
 
   test('creare un promemoria per tutti compare in cima alla lista', async ({ page }) => {

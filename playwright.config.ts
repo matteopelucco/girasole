@@ -28,8 +28,15 @@ export default defineConfig({
 
   projects: [
     {
+      // Fa il login una volta per ruolo e salva la sessione su disco —
+      // vedi e2e/auth.setup.ts ed e2e/helpers.ts.
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+    {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
     },
   ],
 

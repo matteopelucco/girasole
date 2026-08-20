@@ -17,7 +17,7 @@ export default function LoginPage({
         {/* SVG: next/image non lo ottimizza senza abilitare dangerouslyAllowSVG
             in next.config.mjs — per un logo vettoriale di poche decine di KB
             un <img> semplice va benissimo, nessun bisogno di quel toggle. */}
-        <img src="/girasole.svg" alt="Girasole" width={96} height={96} className="mx-auto mb-4" />
+        <img src="/girasole.svg" alt="Girasole" className="mx-auto mb-4 h-auto w-4/5 max-w-xs" />
         <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>
         <p className="mb-6 text-center text-sm text-stone-500">
           Registro elettronico — Asilo Sartorio

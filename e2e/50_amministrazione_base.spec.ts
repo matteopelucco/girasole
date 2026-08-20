@@ -4,12 +4,13 @@
 // `maestre_sezioni`/`profili` sul progetto Supabase di test — vedi la
 // nota in 13-segna-presenza.spec.ts.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('50 — Amministrazione base', () => {
+  test.use({ storageState: statoAutenticazione('admin') });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
-    await loginCome(page, 'admin');
   });
 
   test('/admin: elementi presenti + accessibilità', async ({ page }) => {
