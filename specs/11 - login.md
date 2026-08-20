@@ -1,4 +1,4 @@
-# 01 — Login
+# 11 — Login
 
 ## Attori
 Admin, maestra. (Genitore: fuori scope in questa fase, vedi
@@ -50,7 +50,7 @@ Allora la sessione viene chiusa e torno alla pagina di login
   utente ottiene un profilo con ruolo `genitore` di default (trigger
   `handle_new_user`, vedi `supabase/migrations/0001_init.sql`); un admin
   lo promuove poi da
-  [06 - amministrazione.md](06%20-%20amministrazione.md).
+  [50_amministrazione_base.md](50_amministrazione_base.md).
 - Il primissimo admin del sistema va promosso a mano via SQL Editor
   (bootstrap): non può farlo un altro admin perché non ne esiste ancora
   uno.

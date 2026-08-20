@@ -18,17 +18,25 @@ promemoria/comunicazioni per le famiglie.
 - Portale genitori con interfaccia dedicata (Fase 3).
 
 ## Indice degli scenari
-I requisiti dettagliati sono organizzati per scenario in questa cartella,
-uno per funzionalità della Fase 1:
+I requisiti dettagliati sono organizzati per scenario in questa cartella.
+Numerazione: `0x` requisiti trasversali, `1x` schermata/flusso principale
+della maestra, `5x` amministrazione.
 
-- [01 - login.md](01%20-%20login.md) — accesso all'app e schermata di login
-- [02 - dashboard.md](02%20-%20dashboard.md) — dashboard maestra/admin
-- [03 - presenze.md](03%20-%20presenze.md) — segnare la presenza di un bambino
-- [04 - pasti.md](04%20-%20pasti.md) — segnare il pasto di un bambino
-- [05 - promemoria.md](05%20-%20promemoria.md) — comunicazioni per le famiglie
-- [06 - amministrazione.md](06%20-%20amministrazione.md) — gestione di
-  sezioni, bambini e maestre (admin)
+- [01 - ux.md](01%20-%20ux.md) — specifiche non funzionali di User
+  Experience, trasversali a tutti gli scenari
+- [11 - login.md](11%20-%20login.md) — login e schermata di login
+- [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
+  maestra: lista bambini della sezione con stato presenza/pasto del
+  giorno
+- [13 - segna-presenza.md](13%20-%20segna-presenza.md) — presente /
+  assente / malattia, con nota opzionale
+- [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no / parziale, con
+  nota opzionale ed evidenza delle allergie del bambino
+- [15 - memo.md](15%20-%20memo.md) — promemoria per tutti, una sezione o
+  un bambino
+- [50_amministrazione_base.md](50_amministrazione_base.md) — creazione
+  sezioni/bambini e assegnazione maestre alle sezioni (admin)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
-esistente, creare un nuovo file numerato in questa cartella e aggiungerlo
-all'indice qui sopra.
+esistente, creare un nuovo file numerato in questa cartella (seguendo la
+numerazione sopra) e aggiungerlo all'indice qui sopra.

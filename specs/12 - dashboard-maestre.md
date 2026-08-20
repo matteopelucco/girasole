@@ -1,4 +1,4 @@
-# 02 — Dashboard maestra
+# 12 — Dashboard maestra
 
 ## Attori
 Maestra, admin. (Genitore: fuori scope in questa fase.)
@@ -12,8 +12,8 @@ Dato che sono autenticata come maestra e ho almeno una sezione assegnata
 Quando apro la dashboard
 Allora vedo l'elenco dei bambini delle mie sezioni, ciascuno con lo stato
 di presenza e di pasto di oggi, se già segnati (dettagli in
-[03 - presenze.md](03%20-%20presenze.md) e
-[04 - pasti.md](04%20-%20pasti.md))
+[13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: la maestra non ha sezioni assegnate
 Dato che sono autenticata come maestra ma non ho ancora nessuna sezione
@@ -37,7 +37,7 @@ successiva, e nessun dato di altri bambini
 
 ## Regole
 - L'accesso a `/dashboard` richiede autenticazione (vedi
-  [01 - login.md](01%20-%20login.md)).
+  [11 - login.md](11%20-%20login.md)).
 - Il contenuto mostrato dipende dal ruolo del profilo (`admin`, `maestra`,
   altro), non dal solo fatto di essere autenticati.
 - Priorità a interfaccia rapida, pochi tap, testo leggibile: le maestre

@@ -1,4 +1,4 @@
-# 03 — Presenze
+# 13 — Segna presenza
 
 ## Attori
 Maestra (sui bambini delle sue sezioni), Admin (su tutti i bambini).
@@ -9,7 +9,7 @@ con una nota libera opzionale.
 
 ## Scenario: segnare un bambino presente
 Dato che sto guardando l'elenco dei bambini nella dashboard (vedi
-[02 - dashboard.md](02%20-%20dashboard.md))
+[12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md))
 Quando premo il pulsante "Presente" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa "presente"
 E il pulsante "Presente" resta evidenziato come stato corrente

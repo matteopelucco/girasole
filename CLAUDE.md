@@ -23,14 +23,22 @@ Contesto operativo per Claude Code su questo progetto.
   produzione.
 - Le policy RLS sono la difesa primaria dei dati, non un dettaglio: ogni nuova
   query deve rispettare i confini di ruolo (admin / maestra / genitore)
-  descritti in `SPEC.md`. Se una feature richiede una nuova policy, scrivila
+  descritti in `specs/`. Se una feature richiede una nuova policy, scrivila
   nella migration insieme alla tabella.
 
 ## Workflow
 - Trunk-based development, commit atomici con messaggio in italiano.
 - Prima di ogni nuova feature, aggiornare `TASKS.md` spuntando quanto
   completato.
-- Riferimento ai requisiti dettagliati: `SPEC.md`.
+- Riferimento ai requisiti dettagliati: `specs/` — un file numerato per
+  scenario/funzionalità (`specs/00 - overview.md` per obiettivo, ruoli,
+  fuori-scope e indice; `0x` per requisiti trasversali come
+  `specs/01 - ux.md`; `1x` per la schermata/flusso della maestra, es.
+  `specs/11 - login.md`; `5x` per l'amministrazione, es.
+  `specs/50_amministrazione_base.md`). Non esiste più un unico `SPEC.md`:
+  quando si aggiunge o modifica un requisito, aggiornare o creare il file
+  scenario corrispondente in `specs/` (aggiornando l'indice in
+  `00 - overview.md`), non un documento monolitico.
 
 ## Cosa NON fare in questa fase
 - Non implementare rette/pagamenti (Fase 2).

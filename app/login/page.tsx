@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { login } from './actions';
 
 export default function LoginPage({
@@ -8,8 +9,18 @@ export default function LoginPage({
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-xl font-medium">Girasole</h1>
-        <p className="mb-6 text-sm text-stone-500">Registro elettronico — Asilo Sartorio</p>
+        <Image
+          src="/girasole.png"
+          alt="Girasole"
+          width={96}
+          height={96}
+          className="mx-auto mb-4"
+          priority
+        />
+        <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>
+        <p className="mb-6 text-center text-sm text-stone-500">
+          Registro elettronico — Asilo Sartorio
+        </p>
 
         <form action={login} className="space-y-4">
           <div>

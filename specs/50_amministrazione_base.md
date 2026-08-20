@@ -1,4 +1,4 @@
-# 06 — Amministrazione
+# 50 — Amministrazione base
 
 ## Attori
 Admin.
@@ -18,7 +18,7 @@ Quando su `/admin` compilo nome, cognome, scelgo una sezione e
 (opzionalmente) delle note allergie/intolleranze, e confermo
 Allora il bambino compare nell'elenco bambini della sezione scelta
 E se ha note allergie, sono mostrate in evidenza accanto al suo nome
-(vedi anche [04 - pasti.md](04%20-%20pasti.md))
+(vedi anche [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: promuovere un utente a maestra
 Dato che un utente si è già registrato (ha un profilo con ruolo
@@ -32,7 +32,7 @@ maestra dopo aver effettuato il login
 Dato che un utente ha ruolo `maestra`
 Quando su `/admin/maestre` scelgo la maestra e la sezione, e confermo
 Allora quella maestra vede i bambini di quella sezione nella propria
-dashboard (vedi [03 - presenze.md](03%20-%20presenze.md))
+dashboard (vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md))
 
 ## Scenario: rimuovere l'assegnazione di una maestra a una sezione
 Quando su `/admin/maestre` premo la ✕ su una sezione già assegnata a una
@@ -49,4 +49,4 @@ bambini di quella sezione
   Auth. L'admin gestisce solo il ruolo e le assegnazioni di chi esiste
   già.
 - Il primissimo admin va promosso a mano via SQL Editor (vedi
-  [01 - login.md](01%20-%20login.md)).
+  [11 - login.md](11%20-%20login.md)).
