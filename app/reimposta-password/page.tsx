@@ -26,7 +26,7 @@ export default async function ReimpostaPasswordPage({
   const messaggioErrore = searchParams?.errore ? MESSAGGI_ERRORE[searchParams.errore] : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-xl font-medium">Imposta una nuova password</h1>
         <p className="mb-6 text-sm text-stone-500">{REGOLA_PASSWORD}</p>
