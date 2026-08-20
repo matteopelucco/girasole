@@ -4,6 +4,8 @@ import { NavHeader } from '@/components/NavHeader';
 import { oggi } from '@/lib/date';
 import { segnaPresenza, segnaPasto, creaPromemoria } from './actions';
 
+export const dynamic = 'force-dynamic';
+
 const ETICHETTE_PRESENZA: Record<string, string> = {
   presente: 'Presente',
   assente: 'Assente',

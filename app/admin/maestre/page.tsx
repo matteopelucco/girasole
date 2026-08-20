@@ -9,6 +9,8 @@ const ETICHETTE_RUOLO: Record<string, string> = {
   genitore: 'Genitore',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function MaestrePage() {
   const supabase = createClient();
   const {
