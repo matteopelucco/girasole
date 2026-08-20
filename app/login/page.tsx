@@ -10,7 +10,7 @@ const MESSAGGI_ERRORE: Record<string, string> = {
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { errore?: string; reset?: string };
+  searchParams: { errore?: string; reset?: string; email?: string };
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -38,6 +38,7 @@ export default function LoginPage({
               name="email"
               type="email"
               required
+              defaultValue={searchParams?.email ?? ''}
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
           </div>

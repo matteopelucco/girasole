@@ -34,6 +34,16 @@ migration: mancava la policy di select su `maestre_sezioni`).
       **Captcha non implementato** — serve una decisione su provider
       (Turnstile consigliato) e relativa configurazione in Supabase.
 
+## Test-first
+- [x] Un file `tests/xxx.md` per ogni `specs/xxx.md` (tranne l'overview),
+      con casi di test derivati dagli scenari — vedi `CLAUDE.md`.
+- [x] Prima esecuzione: tutto ciò che è eseguibile senza sessioni
+      autenticate è Pass (login, guardie di accesso, recupero password
+      anti-enumeration, revisioni di codice su RLS/validazioni). I casi
+      che richiedono sessioni admin/maestra/genitore reali sono
+      "Bloccato" nei singoli file — servono account di test per
+      completarli (vedi richiesta fatta in conversazione).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione

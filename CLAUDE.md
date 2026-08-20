@@ -40,6 +40,24 @@ Contesto operativo per Claude Code su questo progetto.
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
+## Test-first (importantissimo)
+- Ogni file di requisiti in `specs/xxx.md` deve avere un corrispondente
+  file `tests/xxx.md` con gli stessi identici nome e numero (es.
+  `specs/13 - segna-presenza.md` → `tests/13 - segna-presenza.md`), che
+  traduce ogni scenario del requisito in casi di test concreti (dato/
+  quando/allora, precondizioni, dati di prova, esito atteso) sufficienti
+  a verificarlo efficacemente. `specs/00 - overview.md` fa eccezione: è
+  un indice, non un requisito testabile, quindi non ha un file test
+  corrispondente.
+- **Ad ogni ri-lettura o modifica di un file in `specs/`, aggiornare
+  subito il file `tests/` corrispondente** — aggiungere casi per gli
+  scenari nuovi, correggere quelli cambiati, rimuovere quelli non più
+  validi. I due file non devono mai divergere.
+- Quando si esegue la suite (manualmente o via agente), annotare l'esito
+  di ogni caso direttamente nel file `tests/xxx.md` (Pass / Fail /
+  Bloccato, con nota sul motivo se Bloccato o Fail), così il file resta
+  anche il registro dell'ultima esecuzione.
+
 ## Cosa NON fare in questa fase
 - Non implementare rette/pagamenti (Fase 2).
 - Non costruire il portale genitori completo (Fase 3) — lo schema dati e le
