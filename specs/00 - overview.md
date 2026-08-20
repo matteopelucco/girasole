@@ -36,7 +36,7 @@ della maestra, `5x` amministrazione.
   nota opzionale ed evidenza delle allergie del bambino
 - [15 - memo.md](15%20-%20memo.md) — promemoria per tutti, una sezione o
   un bambino
-- [50_amministrazione_base.md](50_amministrazione_base.md) — creazione
+- [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre alle sezioni (admin)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
