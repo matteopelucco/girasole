@@ -57,8 +57,15 @@ Non ci riesce. Il sistema è sufficientemente sicuro per evitare di fare enumera
   numero, 1 carattere speciale (vedi `lib/password.ts`). La lunghezza
   minima di 8 non era specificata esplicitamente, aggiunta come requisito
   ragionevole per "sufficientemente complessa".
-- **Captcha: non ancora implementato.** Richiede una scelta di provider
-  (es. Cloudflare Turnstile, gratuito e integrato nativamente in Supabase
-  Auth) e la configurazione di site key/secret key, che non è qualcosa che
-  si possa fare da codice — va deciso e configurato dal proprietario del
-  progetto.
+- **Captcha: implementato con Cloudflare Turnstile.** Widget su
+  `/recupera-password` (`data-action="recupera-password"`), caricato solo
+  se `NEXT_PUBLIC_TURNSTILE_SITE_KEY` è configurata (altrimenti la pagina
+  funziona senza captcha, per non rompere l'ambiente locale finché non è
+  configurato). Verifica server-side in `lib/turnstile.ts` via
+  `siteverify`, chiamata da `richiediResetPassword` prima del rate limit:
+  se `TURNSTILE_SECRET_KEY` non è configurata la verifica passa sempre
+  (stesso motivo); se configurata, un token mancante/non valido/con
+  `action` diverso da `recupera-password` fa fallire silenziosamente la
+  richiesta (stesso messaggio generico di sempre, nessun errore dedicato
+  — coerente con l'anti-enumeration). Vedi TASKS.md per la procedura di
+  configurazione dei secret in locale e su Vercel.

@@ -136,8 +136,50 @@ Tipo: manuale, richiede tempo reale di attesa + link reale.
 Esito: Bloccato — richiede un link di reset reale e attesa di 1 ora;
 demandato a verifica manuale del proprietario.
 
-## TC-02-11 — Captcha
-Requisito: "Un sistema di captcha previene l'uso improprio del form."
-Esito: Bloccato/Non applicabile — captcha non implementato, in attesa
-della scelta del provider (vedi note in specs/02 e TASKS.md). Da
-riattivare come test quando implementato.
+## TC-02-11 — Il widget captcha compare quando configurato
+Precondizioni: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` impostata nell'ambiente.
+Passi: apri `/recupera-password`.
+Risultato atteso: appare il widget Turnstile (checkbox "Verifica che sei
+umano" o challenge) sopra il pulsante "Invia il link di recupero".
+Tipo: manuale (richiede la site key configurata in locale — vedi
+TASKS.md).
+Esito: Bloccato — in attesa che la site key sia impostata in
+`.env.local` (integrazione fatta, configurazione dei secret in corso,
+vedi TASKS.md).
+
+## TC-02-12 — Nessun widget e nessuna rottura se il captcha non è configurato
+Precondizioni: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` NON impostata (stato
+del progetto prima della configurazione dei secret).
+Passi: apri `/recupera-password`, invia il form con un'email qualsiasi.
+Risultato atteso: nessun widget mostrato, nessun errore console, il
+flusso si comporta esattamente come prima dell'integrazione (rate limit
+e messaggio generico invariati) — `turnstileValido` ritorna sempre
+`true` quando `TURNSTILE_SECRET_KEY` non è impostata.
+Tipo: browser, eseguibile senza credenziali.
+Esito: Pass — verificato: con le variabili d'ambiente Turnstile non
+impostate, `/recupera-password` non mostra alcun widget, il submit
+produce lo stesso messaggio generico di prima, nessun errore in console
+né nei log del server. Confermato anche via lettura del codice
+(`lib/turnstile.ts`: `if (!secret) return true;`).
+
+## TC-02-13 — Richiesta senza token quando il captcha è attivo va bloccata
+Precondizioni: `TURNSTILE_SECRET_KEY` impostata (captcha attivo lato
+server).
+Passi: invia il form `/recupera-password` senza aver risolto il widget
+(token assente o vuoto), per un'email realmente esistente.
+Risultato atteso: nessuna email di reset inviata (verificabile solo lato
+DB/log Supabase, non dalla UI — stesso messaggio generico mostrato
+comunque); `turnstileValido` ritorna `false` perché il token è vuoto.
+Tipo: manuale/DB (serve `TURNSTILE_SECRET_KEY` configurata + verifica
+lato Supabase, non solo UI).
+Esito: Bloccato — richiede `TURNSTILE_SECRET_KEY` configurata e accesso
+al progetto Supabase per confermare che l'email non sia partita.
+
+## TC-02-14 — Token con action diverso da "recupera-password" viene rifiutato
+Precondizioni: `TURNSTILE_SECRET_KEY` impostata.
+Passi: revisione codice — `lib/turnstile.ts` verifica
+`risultato.action === 'recupera-password'` oltre a `risultato.success`.
+Risultato atteso: un token valido ma generato per un'altra azione/pagina
+(scenario di replay) viene comunque respinto.
+Tipo: revisione codice.
+Esito: Pass — confermato in `lib/turnstile.ts`.

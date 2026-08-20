@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { turnstileValido } from '@/lib/turnstile';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -11,10 +12,11 @@ function ipRichiedente(): string {
 
 export async function richiediResetPassword(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const ip = ipRichiedente();
+  const captchaOk = await turnstileValido(formData.get('cf-turnstile-response'), ip);
 
-  if (email) {
+  if (email && captchaOk) {
     const supabase = createClient();
-    const ip = ipRichiedente();
 
     const { data: consentito } = await supabase.rpc('puo_richiedere_reset_password', {
       p_email: email,
@@ -31,6 +33,9 @@ export async function richiediResetPassword(formData: FormData) {
     // nulla: la risposta all'utente è identica in ogni caso, per non
     // rivelare né l'esistenza dell'account né il rate limiting.
   }
+  // Stesso discorso se il captcha non è valido: nessun errore dedicato,
+  // stesso messaggio generico — evita di dare a un bot un segnale su
+  // cosa ha sbagliato.
 
   redirect('/recupera-password?inviato=1');
 }

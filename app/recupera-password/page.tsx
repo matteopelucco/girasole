@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Script from 'next/script';
 import { richiediResetPassword } from './actions';
 
 export default function RecuperaPasswordPage({
@@ -7,6 +8,7 @@ export default function RecuperaPasswordPage({
   searchParams: { inviato?: string };
 }) {
   const inviato = searchParams?.inviato === '1';
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
@@ -36,6 +38,11 @@ export default function RecuperaPasswordPage({
                 className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               />
             </div>
+
+            {turnstileSiteKey && (
+              <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="recupera-password" />
+            )}
+
             <button
               type="submit"
               className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
@@ -43,6 +50,10 @@ export default function RecuperaPasswordPage({
               Invia il link di recupero
             </button>
           </form>
+        )}
+
+        {turnstileSiteKey && (
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
         )}
 
         <Link href="/login" className="mt-6 block text-center text-sm text-stone-500 underline">

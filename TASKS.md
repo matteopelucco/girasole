@@ -31,8 +31,41 @@ migration: mancava la policy di select su `maestre_sezioni`).
       `/recupera-password`, reset via `/reimposta-password`, rate limit
       (1/min per email, 5/5min per IP) e anti-enumeration. Applica
       `supabase/migrations/0003_password_recovery.sql` prima di usarlo.
-      **Captcha non implementato** — serve una decisione su provider
-      (Turnstile consigliato) e relativa configurazione in Supabase.
+- [x] Captcha (Cloudflare Turnstile) integrato in `/recupera-password` —
+      vedi `lib/turnstile.ts`. Codice pronto ma **inattivo finché non
+      configuri i secret** (vedi procedura sotto): finché
+      `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` non sono
+      impostate, la pagina funziona esattamente come prima, senza
+      widget.
+
+### Configurare i secret Turnstile (locale + Vercel)
+Due variabili, stesso nome ovunque:
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — pubblica (site key), va bene anche
+  vista/condivisa: `0x4AAAAAAEW_QAO5YcXGwdyP` (quella già creata).
+- `TURNSTILE_SECRET_KEY` — segreta, **non va mai in chat, in commit o in
+  `.env.example`**. Si trova in Cloudflare Dashboard → Turnstile → il tuo
+  widget → "Secret Key" (pulsante per rivelarla).
+
+**In locale**, apri `.env.local` (già in `.gitignore`, non serve fare
+nulla per tenerlo fuori da git) e aggiungi le due righe:
+```
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAEW_QAO5YcXGwdyP
+TURNSTILE_SECRET_KEY=<incolla qui il secret dalla dashboard Cloudflare>
+```
+Poi riavvia `npm run dev`.
+
+**Su Vercel**: Project Settings → Environment Variables → Add New, due
+volte (stessi nomi di sopra), ambiente Production (e Preview se vuoi
+testarlo anche lì). Il sito key può stare anche in chiaro nella UI di
+Vercel (è pubblica); il secret key va inserito nello stesso posto — è
+Vercel stesso a cifrarlo/nasconderlo, non serve altro. Dopo averle
+salvate, serve un nuovo deploy perché le env var vengano lette (un
+redeploy dall'ultimo commit, oppure il prossimo push su `main`).
+
+Nota: il widget Turnstile su Cloudflare ha anche un elenco di hostname
+autorizzati (impostato quando l'hai creato) — assicurati che includa sia
+il dominio di produzione su Vercel sia, se vuoi vedere il widget anche in
+sviluppo, `localhost`.
 
 ## Test-first
 - [x] Un file `tests/xxx.md` per ogni `specs/xxx.md` (tranne l'overview),
