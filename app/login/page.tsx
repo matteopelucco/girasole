@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { login } from './actions';
 
@@ -15,14 +14,10 @@ export default function LoginPage({
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
-        <Image
-          src="/girasole.png"
-          alt="Girasole"
-          width={96}
-          height={96}
-          className="mx-auto mb-4"
-          priority
-        />
+        {/* SVG: next/image non lo ottimizza senza abilitare dangerouslyAllowSVG
+            in next.config.mjs — per un logo vettoriale di poche decine di KB
+            un <img> semplice va benissimo, nessun bisogno di quel toggle. */}
+        <img src="/girasole.svg" alt="Girasole" width={96} height={96} className="mx-auto mb-4" />
         <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>
         <p className="mb-6 text-center text-sm text-stone-500">
           Registro elettronico — Asilo Sartorio

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" role="img" aria-labelledby="title desc">
+  <title id="title">girasole — il registro che fa crescere</title>
+  <desc id="desc">Logo vettoriale di un registro elettronico per scuole dell'infanzia: un girasole, una foglia ecologica e uno smartphone.</desc>
+
+  <defs>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7BCB4A"/>
+      <stop offset="1" stop-color="#3D8E36"/>
+    </linearGradient>
+    <linearGradient id="phone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4E9B3F"/>
+      <stop offset="1" stop-color="#2E7332"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="1200" fill="#FFFFFF"/>
+
+  <!-- Green growth arc -->
+  <path d="M285 535 C205 330 300 125 540 90 C760 58 945 160 960 355"
+        fill="none" stroke="#62B947" stroke-width="12" stroke-linecap="round"/>
+
+  <!-- Sunflower petals -->
+  <path d="M 678.0,355.0 C 725.0,410.0 820.0,373.0 820.0,355.0 C 820.0,337.0 725.0,300.0 678.0,355.0 Z" fill="#F9B51A"/>
+<path d="M 667.5,394.0 C 680.8,465.1 781.5,480.6 790.5,465.0 C 799.5,449.4 735.8,369.9 667.5,394.0 Z" fill="#F9B51A"/>
+<path d="M 639.0,422.5 C 614.9,490.8 694.4,554.5 710.0,545.5 C 725.6,536.5 710.1,435.8 639.0,422.5 Z" fill="#F9B51A"/>
+<path d="M 600.0,433.0 C 545.0,480.0 582.0,575.0 600.0,575.0 C 618.0,575.0 655.0,480.0 600.0,433.0 Z" fill="#F9B51A"/>
+<path d="M 561.0,422.5 C 489.9,435.8 474.4,536.5 490.0,545.5 C 505.6,554.5 585.1,490.8 561.0,422.5 Z" fill="#F9B51A"/>
+<path d="M 532.5,394.0 C 464.2,369.9 400.5,449.4 409.5,465.0 C 418.5,480.6 519.2,465.1 532.5,394.0 Z" fill="#F9B51A"/>
+<path d="M 522.0,355.0 C 475.0,300.0 380.0,337.0 380.0,355.0 C 380.0,373.0 475.0,410.0 522.0,355.0 Z" fill="#F9B51A"/>
+<path d="M 532.5,316.0 C 519.2,244.9 418.5,229.4 409.5,245.0 C 400.5,260.6 464.2,340.1 532.5,316.0 Z" fill="#F9B51A"/>
+<path d="M 561.0,287.5 C 585.1,219.2 505.6,155.5 490.0,164.5 C 474.4,173.5 489.9,274.2 561.0,287.5 Z" fill="#F9B51A"/>
+<path d="M 600.0,277.0 C 655.0,230.0 618.0,135.0 600.0,135.0 C 582.0,135.0 545.0,230.0 600.0,277.0 Z" fill="#F9B51A"/>
+<path d="M 639.0,287.5 C 710.1,274.2 725.6,173.5 710.0,164.5 C 694.4,155.5 614.9,219.2 639.0,287.5 Z" fill="#F9B51A"/>
+<path d="M 667.5,316.0 C 735.8,340.1 799.5,260.6 790.5,245.0 C 781.5,229.4 680.8,244.9 667.5,316.0 Z" fill="#F9B51A"/>
+
+  <!-- Flower centre -->
+  <circle cx="600" cy="355" r="112" fill="#9A641A"/>
+  <circle cx="600" cy="355" r="108" fill="#A86D1D"/>
+  <ellipse cx="565" cy="335" rx="12" ry="20" fill="#4B3212"/>
+  <ellipse cx="635" cy="335" rx="12" ry="20" fill="#4B3212"/>
+  <path d="M560 385 Q600 420 640 385" fill="none" stroke="#4B3212" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- Leaf and stem -->
+  <path d="M625 610 C700 650 735 680 760 735"
+        fill="none" stroke="#4E9D3C" stroke-width="15" stroke-linecap="round"/>
+  <path d="M690 715 C800 680 925 585 1010 475
+           C1015 605 945 720 805 765
+           C755 781 715 762 690 715 Z"
+        fill="url(#leaf)"/>
+  <path d="M715 745 C800 685 875 625 950 535"
+        fill="none" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round"/>
+  <path d="M625 745 C690 770 755 770 815 750"
+        fill="none" stroke="#4E9D3C" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Smartphone -->
+  <g transform="translate(285 395)">
+    <rect x="0" y="0" width="205" height="355" rx="32" fill="url(#phone)"/>
+    <rect x="16" y="18" width="173" height="300" rx="20" fill="#FFFFFF"/>
+    <rect x="73" y="7" width="58" height="6" rx="3" fill="#D7E2D5"/>
+    <circle cx="102.5" cy="338" r="13" fill="#FFFFFF"/>
+
+    <!-- App rows -->
+    <circle cx="47" cy="72" r="22" fill="#75C653"/>
+    <circle cx="47" cy="67" r="7" fill="#FFFFFF"/>
+    <path d="M34 84 Q47 70 60 84" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <rect x="82" y="62" width="78" height="9" rx="4.5" fill="#C9D0C9"/>
+    <rect x="82" y="78" width="52" height="7" rx="3.5" fill="#E1E5E1"/>
+
+    <rect x="27" y="116" width="40" height="40" rx="10" fill="#F29A18"/>
+    <rect x="35" y="126" width="24" height="20" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+    <path d="M35 132 H59 M43 122 V129 M51 122 V129" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <rect x="82" y="122" width="78" height="9" rx="4.5" fill="#C9D0C9"/>
+    <rect x="82" y="138" width="52" height="7" rx="3.5" fill="#E1E5E1"/>
+
+    <circle cx="47" cy="188" r="22" fill="#2E9AD6"/>
+    <path d="M35 188 L44 197 L61 177" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="82" y="178" width="78" height="9" rx="4.5" fill="#C9D0C9"/>
+    <rect x="82" y="194" width="52" height="7" rx="3.5" fill="#E1E5E1"/>
+
+    <circle cx="47" cy="260" r="22" fill="#F07B73"/>
+    <path d="M47 277 C39 269 31 263 31 254 C31 244 44 240 47 250 C51 240 64 244 64 254 C64 263 55 269 47 277Z"
+          fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round"/>
+    <rect x="82" y="250" width="78" height="9" rx="4.5" fill="#C9D0C9"/>
+    <rect x="82" y="266" width="52" height="7" rx="3.5" fill="#E1E5E1"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="600" y="900" text-anchor="middle"
+        font-family="Nunito, Quicksand, Arial, sans-serif"
+        font-size="150" font-weight="700" letter-spacing="-5"
+        fill="#347C35">girasole</text>
+  <!-- Yellow dot over i -->
+  <circle cx="438" cy="786" r="13" fill="#F9B51A"/>
+
+  <!-- Tagline -->
+  <path d="M235 1000 H315 M885 1000 H965" stroke="#68B653" stroke-width="7" stroke-linecap="round"/>
+  <text x="600" y="1010" text-anchor="middle"
+        font-family="Nunito, Quicksand, Arial, sans-serif"
+        font-size="43" font-weight="500"
+        fill="#347C35">il registro che fa crescere</text>
+
+  <!-- Heart -->
+  <path d="M600 1080
+           C582 1058 550 1067 550 1092
+           C550 1115 575 1130 600 1148
+           C625 1130 650 1115 650 1092
+           C650 1067 618 1058 600 1080 Z"
+        fill="#68B653"/>
+</svg>

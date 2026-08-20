@@ -12,7 +12,7 @@ Accedere all'app con email e password.
   una card bianca su sfondo neutro (coerente con
   [00 - overview.md](00%20-%20overview.md) — priorità a interfaccia
   semplice e leggibile da smartphone).
-- In alto, il logo Girasole (`public/girasole.png`), seguito dal titolo
+- In alto, il logo Girasole (`public/girasole.svg`), seguito dal titolo
   "Girasole" e dal sottotitolo "Registro elettronico — Asilo Sartorio".
 - Campo **Email** (tipo email, obbligatorio).
 - Campo **Password** (tipo password, obbligatorio).
