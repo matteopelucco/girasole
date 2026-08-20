@@ -1,6 +1,7 @@
 # Test — 13 Segna presenza
 
 Requisito: [specs/13 - segna-presenza.md](../specs/13%20-%20segna-presenza.md)
+Test automatizzati: [e2e/13-segna-presenza.spec.ts](../e2e/13-segna-presenza.spec.ts)
 
 ## TC-13-01 — Segnare un bambino presente
 Precondizioni: maestra con sezione assegnata, bambino nella sezione,

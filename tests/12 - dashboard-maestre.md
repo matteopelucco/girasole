@@ -1,6 +1,7 @@
 # Test — 12 Dashboard maestra
 
 Requisito: [specs/12 - dashboard-maestre.md](../specs/12%20-%20dashboard-maestre.md)
+Test automatizzati: [e2e/12-dashboard-maestre.spec.ts](../e2e/12-dashboard-maestre.spec.ts)
 
 Tutti i casi sotto (tranne dove indicato) richiedono sessioni autenticate
 reali per i tre ruoli (admin, maestra, genitore) che l'agente non

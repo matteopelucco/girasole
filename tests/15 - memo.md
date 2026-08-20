@@ -1,6 +1,7 @@
 # Test — 15 Promemoria
 
 Requisito: [specs/15 - memo.md](../specs/15%20-%20memo.md)
+Test automatizzati: [e2e/15-memo.spec.ts](../e2e/15-memo.spec.ts)
 
 ## TC-15-01 — Creare un promemoria per tutti
 Precondizioni: sessione maestra o admin.

@@ -1,6 +1,7 @@
 # Test — 11 Login
 
 Requisito: [specs/11 - login.md](../specs/11%20-%20login.md)
+Test automatizzati: [e2e/11-login.spec.ts](../e2e/11-login.spec.ts)
 
 ## TC-11-01 — Schermata di login: elementi presenti
 Precondizioni: nessuna.

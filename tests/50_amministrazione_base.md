@@ -1,6 +1,7 @@
 # Test — 50 Amministrazione base
 
 Requisito: [specs/50_amministrazione_base.md](../specs/50_amministrazione_base.md)
+Test automatizzati: [e2e/50_amministrazione_base.spec.ts](../e2e/50_amministrazione_base.spec.ts)
 
 ## TC-50-01 — Creare una sezione
 Precondizioni: sessione admin.

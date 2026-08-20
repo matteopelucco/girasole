@@ -57,6 +57,39 @@ Contesto operativo per Claude Code su questo progetto.
   di ogni caso direttamente nel file `tests/xxx.md` (Pass / Fail /
   Bloccato, con nota sul motivo se Bloccato o Fail), così il file resta
   anche il registro dell'ultima esecuzione.
+- Oltre al piano di test in Markdown, ogni `specs/xxx.md` ha anche un
+  file `e2e/xxx.spec.ts` con test Playwright automatizzati (stesso nome/
+  numero, es. `specs/13 - segna-presenza.md` →
+  `e2e/13-segna-presenza.spec.ts`) — uno scenario di test per ogni
+  `## Scenario:` del requisito, più un controllo di accessibilità axe-core
+  (`nessunaViolazioneA11yGrave`, in `e2e/helpers.ts`) su ogni pagina
+  toccata. Stessa regola del punto sopra: quando cambia uno scenario in
+  `specs/`, aggiornare anche il test Playwright corrispondente, non solo
+  il piano in Markdown.
+- I test che richiedono una sessione autenticata (admin/maestra/genitore)
+  leggono le credenziali da variabili d'ambiente `E2E_<RUOLO>_EMAIL` /
+  `E2E_<RUOLO>_PASSWORD` (vedi `.env.example` ed `e2e/helpers.ts`) e si
+  saltano da soli (`test.skip`) se non configurate — non devono mai
+  fallire per un secret mancante, solo per una regressione reale.
+
+## Test end-to-end (Playwright)
+- Suite in `e2e/`, configurazione in `playwright.config.ts`. Include
+  `@axe-core/playwright` per un controllo di accessibilità automatico su
+  ogni pagina visitata dai test.
+- **Eseguirli in locale (gratis, nessun servizio esterno)**: in un
+  terminale `npm run dev`, in un altro `npx playwright test` (oppure
+  `npx playwright test --ui` per la modalità interattiva con
+  time-travel debugging — utile per capire perché un test fallisce).
+  Se il server su `:3000` non è già acceso, Playwright lo avvia da solo.
+- **Il database usato in locale deve essere un progetto Supabase di
+  TEST, mai quello di produzione**: i test scrivono e modificano dati
+  veri (presenze, pasti, promemoria, sezioni, bambini, ruoli) sul
+  progetto puntato da `NEXT_PUBLIC_SUPABASE_URL` in `.env.local` — non
+  sono in sola lettura. Prima di lanciare la suite, verificare sempre
+  quale progetto Supabase è configurato.
+- Le credenziali degli account di test (`E2E_*`) vanno in `.env.local`
+  (mai committate). Un ruolo mancante fa saltare solo i test che lo
+  richiedono: la suite resta comunque eseguibile parzialmente.
 
 ## Cosa NON fare in questa fase
 - Non implementare rette/pagamenti (Fase 2).
@@ -78,3 +111,8 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
 - Le pull request di collaboratori esterni vanno revisionate prima del
   merge su `main`: un push su `main` fa deploy automatico in produzione
   su Vercel.
+- La suite Playwright gira automaticamente su ogni PR via GitHub Actions
+  (`.github/workflows/playwright.yml`, gratuito su repo pubblici) e usa
+  le variabili configurate come "Repository secrets" in GitHub — mai
+  hardcoded nel workflow. Anche in CI devono puntare a un progetto
+  Supabase di test, mai a quello di produzione.

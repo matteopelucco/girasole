@@ -1,0 +1,48 @@
+name: Playwright
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Installa Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: Esegui i test end-to-end
+        run: npx playwright test
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
+          E2E_MAESTRA_PASSWORD: ${{ secrets.E2E_MAESTRA_PASSWORD }}
+          E2E_GENITORE_EMAIL: ${{ secrets.E2E_GENITORE_EMAIL }}
+          E2E_GENITORE_PASSWORD: ${{ secrets.E2E_GENITORE_PASSWORD }}
+          E2E_MAESTRA_SENZA_SEZIONE_EMAIL: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_EMAIL }}
+          E2E_MAESTRA_SENZA_SEZIONE_PASSWORD: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD }}
+          E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
+
+      - name: Carica il report HTML (anche se i test falliscono)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

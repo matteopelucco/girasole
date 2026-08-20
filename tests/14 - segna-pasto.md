@@ -1,6 +1,7 @@
 # Test — 14 Segna pasto
 
 Requisito: [specs/14 - segna-pasto.md](../specs/14%20-%20segna-pasto.md)
+Test automatizzati: [e2e/14-segna-pasto.spec.ts](../e2e/14-segna-pasto.spec.ts)
 
 ## TC-14-01 — Le allergie sono visibili prima di segnare il pasto
 Precondizioni: bambino con `note_allergie` compilato (es. "Allergia alle

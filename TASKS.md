@@ -32,11 +32,9 @@ migration: mancava la policy di select su `maestre_sezioni`).
       (1/min per email, 5/5min per IP) e anti-enumeration. Applica
       `supabase/migrations/0003_password_recovery.sql` prima di usarlo.
 - [x] Captcha (Cloudflare Turnstile) integrato in `/recupera-password` —
-      vedi `lib/turnstile.ts`. Codice pronto ma **inattivo finché non
-      configuri i secret** (vedi procedura sotto): finché
-      `NEXT_PUBLIC_TURNSTILE_SITE_KEY`/`TURNSTILE_SECRET_KEY` non sono
-      impostate, la pagina funziona esattamente come prima, senza
-      widget.
+      vedi `lib/turnstile.ts`. Secret configurati in `.env.local`
+      (attivo in locale). **Restano da impostare su Vercel** (vedi
+      procedura sotto) prima che sia attivo anche in produzione.
 
 ### Configurare i secret Turnstile (locale + Vercel)
 Due variabili, stesso nome ovunque:
@@ -76,6 +74,24 @@ sviluppo, `localhost`.
       che richiedono sessioni admin/maestra/genitore reali sono
       "Bloccato" nei singoli file — servono account di test per
       completarli (vedi richiesta fatta in conversazione).
+
+## Test end-to-end (Playwright)
+- [x] Playwright + `@axe-core/playwright` installati come devDependency,
+      configurati per `http://localhost:3000` (`playwright.config.ts`).
+- [x] Un file `e2e/xxx.spec.ts` per ogni `specs/xxx.md`, uno scenario di
+      test per ogni `## Scenario:` del requisito, più un controllo axe
+      su ogni pagina — vedi `CLAUDE.md`.
+- [x] Prima esecuzione locale: 9 test eseguibili senza credenziali, tutti
+      Pass; 25 test che richiedono sessioni admin/maestra/genitore reali
+      saltati (`test.skip`) in attesa delle variabili `E2E_*` — vedi
+      `.env.example`.
+- [x] `.github/workflows/playwright.yml`: la suite gira su ogni PR verso
+      `main` via GitHub Actions (gratuito su repo pubblici). **Da fare
+      da parte tua**: aggiungere gli stessi secret di `.env.example`
+      (Supabase, Turnstile, `E2E_*`) come "Repository secrets" in
+      GitHub (Settings → Secrets and variables → Actions) — puntando
+      **sempre a un progetto Supabase di test**, mai a produzione, dato
+      che i test scrivono dati veri.
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento

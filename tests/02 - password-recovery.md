@@ -1,6 +1,7 @@
 # Test — 02 Password recovery
 
 Requisito: [specs/02 - password-recovery.md](../specs/02%20-%20password-recovery.md)
+Test automatizzati: [e2e/02-password-recovery.spec.ts](../e2e/02-password-recovery.spec.ts)
 
 Prerequisito per tutti i test di invio email: la migration
 `supabase/migrations/0003_password_recovery.sql` deve essere applicata,
