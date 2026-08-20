@@ -31,7 +31,7 @@ export default async function DashboardPage() {
 
   if (!user) redirect('/login');
 
-  const { data: profilo, error: erroreProfilo } = await supabase
+  const { data: profilo } = await supabase
     .from('profili')
     .select('nome, cognome, ruolo')
     .eq('id', user.id)
@@ -47,14 +47,6 @@ export default async function DashboardPage() {
         <main className="mx-auto max-w-2xl px-4 py-10">
           <h1 className="text-xl font-medium">Ciao {nomeVisualizzato}</h1>
           <p className="mt-1 text-sm text-stone-500">Ruolo: {ruolo ?? 'non impostato'}</p>
-          {erroreProfilo && (
-            // DIAGNOSTICA TEMPORANEA — da rimuovere una volta risolto il bug
-            // del ruolo admin non mostrato in produzione. Non sensibile:
-            // ogni utente vede solo l'errore della propria query.
-            <p className="mt-1 text-xs text-red-500">
-              DEBUG {erroreProfilo.code}: {erroreProfilo.message} (uid: {user.id})
-            </p>
-          )}
           <div className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-500">
             Il portale genitori è in arrivo in una fase successiva.
           </div>
