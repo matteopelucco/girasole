@@ -44,9 +44,12 @@ bambini di quella sezione
 - Solo un profilo con ruolo `admin` può creare sezioni/bambini, cambiare
   il ruolo di un profilo, o assegnare/rimuovere maestre dalle sezioni
   (RLS in `supabase/migrations/0002_admin_e_maestre.sql`).
-- Non esiste (in questa fase) un modo per creare un nuovo utente da
-  `/admin`: gli utenti nascono da un login/registrazione su Supabase
-  Auth. L'admin gestisce solo il ruolo e le assegnazioni di chi esiste
-  già.
+- L'admin crea/modifica/elimina utenti direttamente da `/admin/maestre`
+  (email, password, nome, cognome, telefono, ruolo) — non serve più il
+  dashboard di Supabase Auth. Vedi
+  [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md) per i dettagli e
+  gli scenari.
 - Il primissimo admin va promosso a mano via SQL Editor (vedi
-  [11 - login.md](11%20-%20login.md)).
+  [11 - login.md](11%20-%20login.md)): è l'unico caso residuo che
+  richiede un intervento fuori dall'app, perché per creare un utente
+  dall'app serve già essere autenticati come admin.

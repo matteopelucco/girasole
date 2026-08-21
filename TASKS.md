@@ -65,6 +65,26 @@ autorizzati (impostato quando l'hai creato) — assicurati che includa sia
 il dominio di produzione su Vercel sia, se vuoi vedere il widget anche in
 sviluppo, `localhost`.
 
+- [x] Utenti gestiti direttamente dall'app, non più da Supabase Auth
+      (specs/03 - utenti-e-ruoli.md): `/admin/maestre` ora crea, modifica
+      ed elimina utenti (email, password, nome, cognome, telefono,
+      ruolo) con la service_role key (`lib/supabase/admin.ts`). Applica
+      `supabase/migrations/0005_utenti_gestiti_da_app.sql` prima di
+      usarlo. **Da fare da parte tua**: aggiungere
+      `SUPABASE_SERVICE_ROLE_KEY` (Supabase → Project Settings → API →
+      "service_role", MAI la anon key) a `.env.local` e, per la
+      produzione, alle Environment Variables del progetto su Vercel —
+      senza quella variabile la creazione/eliminazione utenti fallisce a
+      runtime.
+- [x] Entità Utente/Classe/Anno Scolastico/Alunno (specs/04 - data-types.md):
+      campi aggiuntivi (indirizzo/note utente, data di nascita/sesso/altre
+      note alunno, classe attiva + anno scolastico) e nuova gestione "Anni
+      scolastici" su `/admin`. Applica
+      `supabase/migrations/0006_data_types.sql` (dopo la 0005) prima di
+      usarlo. Lo storico multi-classe per alunno e la distinzione padre/
+      madre sui genitori sono pronti a schema ma senza UI in questa fase
+      (vedi "Fuori scope" in specs/04 - data-types.md).
+
 ## Test-first — solo Playwright
 - [x] I piani di test in Markdown (`tests/xxx.md`) sono stati dismessi:
       l'unica suite di test è quella eseguibile in `e2e/`. Vedi

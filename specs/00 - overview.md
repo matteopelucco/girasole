@@ -26,6 +26,10 @@ della maestra, `5x` amministrazione.
   Experience, trasversali a tutti gli scenari
 - [02 - password-recovery.md](02%20-%20password-recovery.md) — recupero
   password dimenticata
+- [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md) — dati di un
+  utente, ruoli disponibili e gestione utenti direttamente dall'app
+- [04 - data-types.md](04%20-%20data-types.md) — entità Utente, Classe,
+  Anno Scolastico, Alunno e relazioni tra loro
 - [11 - login.md](11%20-%20login.md) — login e schermata di login
 - [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
   maestra: lista bambini della sezione con stato presenza/pasto del

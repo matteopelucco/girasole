@@ -49,13 +49,14 @@ Allora la sessione viene chiusa e torno alla pagina di login
 ## Regole
 - Autenticazione via Supabase Auth (email/password), nessun altro
   provider in questa fase.
-- Non esiste ancora una pagina di auto-registrazione: i nuovi account
-  vanno creati da Supabase Auth (dashboard) o, in futuro, da un flusso di
-  registrazione dedicato (fuori scope Fase 1). Al primo accesso ogni
-  utente ottiene un profilo con ruolo `genitore` di default (trigger
-  `handle_new_user`, vedi `supabase/migrations/0001_init.sql`); un admin
-  lo promuove poi da
-  [50_amministrazione_base.md](50_amministrazione_base.md).
+- Non esiste una pagina di auto-registrazione: i nuovi account li crea
+  un admin direttamente dall'app, in `/admin/maestre` (email, password,
+  nome, cognome, telefono, ruolo) — vedi
+  [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md). Il profilo
+  (trigger `handle_new_user`, vedi `supabase/migrations/0001_init.sql` e
+  `0005_utenti_gestiti_da_app.sql`) riceve subito il ruolo scelto
+  dall'admin in fase di creazione, senza passare da una promozione
+  successiva.
 - Il primissimo admin del sistema va promosso a mano via SQL Editor
   (bootstrap): non può farlo un altro admin perché non ne esiste ancora
   uno.

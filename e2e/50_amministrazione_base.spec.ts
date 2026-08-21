@@ -38,6 +38,8 @@ test.describe('50 — Amministrazione base', () => {
     const cognome = `E2eTest${Date.now()}`;
     await page.getByPlaceholder('Nome').fill('Bimbo');
     await page.getByPlaceholder('Cognome').fill(cognome);
+    await page.getByLabel('Data di nascita').fill('2020-01-01');
+    await page.getByLabel('Sesso').selectOption('F');
     await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
     await page.getByPlaceholder('Allergie o intolleranze (opzionale)').fill('Allergia test E2E');
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();

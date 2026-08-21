@@ -114,13 +114,13 @@ export default async function DashboardPage() {
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         {ruolo === 'admin' && (
           <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-500">
-            Per creare sezioni e bambini o gestire le maestre vai su{' '}
+            Per creare sezioni e bambini o gestire gli utenti vai su{' '}
             <a href="/admin" className="underline">
               Sezioni e bambini
             </a>{' '}
             /{' '}
             <a href="/admin/maestre" className="underline">
-              Maestre
+              Utenti
             </a>
             .
           </div>

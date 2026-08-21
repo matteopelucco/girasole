@@ -21,7 +21,7 @@ export function NavHeader({
                 Sezioni e bambini
               </Link>
               <Link href="/admin/maestre" className="text-sm text-stone-600 hover:text-stone-900">
-                Maestre
+                Utenti
               </Link>
             </>
           )}

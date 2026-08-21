@@ -45,7 +45,7 @@ test.describe('12 — Dashboard maestra', () => {
 
       await page.goto('/dashboard');
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Maestre' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);

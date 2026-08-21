@@ -16,7 +16,7 @@ L'utente riceve quindi una e-mail, con un link di password reset
 IMPORTANTE: 
 - il link è valido solo 1 ora
 L'utente clicca al link ricevuto nella mail, atterra sulla pagina di re-impostazione password
-Inserisce due volte una nuova password, il sistema verificha che sia sufficientemente complessa (almeno 1 numero, una lettera minuscola, una maiuscola, un carattere speciale)
+Inserisce due volte una nuova password, il sistema verificha che sia sufficientemente complessa (vedi spec utenti-e-ruoli.mds)
 A procedura completata, la password viene salvata a DB e l'utente viene invitato a loggarsi, con link di servizio al login.
 
 ## Scenario: utente non esistente chiede di recuperare la password

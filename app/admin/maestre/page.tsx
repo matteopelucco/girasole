@@ -1,7 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
-import { cambiaRuolo, assegnaSezione, rimuoviSezione } from './actions';
+import { REGOLA_PASSWORD } from '@/lib/password';
+import {
+  creaUtente,
+  aggiornaUtente,
+  eliminaUtente,
+  assegnaSezione,
+  rimuoviSezione,
+} from './actions';
 
 const ETICHETTE_RUOLO: Record<string, string> = {
   admin: 'Admin',
@@ -9,9 +16,25 @@ const ETICHETTE_RUOLO: Record<string, string> = {
   genitore: 'Genitore',
 };
 
+const MESSAGGI_ERRORE: Record<string, string> = {
+  'campi-mancanti': 'Compila tutti i campi (nome, cognome, email, telefono, ruolo).',
+  'password-debole': REGOLA_PASSWORD,
+  'email-duplicata': 'Esiste già un utente con questa email.',
+  'creazione-fallita': "Non è stato possibile creare l'utente. Riprova.",
+  'auto-eliminazione': 'Non puoi eliminare il tuo stesso account.',
+};
+
+const MESSAGGI_OK: Record<string, string> = {
+  'utente-creato': 'Utente creato con successo.',
+};
+
 export const dynamic = 'force-dynamic';
 
-export default async function MaestrePage() {
+export default async function MaestrePage({
+  searchParams,
+}: {
+  searchParams: { errore?: string; ok?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -27,7 +50,10 @@ export default async function MaestrePage() {
   if (profiloCorrente?.ruolo !== 'admin') redirect('/dashboard');
 
   const [{ data: profili }, { data: sezioni }, { data: assegnazioni }] = await Promise.all([
-    supabase.from('profili').select('id, nome, cognome, email, ruolo').order('cognome'),
+    supabase
+      .from('profili')
+      .select('id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note')
+      .order('cognome'),
     supabase.from('sezioni').select('id, nome').order('nome'),
     supabase.from('maestre_sezioni').select('maestra_id, sezione_id'),
   ]);
@@ -41,6 +67,9 @@ export default async function MaestrePage() {
     sezioniPerMaestra.set(a.maestra_id, lista);
   }
 
+  const messaggioErrore = searchParams?.errore ? MESSAGGI_ERRORE[searchParams.errore] : null;
+  const messaggioOk = searchParams?.ok ? MESSAGGI_OK[searchParams.ok] : null;
+
   return (
     <>
       <NavHeader
@@ -51,22 +80,118 @@ export default async function MaestrePage() {
         <section>
           <h1 className="text-lg font-medium">Utenti e ruoli</h1>
           <p className="mt-1 text-sm text-stone-500">
-            Nuovi utenti compaiono qui dopo essersi registrati (ruolo iniziale: genitore).
-            Promuovili a maestra o admin.
+            Crea, modifica ed elimina gli account direttamente da qui — email, password,
+            nome, cognome, telefono, indirizzo, note e ruolo (admin / maestra / genitore).
           </p>
+
+          {messaggioOk && <p className="mt-3 text-sm text-green-700">{messaggioOk}</p>}
+          {messaggioErrore && <p className="mt-3 text-sm text-red-600">{messaggioErrore}</p>}
+
+          <div className="mt-4 rounded-xl border border-stone-200 p-4">
+            <h2 className="text-sm font-medium">Crea nuovo utente</h2>
+            <p className="mt-1 text-xs text-stone-500">{REGOLA_PASSWORD}</p>
+            <form action={creaUtente} className="mt-3 grid gap-2 sm:grid-cols-2">
+              <input
+                name="nome"
+                required
+                placeholder="Nome"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+              <input
+                name="cognome"
+                required
+                placeholder="Cognome"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="Email"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+              <input
+                name="telefono"
+                type="tel"
+                required
+                placeholder="Telefono"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+              <input
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                placeholder="Password"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+              <select
+                name="ruolo"
+                required
+                defaultValue="genitore"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              >
+                {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
+                  <option key={valore} value={valore}>
+                    {etichetta}
+                  </option>
+                ))}
+              </select>
+              <input
+                name="indirizzo_residenza"
+                placeholder="Indirizzo di residenza (opzionale)"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
+              />
+              <input
+                name="note"
+                placeholder="Note (opzionale)"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 sm:col-span-2"
+              >
+                Crea utente
+              </button>
+            </form>
+          </div>
 
           <ul className="mt-4 space-y-2">
             {profili?.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm"
-              >
-                <span>
-                  {p.nome} {p.cognome}{' '}
-                  <span className="text-stone-400">— {p.email}</span>
-                </span>
-                <form action={cambiaRuolo} className="flex items-center gap-2">
+              <li key={p.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
+                <div className="mb-2 text-xs text-stone-400">{p.email}</div>
+                <form action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
+                  <input
+                    name="nome"
+                    defaultValue={p.nome}
+                    placeholder="Nome"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
+                  <input
+                    name="cognome"
+                    defaultValue={p.cognome}
+                    placeholder="Cognome"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
+                  <input
+                    name="telefono"
+                    defaultValue={p.telefono ?? ''}
+                    placeholder="Telefono"
+                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
+                  <input
+                    name="indirizzo_residenza"
+                    defaultValue={p.indirizzo_residenza ?? ''}
+                    placeholder="Indirizzo"
+                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
+                  <input
+                    name="note"
+                    defaultValue={p.note ?? ''}
+                    placeholder="Note"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
                   <select
                     name="ruolo"
                     defaultValue={p.ruolo}
@@ -83,6 +208,12 @@ export default async function MaestrePage() {
                     className="rounded-lg bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700"
                   >
                     Aggiorna
+                  </button>
+                </form>
+                <form action={eliminaUtente} className="mt-1">
+                  <input type="hidden" name="profilo_id" value={p.id} />
+                  <button type="submit" className="text-xs text-red-600 hover:text-red-800">
+                    Elimina utente
                   </button>
                 </form>
               </li>
@@ -136,7 +267,8 @@ export default async function MaestrePage() {
           </form>
           {!maestre.length && (
             <p className="mt-2 text-sm text-stone-400">
-              Nessun utente ha ancora il ruolo maestra: promuovilo prima nella sezione qui sopra.
+              Nessun utente ha ancora il ruolo maestra: creane uno o promuovilo nella sezione qui
+              sopra.
             </p>
           )}
 
