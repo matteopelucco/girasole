@@ -44,7 +44,7 @@ test.describe('12 — Dashboard maestra', () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Sezioni e bambini' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
 

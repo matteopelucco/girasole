@@ -1,4 +1,4 @@
-// Requisito: specs/50_amministrazione_base.md
+// Requisito: specs/50 - amministrazione_base.md
 //
 // ATTENZIONE: questi test scrivono davvero in `sezioni`/`bambini`/
 // `maestre_sezioni`/`profili` sul progetto Supabase di test — vedi la
@@ -25,7 +25,9 @@ test.describe('50 — Amministrazione base', () => {
     const nome = `Sezione E2E ${Date.now()}`;
 
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nome);
-    await page.getByRole('button', { name: 'Crea' }).click();
+    // Due form "Crea" in pagina (Anni scolastici + Sezioni, in quest'ordine
+    // nel DOM — vedi specs/04 - data-types.md): questo è quello di Sezioni.
+    await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
     await expect(page.getByText(nome)).toBeVisible({ timeout: 20_000 });
   });

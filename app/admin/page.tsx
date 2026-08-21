@@ -57,7 +57,7 @@ export default async function AdminPage() {
               </li>
             ))}
             {!anniScolastici?.length && (
-              <li className="text-sm text-stone-400">Nessun anno scolastico ancora creato.</li>
+              <li className="text-sm text-stone-600">Nessun anno scolastico ancora creato.</li>
             )}
           </ul>
         </section>
@@ -74,6 +74,7 @@ export default async function AdminPage() {
             <select
               name="anno_scolastico_id"
               defaultValue=""
+              aria-label="Anno scolastico"
               className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
               <option value="">Anno scolastico (opzionale)</option>
@@ -115,7 +116,7 @@ export default async function AdminPage() {
               </li>
             ))}
             {!sezioni?.length && (
-              <li className="text-sm text-stone-400">Nessuna sezione ancora creata.</li>
+              <li className="text-sm text-stone-600">Nessuna sezione ancora creata.</li>
             )}
           </ul>
         </section>
@@ -163,6 +164,7 @@ export default async function AdminPage() {
               name="sezione_id"
               required
               defaultValue=""
+              aria-label="Sezione"
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
               <option value="" disabled>
@@ -200,7 +202,7 @@ export default async function AdminPage() {
               >
                 <span>
                   {bambino.nome} {bambino.cognome}{' '}
-                  <span className="text-stone-400">
+                  <span className="text-stone-600">
                     — {(bambino.sezioni as unknown as { nome: string } | null)?.nome ?? 'nessuna sezione'}
                   </span>
                 </span>
@@ -212,7 +214,7 @@ export default async function AdminPage() {
               </li>
             ))}
             {!bambini?.length && (
-              <li className="text-sm text-stone-400">Nessun bambino ancora inserito.</li>
+              <li className="text-sm text-stone-600">Nessun bambino ancora inserito.</li>
             )}
           </ul>
         </section>

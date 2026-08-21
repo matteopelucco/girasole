@@ -95,9 +95,9 @@ Allora vengo reindirizzato alla dashboard
 ## Fuori scope in questa fase
 - La maestra non ha (ancora) un proprio pannello per creare/modificare/
   eliminare account genitore: quella gestione resta riservata all'admin.
-- I campi aggiuntivi descritti in
-  [04 - data-types.md](04%20-%20data-types.md) (es. indirizzo di
-  residenza) non sono ancora nello schema `profili` — verranno aggiunti
-  quando quel requisito sarà implementato.
 - Rette/pagamenti e portale genitori restano fuori scope come da
   [00 - overview.md](00%20-%20overview.md).
+
+Nota: indirizzo di residenza e note dell'utente (facoltativi, vedi
+[04 - data-types.md](04%20-%20data-types.md)) sono nello schema `profili`
+e gestibili da `/admin/maestre` dalla creazione dell'utente in poi.

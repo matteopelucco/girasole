@@ -2,7 +2,7 @@
 //
 // ATTENZIONE: questi test scrivono davvero in `anni_scolastici`/
 // `sezioni`/`bambini`/`profili` sul progetto Supabase di test — vedi la
-// nota in 50_amministrazione_base.spec.ts.
+// nota in 50-amministrazione_base.spec.ts.
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 

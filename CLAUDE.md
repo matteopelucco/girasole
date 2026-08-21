@@ -35,12 +35,39 @@ Contesto operativo per Claude Code su questo progetto.
   fuori-scope e indice; `0x` per requisiti trasversali come
   `specs/01 - ux.md`; `1x` per la schermata/flusso della maestra, es.
   `specs/11 - login.md`; `5x` per l'amministrazione, es.
-  `specs/50_amministrazione_base.md`). Non esiste più un unico `SPEC.md`:
+  `specs/50 - amministrazione_base.md`). Non esiste più un unico `SPEC.md`:
   quando si aggiunge o modifica un requisito, aggiornare o creare il file
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
 ## Test-first (importantissimo) — solo Playwright
+
+**Ciclo di lavoro obbligatorio per ogni modifica non banale**, in
+quest'ordine, ed è un ciclo — non un percorso a senso unico: se il check
+del passo 4 trova requisiti scoperti o test rotti, si torna al passo 2/3
+finché non risulta tutto verde.
+
+1. **SPECS** — leggi/scrivi/aggiorna il file `specs/xxx.md` interessato
+   finché descrive esattamente il comportamento voluto, con `## Scenario:`
+   Given/When/Then verificabili. Se tocchi un requisito, controlla anche
+   gli altri file in `specs/` che lo referenziano (link `[...](...)`) e
+   allineali: due requisiti che si contraddicono sono un bug quanto un
+   test rotto.
+2. **TEST_WRITING** — scrivi o aggiorna `e2e/xxx.spec.ts` PRIMA (o
+   comunque prima di dichiarare finito il lavoro) di modificare il
+   codice applicativo, un test per ogni `## Scenario:`.
+3. **CODE** — implementa/modifica il codice applicativo (pagine, server
+   actions, migration) finché soddisfa quei test.
+4. **CHECK_COVERAGE** — verifica che ogni `## Scenario:` di ogni
+   `specs/xxx.md` abbia un test corrispondente (nessuno scenario
+   scoperto, nessun test orfano che non corrisponde più a uno scenario
+   reale) ed esegui la suite (`npx playwright test`, con `npm run dev`
+   attivo — vedi sotto).
+5. **FIX** — se un test fallisce o uno scenario risulta scoperto, non è
+   accettabile lasciarlo così "per ora": o si corregge il codice, o si
+   corregge il test/requisito se era lui ad essere sbagliato. Poi si
+   ripete dal passo 4.
+
 - Niente piani di test in Markdown: l'unica suite di test è quella
   eseguibile in `e2e/`. Ogni file di requisiti in `specs/xxx.md` deve
   avere un corrispondente `e2e/xxx.spec.ts` con gli stessi identici nome

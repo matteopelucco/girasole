@@ -52,6 +52,30 @@ test.describe('02 — Password recovery', () => {
     await expect(page.getByText(MESSAGGIO_GENERICO)).toBeVisible({ timeout: 20_000 });
   });
 
+  test('richieste ripetute per la stessa email restano al riparo (stesso messaggio, nessun errore)', async ({
+    page,
+  }) => {
+    // Verifica il contratto osservabile dall'UI del rate limit (1
+    // richiesta/minuto per email, vedi puo_richiedere_reset_password in
+    // supabase/migrations/0003_password_recovery.sql): anche superando la
+    // soglia, l'utente vede sempre lo stesso messaggio generico, mai un
+    // errore diverso che rivelerebbe il rate limiting stesso (che sarebbe
+    // già una forma di enumeration). Il test non può verificare da UI se
+    // la seconda email è stata effettivamente soppressa lato server: quel
+    // dettaglio richiede ispezione DB/log, fuori dallo scope E2E.
+    const email = `rate-limit-${Date.now()}@esempio.it`;
+
+    await page.goto('/recupera-password');
+    await page.getByLabel('Email').fill(email);
+    await page.getByRole('button', { name: 'Invia il link di recupero' }).click();
+    await expect(page.getByText(MESSAGGIO_GENERICO)).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/recupera-password');
+    await page.getByLabel('Email').fill(email);
+    await page.getByRole('button', { name: 'Invia il link di recupero' }).click();
+    await expect(page.getByText(MESSAGGIO_GENERICO)).toBeVisible({ timeout: 20_000 });
+  });
+
   test('accesso a /reimposta-password senza una sessione di recovery', async ({ page }) => {
     await page.goto('/reimposta-password');
     await expect(page).toHaveURL(/\/login/);

@@ -21,8 +21,8 @@ E se ha note allergie, sono mostrate in evidenza accanto al suo nome
 (vedi anche [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: promuovere un utente a maestra
-Dato che un utente si è già registrato (ha un profilo con ruolo
-`genitore` di default)
+Dato che un utente esiste già (creato dall'admin con un altro ruolo,
+vedi [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md))
 Quando su `/admin/maestre` lo trovo nell'elenco utenti, seleziono ruolo
 "Maestra" e confermo
 Allora il suo ruolo diventa `maestra` e può accedere alla dashboard

@@ -2,7 +2,7 @@
 //
 // ATTENZIONE: questi test creano/modificano/eliminano davvero utenti
 // (auth.users + profili) sul progetto Supabase di test — vedi la nota in
-// 50_amministrazione_base.spec.ts. Ogni utente creato viene eliminato
+// 50-amministrazione_base.spec.ts. Ogni utente creato viene eliminato
 // dallo stesso test per non accumulare account fittizi nel progetto.
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
@@ -63,6 +63,27 @@ test.describe('03 — Utenti e ruoli', () => {
       timeout: 20_000,
     });
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  test('creazione con email già in uso mostra un errore e non crea un secondo utente', async ({
+    page,
+  }) => {
+    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+    const emailEsistente = process.env.E2E_ADMIN_EMAIL!;
+
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Duplicato');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(emailEsistente);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByPlaceholder('Password').fill('PasswordE2E!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    await expect(page.getByText('Esiste già un utente con questa email.')).toBeVisible({
+      timeout: 20_000,
+    });
+    // Un solo utente con quell'email in elenco (l'admin stesso), non due.
+    await expect(page.getByText(emailEsistente, { exact: false })).toHaveCount(1);
   });
 
   test('creazione con campi obbligatori mancanti mostra un errore', async ({ page }) => {

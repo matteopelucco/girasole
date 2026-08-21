@@ -129,7 +129,7 @@ export default async function DashboardPage() {
         <section>
           <h1 className="text-lg font-medium">Presenze e pasti di oggi</h1>
           {!bambini.length && (
-            <p className="mt-3 text-sm text-stone-400">
+            <p className="mt-3 text-sm text-stone-600">
               {ruolo === 'maestra'
                 ? 'Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.'
                 : 'Nessun bambino ancora inserito.'}
@@ -216,6 +216,7 @@ export default async function DashboardPage() {
               <select
                 name="destinatario_tipo"
                 defaultValue="tutti"
+                aria-label="Destinatario"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
                 <option value="tutti">Tutti</option>
@@ -225,6 +226,7 @@ export default async function DashboardPage() {
               <select
                 name="sezione_id"
                 defaultValue=""
+                aria-label="Sezione destinataria"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
                 <option value="">— sezione (se destinatario è "Una sezione") —</option>
@@ -237,6 +239,7 @@ export default async function DashboardPage() {
               <select
                 name="bambino_id"
                 defaultValue=""
+                aria-label="Bambino destinatario"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
                 <option value="">— bambino (se destinatario è "Un bambino") —</option>
@@ -260,7 +263,7 @@ export default async function DashboardPage() {
               <li key={p.id} className="rounded-lg border border-stone-200 p-3 text-sm">
                 <div className="font-medium">{p.titolo}</div>
                 <p className="mt-1 text-stone-600">{p.testo}</p>
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-stone-600">
                   {p.destinatario_tipo === 'tutti' && 'Per tutti'}
                   {p.destinatario_tipo === 'sezione' && 'Per una sezione'}
                   {p.destinatario_tipo === 'bambino' && 'Per un bambino'}
@@ -270,7 +273,7 @@ export default async function DashboardPage() {
               </li>
             ))}
             {!promemoria?.length && (
-              <li className="text-sm text-stone-400">Nessun promemoria pubblicato.</li>
+              <li className="text-sm text-stone-600">Nessun promemoria pubblicato.</li>
             )}
           </ul>
         </section>

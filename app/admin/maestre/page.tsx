@@ -129,6 +129,7 @@ export default async function MaestrePage({
                 name="ruolo"
                 required
                 defaultValue="genitore"
+                aria-label="Ruolo"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
                 {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
@@ -159,7 +160,7 @@ export default async function MaestrePage({
           <ul className="mt-4 space-y-2">
             {profili?.map((p) => (
               <li key={p.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
-                <div className="mb-2 text-xs text-stone-400">{p.email}</div>
+                <div className="mb-2 text-xs text-stone-600">{p.email}</div>
                 <form action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
                   <input
@@ -195,6 +196,7 @@ export default async function MaestrePage({
                   <select
                     name="ruolo"
                     defaultValue={p.ruolo}
+                    aria-label="Ruolo"
                     className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
                   >
                     {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
@@ -219,7 +221,7 @@ export default async function MaestrePage({
               </li>
             ))}
             {!profili?.length && (
-              <li className="text-sm text-stone-400">Nessun utente registrato.</li>
+              <li className="text-sm text-stone-600">Nessun utente registrato.</li>
             )}
           </ul>
         </section>
@@ -232,6 +234,7 @@ export default async function MaestrePage({
               name="maestra_id"
               required
               defaultValue=""
+              aria-label="Maestra"
               className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
               <option value="" disabled>
@@ -247,6 +250,7 @@ export default async function MaestrePage({
               name="sezione_id"
               required
               defaultValue=""
+              aria-label="Sezione"
               className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
               <option value="" disabled>
@@ -266,7 +270,7 @@ export default async function MaestrePage({
             </button>
           </form>
           {!maestre.length && (
-            <p className="mt-2 text-sm text-stone-400">
+            <p className="mt-2 text-sm text-stone-600">
               Nessun utente ha ancora il ruolo maestra: creane uno o promuovilo nella sezione qui
               sopra.
             </p>
@@ -280,7 +284,7 @@ export default async function MaestrePage({
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {(sezioniPerMaestra.get(m.id) ?? []).length === 0 && (
-                    <span className="text-stone-400">Nessuna sezione assegnata.</span>
+                    <span className="text-stone-600">Nessuna sezione assegnata.</span>
                   )}
                   {assegnazioni
                     ?.filter((a) => a.maestra_id === m.id)
