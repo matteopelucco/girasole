@@ -28,7 +28,7 @@ async function requireAdmin() {
 }
 
 export async function creaUtente(formData: FormData) {
-  await requireAdmin();
+  const { supabase } = await requireAdmin();
 
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
@@ -70,7 +70,6 @@ export async function creaUtente(formData: FormData) {
   }
 
   if (indirizzoResidenza || note) {
-    const { supabase } = await requireAdmin();
     await supabase
       .from('profili')
       .update({ indirizzo_residenza: indirizzoResidenza, note })

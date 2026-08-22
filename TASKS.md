@@ -106,6 +106,29 @@ sviluppo, `localhost`.
       **sempre a un progetto Supabase di test**, mai a produzione, dato
       che i test scrivono dati veri.
 
+## Fix — performance e deployment
+- [x] Bug di ricorsione RLS su `ruolo_corrente()` (non era `security
+      definer`, a differenza delle altre funzioni helper): causava
+      "stack depth limit exceeded" su azioni scritte via RLS (osservato
+      creando un promemoria) e rallentava ogni pagina che legge il
+      profilo dell'utente — sostanzialmente tutte, login incluso.
+      **Da fare da parte tua**: applica
+      `supabase/migrations/0007_fix_ruolo_corrente_ricorsione.sql` nel
+      SQL Editor di Supabase (test e produzione) — senza questo passo il
+      fix non ha alcun effetto, è una sola funzione da ridefinire.
+- [x] Il middleware attivava una chiamata di rete a Supabase Auth
+      (`getUser`) anche per gli asset statici in `public/` (es.
+      `girasole.svg`, caricato a piena vista sulla pagina di login) —
+      esclusi ora dal matcher (`middleware.ts`).
+- [x] `creaUtente` interrogava due volte l'utente/profilo admin per la
+      stessa richiesta — ridotto a una sola chiamata.
+
+Nota su prestazioni non risolvibili da codice: verifica che il progetto
+Supabase e il deploy Vercel siano nella stessa regione (o in regioni
+vicine) — un mismatch aggiunge latenza di rete a ogni singola chiamata,
+sopra le limitazioni già note del piano free di entrambi (compute
+condiviso, cold start delle funzioni serverless).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione

@@ -38,5 +38,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // Esclude anche i file statici in public/ (es. girasole.svg, caricato
+  // a piena vista su ogni schermata): senza questa esclusione ogni
+  // richiesta di un asset statico attivava comunque una chiamata di
+  // rete a Supabase Auth (getUser) inutile per servire un file, con un
+  // impatto reale sui tempi di caricamento.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
 };
