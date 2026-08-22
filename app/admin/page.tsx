@@ -31,7 +31,7 @@ export default async function AdminPage() {
               placeholder="Nome anno scolastico (es. 2026/2027)"
               className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
-            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Crea
             </PulsanteInvio>
           </FormConEsito>
@@ -70,7 +70,7 @@ export default async function AdminPage() {
                 </option>
               ))}
             </select>
-            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Crea
             </PulsanteInvio>
           </FormConEsito>
@@ -172,7 +172,7 @@ export default async function AdminPage() {
               placeholder="Altre note (opzionale)"
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
-            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Aggiungi bambino
             </PulsanteInvio>
           </FormConEsito>

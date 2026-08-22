@@ -2,15 +2,62 @@
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
-test.describe('12 — Dashboard maestra', () => {
+test.describe('12 — Dashboard maestra/admin', () => {
   test.describe('come maestra', () => {
     test.use({ storageState: statoAutenticazione('maestra') });
 
-    test('la maestra vede i bambini delle proprie sezioni con stato di oggi', async ({ page }) => {
+    test('aprire la dashboard mostra il calendario e le due attività', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      await expect(page.getByRole('heading', { name: 'Presenze e pasti di oggi' })).toBeVisible();
+      await expect(page.getByLabel('Data')).toBeVisible();
+
+      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      const linkPasti = page.getByRole('link', { name: 'Pasti' });
+      // Una maestra di test senza sezioni assegnate non vede i pulsanti:
+      // in quel caso questo scenario non si applica (coperto a parte).
+      test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
+
+      await expect(linkPresenze).toBeVisible();
+      await expect(linkPasti).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('da Presenze si arriva alle classi e poi ai bambini', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
+      await linkPresenze.click();
+      await page.waitForURL(/\/dashboard\/presenze\?/);
+      await expect(page.getByRole('heading', { name: 'Presenze' })).toBeVisible();
+
+      const primaClasse = page.locator('a.bg-emerald-50').first();
+      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
+      await primaClasse.click();
+      await page.waitForURL(/\/dashboard\/presenze\/.+/);
+      await expect(page.getByRole('heading', { name: /^Presenze —/ })).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('da Pasti si arriva alle classi e poi ai bambini', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      const linkPasti = page.getByRole('link', { name: 'Pasti' });
+      test.skip((await linkPasti.count()) === 0, 'nessuna sezione assegnata a questo account');
+      await linkPasti.click();
+      await page.waitForURL(/\/dashboard\/pasti\?/);
+      await expect(page.getByRole('heading', { name: 'Pasti' })).toBeVisible();
+
+      const primaClasse = page.locator('a.bg-emerald-50').first();
+      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
+      await primaClasse.click();
+      await page.waitForURL(/\/dashboard\/pasti\/.+/);
+      await expect(page.getByRole('heading', { name: /^Pasti —/ })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -32,20 +79,24 @@ test.describe('12 — Dashboard maestra', () => {
     await page.getByRole('button', { name: 'Accedi' }).click();
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 
-    await expect(
-      page.getByText('Non hai ancora nessuna sezione assegnata')
-    ).toBeVisible();
+    await expect(page.getByText('Non hai ancora nessuna sezione assegnata')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Presenze' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
   });
 
   test.describe('come admin', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test('l\'admin apre la dashboard: rimando alle pagine di amministrazione', async ({ page }) => {
+    test("l'admin apre la dashboard: calendario, Presenze/Pasti e rimando alle pagine di amministrazione", async ({
+      page,
+    }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);

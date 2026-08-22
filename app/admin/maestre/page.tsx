@@ -145,7 +145,7 @@ export default async function MaestrePage({
                 placeholder="Note (opzionale)"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
               />
-              <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 sm:col-span-2">
+              <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
             </form>
@@ -199,7 +199,7 @@ export default async function MaestrePage({
                       </option>
                     ))}
                   </select>
-                  <PulsanteInvio className="rounded-lg bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700">
+                  <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
                     Aggiorna
                   </PulsanteInvio>
                 </FormConEsito>
@@ -253,7 +253,7 @@ export default async function MaestrePage({
                 </option>
               ))}
             </select>
-            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Assegna
             </PulsanteInvio>
           </FormConEsito>

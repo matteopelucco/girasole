@@ -5,11 +5,13 @@ Maestra (sui bambini delle sue sezioni), Admin (su tutti i bambini).
 
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino,
-con una nota libera opzionale.
+con una nota libera opzionale, seguendo il flusso calendario → Presenze →
+classe → bambini descritto in
+[12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
 ## Scenario: segnare un bambino presente
-Dato che sto guardando l'elenco dei bambini nella dashboard (vedi
-[12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md))
+Dato che ho aperto "Presenze" per la data odierna e selezionato una mia
+classe, e vedo l'elenco dei suoi bambini
 Quando premo il pulsante "Presente" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa "presente"
 E il pulsante "Presente" resta evidenziato come stato corrente
@@ -18,11 +20,36 @@ E il pulsante "Presente" resta evidenziato come stato corrente
 Quando premo "Assente" e scrivo una nota (es. "influenza, rientra lunedì")
 Allora lo stato diventa "assente" con quella nota salvata
 
-## Scenario: correggere uno stato già segnato
+## Scenario: correggere uno stato già segnato in malattia
 Dato che un bambino è già segnato "presente" per oggi
-Quando premo "Malattia"
-Allora lo stato per oggi viene sovrascritto in "malattia"
+Quando premo "Malattia" e scrivo una nota
+Allora lo stato per oggi viene sovrascritto in "malattia" con quella nota
 E resta un solo record di presenza per quel bambino per quella data
+E lo stato "malattia" appare anche come etichetta (tag) accanto al nome
+del bambino negli elenchi bambini, sia in Presenze sia in Pasti, per
+quella data
+
+## Scenario: la maestra non può modificare una data diversa da oggi
+Dato che sono autenticata come maestra e ho aperto Presenze per una data
+diversa da oggi (passata o futura)
+Quando guardo l'elenco bambini di una mia classe
+Allora vedo lo stato eventualmente già registrato ma senza pulsanti per
+modificarlo: è in sola lettura
+
+## Scenario: l'admin può modificare qualunque data
+Dato che sono autenticato come admin e ho aperto Presenze per una data
+diversa da oggi
+Quando guardo l'elenco bambini di una classe
+Allora i pulsanti Presente/Assente/Malattia restano attivi e posso
+modificare lo stato di quella data
+
+## Scenario: riepilogo giornaliero via email a mezzanotte
+Dato che una giornata è appena terminata nel fuso Europe/Rome
+Quando il job pianificato gira (Vercel Cron)
+Allora viene inviata una mail a info@asilosartorio.it con la scheda delle
+presenze/assenze/malattie di quel giorno, raggruppata per classe attiva
+E se il job viene rieseguito per la stessa data non viene inviata una
+seconda mail (idempotenza)
 
 ## Regole
 - Stati validi: `presente`, `assente`, `malattia`.
@@ -32,5 +59,15 @@ E resta un solo record di presenza per quel bambino per quella data
 - Scrittura consentita solo allo staff: la maestra della sezione del
   bambino, o l'admin (vedi RLS su `presenze` in
   `supabase/migrations/0001_init.sql`).
-- La data usata è "oggi" nel fuso orario Europe/Rome (non UTC), vedi
-  `lib/date.ts`.
+- La data usata come "oggi" è quella nel fuso orario Europe/Rome (non
+  UTC), vedi `lib/date.ts`.
+- Il ruolo "maestra" può scrivere (inserire/modificare) solo sulla data
+  odierna: vincolo imposto anche a livello di RLS, non solo in UI (vedi
+  `supabase/migrations/0009_scrittura_solo_oggi_maestra.sql`); può
+  comunque consultare in sola lettura le altre date.
+- Il ruolo "admin" può scrivere su qualunque data, passata o futura.
+- Alla mezzanotte (fuso Europe/Rome) un job pianificato (Vercel Cron, vedi
+  `app/api/cron/report-presenze/route.ts`) invia una mail a
+  info@asilosartorio.it con la scheda del giorno appena concluso, per
+  ogni classe attiva. L'invio è idempotente per data (tabella
+  `report_giornalieri_inviati`).

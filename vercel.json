@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/report-presenze",
+      "schedule": "0 23 * * *"
+    }
+  ]
+}

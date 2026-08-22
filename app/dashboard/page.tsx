@@ -1,30 +1,20 @@
+import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { SelettoreData } from '@/components/SelettoreData';
 import { requireProfilo } from '@/lib/auth';
 import { oggi } from '@/lib/date';
-import { segnaPresenza, segnaPasto, creaPromemoria } from './actions';
+import { sezioniAttiveVisibili } from '@/lib/sezioni';
+import { creaPromemoria } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-const ETICHETTE_PRESENZA: Record<string, string> = {
-  presente: 'Presente',
-  assente: 'Assente',
-  malattia: 'Malattia',
-};
-const ETICHETTE_PASTO: Record<string, string> = {
-  si: 'Sì',
-  no: 'No',
-  parziale: 'Parziale',
-};
-
-function classePulsante(selezionato: boolean) {
-  return selezionato
-    ? 'rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white'
-    : 'rounded-full border border-stone-300 px-3 py-1 text-xs text-stone-600 hover:border-stone-500';
-}
-
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { data?: string };
+}) {
   const { supabase, user, profilo } = await requireProfilo();
 
   const ruolo = profilo?.ruolo ?? null;
@@ -45,58 +35,31 @@ export default async function DashboardPage() {
     );
   }
 
-  let sezioni: { id: string; nome: string }[] = [];
-  let bambini: { id: string; nome: string; cognome: string; note_allergie: string | null }[] = [];
+  const data = searchParams.data || oggi();
+  const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
+  const haSezioni = ruolo === 'admin' || sezioni.length > 0;
 
+  let bambini: { id: string; nome: string; cognome: string }[] = [];
   if (ruolo === 'admin') {
-    const [{ data: tutteSezioni }, { data: tuttiBambini }] = await Promise.all([
-      supabase.from('sezioni').select('id, nome').order('nome'),
-      supabase.from('bambini').select('id, nome, cognome, note_allergie').order('cognome'),
-    ]);
-    sezioni = tutteSezioni ?? [];
+    const { data: tuttiBambini } = await supabase.from('bambini').select('id, nome, cognome').order('cognome');
     bambini = tuttiBambini ?? [];
-  } else {
-    const { data: mieSezioni } = await supabase
-      .from('maestre_sezioni')
-      .select('sezione_id, sezioni(id, nome)')
-      .eq('maestra_id', user.id);
-
-    sezioni = (mieSezioni ?? [])
-      .map((r) => r.sezioni as unknown as { id: string; nome: string } | null)
-      .filter((s): s is { id: string; nome: string } => !!s);
-
-    if (sezioni.length) {
-      const { data: mieiBambini } = await supabase
-        .from('bambini')
-        .select('id, nome, cognome, note_allergie')
-        .in(
-          'sezione_id',
-          sezioni.map((s) => s.id)
-        )
-        .order('cognome');
-      bambini = mieiBambini ?? [];
-    }
+  } else if (sezioni.length) {
+    const { data: mieiBambini } = await supabase
+      .from('bambini')
+      .select('id, nome, cognome')
+      .in(
+        'sezione_id',
+        sezioni.map((s) => s.id)
+      )
+      .order('cognome');
+    bambini = mieiBambini ?? [];
   }
 
-  const oggiData = oggi();
-  const idBambini = bambini.map((b) => b.id);
-
-  const [{ data: presenzeOggi }, { data: pastiOggi }, { data: promemoria }] = await Promise.all([
-    idBambini.length
-      ? supabase.from('presenze').select('bambino_id, stato, note').eq('data', oggiData).in('bambino_id', idBambini)
-      : Promise.resolve({ data: [] as { bambino_id: string; stato: string; note: string | null }[] }),
-    idBambini.length
-      ? supabase.from('pasti').select('bambino_id, mangiato, note').eq('data', oggiData).in('bambino_id', idBambini)
-      : Promise.resolve({ data: [] as { bambino_id: string; mangiato: string; note: string | null }[] }),
-    supabase
-      .from('promemoria')
-      .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(20),
-  ]);
-
-  const presenzaPerBambino = new Map((presenzeOggi ?? []).map((p) => [p.bambino_id, p]));
-  const pastoPerBambino = new Map((pastiOggi ?? []).map((p) => [p.bambino_id, p]));
+  const { data: promemoria } = await supabase
+    .from('promemoria')
+    .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(20);
 
   return (
     <>
@@ -116,75 +79,31 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <section>
-          <h1 className="text-lg font-medium">Presenze e pasti di oggi</h1>
-          {!bambini.length && (
-            <p className="mt-3 text-sm text-stone-600">
-              {ruolo === 'maestra'
-                ? 'Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.'
-                : 'Nessun bambino ancora inserito.'}
+        <section className="space-y-4">
+          <SelettoreData basePath="/dashboard" data={data} />
+
+          {!haSezioni && (
+            <p className="text-sm text-stone-600">
+              Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.
             </p>
           )}
-          <ul className="mt-4 space-y-3">
-            {bambini.map((bambino) => {
-              const presenza = presenzaPerBambino.get(bambino.id);
-              const pasto = pastoPerBambino.get(bambino.id);
-              return (
-                <li key={bambino.id} className="rounded-xl border border-stone-200 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium">
-                      {bambino.nome} {bambino.cognome}
-                    </span>
-                    {bambino.note_allergie && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-                        ⚠ {bambino.note_allergie}
-                      </span>
-                    )}
-                  </div>
 
-                  <form className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="w-16 text-xs text-stone-500">Presenza</span>
-                    {(['presente', 'assente', 'malattia'] as const).map((stato) => (
-                      <PulsanteInvio
-                        key={stato}
-                        mantieniTesto
-                        formAction={segnaPresenza.bind(null, bambino.id, stato)}
-                        className={classePulsante(presenza?.stato === stato)}
-                      >
-                        {ETICHETTE_PRESENZA[stato]}
-                      </PulsanteInvio>
-                    ))}
-                    <input
-                      name="nota_presenza"
-                      defaultValue={presenza?.note ?? ''}
-                      placeholder="Nota (opzionale)"
-                      className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
-                    />
-                  </form>
-
-                  <form className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="w-16 text-xs text-stone-500">Pasto</span>
-                    {(['si', 'no', 'parziale'] as const).map((mangiato) => (
-                      <PulsanteInvio
-                        key={mangiato}
-                        mantieniTesto
-                        formAction={segnaPasto.bind(null, bambino.id, mangiato)}
-                        className={classePulsante(pasto?.mangiato === mangiato)}
-                      >
-                        {ETICHETTE_PASTO[mangiato]}
-                      </PulsanteInvio>
-                    ))}
-                    <input
-                      name="nota_pasto"
-                      defaultValue={pasto?.note ?? ''}
-                      placeholder="Nota (opzionale)"
-                      className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
-                    />
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
+          {haSezioni && (
+            <div className="grid grid-cols-2 gap-4">
+              <Link
+                href={`/dashboard/presenze?data=${data}`}
+                className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-emerald-800"
+              >
+                Presenze
+              </Link>
+              <Link
+                href={`/dashboard/pasti?data=${data}`}
+                className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-amber-800"
+              >
+                Pasti
+              </Link>
+            </div>
+          )}
         </section>
 
         <section>
@@ -212,7 +131,7 @@ export default async function DashboardPage() {
                 name="destinatario_tipo"
                 defaultValue="tutti"
                 aria-label="Destinatario"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-auto"
               >
                 <option value="tutti">Tutti</option>
                 <option value="sezione">Una sezione</option>
@@ -222,7 +141,7 @@ export default async function DashboardPage() {
                 name="sezione_id"
                 defaultValue=""
                 aria-label="Sezione destinataria"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-56"
               >
                 <option value="">— sezione (se destinatario è &quot;Una sezione&quot;) —</option>
                 {sezioni.map((s) => (
@@ -235,7 +154,7 @@ export default async function DashboardPage() {
                 name="bambino_id"
                 defaultValue=""
                 aria-label="Bambino destinatario"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-56"
               >
                 <option value="">— bambino (se destinatario è &quot;Un bambino&quot;) —</option>
                 {bambini.map((b) => (
@@ -245,7 +164,7 @@ export default async function DashboardPage() {
                 ))}
               </select>
             </div>
-            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Pubblica promemoria
             </PulsanteInvio>
           </FormConEsito>

@@ -20,7 +20,7 @@ export function ErroreAzione({ error, reset }: { error: Error; reset: () => void
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
           >
             Riprova
           </button>

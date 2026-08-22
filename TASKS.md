@@ -151,6 +151,46 @@ scope per un run di analisi statica. Da valutare a parte.
       (`requireUser`/`requireProfilo`/`requireAdmin`), oltre a un
       helper `campiUtente()` condiviso da creazione e modifica utente.
 
+## Nuovo flusso Presenze/Pasti + palette colorata (specs/01, 12, 13, 14)
+- [x] Dashboard sostituita da: selettore data (calendario a un tap) +
+      due schede "Presenze"/"Pasti" → elenco classi attive → elenco
+      bambini della classe, per Presenze e per Pasti (`app/dashboard/`,
+      `app/dashboard/presenze/`, `app/dashboard/pasti/`).
+- [x] Tag "Malattia" visibile accanto al nome del bambino negli elenchi
+      di Presenze e Pasti (`components/EtichettaMalattia.tsx`).
+- [x] Sola lettura per la maestra su date diverse da oggi, admin sempre
+      editabile: imposto sia in RLS (`supabase/migrations/0009_scrittura_solo_oggi_maestra.sql`)
+      sia lato server (`lib/auth.ts`: `puoScrivereData`/`assicuraScrivibile`).
+      **Da fare da parte tua**: applica quella migration nel SQL Editor
+      di Supabase (test e produzione) prima di usare la nuova UI —
+      senza, le policy insert/update restano quelle vecchie (nessuna
+      restrizione di data, solo lato UI).
+- [x] Report email di mezzanotte per classe (`app/api/cron/report-presenze/route.ts`,
+      `lib/reportPresenze.ts`, `lib/email.ts`), pianificato con Vercel
+      Cron (`vercel.json`, una volta al giorno). Invio via Resend
+      (fetch HTTP diretto, nessun pacchetto npm nuovo). Idempotente per
+      data (tabella `report_giornalieri_inviati`, stessa migration 0009).
+      **Da fare da parte tua**:
+      1. Crea un account gratuito su resend.com, genera una API key.
+      2. Aggiungi a `.env.local` (e alle Environment Variables Vercel):
+         `RESEND_API_KEY=<la key>`. Opzionale `RESEND_MITTENTE` una
+         volta verificato un dominio proprio su Resend (di default usa
+         il mittente sandbox `onboarding@resend.dev`, che consegna solo
+         alla mail con cui hai creato l'account Resend — utile per
+         provare, non per la produzione: verifica il dominio quando sei
+         pronto per inviare davvero a info@asilosartorio.it).
+      3. Genera un secret (`openssl rand -hex 32`) e impostalo come
+         `CRON_SECRET` sia in `.env.local` sia su Vercel — protegge la
+         route da chiamate esterne non autorizzate.
+      4. Deploy su Vercel: il cron in `vercel.json` si attiva da solo al
+         primo deploy successivo.
+- [x] Palette colorata "da asilo" ma professionale (specs/01 - ux.md):
+      pulsanti primari da neutro (`stone-900`) a `emerald-600`, stati
+      Presente/Sì = verde, Assente = grigio, Malattia/No = rosa,
+      Parziale = ambra (`lib/classiStato.ts`), selettore data e schede
+      classi in tonalità ambra/verde (`components/SelettoreData.tsx`,
+      `components/ElencoClassi.tsx`), logo con emoji 🌻 in `NavHeader`.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione

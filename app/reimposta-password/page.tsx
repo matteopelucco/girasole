@@ -69,7 +69,7 @@ export default async function ReimpostaPasswordPage({
             </div>
           )}
 
-          <PulsanteInvio className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700">
+          <PulsanteInvio className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-800">
             Salva nuova password
           </PulsanteInvio>
         </form>

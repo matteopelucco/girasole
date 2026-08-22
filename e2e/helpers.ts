@@ -5,6 +5,22 @@ import AxeBuilder from '@axe-core/playwright';
 
 export type Ruolo = 'admin' | 'maestra' | 'genitore';
 
+// "Oggi"/"ieri" nel fuso Europe/Rome, per i test che devono navigare a
+// una data diversa da oggi (specs/13 - segna-presenza.md, specs/14 -
+// segna-pasto.md, regola "sola data odierna per la maestra") —
+// indipendente dal fuso orario della macchina che esegue Playwright.
+// Duplica intenzionalmente la logica di lib/date.ts: qui è codice di
+// test, fuori dallo scope di jscpd (vedi .jscpd.json, path: app/components/lib).
+export function dataOggiRoma(): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date());
+}
+
+export function dataIeriRoma(): string {
+  const [anno, mese, giorno] = dataOggiRoma().split('-').map(Number);
+  const d = new Date(Date.UTC(anno, mese - 1, giorno - 1, 12));
+  return d.toISOString().slice(0, 10);
+}
+
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
   const prefisso = `E2E_${ruolo.toUpperCase()}`;
   const email = process.env[`${prefisso}_EMAIL`];

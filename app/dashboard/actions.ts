@@ -1,60 +1,8 @@
 'use server';
 
-import { oggi } from '@/lib/date';
 import { requireUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import type { EsitoAzione } from '@/components/FormConEsito';
-
-// segnaPresenza/segnaPasto sono azioni diverse legate a bottoni diversi
-// dentro allo stesso form (vedi app/dashboard/page.tsx): non c'è
-// un'unica action da avvolgere con useFormState, quindi il feedback
-// "ko" (specs/05 - feedback.md) qui passa dal sollevare l'errore, che
-// viene intercettato da app/error.tsx con il dettaglio tecnico.
-export async function segnaPresenza(
-  bambinoId: string,
-  stato: 'presente' | 'assente' | 'malattia',
-  formData: FormData
-) {
-  const { supabase, user } = await requireUser();
-  const note = (formData.get('nota_presenza') as string)?.trim() || null;
-
-  const { error } = await supabase.from('presenze').upsert(
-    {
-      bambino_id: bambinoId,
-      data: oggi(),
-      stato,
-      note,
-      inserita_da: user.id,
-    },
-    { onConflict: 'bambino_id,data' }
-  );
-  if (error) throw new Error(`Impossibile salvare la presenza: ${error.message}`);
-
-  revalidatePath('/dashboard');
-}
-
-export async function segnaPasto(
-  bambinoId: string,
-  mangiato: 'si' | 'no' | 'parziale',
-  formData: FormData
-) {
-  const { supabase, user } = await requireUser();
-  const note = (formData.get('nota_pasto') as string)?.trim() || null;
-
-  const { error } = await supabase.from('pasti').upsert(
-    {
-      bambino_id: bambinoId,
-      data: oggi(),
-      mangiato,
-      note,
-      inserito_da: user.id,
-    },
-    { onConflict: 'bambino_id,data' }
-  );
-  if (error) throw new Error(`Impossibile salvare il pasto: ${error.message}`);
-
-  revalidatePath('/dashboard');
-}
 
 export async function creaPromemoria(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase, user } = await requireUser();
