@@ -25,7 +25,18 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.goto('/admin');
     await page.getByPlaceholder('Nome anno scolastico (es. 2026/2027)').fill(nomeAnno);
     await page.getByRole('button', { name: 'Crea' }).first().click();
-    await expect(page.getByText(nomeAnno)).toBeVisible({ timeout: 20_000 });
+
+    // Attendo l'esito reale (banner d'errore o l'anno in elenco) prima
+    // di verificare quale dei due è comparso: un permission denied lato
+    // DB su anni_scolastici (bug reale già capitato — vedi
+    // supabase/migrations/0008) mostra qui il banner d'errore invece
+    // che l'anno in lista, con un messaggio più diagnostico di un
+    // semplice timeout su getByText(nomeAnno).
+    const banner = page.getByRole('alert');
+    const annoInElenco = page.getByText(nomeAnno);
+    await expect(banner.or(annoInElenco)).toBeVisible({ timeout: 20_000 });
+    await expect(banner, 'la creazione ha mostrato un errore').toHaveCount(0);
+    await expect(annoInElenco).toBeVisible();
 
     const nomeSezione = `Sezione E2E ${Date.now()}`;
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nomeSezione);
