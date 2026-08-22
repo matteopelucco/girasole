@@ -1,8 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { requireProfilo } from '@/lib/auth';
 import { oggi } from '@/lib/date';
 import { segnaPresenza, segnaPasto, creaPromemoria } from './actions';
 
@@ -26,18 +25,7 @@ function classePulsante(selezionato: boolean) {
 }
 
 export default async function DashboardPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect('/login');
-
-  const { data: profilo } = await supabase
-    .from('profili')
-    .select('nome, cognome, ruolo')
-    .eq('id', user.id)
-    .single();
+  const { supabase, user, profilo } = await requireProfilo();
 
   const ruolo = profilo?.ruolo ?? null;
   const nomeVisualizzato = profilo?.nome || user.email || '';
@@ -236,7 +224,7 @@ export default async function DashboardPage() {
                 aria-label="Sezione destinataria"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
-                <option value="">— sezione (se destinatario è "Una sezione") —</option>
+                <option value="">— sezione (se destinatario è &quot;Una sezione&quot;) —</option>
                 {sezioni.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.nome}
@@ -249,7 +237,7 @@ export default async function DashboardPage() {
                 aria-label="Bambino destinatario"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               >
-                <option value="">— bambino (se destinatario è "Un bambino") —</option>
+                <option value="">— bambino (se destinatario è &quot;Un bambino&quot;) —</option>
                 {bambini.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.nome} {b.cognome}

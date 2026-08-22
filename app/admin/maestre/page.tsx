@@ -1,9 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { REGOLA_PASSWORD } from '@/lib/password';
+import { requireAdmin } from '@/lib/auth';
 import {
   creaUtente,
   aggiornaUtente,
@@ -36,19 +35,7 @@ export default async function MaestrePage({
 }: {
   searchParams: { errore?: string; ok?: string; dettaglio?: string };
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profiloCorrente } = await supabase
-    .from('profili')
-    .select('nome, cognome, ruolo')
-    .eq('id', user.id)
-    .single();
-
-  if (profiloCorrente?.ruolo !== 'admin') redirect('/dashboard');
+  const { supabase, user, profilo: profiloCorrente } = await requireAdmin();
 
   const [{ data: profili }, { data: sezioni }, { data: assegnazioni }] = await Promise.all([
     supabase

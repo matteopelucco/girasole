@@ -1,0 +1,19 @@
+#!/bin/sh
+# Analisi statica prima di ogni push: type-check, ESLint, codice
+# duplicato (jscpd). Attivato in automatico da "npm install" (script
+# "prepare" in package.json, che imposta core.hooksPath su questa
+# cartella — vedi CLAUDE.md). Volutamente non lancia la suite e2e
+# (richiede credenziali reali e minuti, non secondi: resta un passo
+# manuale, vedi CLAUDE.md).
+set -e
+
+echo "── Type-check (tsc) ──────────────────────────────"
+npx tsc --noEmit
+
+echo "── Lint (ESLint) ─────────────────────────────────"
+npx next lint
+
+echo "── Codice duplicato (jscpd) ──────────────────────"
+npx jscpd
+
+echo "✔ Analisi statica superata."

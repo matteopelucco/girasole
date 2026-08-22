@@ -1,26 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { requireAdmin } from '@/lib/auth';
 import { creaSezione, toggleAttivaSezione, creaAnnoScolastico, creaBambino } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profilo } = await supabase
-    .from('profili')
-    .select('nome, cognome, ruolo')
-    .eq('id', user.id)
-    .single();
-
-  if (profilo?.ruolo !== 'admin') redirect('/dashboard');
+  const { supabase, user, profilo } = await requireAdmin();
 
   const [{ data: anniScolastici }, { data: sezioni }, { data: bambini }] = await Promise.all([
     supabase.from('anni_scolastici').select('id, nome').order('nome'),

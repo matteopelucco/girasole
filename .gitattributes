@@ -1,0 +1,5 @@
+# Gli script di shell devono mantenere sempre gli a-capo LF: un CRLF
+# rompe lo shebang (#!/bin/sh) su Linux/Mac — importante per
+# .githooks/pre-push, eseguito in locale da chi clona il repo.
+*.sh text eol=lf
+.githooks/* text eol=lf

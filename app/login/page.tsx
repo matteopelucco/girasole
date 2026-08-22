@@ -24,6 +24,7 @@ export default function LoginPage({
             un logo grande — almeno l'80% della larghezza utile della card
             su smartphone, vedi specs/11 - login.md. */}
         <div className="-mx-6 mb-4">
+          {/* eslint-disable-next-line @next/next/no-img-element -- vedi commento sopra */}
           <img src="/girasole.svg" alt="Girasole" className="h-auto w-full" />
         </div>
         <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>

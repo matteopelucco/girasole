@@ -1,30 +1,24 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { passwordAbbastanzaComplessa } from '@/lib/password';
+import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 const RUOLI_VALIDI = ['admin', 'maestra', 'genitore'] as const;
 
-async function requireAdmin() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const { data: profilo } = await supabase
-    .from('profili')
-    .select('ruolo')
-    .eq('id', user.id)
-    .single();
-
-  if (profilo?.ruolo !== 'admin') redirect('/dashboard');
-
-  return { supabase, user };
+// Campi condivisi da creazione e modifica di un utente (specs/03).
+function campiUtente(formData: FormData) {
+  return {
+    nome: ((formData.get('nome') as string) || '').trim(),
+    cognome: ((formData.get('cognome') as string) || '').trim(),
+    telefono: ((formData.get('telefono') as string) || '').trim(),
+    ruolo: formData.get('ruolo') as string,
+    indirizzoResidenza: ((formData.get('indirizzo_residenza') as string) || '').trim(),
+    note: ((formData.get('note') as string) || '').trim(),
+  };
 }
 
 export async function creaUtente(formData: FormData) {
@@ -32,12 +26,7 @@ export async function creaUtente(formData: FormData) {
 
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
-  const nome = ((formData.get('nome') as string) || '').trim();
-  const cognome = ((formData.get('cognome') as string) || '').trim();
-  const telefono = ((formData.get('telefono') as string) || '').trim();
-  const ruolo = formData.get('ruolo') as string;
-  const indirizzoResidenza = ((formData.get('indirizzo_residenza') as string) || '').trim();
-  const note = ((formData.get('note') as string) || '').trim();
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note } = campiUtente(formData);
 
   if (
     !email ||
@@ -86,12 +75,7 @@ export async function aggiornaUtente(
 ): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
-  const nome = ((formData.get('nome') as string) || '').trim();
-  const cognome = ((formData.get('cognome') as string) || '').trim();
-  const telefono = ((formData.get('telefono') as string) || '').trim();
-  const ruolo = formData.get('ruolo') as string;
-  const indirizzoResidenza = ((formData.get('indirizzo_residenza') as string) || '').trim();
-  const note = ((formData.get('note') as string) || '').trim();
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note } = campiUtente(formData);
 
   if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) {
     return { ok: false, messaggio: 'Dati utente non validi.' };

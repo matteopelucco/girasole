@@ -129,6 +129,28 @@ vicine) — un mismatch aggiunge latenza di rete a ogni singola chiamata,
 sopra le limitazioni già note del piano free di entrambi (compute
 condiviso, cold start delle funzioni serverless).
 
+Nota sulle 5 vulnerabilità "high" segnalate da `npm audit` (non
+introdotte da questa modifica, già presenti nella versione di Next.js
+già pinnata nel progetto — `next@14.2.35` e la sua dipendenza interna
+`postcss`, più `glob` via `eslint-config-next`): il fix automatico
+richiederebbe l'aggiornamento a `next@16` (breaking change), fuori
+scope per un run di analisi statica. Da valutare a parte.
+
+## Analisi statica
+- [x] Configurato ESLint (`.eslintrc.json`, `next/core-web-vitals` —
+      era installato ma mai configurato) e `jscpd` per il codice
+      duplicato (`.jscpd.json`), con `npm run analyze` e un git hook
+      `pre-push` (`.githooks/pre-push`, attivato da `npm install`) che
+      blocca il push se falliscono. Vedi `CLAUDE.md`.
+- [x] Bug reali corretti dal primo giro: 4 apici non escapati in JSX
+      (`app/dashboard/page.tsx`, `react/no-unescaped-entities`).
+- [x] Duplicazione reale eliminata: `requireAdmin()` era ridefinita
+      identica in tre punti (`app/admin/actions.ts`,
+      `app/admin/maestre/actions.ts`, e in forma di query ripetuta in
+      tre pagine) — estratta in `lib/auth.ts`
+      (`requireUser`/`requireProfilo`/`requireAdmin`), oltre a un
+      helper `campiUtente()` condiviso da creazione e modifica utente.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione

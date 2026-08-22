@@ -40,6 +40,32 @@ Contesto operativo per Claude Code su questo progetto.
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
+## Analisi statica prima di ogni push
+- Un git hook `pre-push` (`.githooks/pre-push`, attivato in automatico
+  da `npm install` tramite lo script `prepare` in `package.json`, che
+  imposta `core.hooksPath`) lancia type-check (`tsc --noEmit`), ESLint
+  (`next lint`, configurato in `.eslintrc.json` con `next/core-web-vitals`)
+  e la ricerca di codice duplicato (`jscpd`, configurato in
+  `.jscpd.json`) prima di ogni `git push`. Il push viene bloccato se uno
+  dei tre fallisce.
+- Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
+  duplicati; per il type-check separato, `npx tsc --noEmit`).
+- Se `jscpd` segnala una duplicazione reale (stessa logica ripetuta,
+  non solo forma simile), il modo giusto per risolverla è estrarre una
+  funzione condivisa (vedi `lib/auth.ts`, `requireAdmin`/`requireProfilo`/
+  `requireUser`, che hanno eliminato la duplicazione più consistente).
+  Se invece è coincidenza tra funzioni concettualmente diverse che
+  capita abbiano la stessa forma (poche righe, validazione simile), non
+  forzare un'astrazione solo per abbassare la percentuale — è consentito
+  alzare la soglia in `.jscpd.json` con una nota sul perché.
+- Questi strumenti girano solo in locale (nessun account/servizio
+  esterno, nessun costo): niente SonarCloud o simili per ora — se in
+  futuro serve un'analisi più approfondita o integrata nelle PR di
+  GitHub, il piano gratuito di SonarCloud per repository pubblici è
+  l'opzione più naturale, ma richiede una decisione esplicita (account
+  da collegare, token da aggiungere ai secret) prima di essere
+  implementato.
+
 ## Test-first (importantissimo) — solo Playwright
 
 **Ciclo di lavoro obbligatorio per ogni modifica non banale**, in

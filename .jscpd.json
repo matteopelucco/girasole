@@ -1,0 +1,16 @@
+{
+  "threshold": 1,
+  "minLines": 8,
+  "minTokens": 50,
+  "reporters": ["consoleFull"],
+  "ignore": [
+    "node_modules/**",
+    ".next/**",
+    "playwright-report/**",
+    "test-results/**",
+    "playwright/**",
+    "*.config.*"
+  ],
+  "path": ["app", "components", "lib"],
+  "gitignore": true
+}

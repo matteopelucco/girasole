@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:dup": "jscpd",
+    "analyze": "npm run lint && npm run check:dup",
+    "prepare": "git config core.hooksPath .githooks",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -26,6 +29,7 @@
     "autoprefixer": "^10.4.19",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
+    "jscpd": "^5.0.16",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
