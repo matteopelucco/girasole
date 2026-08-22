@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { REGOLA_PASSWORD } from '@/lib/password';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { impostaNuovaPassword } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ const MESSAGGI_ERRORE: Record<string, string> = {
 export default async function ReimpostaPasswordPage({
   searchParams,
 }: {
-  searchParams: { errore?: string };
+  searchParams: { errore?: string; dettaglio?: string };
 }) {
   const supabase = createClient();
   const {
@@ -59,14 +60,18 @@ export default async function ReimpostaPasswordPage({
             />
           </div>
 
-          {messaggioErrore && <p className="text-sm text-red-600">{messaggioErrore}</p>}
+          {messaggioErrore && (
+            <div role="alert">
+              <p className="text-sm text-red-600">{messaggioErrore}</p>
+              {searchParams?.dettaglio && (
+                <p className="mt-1 text-xs text-red-500">{decodeURIComponent(searchParams.dettaglio)}</p>
+              )}
+            </div>
+          )}
 
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
-          >
+          <PulsanteInvio className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700">
             Salva nuova password
-          </button>
+          </PulsanteInvio>
         </form>
       </div>
     </main>

@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
+import { FormConEsito } from '@/components/FormConEsito';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { creaSezione, toggleAttivaSezione, creaAnnoScolastico, creaBambino } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -35,20 +37,17 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         <section>
           <h1 className="text-lg font-medium">Anni scolastici</h1>
-          <form action={creaAnnoScolastico} className="mt-3 flex gap-2">
+          <FormConEsito action={creaAnnoScolastico} className="mt-3 flex gap-2">
             <input
               name="nome"
               required
               placeholder="Nome anno scolastico (es. 2026/2027)"
               className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
-            <button
-              type="submit"
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-            >
+            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
               Crea
-            </button>
-          </form>
+            </PulsanteInvio>
+          </FormConEsito>
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
@@ -64,7 +63,7 @@ export default async function AdminPage() {
 
         <section>
           <h1 className="text-lg font-medium">Sezioni</h1>
-          <form action={creaSezione} className="mt-3 flex flex-wrap gap-2">
+          <FormConEsito action={creaSezione} className="mt-3 flex flex-wrap gap-2">
             <input
               name="nome"
               required
@@ -84,13 +83,10 @@ export default async function AdminPage() {
                 </option>
               ))}
             </select>
-            <button
-              type="submit"
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-            >
+            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
               Crea
-            </button>
-          </form>
+            </PulsanteInvio>
+          </FormConEsito>
 
           <ul className="mt-4 space-y-1">
             {sezioni?.map((sezione) => (
@@ -106,13 +102,13 @@ export default async function AdminPage() {
                     </span>
                   )}
                 </span>
-                <form action={toggleAttivaSezione}>
+                <FormConEsito action={toggleAttivaSezione}>
                   <input type="hidden" name="sezione_id" value={sezione.id} />
                   <input type="hidden" name="attiva_attuale" value={String(sezione.attiva)} />
-                  <button type="submit" className="text-xs text-stone-500 underline hover:text-stone-900">
+                  <PulsanteInvio className="text-xs text-stone-500 underline hover:text-stone-900">
                     {sezione.attiva ? 'Disattiva' : 'Riattiva'}
-                  </button>
-                </form>
+                  </PulsanteInvio>
+                </FormConEsito>
               </li>
             ))}
             {!sezioni?.length && (
@@ -123,7 +119,10 @@ export default async function AdminPage() {
 
         <section>
           <h1 className="text-lg font-medium">Bambini</h1>
-          <form action={creaBambino} className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4">
+          <FormConEsito
+            action={creaBambino}
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4"
+          >
             <div className="flex gap-2">
               <input
                 name="nome"
@@ -186,13 +185,10 @@ export default async function AdminPage() {
               placeholder="Altre note (opzionale)"
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
-            <button
-              type="submit"
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-            >
+            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
               Aggiungi bambino
-            </button>
-          </form>
+            </PulsanteInvio>
+          </FormConEsito>
 
           <ul className="mt-4 space-y-1">
             {bambini?.map((bambino) => (

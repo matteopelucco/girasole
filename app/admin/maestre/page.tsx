@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
+import { FormConEsito } from '@/components/FormConEsito';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { REGOLA_PASSWORD } from '@/lib/password';
 import {
   creaUtente,
@@ -21,7 +23,6 @@ const MESSAGGI_ERRORE: Record<string, string> = {
   'password-debole': REGOLA_PASSWORD,
   'email-duplicata': 'Esiste già un utente con questa email.',
   'creazione-fallita': "Non è stato possibile creare l'utente. Riprova.",
-  'auto-eliminazione': 'Non puoi eliminare il tuo stesso account.',
 };
 
 const MESSAGGI_OK: Record<string, string> = {
@@ -33,7 +34,7 @@ export const dynamic = 'force-dynamic';
 export default async function MaestrePage({
   searchParams,
 }: {
-  searchParams: { errore?: string; ok?: string };
+  searchParams: { errore?: string; ok?: string; dettaglio?: string };
 }) {
   const supabase = createClient();
   const {
@@ -85,7 +86,16 @@ export default async function MaestrePage({
           </p>
 
           {messaggioOk && <p className="mt-3 text-sm text-green-700">{messaggioOk}</p>}
-          {messaggioErrore && <p className="mt-3 text-sm text-red-600">{messaggioErrore}</p>}
+          {messaggioErrore && (
+            <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-sm">
+              <p className="font-medium text-red-800">{messaggioErrore}</p>
+              {searchParams?.dettaglio && (
+                <p className="mt-1 text-xs text-red-600">
+                  {decodeURIComponent(searchParams.dettaglio)}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="mt-4 rounded-xl border border-stone-200 p-4">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
@@ -148,12 +158,9 @@ export default async function MaestrePage({
                 placeholder="Note (opzionale)"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
               />
-              <button
-                type="submit"
-                className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 sm:col-span-2"
-              >
+              <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 sm:col-span-2">
                 Crea utente
-              </button>
+              </PulsanteInvio>
             </form>
           </div>
 
@@ -161,7 +168,7 @@ export default async function MaestrePage({
             {profili?.map((p) => (
               <li key={p.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
                 <div className="mb-2 text-xs text-stone-600">{p.email}</div>
-                <form action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
+                <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
                   <input
                     name="nome"
@@ -205,19 +212,16 @@ export default async function MaestrePage({
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700"
-                  >
+                  <PulsanteInvio className="rounded-lg bg-stone-900 px-3 py-1 text-xs font-medium text-white hover:bg-stone-700">
                     Aggiorna
-                  </button>
-                </form>
-                <form action={eliminaUtente} className="mt-1">
+                  </PulsanteInvio>
+                </FormConEsito>
+                <FormConEsito action={eliminaUtente} className="mt-1">
                   <input type="hidden" name="profilo_id" value={p.id} />
-                  <button type="submit" className="text-xs text-red-600 hover:text-red-800">
+                  <PulsanteInvio className="text-xs text-red-600 hover:text-red-800">
                     Elimina utente
-                  </button>
-                </form>
+                  </PulsanteInvio>
+                </FormConEsito>
               </li>
             ))}
             {!profili?.length && (
@@ -229,7 +233,7 @@ export default async function MaestrePage({
         <section>
           <h1 className="text-lg font-medium">Assegna maestre alle sezioni</h1>
 
-          <form action={assegnaSezione} className="mt-3 flex flex-wrap gap-2">
+          <FormConEsito action={assegnaSezione} className="mt-3 flex flex-wrap gap-2">
             <select
               name="maestra_id"
               required
@@ -262,13 +266,10 @@ export default async function MaestrePage({
                 </option>
               ))}
             </select>
-            <button
-              type="submit"
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-            >
+            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
               Assegna
-            </button>
-          </form>
+            </PulsanteInvio>
+          </FormConEsito>
           {!maestre.length && (
             <p className="mt-2 text-sm text-stone-600">
               Nessun utente ha ancora il ruolo maestra: creane uno o promuovilo nella sezione qui
@@ -291,17 +292,16 @@ export default async function MaestrePage({
                     .map((a) => {
                       const nomeSezione = sezioni?.find((s) => s.id === a.sezione_id)?.nome;
                       return (
-                        <form key={a.sezione_id} action={rimuoviSezione}>
+                        <FormConEsito key={a.sezione_id} action={rimuoviSezione}>
                           <input type="hidden" name="maestra_id" value={a.maestra_id} />
                           <input type="hidden" name="sezione_id" value={a.sezione_id} />
-                          <button
-                            type="submit"
+                          <PulsanteInvio
                             className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700 hover:bg-stone-200"
                             title="Rimuovi assegnazione"
                           >
                             {nomeSezione} ✕
-                          </button>
-                        </form>
+                          </PulsanteInvio>
+                        </FormConEsito>
                       );
                     })}
                 </div>

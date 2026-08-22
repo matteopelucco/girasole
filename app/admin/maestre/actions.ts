@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { passwordAbbastanzaComplessa } from '@/lib/password';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import type { EsitoAzione } from '@/components/FormConEsito';
 
 const RUOLI_VALIDI = ['admin', 'maestra', 'genitore'] as const;
 
@@ -60,8 +61,12 @@ export async function creaUtente(formData: FormData) {
   });
 
   if (error) {
-    const slug = /already|registrat/i.test(error.message) ? 'email-duplicata' : 'creazione-fallita';
-    redirect(`/admin/maestre?errore=${slug}`);
+    if (/already|registrat/i.test(error.message)) {
+      redirect('/admin/maestre?errore=email-duplicata');
+    }
+    // Errore non atteso (permessi, rete, ...): il dettaglio tecnico
+    // resta utile per il troubleshooting, vedi specs/05 - feedback.md.
+    redirect(`/admin/maestre?errore=creazione-fallita&dettaglio=${encodeURIComponent(error.message)}`);
   }
 
   if (indirizzoResidenza || note) {
@@ -76,7 +81,10 @@ export async function creaUtente(formData: FormData) {
   redirect('/admin/maestre?ok=utente-creato');
 }
 
-export async function aggiornaUtente(formData: FormData) {
+export async function aggiornaUtente(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
   const nome = ((formData.get('nome') as string) || '').trim();
@@ -86,53 +94,85 @@ export async function aggiornaUtente(formData: FormData) {
   const indirizzoResidenza = ((formData.get('indirizzo_residenza') as string) || '').trim();
   const note = ((formData.get('note') as string) || '').trim();
 
-  if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) return;
+  if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) {
+    return { ok: false, messaggio: 'Dati utente non validi.' };
+  }
 
-  await supabase
+  const { error } = await supabase
     .from('profili')
     .update({ nome, cognome, telefono, ruolo, indirizzo_residenza: indirizzoResidenza, note })
     .eq('id', profiloId);
+  if (error) {
+    return { ok: false, messaggio: "Impossibile aggiornare l'utente.", dettaglio: error.message };
+  }
+
   revalidatePath('/admin/maestre');
+  return { ok: true };
 }
 
-export async function eliminaUtente(formData: FormData) {
+export async function eliminaUtente(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { user } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
-  if (!profiloId) return;
+  if (!profiloId) return { ok: false, messaggio: 'Utente non valido.' };
 
   if (profiloId === user.id) {
-    redirect('/admin/maestre?errore=auto-eliminazione');
+    return { ok: false, messaggio: 'Non puoi eliminare il tuo stesso account.' };
   }
 
   const admin = createAdminClient();
-  await admin.auth.admin.deleteUser(profiloId);
+  const { error } = await admin.auth.admin.deleteUser(profiloId);
+  if (error) {
+    return { ok: false, messaggio: "Impossibile eliminare l'utente.", dettaglio: error.message };
+  }
+
   revalidatePath('/admin/maestre');
+  return { ok: true };
 }
 
-export async function assegnaSezione(formData: FormData) {
+export async function assegnaSezione(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const maestraId = formData.get('maestra_id') as string;
   const sezioneId = formData.get('sezione_id') as string;
 
-  if (!maestraId || !sezioneId) return;
+  if (!maestraId || !sezioneId) {
+    return { ok: false, messaggio: 'Scegli sia la maestra che la sezione.' };
+  }
 
-  await supabase
+  const { error } = await supabase
     .from('maestre_sezioni')
     .upsert({ maestra_id: maestraId, sezione_id: sezioneId }, { onConflict: 'maestra_id,sezione_id' });
+  if (error) {
+    return { ok: false, messaggio: "Impossibile assegnare la sezione.", dettaglio: error.message };
+  }
+
   revalidatePath('/admin/maestre');
+  return { ok: true };
 }
 
-export async function rimuoviSezione(formData: FormData) {
+export async function rimuoviSezione(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const maestraId = formData.get('maestra_id') as string;
   const sezioneId = formData.get('sezione_id') as string;
 
-  if (!maestraId || !sezioneId) return;
+  if (!maestraId || !sezioneId) {
+    return { ok: false, messaggio: 'Assegnazione non valida.' };
+  }
 
-  await supabase
+  const { error } = await supabase
     .from('maestre_sezioni')
     .delete()
     .eq('maestra_id', maestraId)
     .eq('sezione_id', sezioneId);
+  if (error) {
+    return { ok: false, messaggio: "Impossibile rimuovere l'assegnazione.", dettaglio: error.message };
+  }
+
   revalidatePath('/admin/maestre');
+  return { ok: true };
 }

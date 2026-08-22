@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
+import { FormConEsito } from '@/components/FormConEsito';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { oggi } from '@/lib/date';
 import { segnaPresenza, segnaPasto, creaPromemoria } from './actions';
 
@@ -155,13 +157,14 @@ export default async function DashboardPage() {
                   <form className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="w-16 text-xs text-stone-500">Presenza</span>
                     {(['presente', 'assente', 'malattia'] as const).map((stato) => (
-                      <button
+                      <PulsanteInvio
                         key={stato}
+                        mantieniTesto
                         formAction={segnaPresenza.bind(null, bambino.id, stato)}
                         className={classePulsante(presenza?.stato === stato)}
                       >
                         {ETICHETTE_PRESENZA[stato]}
-                      </button>
+                      </PulsanteInvio>
                     ))}
                     <input
                       name="nota_presenza"
@@ -174,13 +177,14 @@ export default async function DashboardPage() {
                   <form className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="w-16 text-xs text-stone-500">Pasto</span>
                     {(['si', 'no', 'parziale'] as const).map((mangiato) => (
-                      <button
+                      <PulsanteInvio
                         key={mangiato}
+                        mantieniTesto
                         formAction={segnaPasto.bind(null, bambino.id, mangiato)}
                         className={classePulsante(pasto?.mangiato === mangiato)}
                       >
                         {ETICHETTE_PASTO[mangiato]}
-                      </button>
+                      </PulsanteInvio>
                     ))}
                     <input
                       name="nota_pasto"
@@ -198,7 +202,10 @@ export default async function DashboardPage() {
         <section>
           <h1 className="text-lg font-medium">Promemoria</h1>
 
-          <form action={creaPromemoria} className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4">
+          <FormConEsito
+            action={creaPromemoria}
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4"
+          >
             <input
               name="titolo"
               required
@@ -250,13 +257,10 @@ export default async function DashboardPage() {
                 ))}
               </select>
             </div>
-            <button
-              type="submit"
-              className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700"
-            >
+            <PulsanteInvio className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">
               Pubblica promemoria
-            </button>
-          </form>
+            </PulsanteInvio>
+          </FormConEsito>
 
           <ul className="mt-4 space-y-2">
             {promemoria?.map((p) => (

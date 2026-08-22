@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Script from 'next/script';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { richiediResetPassword } from './actions';
 
 export default function RecuperaPasswordPage({
@@ -43,12 +44,9 @@ export default function RecuperaPasswordPage({
               <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-action="recupera-password" />
             )}
 
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
-            >
+            <PulsanteInvio className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700">
               Invia il link di recupero
-            </button>
+            </PulsanteInvio>
           </form>
         )}
 

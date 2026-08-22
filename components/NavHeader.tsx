@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { logout } from '@/app/actions';
 
 export function NavHeader({
@@ -29,9 +30,9 @@ export function NavHeader({
         <div className="flex items-center gap-3">
           <span className="text-sm text-stone-500">{nome}</span>
           <form action={logout}>
-            <button type="submit" className="text-sm text-stone-500 hover:text-stone-900">
+            <PulsanteInvio mantieniTesto className="text-sm text-stone-500 hover:text-stone-900">
               Esci
-            </button>
+            </PulsanteInvio>
           </form>
         </div>
       </div>

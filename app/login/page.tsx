@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { login } from './actions';
 
 const MESSAGGI_ERRORE: Record<string, string> = {
@@ -74,12 +75,9 @@ export default function LoginPage({
             </div>
           )}
 
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700"
-          >
+          <PulsanteInvio className="w-full rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-stone-700">
             Accedi
-          </button>
+          </PulsanteInvio>
         </form>
       </div>
     </main>

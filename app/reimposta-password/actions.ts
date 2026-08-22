@@ -19,7 +19,7 @@ export async function impostaNuovaPassword(formData: FormData) {
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    redirect('/reimposta-password?errore=generico');
+    redirect(`/reimposta-password?errore=generico&dettaglio=${encodeURIComponent(error.message)}`);
   }
 
   await supabase.auth.signOut();
