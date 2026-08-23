@@ -29,6 +29,7 @@ export default async function PastiClassePage({
     .from('bambini')
     .select('id, nome, cognome, note_allergie')
     .eq('sezione_id', sezioneId)
+    .eq('attiva', true)
     .order('cognome');
   const bambini = bambiniSezione ?? [];
   const idBambini = bambini.map((b) => b.id);

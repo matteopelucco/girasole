@@ -4,7 +4,13 @@
 // `sezioni`/`bambini`/`profili` sul progetto Supabase di test — vedi la
 // nota in 50-amministrazione_base.spec.ts.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  formCreaBambino,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  rigaSezione,
+  statoAutenticazione,
+} from './helpers';
 
 test.describe('04 — Tipi di dato ed entità', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -43,10 +49,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.locator('select[name="anno_scolastico_id"]').selectOption({ label: nomeAnno });
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
-    // Il nome della sezione compare sia nell'elenco (<li>) sia come
-    // <option> nel select "Sezione" del form Bambini: mi limito
-    // all'elenco per evitare un doppio match (strict mode).
-    await expect(page.locator('li', { hasText: nomeSezione })).toBeVisible({ timeout: 20_000 });
+    await expect(rigaSezione(page, nomeSezione)).toBeVisible({ timeout: 20_000 });
   });
 
   test('admin disattiva e riattiva una classe', async ({ page }) => {
@@ -55,9 +58,9 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nomeSezione);
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
-    const riga = page.locator('li', { hasText: nomeSezione });
+    const riga = rigaSezione(page, nomeSezione);
     await expect(riga).toBeVisible({ timeout: 20_000 });
-    await riga.getByRole('button', { name: 'Disattiva' }).click();
+    await riga.getByRole('button', { name: 'Disattiva', exact: true }).click();
     await expect(riga.getByText('non attiva')).toBeVisible({ timeout: 20_000 });
 
     await riga.getByRole('button', { name: 'Riattiva' }).click();
@@ -66,7 +69,8 @@ test.describe('04 — Tipi di dato ed entità', () => {
 
   test('admin inserisce un alunno con data di nascita e sesso', async ({ page }) => {
     await page.goto('/admin');
-    const opzioniSezione = page.locator('select[name="sezione_id"] option:not([value=""])');
+    const form = formCreaBambino(page);
+    const opzioniSezione = form.locator('select[name="sezione_id"] option:not([value=""])');
     test.skip((await opzioniSezione.count()) === 0, 'nessuna sezione disponibile, crea prima una sezione');
 
     const cognome = `E2eAlunno${Date.now()}`;
@@ -77,7 +81,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Cognome').fill(cognome);
     await page.getByLabel('Data di nascita').fill('2021-05-10');
     await page.getByLabel('Sesso').selectOption('M');
-    await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
+    await form.locator('select[name="sezione_id"]').selectOption({ index: 1 });
     await page.getByPlaceholder('Altre note (opzionale)').fill('Nota E2E');
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
 
@@ -86,7 +90,8 @@ test.describe('04 — Tipi di dato ed entità', () => {
 
   test('impedire un alunno duplicato (stesso nome, cognome e data di nascita)', async ({ page }) => {
     await page.goto('/admin');
-    const opzioniSezione = page.locator('select[name="sezione_id"] option:not([value=""])');
+    const form = formCreaBambino(page);
+    const opzioniSezione = form.locator('select[name="sezione_id"] option:not([value=""])');
     test.skip((await opzioniSezione.count()) === 0, 'nessuna sezione disponibile, crea prima una sezione');
 
     const nome = 'Gemello';
@@ -97,7 +102,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Cognome').fill(cognome);
     await page.getByLabel('Data di nascita').fill(dataNascita);
     await page.getByLabel('Sesso').selectOption('M');
-    await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
+    await form.locator('select[name="sezione_id"]').selectOption({ index: 1 });
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
     await expect(page.getByText(cognome, { exact: false })).toBeVisible({ timeout: 20_000 });
 
@@ -107,7 +112,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Cognome').fill(cognome.toUpperCase());
     await page.getByLabel('Data di nascita').fill(dataNascita);
     await page.getByLabel('Sesso').selectOption('M');
-    await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
+    await form.locator('select[name="sezione_id"]').selectOption({ index: 1 });
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
 
     const banner = page.getByRole('alert').filter({ hasText: /esiste già/i });

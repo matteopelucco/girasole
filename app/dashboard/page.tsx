@@ -41,7 +41,11 @@ export default async function DashboardPage({
 
   let bambini: { id: string; nome: string; cognome: string }[] = [];
   if (ruolo === 'admin') {
-    const { data: tuttiBambini } = await supabase.from('bambini').select('id, nome, cognome').order('cognome');
+    const { data: tuttiBambini } = await supabase
+      .from('bambini')
+      .select('id, nome, cognome')
+      .eq('attiva', true)
+      .order('cognome');
     bambini = tuttiBambini ?? [];
   } else if (sezioni.length) {
     const { data: mieiBambini } = await supabase
@@ -51,6 +55,7 @@ export default async function DashboardPage({
         'sezione_id',
         sezioni.map((s) => s.id)
       )
+      .eq('attiva', true)
       .order('cognome');
     bambini = mieiBambini ?? [];
   }

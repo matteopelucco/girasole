@@ -12,7 +12,7 @@ Utente, Classe, Anno Scolastico, Alunno.
 (admin, maestra o genitore — vedi
 [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
 
-Dati obbligatori: Nome, Cognome, Email.
+Dati obbligatori: Nome, Cognome, e-mail, Numero di telefono
 Dati facoltativi: Indirizzo di residenza, Note.
 
 Ruolo → vedi [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md).
@@ -34,8 +34,12 @@ Dati obbligatori: Nome.
 Rappresenta l'alunno frequentante l'asilo (`bambini` a DB, stesso nome
 usato nel resto dell'app).
 
-Dati obbligatori: Nome, Cognome, Data di nascita, Sesso.
-Dati facoltativi: Note alimentari (`note_allergie` a DB), Altre note.
+Dati obbligatori: Nome, Cognome, Data di nascita, Sesso, Attiva
+(true/false, default vero — un alunno disattivato non compare più
+nell'elenco della sua classe né nelle funzioni Presenze/Pasto, vedi
+[50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
+Dati facoltativi: Classe corrente (`sezione_id`, nullo finché non
+assegnato), Note alimentari (`note_allergie` a DB), Altre note.
 
 Un alunno è univoco per Nome + Cognome + Data di nascita (senza distinguere
 maiuscole/minuscole): non possono esistere due alunni con questi tre dati

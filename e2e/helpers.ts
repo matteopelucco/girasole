@@ -21,6 +21,31 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Il form di creazione bambino su /admin (specs/50 - amministrazione_base.md)
+// e i mini-form "assegna rapidamente" (uno per bambino "senza classe")
+// condividono lo stesso name="sezione_id": gli <form> non si annidano
+// mai in HTML, quindi risalire al <form> che contiene il pulsante
+// "Aggiungi bambino" individua sempre e solo il form di creazione, a
+// differenza di un <div> (che invece può avere antenati anch'essi <div>
+// che "contengono" lo stesso elemento — vedi uso di `has` più sotto).
+export function formCreaBambino(page: Page) {
+  return page.locator('form', { has: page.getByRole('button', { name: 'Aggiungi bambino' }) });
+}
+
+// Il nome di una sezione compare anche come <option> (nel form Bambini
+// e in ogni mini-form "assegna rapidamente" della sezione "Bambini
+// senza classe o disattivati" — specs/50) e come intestazione <h3> nel
+// gruppo classi (specs/50): mi limito all'unico <li> dell'elenco
+// Sezioni, escludendo quelli che hanno un <select> di assegnazione
+// (solo le righe bambino ce l'hanno). Non filtro sul testo del
+// pulsante ("Disattiva"/"Riattiva") perché cambia proprio durante i
+// test che verificano il toggle.
+export function rigaSezione(page: Page, nomeSezione: string) {
+  return page
+    .locator('li', { hasText: nomeSezione })
+    .filter({ hasNot: page.locator('select[name="sezione_id"]') });
+}
+
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
   const prefisso = `E2E_${ruolo.toUpperCase()}`;
   const email = process.env[`${prefisso}_EMAIL`];

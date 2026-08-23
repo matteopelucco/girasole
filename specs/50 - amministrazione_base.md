@@ -14,11 +14,48 @@ Allora la sezione compare nell'elenco sezioni, subito disponibile per
 assegnare bambini e maestre
 
 ## Scenario: creare un bambino
-Quando su `/admin` compilo nome, cognome, scelgo una sezione e
-(opzionalmente) delle note allergie/intolleranze, e confermo
-Allora il bambino compare nell'elenco bambini della sezione scelta
+Quando su `/admin` compilo nome, cognome, data di nascita, sesso,
+(opzionalmente) una sezione e delle note allergie/intolleranze, e
+confermo
+Allora il bambino compare nell'elenco bambini della sezione scelta (o
+nell'elenco "senza sezione", se non ne ho scelta una)
 E se ha note allergie, sono mostrate in evidenza accanto al suo nome
 (vedi anche [14 - segna-pasto.md](14%20-%20segna-pasto.md))
+
+## Scenario: vedere le classi con i bambini assegnati
+Dato che sono autenticato come admin
+Quando apro `/admin`
+Allora vedo l'elenco di tutte le sezioni, ciascuna con l'elenco dei
+bambini attivi assegnati
+E vedo anche un elenco separato dei bambini senza sezione o disattivati
+E da ogni bambino elencato (in entrambi gli elenchi) posso aprire la sua
+scheda di dettaglio
+
+## Scenario: assegnare rapidamente una sezione a un bambino senza classe
+Dato che un bambino non ha ancora una sezione, oppure è disattivato
+Quando dall'elenco "senza sezione o disattivati" scelgo una sezione e
+premo "Assegna"
+Allora il bambino viene assegnato a quella sezione (e riattivato, se era
+disattivato) e compare da quel momento nell'elenco di quella sezione
+
+## Scenario: modificare i dati di un bambino
+Dato che apro la scheda di dettaglio di un bambino
+Quando trovo un form con tutti i suoi dati pre-caricati, modifico uno o
+più campi (nome, cognome, data di nascita, sesso, sezione, note
+allergie, altre note) e confermo
+Allora i nuovi dati sono salvati e restano visibili riaprendo la scheda
+
+## Scenario: disattivare e riattivare un bambino
+Dato che sono sulla scheda di dettaglio di un bambino attivo
+Quando premo "Disattiva bambino"
+Allora il bambino resta con tutti i suoi dati salvati (presenze, pasti e
+promemoria passati restano collegati a lui)
+E non compare più nell'elenco bambini della sua sezione, né nelle
+funzioni Presenze e Pasto (vedi
+[13 - segna-presenza.md](13%20-%20segna-presenza.md),
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
+E premendo "Riattiva bambino" torna a comparire nella sua sezione (se ne
+ha ancora una) e nelle funzioni Presenze e Pasto
 
 ## Scenario: promuovere un utente a maestra
 Dato che un utente esiste già (creato dall'admin con un altro ruolo,
@@ -53,3 +90,11 @@ bambini di quella sezione
   [11 - login.md](11%20-%20login.md)): è l'unico caso residuo che
   richiede un intervento fuori dall'app, perché per creare un utente
   dall'app serve già essere autenticati come admin.
+- Un bambino ha un flag `attiva` (default vero, `bambini.attiva` —
+  `supabase/migrations/0011_bambino_attivo.sql`): disattivarlo non
+  cancella nessun dato, filtra solo la sua visibilità nell'elenco della
+  classe e nelle funzioni Presenze/Pasto (stesso pattern già usato per
+  `sezioni.attiva`, filtro applicato lato applicazione).
+- La sezione è facoltativa alla creazione di un bambino: un bambino
+  senza sezione (`sezione_id` nullo) compare nell'elenco "senza sezione
+  o disattivati" finché non gli viene assegnata una classe.

@@ -1,8 +1,15 @@
+import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
-import { creaSezione, toggleAttivaSezione, creaAnnoScolastico, creaBambino } from './actions';
+import {
+  creaSezione,
+  toggleAttivaSezione,
+  creaAnnoScolastico,
+  creaBambino,
+  assegnaSezioneBambino,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +21,21 @@ export default async function AdminPage() {
     supabase.from('sezioni').select('id, nome, attiva, anno_scolastico_id').order('nome'),
     supabase
       .from('bambini')
-      .select('id, nome, cognome, data_nascita, sesso, note_allergie, altre_note, sezioni(nome)')
+      .select('id, nome, cognome, sezione_id, note_allergie, attiva')
       .order('cognome'),
   ]);
+
+  const tuttiBambini = bambini ?? [];
+  const bambiniPerSezione = new Map<string, typeof tuttiBambini>();
+  for (const bambino of tuttiBambini) {
+    if (!bambino.sezione_id || !bambino.attiva) continue;
+    const lista = bambiniPerSezione.get(bambino.sezione_id) ?? [];
+    lista.push(bambino);
+    bambiniPerSezione.set(bambino.sezione_id, lista);
+  }
+  const bambiniSenzaClasseODisattivati = tuttiBambini.filter(
+    (bambino) => !bambino.sezione_id || !bambino.attiva
+  );
 
   return (
     <>
@@ -84,7 +103,7 @@ export default async function AdminPage() {
                 <span>
                   {sezione.nome}
                   {!sezione.attiva && (
-                    <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-500">
+                    <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
                       non attiva
                     </span>
                   )}
@@ -148,14 +167,11 @@ export default async function AdminPage() {
             </div>
             <select
               name="sezione_id"
-              required
               defaultValue=""
               aria-label="Sezione"
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
-              <option value="" disabled>
-                Scegli la sezione
-              </option>
+              <option value="">Nessuna sezione (assegna dopo)</option>
               {sezioni?.map((sezione) => (
                 <option key={sezione.id} value={sezione.id}>
                   {sezione.nome}
@@ -177,29 +193,85 @@ export default async function AdminPage() {
             </PulsanteInvio>
           </FormConEsito>
 
-          <ul className="mt-4 space-y-1">
-            {bambini?.map((bambino) => (
-              <li
-                key={bambino.id}
-                className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 text-sm"
-              >
-                <span>
-                  {bambino.nome} {bambino.cognome}{' '}
-                  <span className="text-stone-600">
-                    — {(bambino.sezioni as unknown as { nome: string } | null)?.nome ?? 'nessuna sezione'}
-                  </span>
-                </span>
-                {bambino.note_allergie && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                    {bambino.note_allergie}
-                  </span>
-                )}
-              </li>
-            ))}
-            {!bambini?.length && (
-              <li className="text-sm text-stone-600">Nessun bambino ancora inserito.</li>
+          <div id="classi-e-bambini-assegnati" className="mt-6 space-y-4">
+            <h2 className="text-sm font-medium text-stone-700">Classi e bambini assegnati</h2>
+            {sezioni?.map((sezione) => {
+              const lista = bambiniPerSezione.get(sezione.id) ?? [];
+              return (
+                <div key={sezione.id} className="rounded-lg border border-stone-200 p-3">
+                  <h3 className="text-sm font-semibold">{sezione.nome}</h3>
+                  <ul className="mt-2 space-y-1">
+                    {lista.map((bambino) => (
+                      <li
+                        key={bambino.id}
+                        className="flex items-center justify-between rounded-lg border border-stone-100 px-3 py-2 text-sm"
+                      >
+                        <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
+                          {bambino.nome} {bambino.cognome}
+                        </Link>
+                        {bambino.note_allergie && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            {bambino.note_allergie}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                    {!lista.length && (
+                      <li className="text-xs text-stone-500">Nessun bambino assegnato.</li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+            {!sezioni?.length && (
+              <p className="text-sm text-stone-600">Nessuna sezione ancora creata.</p>
             )}
-          </ul>
+          </div>
+
+          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 p-3">
+            <h2 className="text-sm font-medium text-stone-700">Bambini senza classe o disattivati</h2>
+            <ul className="mt-2 space-y-2">
+              {bambiniSenzaClasseODisattivati.map((bambino) => (
+                <li key={bambino.id} className="rounded-lg border border-stone-100 px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
+                      {bambino.nome} {bambino.cognome}
+                    </Link>
+                    {!bambino.attiva && (
+                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
+                        Disattivato
+                      </span>
+                    )}
+                  </div>
+                  <FormConEsito action={assegnaSezioneBambino} className="mt-2 flex items-center gap-2">
+                    <input type="hidden" name="bambino_id" value={bambino.id} />
+                    <select
+                      name="sezione_id"
+                      required
+                      defaultValue=""
+                      aria-label={`Sezione per ${bambino.nome} ${bambino.cognome}`}
+                      className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    >
+                      <option value="" disabled>
+                        Assegna a...
+                      </option>
+                      {sezioni?.map((sezione) => (
+                        <option key={sezione.id} value={sezione.id}>
+                          {sezione.nome}
+                        </option>
+                      ))}
+                    </select>
+                    <PulsanteInvio className="rounded-lg border border-sky-300 bg-white px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50">
+                      Assegna
+                    </PulsanteInvio>
+                  </FormConEsito>
+                </li>
+              ))}
+              {!bambiniSenzaClasseODisattivati.length && (
+                <li className="text-xs text-stone-500">Nessuno.</li>
+              )}
+            </ul>
+          </div>
         </section>
       </main>
     </>

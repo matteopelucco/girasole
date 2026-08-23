@@ -33,6 +33,7 @@ export default async function PresenzeClassePage({
     .from('bambini')
     .select('id, nome, cognome')
     .eq('sezione_id', sezioneId)
+    .eq('attiva', true)
     .order('cognome');
   const bambini = bambiniSezione ?? [];
   const idBambini = bambini.map((b) => b.id);

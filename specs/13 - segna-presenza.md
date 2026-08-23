@@ -78,6 +78,10 @@ seconda mail (idempotenza)
   `supabase/migrations/0009_scrittura_solo_oggi_maestra.sql`); può
   comunque consultare in sola lettura le altre date.
 - Il ruolo "admin" può scrivere su qualunque data, passata o futura.
+- L'elenco bambini di una classe mostra solo i bambini attivi
+  (`bambini.attiva = true`): un bambino disattivato dall'admin non
+  compare più qui, pur restando collegate le sue presenze passate (vedi
+  [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
 - Alla mezzanotte (fuso Europe/Rome) un job pianificato (Vercel Cron, vedi
   `app/api/cron/report-presenze/route.ts`) invia una mail a
   info@asilosartorio.it con la scheda del giorno appena concluso, per

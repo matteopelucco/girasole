@@ -1,0 +1,11 @@
+-- Girasole — Requisito 50 (specs/50 - amministrazione_base.md): un
+-- bambino può essere disattivato dall'admin (es. lascia l'asilo per
+-- un'altra scuola) senza perdere i suoi dati storici (presenze, pasti,
+-- promemoria restano collegati). Un bambino disattivato non compare più
+-- nell'elenco bambini della sua classe né nelle funzioni Presenze/Pasto
+-- (filtro applicato lato applicazione, stesso pattern già usato per
+-- `sezioni.attiva` — vedi lib/sezioni.ts).
+--
+-- Incolla questo file nel SQL Editor di Supabase (dopo 0010) ed
+-- eseguilo una volta sola.
+alter table public.bambini add column if not exists attiva boolean not null default true;

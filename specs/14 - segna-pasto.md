@@ -72,3 +72,6 @@ modificarlo: è in sola lettura
 - Se il bambino risulta "malattia" per la data visualizzata, l'etichetta
   malattia appare anche in questo elenco, accanto al nome (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
+- L'elenco bambini di una classe mostra solo i bambini attivi, stessa
+  regola di [13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+  [50 - amministrazione_base.md](50%20-%20amministrazione_base.md).

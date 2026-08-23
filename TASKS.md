@@ -225,6 +225,56 @@ scope per un run di analisi statica. Da valutare a parte.
       quella, insieme alla `0009_scrittura_solo_oggi_maestra.sql` già
       segnalata sopra, se non fatto.
 
+## Requisito 50: gestione classi/bambini dall'admin (visualizzazione, modifica, disattivazione)
+- [x] `/admin` mostra ora l'elenco completo delle classi con i bambini
+      attivi assegnati a ciascuna, più un elenco separato "Bambini
+      senza classe o disattivati" con un'azione rapida per assegnare
+      una sezione (che riattiva il bambino, se serve).
+- [x] La sezione è ora facoltativa alla creazione di un bambino (prima
+      era obbligatoria): un bambino senza sezione finisce nell'elenco
+      "senza classe".
+- [x] Nuova scheda di dettaglio bambino (`/admin/bambini/[id]`): form
+      con tutti i dati pre-caricati per la modifica, più un pulsante
+      "Disattiva/Riattiva bambino".
+- [x] Un bambino disattivato (`bambini.attiva`, nuova colonna —
+      `supabase/migrations/0011_bambino_attivo.sql`) sparisce
+      dall'elenco della sua classe e dalle funzioni Presenze/Pasto, ma
+      i suoi dati e le presenze/pasti passati restano intatti.
+- [x] Test aggiornati/aggiunti in `e2e/50-amministrazione_base.spec.ts`
+      per ogni scenario; corrette anche due fragilità pre-esistenti nei
+      test scoperte durante la verifica: un test ("assegnare e poi
+      rimuovere una maestra da una sezione") poteva rimuovere
+      un'assegnazione maestra↔sezione già esistente (non creata da lui)
+      invece di una fittizia, e diversi selettori Playwright non
+      distinguevano l'elenco classi dai form embedded con lo stesso
+      `name`.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0011_bambino_attivo.sql` (se non già fatto)
+      nel SQL Editor di Supabase (test e produzione). Ho anche
+      verificato che `0010_alunno_univoco.sql` non sta bloccando i
+      duplicati sul progetto di test: molto probabilmente la sua
+      `CREATE UNIQUE INDEX` ha fallito silenziosamente perché esisteva
+      già una coppia di alunni duplicati (creata durante lo sviluppo,
+      prima che il vincolo esistesse). Per sbloccarla:
+      ```sql
+      -- 1. Trova i duplicati che bloccano il vincolo
+      select lower(nome), lower(cognome), data_nascita, count(*), array_agg(id) as ids
+      from public.bambini
+      group by lower(nome), lower(cognome), data_nascita
+      having count(*) > 1;
+
+      -- 2. Elimina le righe di troppo (scegli quale id tenere)
+      -- delete from public.bambini where id = '<id-da-eliminare>';
+
+      -- 3. Riprova
+      create unique index if not exists bambini_univoco_nome_cognome_nascita
+        on public.bambini (lower(nome), lower(cognome), data_nascita);
+      ```
+      Anche `0008_fix_grant_tabelle_04.sql` risulta ancora non efficace
+      (creare un anno scolastico fallisce con "permission denied for
+      table anni_scolastici"): verifica di averla incollata sul
+      progetto giusto e rieseguila.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione
