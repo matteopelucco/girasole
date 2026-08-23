@@ -28,6 +28,10 @@ test.describe('13 — Segna presenza', () => {
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
     });
 
+    test('riepilogo presenze della classe', async ({ page }) => {
+      await expect(page.getByText(/^Presenti: \d+\/\d+$/)).toBeVisible();
+    });
+
     test('segnare un bambino presente evidenzia il pulsante corretto', async ({ page }) => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
@@ -47,6 +51,13 @@ test.describe('13 — Segna presenza', () => {
       await bottoneAssente.click();
 
       await expect(bottoneAssente).toHaveClass(/bg-stone-600/);
+      // Bug reale trovato durante un test con un'insegnante: il
+      // pulsante selezionato appariva come uno spazio bianco perché
+      // lib/classiStato.ts non era incluso nel content di Tailwind
+      // (tailwind.config.ts) — la classe bg-stone-600 non veniva mai
+      // generata nel CSS finale, pur comparendo nell'attributo class.
+      // Verifico il colore di sfondo REALE, non solo il nome classe.
+      await expect(bottoneAssente).toHaveCSS('background-color', 'rgb(87, 83, 78)');
       await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue(
         'influenza, rientra lunedì'
       );

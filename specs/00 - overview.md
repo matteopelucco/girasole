@@ -14,7 +14,6 @@ promemoria/comunicazioni per le famiglie.
 
 ## Fuori scope per questa fase
 - Rette e pagamenti genitori (Fase 2).
-- Report mensili aggregati per amministrazione (Fase 2).
 - Portale genitori con interfaccia dedicata (Fase 3).
 
 ## Indice degli scenari
@@ -39,12 +38,15 @@ della maestra, `5x` amministrazione.
   giorno
 - [13 - segna-presenza.md](13%20-%20segna-presenza.md) — presente /
   assente / malattia, con nota opzionale
-- [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no / parziale, con
-  nota opzionale ed evidenza delle allergie del bambino
+- [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no, con nota
+  opzionale ed evidenza delle allergie del bambino
 - [15 - memo.md](15%20-%20memo.md) — promemoria per tutti, una sezione o
   un bambino
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre alle sezioni (admin)
+- [51 - report.md](51%20-%20report.md) — report tabellari di
+  presenze/pasti (giornaliero, settimanale, mensile con drill-down) e
+  anagrafica classi
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

@@ -13,7 +13,11 @@ utenti da `/admin/maestre`.
 - **email** — funge anche da username, univoca.
 - **password** — almeno 8 caratteri, con una lettera minuscola, una
   maiuscola, un numero e un carattere speciale (vedi
-  `lib/password.ts`, `REGOLA_PASSWORD`).
+  `lib/password.ts`, `REGOLA_PASSWORD`). In fase di creazione va
+  digitata due volte (password + conferma), con un riscontro in tempo
+  reale se le due coincidono o no — evita di scoprire un errore di
+  battitura solo al momento del primo login. Entrambi i campi hanno un
+  pulsante "occhio" per mostrare/nascondere il testo in chiaro.
 - **nome**
 - **cognome**
 - **numero di telefono**
@@ -46,6 +50,20 @@ Quando su `/admin/maestre` provo a creare un utente con una password che
 non rispetta i requisiti di complessità
 Allora vedo un messaggio d'errore che spiega la regola e l'utente non
 viene creato
+E tutti gli altri campi già compilati (nome, cognome, email, telefono,
+ruolo) restano nel form: non devo reinserirli, mi basta correggere la
+password
+
+## Scenario: conferma password in tempo reale
+Quando su `/admin/maestre` sto compilando il form di creazione utente
+Allora vedo due campi password (Password e Conferma password)
+E mentre scrivo nel campo "Conferma password" vedo subito un riscontro
+se coincide o no con il campo "Password", senza dover inviare il form
+
+## Scenario: creazione con password non confermata correttamente
+Quando su `/admin/maestre` invio il form con "Password" e "Conferma
+password" diversi tra loro
+Allora vedo un messaggio d'errore e l'utente non viene creato
 
 ## Scenario: creazione con email già in uso
 Quando su `/admin/maestre` provo a creare un utente con un'email già
@@ -86,6 +104,11 @@ Allora vengo reindirizzato alla dashboard
   browser — vedi `supabase/migrations/0005_utenti_gestiti_da_app.sql` per
   lo schema e `CLAUDE.md` per le regole di sicurezza sulla service_role
   key.
+- Il form di creazione utente segue lo stesso pattern "errore ⇒ dati
+  preservati" di tutte le altre form di creazione (specs/05 -
+  feedback.md): un errore di validazione non svuota il form. La
+  creazione riuscita non mostra un banner aggiuntivo (l'effetto — il
+  nuovo utente in elenco — è già la conferma).
 - Il primissimo admin del sistema va comunque promosso a mano via SQL
   Editor (bootstrap): per creare un utente dall'app serve già essere
   autenticati come admin, quindi non può esistere un flusso interamente

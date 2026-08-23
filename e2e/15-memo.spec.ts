@@ -27,6 +27,22 @@ test.describe('15 — Promemoria', () => {
     await nessunaViolazioneA11yGrave(page);
   });
 
+  test('il form si svuota dopo aver pubblicato un promemoria', async ({ page }) => {
+    const titolo = `Promemoria Svuota E2E ${Date.now()}`;
+
+    await page.getByPlaceholder('Titolo').fill(titolo);
+    await page.getByPlaceholder('Testo del promemoria').fill('Testo che deve sparire dal form.');
+    await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+    await page.getByRole('button', { name: 'Pubblica promemoria' }).click();
+
+    await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+    // Bug segnalato da un'insegnante: dopo la pubblicazione il form
+    // restava compilato, costringendo a cancellarlo a mano prima di
+    // inserirne un altro.
+    await expect(page.getByPlaceholder('Titolo')).toHaveValue('');
+    await expect(page.getByPlaceholder('Testo del promemoria')).toHaveValue('');
+  });
+
   test('creare un promemoria per una sezione', async ({ page }) => {
     const opzioniSezione = page.locator('select[name="sezione_id"] option');
     test.skip((await opzioniSezione.count()) <= 1, 'nessuna sezione disponibile per questo account');
@@ -68,5 +84,52 @@ test.describe('15 — Promemoria', () => {
     // promemoria pubblicato" resta identico, oppure la lista non cresce.
     const promemoriaDopo = await page.locator('main >> text=Nessun promemoria').count();
     expect(promemoriaDopo).toBe(promemoriaPrima);
+  });
+
+  test('modifica di un promemoria', async ({ page }) => {
+    const titolo = `Promemoria Modifica E2E ${Date.now()}`;
+    const titoloModificato = `${titolo} (modificato)`;
+
+    await page.getByPlaceholder('Titolo').fill(titolo);
+    await page.getByPlaceholder('Testo del promemoria').fill('Testo originale.');
+    await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+    await page.getByRole('button', { name: 'Pubblica promemoria' }).click();
+    await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('link', { name: titolo }).click();
+    await page.waitForURL(/\/dashboard\/promemoria\/.+/);
+
+    await page.getByPlaceholder('Titolo').fill(titoloModificato);
+    await page.getByRole('button', { name: 'Salva modifiche' }).click();
+    await expect(page.getByPlaceholder('Titolo')).toHaveValue(titoloModificato, { timeout: 20_000 });
+
+    await page.goto('/dashboard');
+    await expect(page.getByText(titoloModificato)).toBeVisible();
+  });
+
+  test('cancellazione di un promemoria, con conferma', async ({ page }) => {
+    const titolo = `Promemoria Elimina E2E ${Date.now()}`;
+
+    await page.getByPlaceholder('Titolo').fill(titolo);
+    await page.getByPlaceholder('Testo del promemoria').fill('Da eliminare.');
+    await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+    await page.getByRole('button', { name: 'Pubblica promemoria' }).click();
+    await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('link', { name: titolo }).click();
+    await page.waitForURL(/\/dashboard\/promemoria\/.+/);
+
+    // "Annulla" nasconde la richiesta di conferma senza eliminare nulla.
+    await page.getByRole('button', { name: 'Elimina promemoria' }).click();
+    await expect(page.getByText("Confermi l'eliminazione?")).toBeVisible();
+    await page.getByRole('button', { name: 'Annulla' }).click();
+    await expect(page.getByText("Confermi l'eliminazione?")).toHaveCount(0);
+
+    // "Sì" elimina davvero e torna alla lista con un messaggio.
+    await page.getByRole('button', { name: 'Elimina promemoria' }).click();
+    await page.getByRole('button', { name: 'Sì' }).click();
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText('Promemoria eliminato.')).toBeVisible();
+    await expect(page.getByText(titolo)).toHaveCount(0);
   });
 });

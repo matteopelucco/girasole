@@ -1,10 +1,9 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { passwordAbbastanzaComplessa } from '@/lib/password';
+import { passwordAbbastanzaComplessa, REGOLA_PASSWORD } from '@/lib/password';
 import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 const RUOLI_VALIDI = ['admin', 'maestra', 'genitore'] as const;
@@ -21,11 +20,18 @@ function campiUtente(formData: FormData) {
   };
 }
 
-export async function creaUtente(formData: FormData) {
+// Segue il pattern EsitoAzione/FormConEsito (non un redirect con
+// query-string come in passato): un redirect ricarica l'intera pagina,
+// svuotando ogni campo del form — bug reale segnalato da un'insegnante
+// dopo un errore di password, costretta a reinserire nome/cognome/
+// email/telefono da capo. Con FormConEsito un errore lascia i campi
+// già compilati (specs/03 - utenti-e-ruoli.md, specs/05 - feedback.md).
+export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
 
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
+  const confermaPassword = (formData.get('conferma_password') as string) || '';
   const { nome, cognome, telefono, ruolo, indirizzoResidenza, note } = campiUtente(formData);
 
   if (
@@ -35,10 +41,13 @@ export async function creaUtente(formData: FormData) {
     !telefono ||
     !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])
   ) {
-    redirect('/admin/maestre?errore=campi-mancanti');
+    return { ok: false, messaggio: 'Compila tutti i campi (nome, cognome, email, telefono, ruolo).' };
+  }
+  if (password !== confermaPassword) {
+    return { ok: false, messaggio: 'Le due password inserite non coincidono.' };
   }
   if (!passwordAbbastanzaComplessa(password)) {
-    redirect('/admin/maestre?errore=password-debole');
+    return { ok: false, messaggio: REGOLA_PASSWORD };
   }
 
   const admin = createAdminClient();
@@ -51,11 +60,11 @@ export async function creaUtente(formData: FormData) {
 
   if (error) {
     if (/already|registrat/i.test(error.message)) {
-      redirect('/admin/maestre?errore=email-duplicata');
+      return { ok: false, messaggio: 'Esiste già un utente con questa email.' };
     }
     // Errore non atteso (permessi, rete, ...): il dettaglio tecnico
     // resta utile per il troubleshooting, vedi specs/05 - feedback.md.
-    redirect(`/admin/maestre?errore=creazione-fallita&dettaglio=${encodeURIComponent(error.message)}`);
+    return { ok: false, messaggio: "Non è stato possibile creare l'utente. Riprova.", dettaglio: error.message };
   }
 
   if (indirizzoResidenza || note) {
@@ -66,7 +75,7 @@ export async function creaUtente(formData: FormData) {
   }
 
   revalidatePath('/admin/maestre');
-  redirect('/admin/maestre?ok=utente-creato');
+  return { ok: true };
 }
 
 export async function aggiornaUtente(

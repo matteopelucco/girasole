@@ -11,7 +11,6 @@ const CLASSI_SELEZIONATO: Record<string, string> = {
   assente: 'rounded-full bg-stone-600 px-3 py-1 text-xs font-semibold text-white shadow-sm',
   no: 'rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white shadow-sm',
   malattia: 'rounded-full bg-rose-600 px-3 py-1 text-xs font-semibold text-white shadow-sm',
-  parziale: 'rounded-full bg-amber-700 px-3 py-1 text-xs font-semibold text-white shadow-sm',
 };
 
 const CLASSE_NON_SELEZIONATO =

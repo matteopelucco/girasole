@@ -28,13 +28,14 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByPlaceholder('Cognome').first().fill('E2E');
     await page.getByPlaceholder('Email').fill(email);
     await page.getByPlaceholder('Telefono').first().fill('3331234567');
-    await page.getByPlaceholder('Password').fill('PasswordE2E!1');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
-    // La creazione redirige su ?ok=utente-creato e il nuovo utente compare in elenco.
-    await expect(page.getByText('Utente creato con successo.')).toBeVisible({ timeout: 20_000 });
+    // Nessun banner di successo (specs/05 - feedback.md): l'effetto —
+    // il nuovo utente in elenco — è già la conferma.
     const riga = page.getByText(email, { exact: false }).locator('..');
-    await expect(riga).toBeVisible();
+    await expect(riga).toBeVisible({ timeout: 20_000 });
 
     // Modifica: cambio il ruolo a maestra dal form della riga.
     await riga.locator('select[name="ruolo"]').selectOption('maestra');
@@ -48,6 +49,37 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
+  test('conferma password in tempo reale', async ({ page }) => {
+    await page.goto('/admin/maestre');
+    const password = page.getByLabel('Password', { exact: true });
+    const conferma = page.getByLabel('Conferma password');
+
+    await password.fill('PasswordE2E!1');
+    await conferma.fill('PasswordDiversa!1');
+    await expect(page.getByText('Le password non coincidono.')).toBeVisible();
+
+    await conferma.fill('PasswordE2E!1');
+    await expect(page.getByText('Le password coincidono.')).toBeVisible();
+  });
+
+  test('creazione con password non confermata correttamente', async ({ page }) => {
+    const email = `e2e-conferma-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Conferma');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordDiversa!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    await expect(page.getByText('Le due password inserite non coincidono.')).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
   test('creazione con password debole mostra un errore e non crea l\'utente', async ({ page }) => {
     const email = `e2e-debole-${Date.now()}@example.com`;
 
@@ -56,13 +88,21 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByPlaceholder('Cognome').first().fill('E2E');
     await page.getByPlaceholder('Email').fill(email);
     await page.getByPlaceholder('Telefono').first().fill('3331234567');
-    await page.getByPlaceholder('Password').fill('debole');
+    await page.getByLabel('Password', { exact: true }).fill('debole');
+    await page.getByLabel('Conferma password').fill('debole');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
     await expect(page.getByText(/lettera minuscola|maiuscola|carattere speciale/i)).toBeVisible({
       timeout: 20_000,
     });
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+
+    // Bug segnalato da un'insegnante: un errore non deve svuotare i
+    // campi già compilati, altrimenti tocca reinserirli da capo.
+    await expect(page.getByPlaceholder('Nome').first()).toHaveValue('Debole');
+    await expect(page.getByPlaceholder('Cognome').first()).toHaveValue('E2E');
+    await expect(page.getByPlaceholder('Email')).toHaveValue(email);
+    await expect(page.getByPlaceholder('Telefono').first()).toHaveValue('3331234567');
   });
 
   test('creazione con email già in uso mostra un errore e non crea un secondo utente', async ({
@@ -76,14 +116,18 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByPlaceholder('Cognome').first().fill('E2E');
     await page.getByPlaceholder('Email').fill(emailEsistente);
     await page.getByPlaceholder('Telefono').first().fill('3331234567');
-    await page.getByPlaceholder('Password').fill('PasswordE2E!1');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
     await expect(page.getByText('Esiste già un utente con questa email.')).toBeVisible({
       timeout: 20_000,
     });
-    // Un solo utente con quell'email in elenco (l'admin stesso), non due.
-    await expect(page.getByText(emailEsistente, { exact: false })).toHaveCount(1);
+    // Un solo utente con quell'email in elenco (l'admin stesso), non
+    // due. Scelgo l'elenco (<main>) ed escludo l'intestazione
+    // (<header>), che mostra la stessa email quando il profilo non ha
+    // un nome impostato.
+    await expect(page.getByRole('main').getByText(emailEsistente, { exact: false })).toHaveCount(1);
   });
 
   test('creazione con campi obbligatori mancanti mostra un errore', async ({ page }) => {
@@ -110,7 +154,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByText('Non puoi eliminare il tuo stesso account.')).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText(process.env.E2E_ADMIN_EMAIL!)).toBeVisible();
+    await expect(rigaPropria).toBeVisible();
   });
 
   test('maestra e genitore non possono aprire /admin/maestre', async ({ browser }) => {

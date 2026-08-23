@@ -9,6 +9,12 @@ con una nota libera opzionale, seguendo il flusso calendario → Presenze →
 classe → bambini descritto in
 [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
+## Scenario: riepilogo presenze della classe
+Dato che ho aperto l'elenco bambini di una classe, per una data
+Allora vedo in cima un riepilogo "Presenti: X/Y", dove X è il numero di
+bambini segnati "presente" per quella data e Y il totale dei bambini
+attivi della classe
+
 ## Scenario: segnare un bambino presente
 Dato che ho aperto "Presenze" per la data odierna e selezionato una mia
 classe, e vedo l'elenco dei suoi bambini
@@ -60,6 +66,10 @@ seconda mail (idempotenza)
 
 ## Regole
 - Stati validi: `presente`, `assente`, `malattia`.
+- Il riepilogo "Presenti: X/Y" conta X come i bambini con stato
+  `presente` per la data visualizzata; Y è il totale dei bambini attivi
+  della classe (indipendentemente dal loro stato o dall'assenza di uno
+  stato).
 - Un solo record di presenza per bambino per giorno (upsert su
   `bambino_id, data`).
 - La nota è testo libero, opzionale.

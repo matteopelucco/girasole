@@ -16,6 +16,7 @@ export function PaginaClasseAttivita({
   data,
   editable,
   vuoto,
+  riepilogo,
   children,
 }: {
   nome: string;
@@ -26,6 +27,7 @@ export function PaginaClasseAttivita({
   data: string;
   editable: boolean;
   vuoto: boolean;
+  riepilogo?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -40,6 +42,8 @@ export function PaginaClasseAttivita({
         </div>
 
         <SelettoreData basePath={basePath} data={data} />
+
+        {riepilogo}
 
         {!editable && (
           <p className="rounded-xl border border-stone-300 bg-stone-50 p-3 text-sm text-stone-600">

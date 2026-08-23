@@ -1,6 +1,7 @@
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { CampiPasswordConferma } from '@/components/CampiPasswordConferma';
 import { REGOLA_PASSWORD } from '@/lib/password';
 import { requireAdmin } from '@/lib/auth';
 import {
@@ -17,24 +18,9 @@ const ETICHETTE_RUOLO: Record<string, string> = {
   genitore: 'Genitore',
 };
 
-const MESSAGGI_ERRORE: Record<string, string> = {
-  'campi-mancanti': 'Compila tutti i campi (nome, cognome, email, telefono, ruolo).',
-  'password-debole': REGOLA_PASSWORD,
-  'email-duplicata': 'Esiste già un utente con questa email.',
-  'creazione-fallita': "Non è stato possibile creare l'utente. Riprova.",
-};
-
-const MESSAGGI_OK: Record<string, string> = {
-  'utente-creato': 'Utente creato con successo.',
-};
-
 export const dynamic = 'force-dynamic';
 
-export default async function MaestrePage({
-  searchParams,
-}: {
-  searchParams: { errore?: string; ok?: string; dettaglio?: string };
-}) {
+export default async function MaestrePage() {
   const { supabase, user, profilo: profiloCorrente } = await requireAdmin();
 
   const [{ data: profili }, { data: sezioni }, { data: assegnazioni }] = await Promise.all([
@@ -55,9 +41,6 @@ export default async function MaestrePage({
     sezioniPerMaestra.set(a.maestra_id, lista);
   }
 
-  const messaggioErrore = searchParams?.errore ? MESSAGGI_ERRORE[searchParams.errore] : null;
-  const messaggioOk = searchParams?.ok ? MESSAGGI_OK[searchParams.ok] : null;
-
   return (
     <>
       <NavHeader
@@ -72,22 +55,10 @@ export default async function MaestrePage({
             nome, cognome, telefono, indirizzo, note e ruolo (admin / maestra / genitore).
           </p>
 
-          {messaggioOk && <p className="mt-3 text-sm text-green-700">{messaggioOk}</p>}
-          {messaggioErrore && (
-            <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-sm">
-              <p className="font-medium text-red-800">{messaggioErrore}</p>
-              {searchParams?.dettaglio && (
-                <p className="mt-1 text-xs text-red-600">
-                  {decodeURIComponent(searchParams.dettaglio)}
-                </p>
-              )}
-            </div>
-          )}
-
           <div className="mt-4 rounded-xl border border-stone-200 p-4">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
             <p className="mt-1 text-xs text-stone-500">{REGOLA_PASSWORD}</p>
-            <form action={creaUtente} className="mt-3 grid gap-2 sm:grid-cols-2">
+            <FormConEsito action={creaUtente} className="mt-3 grid gap-2 sm:grid-cols-2">
               <input
                 name="nome"
                 required
@@ -114,14 +85,7 @@ export default async function MaestrePage({
                 placeholder="Telefono"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               />
-              <input
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                placeholder="Password"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
-              />
+              <CampiPasswordConferma />
               <select
                 name="ruolo"
                 required
@@ -148,7 +112,7 @@ export default async function MaestrePage({
               <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
-            </form>
+            </FormConEsito>
           </div>
 
           <ul className="mt-4 space-y-2">

@@ -20,7 +20,9 @@ Accedere all'app con email e password.
   larghezza che sconfina fuori dal box. Altezza proporzionale (rapporto
   1:1).
 - Campo **Email** (tipo email, obbligatorio).
-- Campo **Password** (tipo password, obbligatorio).
+- Campo **Password** (tipo password, obbligatorio), con un pulsante
+  "occhio" per mostrare/nascondere il testo in chiaro — utile per
+  controllare quanto digitato, soprattutto da smartphone.
 - Pulsante **Accedi** che invia il form.
 - In caso di credenziali errate, un messaggio d'errore "Credenziali non
   valide. Riprova." appare sopra il pulsante, senza svuotare il campo
@@ -40,6 +42,11 @@ valide. Riprova."
 Dato che non ho effettuato il login
 Quando provo ad aprire `/dashboard`, `/admin` o `/admin/maestre`
 Allora vengo reindirizzato a `/login`
+
+## Scenario: mostrare/nascondere la password durante la digitazione
+Quando premo l'icona "occhio" accanto al campo Password
+Allora il testo digitato diventa visibile in chiaro
+E premendo di nuovo torna nascosto
 
 ## Scenario: logout
 Dato che sono autenticata

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { data?: string };
+  searchParams: { data?: string; promemoria?: string };
 }) {
   const { supabase, user, profilo } = await requireProfilo();
 
@@ -109,13 +109,25 @@ export default async function DashboardPage({
               </Link>
             </div>
           )}
+
+          <Link
+            href="/dashboard/report"
+            className="block rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm hover:bg-sky-800"
+          >
+            Report
+          </Link>
         </section>
 
         <section>
           <h1 className="text-lg font-medium">Promemoria</h1>
 
+          {searchParams.promemoria === 'eliminato' && (
+            <p className="mt-2 text-sm text-green-700">Promemoria eliminato.</p>
+          )}
+
           <FormConEsito
             action={creaPromemoria}
+            resetSuOk
             className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4"
           >
             <input
@@ -177,7 +189,9 @@ export default async function DashboardPage({
           <ul className="mt-4 space-y-2">
             {promemoria?.map((p) => (
               <li key={p.id} className="rounded-lg border border-stone-200 p-3 text-sm">
-                <div className="font-medium">{p.titolo}</div>
+                <Link href={`/dashboard/promemoria/${p.id}`} className="font-medium hover:underline">
+                  {p.titolo}
+                </Link>
                 <p className="mt-1 text-stone-600">{p.testo}</p>
                 <p className="mt-1 text-xs text-stone-600">
                   {p.destinatario_tipo === 'tutti' && 'Per tutti'}

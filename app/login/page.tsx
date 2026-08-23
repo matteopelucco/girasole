@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { CampoPassword } from '@/components/CampoPassword';
 import { login } from './actions';
 
 const MESSAGGI_ERRORE: Record<string, string> = {
@@ -50,13 +51,7 @@ export default function LoginPage({
             <label className="mb-1 block text-sm text-stone-600" htmlFor="password">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
-            />
+            <CampoPassword id="password" name="password" required autoComplete="current-password" />
           </div>
 
           {searchParams?.reset === 'ok' && (

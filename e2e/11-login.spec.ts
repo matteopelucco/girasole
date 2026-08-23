@@ -8,7 +8,7 @@ test.describe('11 — Login', () => {
 
     await expect(page.getByRole('heading', { name: 'Girasole' })).toBeVisible();
     await expect(page.getByLabel('Email')).toBeVisible();
-    await expect(page.getByLabel('Password')).toBeVisible();
+    await expect(page.getByLabel('Password', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Accedi' })).toBeVisible();
 
     await nessunaViolazioneA11yGrave(page);
@@ -17,7 +17,7 @@ test.describe('11 — Login', () => {
   test('credenziali errate: messaggio d\'errore ed email preservata', async ({ page }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('prova@esempio.it');
-    await page.getByLabel('Password').fill('password-sicuramente-sbagliata');
+    await page.getByLabel('Password', { exact: true }).fill('password-sicuramente-sbagliata');
     await page.getByRole('button', { name: 'Accedi' }).click();
 
     await expect(page.getByText('Credenziali non valide. Riprova.')).toBeVisible({
@@ -25,6 +25,20 @@ test.describe('11 — Login', () => {
     });
     await expect(page.getByLabel('Email')).toHaveValue('prova@esempio.it');
     await expect(page.getByRole('link', { name: 'Non ricordi la password?' })).toBeVisible();
+  });
+
+  test('mostrare/nascondere la password durante la digitazione', async ({ page }) => {
+    await page.goto('/login');
+    const campoPassword = page.getByLabel('Password', { exact: true });
+    await campoPassword.fill('unaPasswordDiProva');
+    await expect(campoPassword).toHaveAttribute('type', 'password');
+
+    await page.getByRole('button', { name: 'Mostra password' }).click();
+    await expect(campoPassword).toHaveAttribute('type', 'text');
+    await expect(campoPassword).toHaveValue('unaPasswordDiProva');
+
+    await page.getByRole('button', { name: 'Nascondi password' }).click();
+    await expect(campoPassword).toHaveAttribute('type', 'password');
   });
 
   test('accesso a pagine protette senza login reindirizza a /login', async ({ page }) => {

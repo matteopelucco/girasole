@@ -31,6 +31,10 @@ test.describe('14 — Segna pasto', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
+    test('riepilogo pasti della classe', async ({ page }) => {
+      await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+    });
+
     test('le allergie sono visibili accanto al nome, indipendentemente dallo stato pasto', async ({
       page,
     }) => {
@@ -52,21 +56,6 @@ test.describe('14 — Segna pasto', () => {
       await expect(bottoneSi).toHaveClass(/bg-emerald-700/);
     });
 
-    test('segnare un pasto parziale con nota', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Parziale' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
-
-      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('solo il primo');
-      const bottoneParziale = primaRiga.getByRole('button', { name: 'Parziale' });
-      await bottoneParziale.click();
-
-      await expect(bottoneParziale).toHaveClass(/bg-amber-700/);
-
-      // La nota deve restare salvata anche dopo un ricaricamento.
-      await page.reload();
-      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue('solo il primo');
-    });
-
     test('salvare una nota senza cambiare lo stato', async ({ page }) => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
@@ -85,12 +74,19 @@ test.describe('14 — Segna pasto', () => {
     });
 
     test('segnare che un bambino non ha mangiato', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'No', exact: true }) }).first();
+      const primaRiga = page
+        .locator('li', { has: page.getByRole('button', { name: 'No', exact: true }) })
+        .first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
 
       const bottoneNo = primaRiga.getByRole('button', { name: 'No', exact: true });
       await bottoneNo.click();
       await expect(bottoneNo).toHaveClass(/bg-rose-600/);
+      // Stesso bug del pulsante "Assente" in Presenze (vedi
+      // 13-segna-presenza.spec.ts): verifico il colore reale, non solo
+      // il nome della classe, dato che lib/classiStato.ts non era
+      // incluso nel content di Tailwind.
+      await expect(bottoneNo).toHaveCSS('background-color', 'rgb(225, 29, 72)');
     });
 
     test('presenza e pasto sono indipendenti: segnare solo il pasto non richiede la presenza', async ({
@@ -112,7 +108,33 @@ test.describe('14 — Segna pasto', () => {
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sì' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Parziale' })).toHaveCount(0);
+    });
+
+    // Ultimo del describe: segna un bambino come assente, cosa che
+    // altrimenti condizionerebbe i test precedenti (un bambino assente
+    // non ha più pulsanti Sì/No in questa pagina).
+    test('un bambino assente non è selezionabile per il pasto', async ({ page }) => {
+      await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
+      const primaClassePresenze = page.locator('a.bg-emerald-50').first();
+      test.skip((await primaClassePresenze.count()) === 0, 'nessuna classe attiva per questo account');
+      await primaClassePresenze.click();
+      await page.waitForURL(/\/dashboard\/presenze\/.+/);
+
+      const primaRigaPresenza = page
+        .locator('li', { has: page.getByRole('button', { name: 'Assente' }) })
+        .first();
+      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino in questa classe');
+      const nomeBambino = (await primaRigaPresenza.locator('span.font-medium').first().textContent())?.trim();
+
+      await primaRigaPresenza.getByRole('button', { name: 'Assente' }).click();
+      await expect(primaRigaPresenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+
+      const sezioneId = new URL(page.url()).pathname.split('/').pop();
+      await page.goto(`/dashboard/pasti/${sezioneId}?data=${dataOggiRoma()}`);
+      const rigaPasto = page.locator('li', { hasText: nomeBambino ?? '' }).first();
+      await expect(rigaPasto.getByText('🚫 Assente')).toBeVisible();
+      await expect(rigaPasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
+      await expect(rigaPasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
     });
   });
 });

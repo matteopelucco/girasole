@@ -1,7 +1,7 @@
 'use client';
 
 import { useFormState } from 'react-dom';
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 // Esito di un'azione lato server, per il feedback "done"/"ko" di
 // specs/05 - feedback.md: { ok: true } = nessun errore da mostrare
@@ -21,15 +21,35 @@ export function FormConEsito({
   action,
   children,
   className,
+  resetSuOk = false,
 }: {
   action: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   children: ReactNode;
   className?: string;
+  // Svuota il form (tutti i campi tornano al loro defaultValue) dopo
+  // un invio riuscito — per le form di creazione dove l'utente vuole
+  // inserirne subito un'altra (specs/15 - memo.md, scenario "il form si
+  // svuota dopo aver pubblicato un promemoria"). Di default false: le
+  // form di modifica (es. aggiornaBambino) devono continuare a mostrare
+  // i dati correnti, non svuotarsi.
+  resetSuOk?: boolean;
 }) {
   const [esito, formAction] = useFormState(action, ESITO_INIZIALE);
+  const [chiaveForm, setChiaveForm] = useState(0);
+  const primoRender = useRef(true);
+
+  useEffect(() => {
+    if (primoRender.current) {
+      primoRender.current = false;
+      return;
+    }
+    if (resetSuOk && esito.ok) {
+      setChiaveForm((k) => k + 1);
+    }
+  }, [esito, resetSuOk]);
 
   return (
-    <form action={formAction} className={className}>
+    <form key={chiaveForm} action={formAction} className={className}>
       {children}
       {!esito.ok && (
         <div

@@ -131,11 +131,6 @@ finché non risulta tutto verde.
   (mai committate). Un ruolo mancante fa saltare solo i test che lo
   richiedono: la suite resta comunque eseguibile parzialmente.
 
-## Cosa NON fare in questa fase
-- Non implementare rette/pagamenti (Fase 2).
-- Non costruire il portale genitori completo (Fase 3) — lo schema dati e le
-  RLS per i genitori sono già pronti, ma le pagine no.
-
 ## Repo pubblico — regole di sicurezza (non negoziabili)
 Questo repository è pubblico su GitHub: chiunque legga il codice, anche in
 cronologia commit passata, anche dopo un'eventuale rimozione.
@@ -156,3 +151,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   le variabili configurate come "Repository secrets" in GitHub — mai
   hardcoded nel workflow. Anche in CI devono puntare a un progetto
   Supabase di test, mai a quello di produzione.
+
+  ## Versioning
+  - Prima di ogni push su git effettuare un bump di versione
+  - Tracciare sempre la data di push (corrisponde alla data di build)

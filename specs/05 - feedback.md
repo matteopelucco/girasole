@@ -58,8 +58,8 @@ bianca o un errore non gestito
   (creazione/modifica/eliminazione di sezioni, anni scolastici, bambini,
   utenti, assegnazioni, promemoria).
 - Per i pochi punti dove un form ha più azioni diverse su pulsanti
-  diversi (i pulsanti presente/assente/malattia e sì/no/parziale in
-  dashboard, che condividono lo stesso form) l'errore viene sollevato
+  diversi (i pulsanti presente/assente/malattia e sì/no in dashboard,
+  che condividono lo stesso form) l'errore viene sollevato
   dall'azione e intercettato da un error boundary
   (`app/error.tsx`, convenzione Next.js) con lo stesso messaggio
   tecnico — rete di sicurezza applicata anche a qualunque altro errore

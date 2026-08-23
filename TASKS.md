@@ -15,7 +15,7 @@
 - [x] Dashboard maestra: lista bambini della sezione con stato
       presenza/pasto del giorno
 - [x] Azione "segna presenza" (presente/assente/malattia + nota)
-- [x] Azione "segna pasto" (sì/no/parziale + nota), con evidenza allergie da
+- [x] Azione "segna pasto" (sì/no + nota), con evidenza allergie da
       `bambini.note_allergie`
 - [x] Creazione e lista promemoria (tutti / sezione / bambino)
 - [x] Seed di dati di prova (una sezione, 3-4 bambini) per testare in locale
@@ -275,7 +275,52 @@ scope per un run di analisi statica. Da valutare a parte.
       table anni_scolastici"): verifica di averla incollata sul
       progetto giusto e rieseguila.
 
+## Sessione di test con un'insegnante: bug fix, miglioramenti, requisito 51 (Report)
+- [x] Riepilogo numerico in cima a Presenze/Pasti (`components/RiepilogoConteggio.tsx`,
+      es. "Presenti: 8/12", "Pasti: 6/8"). Vedi specs/13, specs/14.
+- [x] Rimosso lo stato "parziale" dal pasto: solo sì/no, con eventuale
+      dettaglio nella nota libera (`supabase/migrations/0012_pasto_senza_parziale.sql`,
+      dati storici migrati automaticamente). Un bambino assente ora
+      compare come "🚫 Assente" anche in Pasti e non è più selezionabile
+      (blocco sia in UI sia con un trigger DB). Vedi specs/14.
+- [x] Bug: il pulsante di stato selezionato (Assente/No) appariva come
+      uno spazio bianco invece che colorato — `tailwind.config.ts` non
+      includeva `lib/**` nel `content`, quindi le classi Tailwind usate
+      in `lib/classiStato.ts` non venivano mai generate nel CSS finale.
+- [x] Bug: un errore nel form di creazione utente (es. password troppo
+      debole) svuotava tutti i campi già compilati — riscritto
+      `app/admin/maestre/actions.ts` sul pattern `EsitoAzione`/
+      `FormConEsito` già usato altrove, che preserva i valori inseriti.
+      Vedi specs/03.
+- [x] Bug: il form promemoria restava compilato dopo un invio riuscito —
+      aggiunto un remount opt-in (`FormConEsito`: prop `resetSuOk`).
+- [x] Bug: non era possibile modificare né eliminare un promemoria —
+      nuova pagina `/dashboard/promemoria/[id]` con modifica ed
+      eliminazione (con conferma), permessi RLS estesi a tutto lo staff
+      (non solo l'autore) in `0012_pasto_senza_parziale.sql`. Vedi specs/15.
+- [x] Occhietto mostra/nascondi password su login e creazione utente
+      (`components/CampoPassword.tsx`). Vedi specs/11.
+- [x] Conferma password (con riscontro in tempo reale "coincidono"/"non
+      coincidono") alla creazione di un utente
+      (`components/CampiPasswordConferma.tsx`). Vedi specs/03.
+- [x] Nuovo requisito 51 (specs/51 - report.md): report tabellare
+      presenze/pasti per classe (mensile/settimanale/giornaliero, con
+      navigazione tra periodi e drill-down giorno per giorno su un
+      bambino) più un'anagrafica classi (maestre, bambini, genitori) —
+      `app/dashboard/report/`, `lib/report.ts`, `lib/date.ts` (nuovi
+      helper periodo). Nuove policy RLS in
+      `supabase/migrations/0013_report_anagrafica.sql` (una maestra deve
+      vedere le colleghe sulla stessa classe e i genitori dei propri
+      bambini, permessi prima non necessari).
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0012_pasto_senza_parziale.sql` e
+      `supabase/migrations/0013_report_anagrafica.sql` nel SQL Editor di
+      Supabase (test e produzione) — senza la 0012, modificare/eliminare
+      un promemoria non ha effetto (RLS silenziosamente non aggiorna/
+      elimina nulla, 2 test restano rossi:
+      `e2e/15-memo.spec.ts`); senza la 0013, l'anagrafica classi non
+      mostra colleghe/genitori a una maestra.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
-- [ ] Report mensile presenze per amministrazione
 - [ ] Portale genitori (UI dedicata)

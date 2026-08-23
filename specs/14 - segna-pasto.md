@@ -16,6 +16,13 @@ Quando seleziono una classe
 Allora vedo l'elenco dei bambini di quella classe con lo stato pasto di
 quella data, se già segnato
 
+## Scenario: riepilogo pasti della classe
+Dato che ho aperto l'elenco bambini di una classe, per una data
+Allora vedo in cima un riepilogo "Pasti: X/Y", dove X è il numero di
+bambini segnati "sì" per quella data e Y il numero di bambini della
+classe che non risultano "assente" quel giorno (i soli per cui ha senso
+segnare il pasto)
+
 ## Scenario: le allergie sono visibili prima di segnare il pasto
 Dato che un bambino ha `note_allergie` compilato (es. "Allergia alle
 arachidi")
@@ -27,11 +34,6 @@ al nome del bambino, indipendentemente dallo stato del pasto
 Quando premo "Sì" sulla riga pasto di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "sì"
 
-## Scenario: segnare un pasto parziale con nota
-Quando premo "Parziale" e scrivo una nota (es. "solo il primo")
-Allora lo stato diventa "parziale" con quella nota salvata
-E la nota resta salvata anche dopo aver ricaricato la pagina
-
 ## Scenario: salvare una nota senza cambiare lo stato
 Dato che un bambino ha già uno stato pasto segnato per oggi
 Quando scrivo o modifico la nota e premo "Salva nota"
@@ -42,6 +44,13 @@ E la nota resta visibile anche dopo aver ricaricato la pagina
 Quando premo "No" sulla riga pasto di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "no"
 
+## Scenario: un bambino assente non è selezionabile per il pasto
+Dato che un bambino è segnato "assente" per la data in questione
+Quando apro l'elenco Pasti della sua classe per quella data
+Allora al posto dei pulsanti Sì/No vedo l'etichetta "Assente"
+E non posso selezionare alcuno stato pasto per quel bambino, nemmeno
+come admin
+
 ## Scenario: la maestra non può modificare il pasto di una data diversa da oggi
 Dato che sono autenticata come maestra e ho aperto Pasti per una data
 diversa da oggi (passata o futura)
@@ -50,7 +59,11 @@ Allora vedo lo stato eventualmente già registrato ma senza pulsanti per
 modificarlo: è in sola lettura
 
 ## Regole
-- Stati validi: `si`, `no`, `parziale`.
+- Stati validi: `si`, `no`. (Lo stato `parziale` è stato rimosso dopo
+  un test con un'insegnante: nella pratica un pasto è mangiato o no, un
+  eventuale dettaglio va nella nota libera — vedi
+  `supabase/migrations/0012_pasto_senza_parziale.sql` per la migration
+  dei dati storici già segnati "parziale".)
 - Un solo record di pasto per bambino per giorno (upsert su
   `bambino_id, data`).
 - La nota è testo libero, opzionale.
@@ -58,6 +71,12 @@ modificarlo: è in sola lettura
   già uno stato pasto segnato per la data in questione (stesso motivo di
   [13 - segna-presenza.md](13%20-%20segna-presenza.md): il record
   richiede sempre uno stato).
+- Un bambino con presenza "assente" per la data in questione non può
+  avere un pasto segnato per quella data: vincolo imposto anche a
+  livello di database (trigger, vedi
+  `supabase/migrations/0012_pasto_senza_parziale.sql`), non solo in UI
+  — riguarda solo lo stato "assente", non "malattia" (un bambino
+  malato può comunque aver mangiato, es. a casa poi rientrato).
 - Scrittura consentita solo allo staff: la maestra della sezione del
   bambino, o l'admin (vedi RLS su `pasti` in
   `supabase/migrations/0001_init.sql`).
@@ -68,7 +87,8 @@ modificarlo: è in sola lettura
   [13 - segna-presenza.md](13%20-%20segna-presenza.md).
 - Presenza e pasto sono indipendenti: si può segnare il pasto anche senza
   aver ancora segnato la presenza (utile se la maestra segna prima il
-  pranzo e la presenza a fine giornata).
+  pranzo e la presenza a fine giornata) — a meno che la presenza non sia
+  già "assente" (vedi sopra).
 - Se il bambino risulta "malattia" per la data visualizzata, l'etichetta
   malattia appare anche in questo elenco, accanto al nome (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).

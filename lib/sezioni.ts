@@ -2,20 +2,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type SezioneAttiva = { id: string; nome: string };
 
-// Classi attive rilevanti per l'utente corrente: tutte per l'admin, solo
-// quelle assegnate per la maestra (specs/12 - dashboard-maestre.md). Le
-// classi non attive non compaiono: non servono per l'appello quotidiano.
-export async function sezioniAttiveVisibili(
+// Classi rilevanti per l'utente corrente: tutte per l'admin, solo quelle
+// assegnate per la maestra (specs/12 - dashboard-maestre.md). Con
+// `soloAttive` (default true) filtra anche le classi disattivate — le
+// pagine operative (Presenze/Pasti/promemoria) non ne hanno bisogno,
+// solo l'anagrafica classi (specs/51 - report.md) vuole vederle tutte.
+async function sezioniPerRuolo(
   supabase: SupabaseClient,
   userId: string,
-  ruolo: string | null | undefined
+  ruolo: string | null | undefined,
+  soloAttive: boolean
 ): Promise<SezioneAttiva[]> {
   if (ruolo === 'admin') {
-    const { data } = await supabase
-      .from('sezioni')
-      .select('id, nome')
-      .eq('attiva', true)
-      .order('nome');
+    let query = supabase.from('sezioni').select('id, nome').order('nome');
+    if (soloAttive) query = query.eq('attiva', true);
+    const { data } = await query;
     return data ?? [];
   }
 
@@ -27,12 +28,30 @@ export async function sezioniAttiveVisibili(
 
     return (data ?? [])
       .map((r) => r.sezioni as unknown as (SezioneAttiva & { attiva: boolean }) | null)
-      .filter((s): s is SezioneAttiva & { attiva: boolean } => !!s && s.attiva)
+      .filter((s): s is SezioneAttiva & { attiva: boolean } => !!s && (!soloAttive || s.attiva))
       .map(({ id, nome }) => ({ id, nome }))
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }
 
   return [];
+}
+
+export function sezioniAttiveVisibili(
+  supabase: SupabaseClient,
+  userId: string,
+  ruolo: string | null | undefined
+): Promise<SezioneAttiva[]> {
+  return sezioniPerRuolo(supabase, userId, ruolo, true);
+}
+
+// Tutte le classi rilevanti per l'utente corrente, ATTIVE O NO — usata
+// solo dall'anagrafica classi (specs/51 - report.md).
+export function sezioniComplete(
+  supabase: SupabaseClient,
+  userId: string,
+  ruolo: string | null | undefined
+): Promise<SezioneAttiva[]> {
+  return sezioniPerRuolo(supabase, userId, ruolo, false);
 }
 
 // Una singola classe per id, o null se non esiste (o non è visibile per

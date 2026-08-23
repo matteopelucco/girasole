@@ -97,7 +97,7 @@ export async function loginCome(page: Page, ruolo: Ruolo): Promise<void> {
   }
   await page.goto('/login');
   await page.getByLabel('Email').fill(cred.email);
-  await page.getByLabel('Password').fill(cred.password);
+  await page.getByLabel('Password', { exact: true }).fill(cred.password);
   await page.getByRole('button', { name: 'Accedi' }).click();
   await page.waitForURL('/dashboard', { timeout: 20_000 });
 }

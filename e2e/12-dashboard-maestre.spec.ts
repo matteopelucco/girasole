@@ -75,7 +75,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
 
     await page.goto('/login');
     await page.getByLabel('Email').fill(process.env.E2E_MAESTRA_SENZA_SEZIONE_EMAIL!);
-    await page.getByLabel('Password').fill(process.env.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD!);
+    await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD!);
     await page.getByRole('button', { name: 'Accedi' }).click();
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 

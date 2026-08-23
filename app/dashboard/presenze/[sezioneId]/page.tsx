@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
+import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData } from '@/lib/auth';
@@ -48,6 +49,7 @@ export default async function PresenzeClassePage({
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
   const editable = puoScrivereData(ruolo, data);
+  const numeroPresenti = bambini.filter((b) => presenzaPerBambino.get(b.id)?.stato === 'presente').length;
 
   return (
     <PaginaClasseAttivita
@@ -59,6 +61,11 @@ export default async function PresenzeClassePage({
       data={data}
       editable={editable}
       vuoto={!bambini.length}
+      riepilogo={
+        bambini.length > 0 && (
+          <RiepilogoConteggio etichetta="Presenti" numeratore={numeroPresenti} denominatore={bambini.length} />
+        )
+      }
     >
       {bambini.map((bambino) => {
         const presenza = presenzaPerBambino.get(bambino.id);
