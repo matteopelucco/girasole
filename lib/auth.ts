@@ -26,11 +26,19 @@ export async function requireUser() {
 export async function requireProfilo() {
   const { supabase, user } = await requireUser();
 
-  const { data: profilo } = await supabase
+  const { data: profilo, error } = await supabase
     .from('profili')
     .select('nome, cognome, ruolo')
     .eq('id', user.id)
     .single();
+
+  // Se questa query fallisce (es. permission denied per GRANT mancanti su
+  // `profili`, già capitato due volte — vedi 0004/0008_fix_grant_tabelle*.sql)
+  // profilo resta null e l'utente vede "Ruolo: non impostato" senza indizi:
+  // logghiamo l'errore reale per renderlo diagnosticabile dai log Vercel.
+  if (error) {
+    console.error(`requireProfilo: impossibile leggere il profilo di ${user.id}`, error);
+  }
 
   return { supabase, user, profilo: profilo as Profilo | null };
 }
