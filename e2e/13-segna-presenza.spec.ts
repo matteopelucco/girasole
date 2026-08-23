@@ -50,6 +50,33 @@ test.describe('13 — Segna presenza', () => {
       await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue(
         'influenza, rientra lunedì'
       );
+
+      // La nota deve restare salvata anche dopo un ricaricamento, non
+      // solo visibile finché l'input non viene rimontato.
+      await page.reload();
+      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue(
+        'influenza, rientra lunedì'
+      );
+    });
+
+    test('salvare una nota senza cambiare lo stato', async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      // Serve uno stato già segnato: "Salva nota" richiede un record di
+      // presenza esistente (la colonna stato non è nullable).
+      await primaRiga.getByRole('button', { name: 'Presente' }).click();
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+
+      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('entra alle 9:03');
+      await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
+
+      // Lo stato non cambia: resta "presente".
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+
+      await page.reload();
+      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue('entra alle 9:03');
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
     });
 
     test('correggere uno stato in malattia: upsert, nota e tag negli elenchi', async ({ page }) => {

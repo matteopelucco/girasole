@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
-import { segnaPresenza } from '../actions';
+import { segnaPresenza, salvaNotaPresenza } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +87,19 @@ export default async function PresenzeClassePage({
                   defaultValue={presenza?.note ?? ''}
                   placeholder="Nota (opzionale)"
                   className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                />
+                <BottoneSalvaNota
+                  formAction={
+                    presenza
+                      ? salvaNotaPresenza.bind(
+                          null,
+                          bambino.id,
+                          sezioneId,
+                          data,
+                          presenza.stato as 'presente' | 'assente' | 'malattia'
+                        )
+                      : null
+                  }
                 />
               </form>
             ) : (

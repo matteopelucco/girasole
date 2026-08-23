@@ -30,6 +30,13 @@ Allora lo stato pasto di oggi per quel bambino diventa "sì"
 ## Scenario: segnare un pasto parziale con nota
 Quando premo "Parziale" e scrivo una nota (es. "solo il primo")
 Allora lo stato diventa "parziale" con quella nota salvata
+E la nota resta salvata anche dopo aver ricaricato la pagina
+
+## Scenario: salvare una nota senza cambiare lo stato
+Dato che un bambino ha già uno stato pasto segnato per oggi
+Quando scrivo o modifico la nota e premo "Salva nota"
+Allora la nota viene salvata restando associata allo stato già segnato
+E la nota resta visibile anche dopo aver ricaricato la pagina
 
 ## Scenario: segnare che un bambino non ha mangiato
 Quando premo "No" sulla riga pasto di un bambino
@@ -47,6 +54,10 @@ modificarlo: è in sola lettura
 - Un solo record di pasto per bambino per giorno (upsert su
   `bambino_id, data`).
 - La nota è testo libero, opzionale.
+- Il pulsante "Salva nota" è disponibile solo se per il bambino esiste
+  già uno stato pasto segnato per la data in questione (stesso motivo di
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md): il record
+  richiede sempre uno stato).
 - Scrittura consentita solo allo staff: la maestra della sezione del
   bambino, o l'admin (vedi RLS su `pasti` in
   `supabase/migrations/0001_init.sql`).

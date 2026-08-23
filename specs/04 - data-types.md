@@ -37,6 +37,10 @@ usato nel resto dell'app).
 Dati obbligatori: Nome, Cognome, Data di nascita, Sesso.
 Dati facoltativi: Note alimentari (`note_allergie` a DB), Altre note.
 
+Un alunno è univoco per Nome + Cognome + Data di nascita (senza distinguere
+maiuscole/minuscole): non possono esistere due alunni con questi tre dati
+identici — evita inserimenti duplicati dello stesso bambino.
+
 ## Relazioni
 - **Alunno → Classe**: un alunno appartiene a tante classi nel tempo (un
   alunno che entra in materna 1 ed esce in materna 3 è associato a 3
@@ -71,6 +75,13 @@ Quando su `/admin` compilo nome, cognome, data di nascita, sesso e
 sezione di un bambino, e confermo
 Allora il bambino compare in elenco con i dati inseriti
 
+## Scenario: impedire un alunno duplicato
+Dato che esiste già un alunno con un certo nome, cognome e data di
+nascita
+Quando provo a crearne un altro su `/admin` con nome, cognome e data di
+nascita identici (anche scritti con maiuscole/minuscole diverse)
+Allora vedo un errore chiaro e il nuovo alunno non viene creato
+
 ## Scenario: admin aggiunge indirizzo e note a un utente
 Quando su `/admin/maestre` compilo indirizzo di residenza e/o note in
 fase di creazione o modifica di un utente, e confermo
@@ -87,6 +98,10 @@ quell'utente
   [13 - segna-presenza.md](13%20-%20segna-presenza.md),
   [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Lo storico multi-classe
   nel tempo è modellato a parte (vedi Fuori scope sotto).
+- L'unicità Nome+Cognome+Data di nascita è imposta con un indice unico
+  case-insensitive in DB (`supabase/migrations/0010_alunno_univoco.sql`),
+  non solo lato UI: chi crea un bambino via API/script bypassando
+  l'interfaccia resta comunque protetto dal duplicato.
 
 ## Fuori scope in questa fase
 Le seguenti parti dello schema sono pronte a DB (migration

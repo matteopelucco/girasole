@@ -61,13 +61,34 @@ test.describe('14 — Segna pasto', () => {
       await bottoneParziale.click();
 
       await expect(bottoneParziale).toHaveClass(/bg-amber-700/);
+
+      // La nota deve restare salvata anche dopo un ricaricamento.
+      await page.reload();
+      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue('solo il primo');
+    });
+
+    test('salvare una nota senza cambiare lo stato', async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      await primaRiga.getByRole('button', { name: 'Sì' }).click();
+      await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+
+      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
+      await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
+
+      await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+
+      await page.reload();
+      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue('ha finito tutto');
+      await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
     });
 
     test('segnare che un bambino non ha mangiato', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'No' }) }).first();
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'No', exact: true }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
 
-      const bottoneNo = primaRiga.getByRole('button', { name: 'No' });
+      const bottoneNo = primaRiga.getByRole('button', { name: 'No', exact: true });
       await bottoneNo.click();
       await expect(bottoneNo).toHaveClass(/bg-rose-600/);
     });
@@ -90,7 +111,7 @@ test.describe('14 — Segna pasto', () => {
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sì' })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'No' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Parziale' })).toHaveCount(0);
     });
   });

@@ -43,7 +43,10 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.locator('select[name="anno_scolastico_id"]').selectOption({ label: nomeAnno });
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
-    await expect(page.getByText(nomeSezione)).toBeVisible({ timeout: 20_000 });
+    // Il nome della sezione compare sia nell'elenco (<li>) sia come
+    // <option> nel select "Sezione" del form Bambini: mi limito
+    // all'elenco per evitare un doppio match (strict mode).
+    await expect(page.locator('li', { hasText: nomeSezione })).toBeVisible({ timeout: 20_000 });
   });
 
   test('admin disattiva e riattiva una classe', async ({ page }) => {
@@ -51,9 +54,9 @@ test.describe('04 — Tipi di dato ed entità', () => {
     const nomeSezione = `Sezione Toggle E2E ${Date.now()}`;
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nomeSezione);
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
-    await expect(page.getByText(nomeSezione)).toBeVisible({ timeout: 20_000 });
 
-    const riga = page.getByText(nomeSezione, { exact: false }).locator('..');
+    const riga = page.locator('li', { hasText: nomeSezione });
+    await expect(riga).toBeVisible({ timeout: 20_000 });
     await riga.getByRole('button', { name: 'Disattiva' }).click();
     await expect(riga.getByText('non attiva')).toBeVisible({ timeout: 20_000 });
 
@@ -67,7 +70,10 @@ test.describe('04 — Tipi di dato ed entità', () => {
     test.skip((await opzioniSezione.count()) === 0, 'nessuna sezione disponibile, crea prima una sezione');
 
     const cognome = `E2eAlunno${Date.now()}`;
-    await page.getByPlaceholder('Nome').fill('Alunno');
+    // { exact: true }: senza, "Nome" combacerebbe anche con "Nome
+    // sezione (es. Girasoli)", "Nome anno scolastico..." e persino
+    // "Cognome" (contiene "nome" come sottostringa case-insensitive).
+    await page.getByPlaceholder('Nome', { exact: true }).fill('Alunno');
     await page.getByPlaceholder('Cognome').fill(cognome);
     await page.getByLabel('Data di nascita').fill('2021-05-10');
     await page.getByLabel('Sesso').selectOption('M');
@@ -76,6 +82,37 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
 
     await expect(page.getByText(cognome, { exact: false })).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('impedire un alunno duplicato (stesso nome, cognome e data di nascita)', async ({ page }) => {
+    await page.goto('/admin');
+    const opzioniSezione = page.locator('select[name="sezione_id"] option:not([value=""])');
+    test.skip((await opzioniSezione.count()) === 0, 'nessuna sezione disponibile, crea prima una sezione');
+
+    const nome = 'Gemello';
+    const cognome = `E2eDuplicato${Date.now()}`;
+    const dataNascita = '2019-03-15';
+
+    await page.getByPlaceholder('Nome', { exact: true }).fill(nome);
+    await page.getByPlaceholder('Cognome').fill(cognome);
+    await page.getByLabel('Data di nascita').fill(dataNascita);
+    await page.getByLabel('Sesso').selectOption('M');
+    await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
+    await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
+    await expect(page.getByText(cognome, { exact: false })).toBeVisible({ timeout: 20_000 });
+
+    // Ripeto con nome/cognome in maiuscolo (il confronto è case-insensitive)
+    // e la stessa identica data di nascita: deve essere rifiutato.
+    await page.getByPlaceholder('Nome', { exact: true }).fill(nome.toUpperCase());
+    await page.getByPlaceholder('Cognome').fill(cognome.toUpperCase());
+    await page.getByLabel('Data di nascita').fill(dataNascita);
+    await page.getByLabel('Sesso').selectOption('M');
+    await page.locator('select[name="sezione_id"]').selectOption({ index: 1 });
+    await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
+
+    const banner = page.getByRole('alert').filter({ hasText: /esiste già/i });
+    await expect(banner).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(cognome, { exact: false })).toHaveCount(1);
   });
 
   test('admin aggiunge indirizzo e note a un utente in fase di creazione', async ({ page }) => {

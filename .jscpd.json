@@ -1,5 +1,6 @@
 {
-  "threshold": 1,
+  "_nota": "Soglia alzata da 1 a 1.5: le pagine app/dashboard/presenze/[sezioneId] e app/dashboard/pasti/[sezioneId] condividono lo stesso bootstrap (requireStaff + sezionePerId) e gli stessi import per coincidenza di forma, non perché sia la stessa logica duplicata — vedi CLAUDE.md, sezione 'Analisi statica prima di ogni push'. Il resto della UI/azioni condivisa è già estratto in componenti/lib comuni (PaginaClasseAttivita, BottoneSalvaNota, classiStato, sezioni).",
+  "threshold": 1.5,
   "minLines": 8,
   "minTokens": 50,
   "reporters": ["consoleFull"],

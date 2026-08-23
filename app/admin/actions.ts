@@ -94,6 +94,12 @@ export async function creaBambino(_stato: EsitoAzione, formData: FormData): Prom
     altre_note: altreNote || null,
   });
   if (error) {
+    if (error.code === '23505') {
+      return {
+        ok: false,
+        messaggio: 'Esiste già un alunno con questo nome, cognome e data di nascita.',
+      };
+    }
     return { ok: false, messaggio: 'Impossibile aggiungere il bambino.', dettaglio: error.message };
   }
 

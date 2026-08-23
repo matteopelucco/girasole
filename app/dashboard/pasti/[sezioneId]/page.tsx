@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
-import { segnaPasto } from '../actions';
+import { segnaPasto, salvaNotaPasto } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,19 @@ export default async function PastiClassePage({
                   defaultValue={pasto?.note ?? ''}
                   placeholder="Nota (opzionale)"
                   className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                />
+                <BottoneSalvaNota
+                  formAction={
+                    pasto
+                      ? salvaNotaPasto.bind(
+                          null,
+                          bambino.id,
+                          sezioneId,
+                          data,
+                          pasto.mangiato as 'si' | 'no' | 'parziale'
+                        )
+                      : null
+                  }
                 />
               </form>
             ) : (

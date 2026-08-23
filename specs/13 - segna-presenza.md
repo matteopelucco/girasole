@@ -19,6 +19,13 @@ E il pulsante "Presente" resta evidenziato come stato corrente
 ## Scenario: segnare un'assenza con nota
 Quando premo "Assente" e scrivo una nota (es. "influenza, rientra lunedì")
 Allora lo stato diventa "assente" con quella nota salvata
+E la nota resta salvata anche dopo aver ricaricato la pagina
+
+## Scenario: salvare una nota senza cambiare lo stato
+Dato che un bambino ha già uno stato di presenza segnato per oggi
+Quando scrivo o modifico la nota (es. "entra alle 9:03") e premo "Salva nota"
+Allora la nota viene salvata restando associata allo stato già segnato
+E la nota resta visibile anche dopo aver ricaricato la pagina
 
 ## Scenario: correggere uno stato già segnato in malattia
 Dato che un bambino è già segnato "presente" per oggi
@@ -56,6 +63,11 @@ seconda mail (idempotenza)
 - Un solo record di presenza per bambino per giorno (upsert su
   `bambino_id, data`).
 - La nota è testo libero, opzionale.
+- Il pulsante "Salva nota" è disponibile solo se per il bambino esiste
+  già uno stato segnato per la data in questione: un record di presenza
+  richiede sempre uno stato (colonna non nulla), quindi non è possibile
+  salvare una nota "orfana" prima di aver segnato almeno una volta
+  Presente/Assente/Malattia.
 - Scrittura consentita solo allo staff: la maestra della sezione del
   bambino, o l'admin (vedi RLS su `presenze` in
   `supabase/migrations/0001_init.sql`).

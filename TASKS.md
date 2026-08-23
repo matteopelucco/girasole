@@ -191,6 +191,40 @@ scope per un run di analisi statica. Da valutare a parte.
       classi in tonalità ambra/verde (`components/SelettoreData.tsx`,
       `components/ElencoClassi.tsx`), logo con emoji 🌻 in `NavHeader`.
 
+## Bug fix: alunno duplicato + nota presenza/pasto non salvabile
+- [x] Un alunno è ora univoco per Nome+Cognome+Data di nascita
+      (case-insensitive): indice unico in DB
+      (`supabase/migrations/0010_alunno_univoco.sql`) + messaggio
+      d'errore chiaro su `/admin` (`app/admin/actions.ts:creaBambino`,
+      codice Postgres `23505`). Vedi specs/04 - data-types.md.
+- [x] Aggiunto il pulsante "Salva nota" in Presenze e Pasti
+      (`components/BottoneSalvaNota.tsx`): prima l'unico modo per
+      salvare la nota era ripremere lo stesso stato già segnato, non
+      ovvio da UI e percepito come "la nota non si salva mai". Ora è
+      disponibile un'azione dedicata (disabilitata finché non esiste
+      già uno stato, perché la colonna `stato`/`mangiato` non è
+      nullable). Vedi specs/13 - segna-presenza.md, specs/14 -
+      segna-pasto.md.
+- [x] Test aggiunti per entrambi (persistenza dopo reload inclusa):
+      `e2e/04-data-types.spec.ts`, `e2e/13-segna-presenza.spec.ts`,
+      `e2e/14-segna-pasto.spec.ts`. Corretta anche una fragilità nei
+      test esistenti: i selettori Playwright per testo fanno match per
+      sottostringa case-insensitive di default, quindi `getByPlaceholder('Nome')`
+      combaciava anche con "Cognome"/"Nome sezione..." e
+      `getByRole('button', { name: 'No' })` con "Salva **no**ta" —
+      corretto con `{ exact: true }` o locator più specifici.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0010_alunno_univoco.sql` nel SQL Editor di
+      Supabase (test e produzione) — senza, il vincolo non è attivo e
+      un alunno duplicato viene comunque creato senza errore. **Nota
+      anche**: verificando questo fix ho scoperto che
+      `0008_fix_grant_tabelle_04.sql` (permessi su `anni_scolastici`,
+      commit precedente) non risulta applicata sul progetto di test —
+      creare un anno scolastico da `/admin` fallisce ancora con
+      "permission denied for table anni_scolastici". Applica anche
+      quella, insieme alla `0009_scrittura_solo_oggi_maestra.sql` già
+      segnalata sopra, se non fatto.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Report mensile presenze per amministrazione
