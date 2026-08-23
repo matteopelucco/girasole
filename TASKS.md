@@ -321,6 +321,28 @@ scope per un run di analisi statica. Da valutare a parte.
       `e2e/15-memo.spec.ts`); senza la 0013, l'anagrafica classi non
       mostra colleghe/genitori a una maestra.
 
+## Test unitari (Vitest) per la logica pura
+- [x] Aggiunto Vitest (`vitest.config.mts`) come secondo livello di test,
+      accanto a Playwright: unit test per le funzioni pure di `lib/`
+      (nessun I/O — niente Supabase, niente fetch, niente filesystem),
+      per coprire in millisecondi i casi limite (bisestili, cambi di
+      mese/anno, combinazioni della regex password) che gli scenari e2e
+      non enumerano uno per uno. Copertura e2e invariata: nessuno
+      scenario Playwright è stato rimosso. Vedi `CLAUDE.md`, sezione
+      "Test-first".
+- [x] `lib/date.test.ts`, `lib/classiStato.test.ts`, `lib/password.test.ts`,
+      `lib/report.test.ts`, `lib/auth.test.ts` (solo `puoScrivereData`/
+      `assicuraScrivibile`, le uniche funzioni pure di `lib/auth.ts` — il
+      resto fa I/O e resta coperto solo da e2e). 52 test, ~0.3s.
+- [x] `npm run test:unit` (una tantum) / `test:unit:watch`; incluso in
+      `npm run analyze` e nel git hook `pre-push`
+      (`.githooks/pre-push`), che ora blocca il push anche su un unit
+      test rotto — a differenza di Playwright, non richiede un server
+      dev né credenziali, quindi può girare ad ogni push senza costo.
+- [x] `.jscpd.json`: esclusi i file `**/*.test.ts` dal controllo
+      duplicati (le asserzioni ripetute per casi diversi non sono
+      duplicazione reale).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

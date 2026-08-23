@@ -1,10 +1,12 @@
 #!/bin/sh
-# Analisi statica prima di ogni push: type-check, ESLint, codice
-# duplicato (jscpd). Attivato in automatico da "npm install" (script
-# "prepare" in package.json, che imposta core.hooksPath su questa
-# cartella — vedi CLAUDE.md). Volutamente non lancia la suite e2e
-# (richiede credenziali reali e minuti, non secondi: resta un passo
-# manuale, vedi CLAUDE.md).
+# Analisi statica prima di ogni push: type-check, ESLint, unit test
+# (Vitest), codice duplicato (jscpd). Attivato in automatico da "npm
+# install" (script "prepare" in package.json, che imposta
+# core.hooksPath su questa cartella — vedi CLAUDE.md). Volutamente non
+# lancia la suite e2e (richiede un server dev attivo, credenziali reali
+# e minuti, non secondi: resta un passo manuale, vedi CLAUDE.md). I
+# unit test invece non toccano rete/DB/browser, girano in secondi:
+# nessuna ragione per escluderli da questo hook.
 set -e
 
 echo "── Type-check (tsc) ──────────────────────────────"
@@ -12,6 +14,9 @@ npx tsc --noEmit
 
 echo "── Lint (ESLint) ─────────────────────────────────"
 npx next lint
+
+echo "── Unit test (Vitest) ────────────────────────────"
+npx vitest run
 
 echo "── Codice duplicato (jscpd) ──────────────────────"
 npx jscpd

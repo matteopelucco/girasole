@@ -19,6 +19,9 @@ jobs:
       - name: Installa le dipendenze
         run: npm ci
 
+      - name: Esegui gli unit test (Vitest)
+        run: npx vitest run
+
       - name: Installa Chromium (Playwright)
         run: npx playwright install --with-deps chromium
 

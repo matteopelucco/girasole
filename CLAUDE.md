@@ -44,12 +44,15 @@ Contesto operativo per Claude Code su questo progetto.
 - Un git hook `pre-push` (`.githooks/pre-push`, attivato in automatico
   da `npm install` tramite lo script `prepare` in `package.json`, che
   imposta `core.hooksPath`) lancia type-check (`tsc --noEmit`), ESLint
-  (`next lint`, configurato in `.eslintrc.json` con `next/core-web-vitals`)
-  e la ricerca di codice duplicato (`jscpd`, configurato in
-  `.jscpd.json`) prima di ogni `git push`. Il push viene bloccato se uno
-  dei tre fallisce.
+  (`next lint`, configurato in `.eslintrc.json` con `next/core-web-vitals`),
+  gli unit test Vitest (`npx vitest run` — vedi sotto) e la ricerca di
+  codice duplicato (`jscpd`, configurato in `.jscpd.json`) prima di ogni
+  `git push`. Il push viene bloccato se uno dei quattro fallisce. A
+  differenza della suite e2e, gli unit test non richiedono un server dev
+  né credenziali (nessun I/O), quindi girano bene dentro un hook che deve
+  restare veloce.
 - Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
-  duplicati; per il type-check separato, `npx tsc --noEmit`).
+  unit test + duplicati; per il type-check separato, `npx tsc --noEmit`).
 - Se `jscpd` segnala una duplicazione reale (stessa logica ripetuta,
   non solo forma simile), il modo giusto per risolverla è estrarre una
   funzione condivisa (vedi `lib/auth.ts`, `requireAdmin`/`requireProfilo`/
@@ -66,7 +69,18 @@ Contesto operativo per Claude Code su questo progetto.
   da collegare, token da aggiungere ai secret) prima di essere
   implementato.
 
-## Test-first (importantissimo) — solo Playwright
+## Test-first (importantissimo) — Playwright (e2e) + Vitest (unit)
+
+Due livelli di test, non alternativi: **e2e (Playwright)** copre ogni
+`## Scenario:` di `specs/` così com'è sempre stato (comportamento
+osservabile via browser, ruoli, RLS) — questa copertura non si riduce.
+**Unit (Vitest)** è un livello aggiuntivo, più veloce, per la logica
+pura dentro `lib/`: non sostituisce nessuno scenario e2e, ma copre in
+millisecondi i casi limite che sarebbe costoso enumerare uno per uno
+tramite browser (bisestili, cambi di mese/anno, combinazioni di una
+regex), e permette di iterare su quella logica durante la sessione di
+sviluppo con `npm run test:unit` invece di dover riavviare `npm run dev`
++ Playwright ad ogni modifica.
 
 **Ciclo di lavoro obbligatorio per ogni modifica non banale**, in
 quest'ordine, ed è un ciclo — non un percorso a senso unico: se il check
@@ -81,23 +95,27 @@ finché non risulta tutto verde.
    test rotto.
 2. **TEST_WRITING** — scrivi o aggiorna `e2e/xxx.spec.ts` PRIMA (o
    comunque prima di dichiarare finito il lavoro) di modificare il
-   codice applicativo, un test per ogni `## Scenario:`.
+   codice applicativo, un test per ogni `## Scenario:`. Se il codice che
+   stai per scrivere/toccare introduce o modifica una funzione pura in
+   `lib/` (vedi criterio sotto), scrivi/aggiorna anche il corrispondente
+   `lib/xxx.test.ts`.
 3. **CODE** — implementa/modifica il codice applicativo (pagine, server
    actions, migration) finché soddisfa quei test.
 4. **CHECK_COVERAGE** — verifica che ogni `## Scenario:` di ogni
-   `specs/xxx.md` abbia un test corrispondente (nessuno scenario
+   `specs/xxx.md` abbia un test e2e corrispondente (nessuno scenario
    scoperto, nessun test orfano che non corrisponde più a uno scenario
-   reale) ed esegui la suite (`npx playwright test`, con `npm run dev`
-   attivo — vedi sotto).
+   reale) ed esegui entrambe le suite: `npx vitest run` (secondi, sempre)
+   e `npx playwright test` (con `npm run dev` attivo — vedi sotto).
 5. **FIX** — se un test fallisce o uno scenario risulta scoperto, non è
    accettabile lasciarlo così "per ora": o si corregge il codice, o si
    corregge il test/requisito se era lui ad essere sbagliato. Poi si
    ripete dal passo 4.
 
-- Niente piani di test in Markdown: l'unica suite di test è quella
-  eseguibile in `e2e/`. Ogni file di requisiti in `specs/xxx.md` deve
-  avere un corrispondente `e2e/xxx.spec.ts` con gli stessi identici nome
-  e numero (es. `specs/13 - segna-presenza.md` →
+### e2e (Playwright) — comportamento end-to-end
+- Niente piani di test in Markdown: l'unica suite di test end-to-end è
+  quella eseguibile in `e2e/`. Ogni file di requisiti in `specs/xxx.md`
+  deve avere un corrispondente `e2e/xxx.spec.ts` con gli stessi identici
+  nome e numero (es. `specs/13 - segna-presenza.md` →
   `e2e/13-segna-presenza.spec.ts`), con uno scenario di test Playwright
   per ogni `## Scenario:` del requisito, più un controllo di
   accessibilità axe-core (`nessunaViolazioneA11yGrave`, in
@@ -131,6 +149,34 @@ finché non risulta tutto verde.
   (mai committate). Un ruolo mancante fa saltare solo i test che lo
   richiedono: la suite resta comunque eseguibile parzialmente.
 
+### Unit (Vitest) — solo logica pura
+- **Criterio di ammissione, rigido**: un unit test in `lib/xxx.test.ts`
+  è ammesso solo per funzioni **senza I/O** — niente chiamate Supabase
+  (nemmeno con un client "finto"), niente `fetch`, niente filesystem,
+  niente `redirect()` di Next.js. Se una funzione tocca anche solo in
+  parte uno di questi, resta coperta esclusivamente da e2e: un mock del
+  client Supabase darebbe un falso senso di sicurezza proprio sulle RLS,
+  che sono "la difesa primaria dei dati" (vedi Convenzioni) e si
+  verificano solo con un Postgres reale e una sessione reale. Esempio:
+  in `lib/auth.ts`, `puoScrivereData`/`assicuraScrivibile` sono unit
+  test (prendono ruolo/data, nessun I/O); `requireUser`/`requireProfilo`/
+  `requireAdmin`/`requireStaff` restano solo e2e (fanno query Supabase e
+  `redirect()`).
+- Co-locati accanto al modulo che testano (`lib/date.ts` →
+  `lib/date.test.ts`, non una cartella `__tests__` separata), niente
+  mapping 1:1 con `specs/xxx.md`: una funzione di `lib/` può essere
+  usata da più scenari (es. `lib/date.ts` da `specs/13`, `specs/14` e
+  `specs/51`), quindi si testa una volta sola al livello del modulo,
+  con i casi limite significativi (bisestili, cambi mese/anno,
+  confini di regex), non uno scenario e2e per ogni combinazione.
+- Configurazione in `vitest.config.mts` (environment `node`, alias `@`
+  come in `tsconfig.json`). Nessuna dipendenza da un server dev, da
+  Playwright o da credenziali: girano ovunque, incluso dentro l'hook
+  `pre-push`.
+- Eseguirli con `npm run test:unit` (una tantum) o `npm run
+  test:unit:watch` (rilancia ad ogni modifica — utile durante lo
+  sviluppo di una funzione in `lib/`).
+
 ## Repo pubblico — regole di sicurezza (non negoziabili)
 Questo repository è pubblico su GitHub: chiunque legga il codice, anche in
 cronologia commit passata, anche dopo un'eventuale rimozione.
@@ -146,11 +192,13 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
 - Le pull request di collaboratori esterni vanno revisionate prima del
   merge su `main`: un push su `main` fa deploy automatico in produzione
   su Vercel.
-- La suite Playwright gira automaticamente su ogni PR via GitHub Actions
-  (`.github/workflows/playwright.yml`, gratuito su repo pubblici) e usa
-  le variabili configurate come "Repository secrets" in GitHub — mai
-  hardcoded nel workflow. Anche in CI devono puntare a un progetto
-  Supabase di test, mai a quello di produzione.
+- Unit test (Vitest) ed e2e (Playwright) girano entrambi automaticamente
+  su ogni PR via GitHub Actions (`.github/workflows/playwright.yml`,
+  gratuito su repo pubblici) — gli unit test prima, non richiedono
+  secret e falliscono in secondi; la suite e2e usa le variabili
+  configurate come "Repository secrets" in GitHub — mai hardcoded nel
+  workflow. Anche in CI devono puntare a un progetto Supabase di test,
+  mai a quello di produzione.
 
   ## Versioning
   - Prima di ogni push su git effettuare un bump di versione

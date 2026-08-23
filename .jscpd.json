@@ -9,7 +9,8 @@
     "playwright-report/**",
     "test-results/**",
     "playwright/**",
-    "*.config.*"
+    "*.config.*",
+    "**/*.test.ts"
   ],
   "path": ["app", "components", "lib"],
   "gitignore": true

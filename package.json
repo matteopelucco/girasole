@@ -8,8 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "check:dup": "jscpd",
-    "analyze": "npm run lint && npm run check:dup",
+    "analyze": "npm run lint && npm run test:unit && npm run check:dup",
     "prepare": "git config core.hooksPath .githooks",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -32,6 +34,7 @@
     "jscpd": "^5.0.16",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
