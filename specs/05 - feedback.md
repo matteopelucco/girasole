@@ -56,7 +56,7 @@ bianca o un errore non gestito
   form, con il dettaglio tecnico (`components/FormConEsito.tsx`, basato
   su `useFormState`): si applica a ogni form con un'unica azione
   (creazione/modifica/eliminazione di sezioni, anni scolastici, bambini,
-  utenti, assegnazioni, promemoria).
+  utenti, assegnazioni, avvisi).
 - Per i pochi punti dove un form ha più azioni diverse su pulsanti
   diversi (i pulsanti presente/assente/malattia e sì/no in dashboard,
   che condividono lo stesso form) l'errore viene sollevato

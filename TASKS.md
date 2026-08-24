@@ -402,16 +402,25 @@ installarla).
       parte tua**: applica le stesse due migration (in quest'ordine,
       come "Run" separati) anche sul progetto di produzione prima del
       deploy.
-- [ ] **Da fare da parte tua**: l'account di test
-      `assistente.test@example.com` non esiste ancora in Supabase Auth
-      (la query di `supabase/helper.sql` ha girato ma non ha trovato
-      nessuna riga da collegare, quindi non ha inserito nulla) — crealo
-      da Supabase Dashboard → Authentication → Add user (stessa
-      email/password di `E2E_ASSISTENTE_EMAIL`/`PASSWORD` in
-      `.env.local`, "Auto Confirm User" attivo), poi rilancia il blocco
-      SQL in `supabase/helper.sql` per impostare ruolo e sezione. Dopo
-      questo passaggio gli scenario assistente di specs/03, 12, 13, 14,
-      15, 51 smettono di saltarsi.
+- [ ] **Da fare da parte tua — verificato due volte, ancora mancante**:
+      l'account di test `assistente.test@example.com` non esiste ancora
+      in Supabase Auth. Il blocco SQL in `supabase/helper.sql` da solo
+      non può crearlo: esegue una `select ... from auth.users where
+      email = '...'`, e se quella select non trova righe (perché
+      l'utente Auth non esiste) l'insert successivo su `profili` non
+      inserisce nulla, silenziosamente — la query "va a buon fine" (0
+      righe interessate) ma non fa quello che serve. Prima di rilanciare
+      quel blocco SQL, l'utente Auth va creato **dalla Dashboard
+      Supabase**: Authentication → Users → Add user → email
+      `assistente.test@example.com`, password `testtest` (o il valore
+      che hai in `E2E_ASSISTENTE_PASSWORD` su `.env.local`), spunta
+      "Auto Confirm User". Solo dopo, rilancia il blocco SQL per
+      assistente in `supabase/helper.sql`. Verificabile da riga di
+      comando senza aprire il browser: `node -e "..."` con
+      `admin.auth.admin.listUsers()` (service role) per controllare se
+      l'email compare — è così che ho verificato che manca ancora.
+      Dopo questo passaggio gli scenari assistente di specs/03, 12, 13,
+      14, 15, 51 smettono di saltarsi.
 - [ ] Lo scenario "idempotenza per tipo" di `e2e/52-report-email-automatico.spec.ts`
       chiama davvero l'API di Resend: non verificabile dall'ambiente
       sandbox di sviluppo usato per questa sessione (nessun accesso di
@@ -422,6 +431,46 @@ installarla).
 - [ ] Facoltativo: se vuoi provare l'invio reale del report notturno con
       PDF allegati, `RESEND_API_KEY`/`CRON_SECRET` sono già configurati
       da requisiti precedenti — nessun secret nuovo necessario.
+
+## "Promemoria" rinominato in "Avviso" + selezione destinatario a cascata (specs/15)
+- [x] Rinominato in tutta l'interfaccia (titoli, pulsanti, messaggi,
+      placeholder): "Promemoria" → "Avviso"/"Avvisi". Tabella DB,
+      colonne, nomi di server action (`creaPromemoria`/
+      `aggiornaPromemoria`/`eliminaPromemoria`) e route
+      (`/dashboard/promemoria/[id]`) NON rinominati — stessa scelta già
+      fatta per Classe/Alunno rispetto a `sezioni`/`bambini` (vedi nota
+      terminologica in specs/15), per non introdurre una rinomina ad
+      ampio raggio di tabelle/route già in produzione. Nessuna migration
+      necessaria.
+- [x] Selezione del destinatario ridisegnata come menu a cascata
+      (`components/SelettoreDestinatarioAvviso.tsx`, nuovo client
+      component condiviso da creazione e modifica): "Tutti" non mostra
+      altri campi; "Una sezione" rivela il campo sezione; "Un bambino"
+      rivela prima il campo sezione (solo filtro, non salvato) poi,
+      scelta la sezione, il campo bambino con il solo elenco di quella
+      sezione — non più un unico elenco con tutti i bambini di tutte le
+      classi insieme (il problema concreto dietro al "macchinoso"
+      segnalato: con una sezione "seed" che nel progetto di test ha
+      accumulato ~75 bambini fixture, l'elenco piatto precedente era
+      impraticabile — verificato riproducendo il comportamento a mano).
+- [x] Validazione aggiunta (prima mancante): pubblicare/aggiornare un
+      avviso con destinatario "Una sezione"/"Un bambino" senza aver
+      scelto rispettivamente una sezione o un bambino ora viene
+      rifiutato con un messaggio chiaro, sia lato client (`required` sui
+      campi comparsi) sia lato server (`app/dashboard/actions.ts`).
+- [x] Estratto `lib/sezioni.ts:bambiniAttiviVisibili` (bambini attivi
+      visibili per ruolo: tutti per l'admin, solo delle proprie sezioni
+      per maestra/assistente) — riusato da Avvisi, dalla pagina di
+      modifica avviso e dal Report (specs/51), eliminando una
+      duplicazione reale di query segnalata da `jscpd` durante lo
+      sviluppo (stesso pattern ripetuto in 3 file).
+- [x] Test aggiornati/aggiunti in `e2e/15-memo.spec.ts` (terminologia +
+      nuovi scenari per la cascata: rivelare/nascondere i campi,
+      aggiornamento dell'elenco bambini al cambio sezione, validazione,
+      pre-compilazione della sezione filtro in modifica) ed
+      `e2e/12-dashboard-maestre.spec.ts` (intestazione "Avvisi"). Suite
+      verde (30 scenari passano, gli unici skip richiedono l'account di
+      test assistente, vedi sopra).
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento

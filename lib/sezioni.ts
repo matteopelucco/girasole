@@ -65,3 +65,34 @@ export async function sezionePerId(
   const { data } = await supabase.from('sezioni').select('id, nome').eq('id', sezioneId).maybeSingle();
   return data;
 }
+
+export type BambinoBase = { id: string; nome: string; cognome: string; sezione_id: string | null };
+
+// Bambini attivi rilevanti per l'utente corrente: tutti per l'admin,
+// solo quelli delle sezioni indicate (già filtrate per ruolo da
+// sezioniAttiveVisibili) per maestra/assistente — usata dal form Avvisi
+// (specs/15 - memo.md, per popolare la selezione a cascata) e dal
+// report (specs/51 - report.md).
+export async function bambiniAttiviVisibili(
+  supabase: SupabaseClient,
+  ruolo: string | null | undefined,
+  sezioneIds: string[]
+): Promise<BambinoBase[]> {
+  if (ruolo === 'admin') {
+    const { data } = await supabase
+      .from('bambini')
+      .select('id, nome, cognome, sezione_id')
+      .eq('attiva', true)
+      .order('cognome');
+    return data ?? [];
+  }
+
+  if (!sezioneIds.length) return [];
+  const { data } = await supabase
+    .from('bambini')
+    .select('id, nome, cognome, sezione_id')
+    .in('sezione_id', sezioneIds)
+    .eq('attiva', true)
+    .order('cognome');
+  return data ?? [];
+}

@@ -3,7 +3,7 @@
 ## Obiettivo
 Permettere alle maestre di registrare in pochi tap presenze e pasti
 giornalieri dei bambini della propria sezione, e pubblicare
-promemoria/comunicazioni per le famiglie.
+avvisi/comunicazioni per le famiglie.
 
 ## Ruoli
 - **admin**: accesso completo, gestisce sezioni/bambini/utenti.
@@ -46,7 +46,7 @@ della maestra, `5x` amministrazione.
   pre-asilo e post-asilo
 - [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no, con nota
   opzionale ed evidenza delle allergie del bambino
-- [15 - memo.md](15%20-%20memo.md) — promemoria per tutti, una sezione o
+- [15 - memo.md](15%20-%20memo.md) — avvisi per tutti, una sezione o
   un bambino
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)

@@ -28,7 +28,7 @@ Un utente ha uno e un solo ruolo, tra:
   gli utenti e dei loro ruoli.
 - **maestra** *(corrisponde a "insegnante" nel linguaggio corrente)* —
   gestione (crud) della propria sezione, dei bambini, delle presenze,
-  dei pasti e dei promemoria (vedi
+  dei pasti e degli avvisi (vedi
   [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md),
   [13 - segna-presenza.md](13%20-%20segna-presenza.md),
   [14 - segna-pasto.md](14%20-%20segna-pasto.md),
@@ -57,11 +57,11 @@ in ogni file — il dettaglio di ciascuna riga resta nel file linkato.
 | Sezioni/bambini/utenti ([50](50%20-%20amministrazione_base.md)) | crud | — | — | — |
 | Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | crud, solo oggi, proprie sezioni | lettura, solo il proprio figlio (fuori scope UI) |
 | Pasti ([14](14%20-%20segna-pasto.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | **nessun accesso** | lettura, solo il proprio figlio (fuori scope UI) |
-| Promemoria ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli promemoria a lui destinati (fuori scope UI) |
+| Avvisi ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli avvisi a lui destinati (fuori scope UI) |
 | Report/anagrafica classi ([51](51%20-%20report.md)) | tutte le classi | proprie classi | proprie classi | — |
 
 Nota: "assistente" è stato assunto con lo stesso perimetro di una maestra
-su promemoria e report (nessuna indicazione contraria nel requisito che
+su avvisi e report (nessuna indicazione contraria nel requisito che
 ha introdotto il ruolo) — se in pratica dovesse restare più limitata, è
 una riga sola da correggere in questa tabella.
 

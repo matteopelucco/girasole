@@ -114,7 +114,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Pasti' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Promemoria' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });

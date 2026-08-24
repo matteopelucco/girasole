@@ -29,7 +29,7 @@ export function FormConEsito({
   // Svuota il form (tutti i campi tornano al loro defaultValue) dopo
   // un invio riuscito — per le form di creazione dove l'utente vuole
   // inserirne subito un'altra (specs/15 - memo.md, scenario "il form si
-  // svuota dopo aver pubblicato un promemoria"). Di default false: le
+  // svuota dopo aver pubblicato un avviso"). Di default false: le
   // form di modifica (es. aggiornaBambino) devono continuare a mostrare
   // i dati correnti, non svuotarsi.
   resetSuOk?: boolean;

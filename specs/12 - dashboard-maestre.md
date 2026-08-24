@@ -6,7 +6,7 @@ Maestra, assistente, admin. (Genitore: fuori scope in questa fase.)
 ## Obiettivo
 Un punto d'ingresso unico da cui maestra e admin scelgono una data e
 raggiungono le due attività quotidiane — Presenze e Pasti — e da cui
-pubblicano promemoria.
+pubblicano avvisi.
 
 ## Scenario: aprire la dashboard mostra il calendario e le due attività
 Dato che sono autenticata come maestra (con almeno una sezione assegnata)
@@ -42,7 +42,7 @@ stesso comportamento di una maestra (vedi
 E NON vedo il pulsante/scheda "Pasti": il registro pasti non è
 accessibile al ruolo assistente (vedi
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
-E vedo comunque la sezione promemoria, con la possibilità di crearne uno
+E vedo comunque la sezione avvisi, con la possibilità di crearne uno
 per le sezioni a cui sono assegnata o per i loro bambini
 
 ## Scenario: la maestra non ha sezioni assegnate
@@ -58,7 +58,7 @@ Dato che sono autenticato come admin
 Quando apro la dashboard
 Allora vedo, oltre al calendario e a Presenze/Pasti, anche un rimando alle
 pagine di amministrazione (`/admin` e `/admin/maestre`)
-E vedo comunque la sezione promemoria, con la possibilità di crearne uno
+E vedo comunque la sezione avvisi, con la possibilità di crearne uno
 per qualsiasi sezione o bambino
 
 ## Scenario: un genitore apre la dashboard

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { requireStaff } from '@/lib/auth';
-import { sezioniAttiveVisibili } from '@/lib/sezioni';
+import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
 
 export const dynamic = 'force-dynamic';
@@ -29,25 +29,11 @@ export default async function ReportPage({
     risolviPeriodoReport(tipo, searchParams.periodo);
 
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
-  const sezioneIds = sezioni.map((s) => s.id);
-
-  let bambini: { id: string; nome: string; cognome: string; sezione_id: string | null }[] = [];
-  if (ruolo === 'admin') {
-    const { data } = await supabase
-      .from('bambini')
-      .select('id, nome, cognome, sezione_id')
-      .eq('attiva', true)
-      .order('cognome');
-    bambini = data ?? [];
-  } else if (sezioneIds.length) {
-    const { data } = await supabase
-      .from('bambini')
-      .select('id, nome, cognome, sezione_id')
-      .in('sezione_id', sezioneIds)
-      .eq('attiva', true)
-      .order('cognome');
-    bambini = data ?? [];
-  }
+  const bambini = await bambiniAttiviVisibili(
+    supabase,
+    ruolo,
+    sezioni.map((s) => s.id)
+  );
 
   const idBambini = bambini.map((b) => b.id);
   const [{ data: presenze }, { data: pasti }] = idBambini.length

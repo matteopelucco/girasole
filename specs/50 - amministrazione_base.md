@@ -49,7 +49,7 @@ Allora i nuovi dati sono salvati e restano visibili riaprendo la scheda
 Dato che sono sulla scheda di dettaglio di un bambino attivo
 Quando premo "Disattiva bambino"
 Allora il bambino resta con tutti i suoi dati salvati (presenze, pasti e
-promemoria passati restano collegati a lui)
+avvisi passati restano collegati a lui)
 E non compare più nell'elenco bambini della sua sezione, né nelle
 funzioni Presenze e Pasto (vedi
 [13 - segna-presenza.md](13%20-%20segna-presenza.md),

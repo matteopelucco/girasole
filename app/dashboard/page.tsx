@@ -3,9 +3,10 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { SelettoreData } from '@/components/SelettoreData';
+import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
 import { oggi } from '@/lib/date';
-import { sezioniAttiveVisibili } from '@/lib/sezioni';
+import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { creaPromemoria } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -39,26 +40,11 @@ export default async function DashboardPage({
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
 
-  let bambini: { id: string; nome: string; cognome: string }[] = [];
-  if (ruolo === 'admin') {
-    const { data: tuttiBambini } = await supabase
-      .from('bambini')
-      .select('id, nome, cognome')
-      .eq('attiva', true)
-      .order('cognome');
-    bambini = tuttiBambini ?? [];
-  } else if (sezioni.length) {
-    const { data: mieiBambini } = await supabase
-      .from('bambini')
-      .select('id, nome, cognome')
-      .in(
-        'sezione_id',
-        sezioni.map((s) => s.id)
-      )
-      .eq('attiva', true)
-      .order('cognome');
-    bambini = mieiBambini ?? [];
-  }
+  const bambini = await bambiniAttiviVisibili(
+    supabase,
+    ruolo,
+    sezioni.map((s) => s.id)
+  );
 
   const { data: promemoria } = await supabase
     .from('promemoria')
@@ -121,10 +107,10 @@ export default async function DashboardPage({
         </section>
 
         <section>
-          <h1 className="text-lg font-medium">Promemoria</h1>
+          <h1 className="text-lg font-medium">Avvisi</h1>
 
           {searchParams.promemoria === 'eliminato' && (
-            <p className="mt-2 text-sm text-green-700">Promemoria eliminato.</p>
+            <p className="mt-2 text-sm text-green-700">Avviso eliminato.</p>
           )}
 
           <FormConEsito
@@ -141,50 +127,13 @@ export default async function DashboardPage({
             <textarea
               name="testo"
               required
-              placeholder="Testo del promemoria"
+              placeholder="Testo dell'avviso"
               rows={3}
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
-            <div className="flex flex-wrap gap-2">
-              <select
-                name="destinatario_tipo"
-                defaultValue="tutti"
-                aria-label="Destinatario"
-                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-auto"
-              >
-                <option value="tutti">Tutti</option>
-                <option value="sezione">Una sezione</option>
-                <option value="bambino">Un bambino</option>
-              </select>
-              <select
-                name="sezione_id"
-                defaultValue=""
-                aria-label="Sezione destinataria"
-                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-56"
-              >
-                <option value="">— sezione (se destinatario è &quot;Una sezione&quot;) —</option>
-                {sezioni.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="bambino_id"
-                defaultValue=""
-                aria-label="Bambino destinatario"
-                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:w-56"
-              >
-                <option value="">— bambino (se destinatario è &quot;Un bambino&quot;) —</option>
-                {bambini.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome} {b.cognome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SelettoreDestinatarioAvviso sezioni={sezioni} bambini={bambini} />
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
-              Pubblica promemoria
+              Pubblica avviso
             </PulsanteInvio>
           </FormConEsito>
 
@@ -205,7 +154,7 @@ export default async function DashboardPage({
               </li>
             ))}
             {!promemoria?.length && (
-              <li className="text-sm text-stone-600">Nessun promemoria pubblicato.</li>
+              <li className="text-sm text-stone-600">Nessun avviso pubblicato.</li>
             )}
           </ul>
         </section>

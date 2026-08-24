@@ -5,8 +5,8 @@ import { FormConEsito, type EsitoAzione } from './FormConEsito';
 import { PulsanteInvio } from './PulsanteInvio';
 
 // Pulsante "Elimina" con conferma esplicita sì/annulla (specs/15 -
-// memo.md, scenario "cancellazione di un promemoria"): evita
-// cancellazioni accidentali con un tap solo.
+// memo.md, scenario "cancellazione di un avviso"): evita cancellazioni
+// accidentali con un tap solo.
 export function ConfermaEliminazione({
   azione,
   campiNascosti,
