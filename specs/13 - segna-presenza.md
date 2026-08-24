@@ -31,6 +31,12 @@ giorno sono quindi:
 - **Assente**.
 - **Malattia** (con nota opzionale).
 
+I pulsanti per ogni bambino sono disposti su due righe: la prima con
+Presente, Pre-asilo, Post-asilo (gli stati/indicatori dell'orario
+"disteso", dal più corto al più lungo); la seconda con Assente,
+Malattia e il campo nota (le eccezioni alla presenza, più la nota che
+le accompagna).
+
 ## Scenario: riepilogo presenze della classe
 Dato che ho aperto l'elenco bambini di una classe, per una data
 Allora vedo in cima un riepilogo "Presenti: X/Y", dove X è il numero di

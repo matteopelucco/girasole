@@ -102,44 +102,59 @@ export default async function PresenzeClassePage({
             </div>
 
             {editable ? (
-              <form className="mt-3 flex flex-wrap items-center gap-2">
-                {(['presente', 'assente', 'malattia'] as const).map((stato) => (
+              <form className="mt-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <PulsanteInvio
-                    key={stato}
                     mantieniTesto
-                    formAction={segnaPresenza.bind(null, bambino.id, stato, sezioneId, data)}
-                    className={classePulsanteStato(stato, presenza?.stato === stato)}
+                    formAction={segnaPresenza.bind(null, bambino.id, 'presente', sezioneId, data)}
+                    className={classePulsanteStato('presente', presenza?.stato === 'presente')}
                   >
-                    {ETICHETTE[stato]}
+                    {ETICHETTE.presente}
                   </PulsanteInvio>
-                ))}
-                <PulsanteInvio
-                  mantieniTesto
-                  formAction={segnaPreAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
-                  className={classePulsanteToggle(!!presenza?.pre_asilo)}
-                >
-                  Pre-asilo
-                </PulsanteInvio>
-                <PulsanteInvio
-                  mantieniTesto
-                  formAction={segnaPostAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
-                  className={classePulsanteToggle(!!presenza?.post_asilo)}
-                >
-                  Post-asilo
-                </PulsanteInvio>
-                <input
-                  name="nota_presenza"
-                  defaultValue={presenza?.note ?? ''}
-                  placeholder="Nota (opzionale)"
-                  className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
-                />
-                <BottoneSalvaNota
-                  formAction={
-                    rigaAttuale
-                      ? salvaNotaPresenza.bind(null, bambino.id, sezioneId, data, rigaAttuale)
-                      : null
-                  }
-                />
+                  <PulsanteInvio
+                    mantieniTesto
+                    formAction={segnaPreAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
+                    className={classePulsanteToggle(!!presenza?.pre_asilo)}
+                  >
+                    Pre-asilo
+                  </PulsanteInvio>
+                  <PulsanteInvio
+                    mantieniTesto
+                    formAction={segnaPostAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
+                    className={classePulsanteToggle(!!presenza?.post_asilo)}
+                  >
+                    Post-asilo
+                  </PulsanteInvio>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <PulsanteInvio
+                    mantieniTesto
+                    formAction={segnaPresenza.bind(null, bambino.id, 'assente', sezioneId, data)}
+                    className={classePulsanteStato('assente', presenza?.stato === 'assente')}
+                  >
+                    {ETICHETTE.assente}
+                  </PulsanteInvio>
+                  <PulsanteInvio
+                    mantieniTesto
+                    formAction={segnaPresenza.bind(null, bambino.id, 'malattia', sezioneId, data)}
+                    className={classePulsanteStato('malattia', presenza?.stato === 'malattia')}
+                  >
+                    {ETICHETTE.malattia}
+                  </PulsanteInvio>
+                  <input
+                    name="nota_presenza"
+                    defaultValue={presenza?.note ?? ''}
+                    placeholder="Nota (opzionale)"
+                    className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  />
+                  <BottoneSalvaNota
+                    formAction={
+                      rigaAttuale
+                        ? salvaNotaPresenza.bind(null, bambino.id, sezioneId, data, rigaAttuale)
+                        : null
+                    }
+                  />
+                </div>
               </form>
             ) : (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600">
