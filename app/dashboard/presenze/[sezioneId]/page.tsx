@@ -141,8 +141,11 @@ export default async function PresenzeClassePage({
                   >
                     {ETICHETTE.malattia}
                   </PulsanteInvio>
-                  <input
+                </div>
+                <div className="flex flex-wrap items-start gap-2">
+                  <textarea
                     name="nota_presenza"
+                    rows={2}
                     defaultValue={presenza?.note ?? ''}
                     placeholder="Nota (opzionale)"
                     className="min-w-[10rem] flex-1 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
