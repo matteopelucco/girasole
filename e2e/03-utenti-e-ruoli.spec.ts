@@ -49,6 +49,33 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
+  test('admin crea un nuovo utente con ruolo assistente', async ({ page }) => {
+    const email = `e2e-assistente-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    // Il <select> "Ruolo" compare anche una volta per riga utente
+    // esistente: scelgo esplicitamente quello dentro al form di
+    // creazione (identificato dal pulsante "Crea utente").
+    const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
+
+    await page.getByPlaceholder('Nome').first().fill('Prova');
+    await page.getByPlaceholder('Cognome').first().fill('Assistente');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await formCreazione.getByLabel('Ruolo').selectOption('assistente');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+    await expect(riga.locator('select[name="ruolo"]')).toHaveValue('assistente');
+
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
   test('conferma password in tempo reale', async ({ page }) => {
     await page.goto('/admin/maestre');
     const password = page.getByLabel('Password', { exact: true });
@@ -157,8 +184,8 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(rigaPropria).toBeVisible();
   });
 
-  test('maestra e genitore non possono aprire /admin/maestre', async ({ browser }) => {
-    for (const ruolo of ['maestra', 'genitore'] as const) {
+  test('maestra, assistente e genitore non possono aprire /admin/maestre', async ({ browser }) => {
+    for (const ruolo of ['maestra', 'assistente', 'genitore'] as const) {
       test.skip(!hasCredenziali(ruolo), `richiede E2E_${ruolo.toUpperCase()}_EMAIL/PASSWORD`);
       const stato = statoAutenticazione(ruolo);
       test.skip(!stato, `sessione non disponibile per ${ruolo}`);

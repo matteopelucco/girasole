@@ -57,30 +57,36 @@ funzioni Presenze e Pasto (vedi
 E premendo "Riattiva bambino" torna a comparire nella sua sezione (se ne
 ha ancora una) e nelle funzioni Presenze e Pasto
 
-## Scenario: promuovere un utente a maestra
+## Scenario: promuovere un utente a maestra o assistente
 Dato che un utente esiste già (creato dall'admin con un altro ruolo,
 vedi [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md))
 Quando su `/admin/maestre` lo trovo nell'elenco utenti, seleziono ruolo
-"Maestra" e confermo
-Allora il suo ruolo diventa `maestra` e può accedere alla dashboard
-maestra dopo aver effettuato il login
+"Maestra" (o "Assistente") e confermo
+Allora il suo ruolo diventa `maestra` (o `assistente`) e può accedere
+alla dashboard dopo aver effettuato il login, con le funzioni previste
+per quel ruolo (vedi [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md))
 
-## Scenario: assegnare una maestra a una sezione
-Dato che un utente ha ruolo `maestra`
-Quando su `/admin/maestre` scelgo la maestra e la sezione, e confermo
-Allora quella maestra vede i bambini di quella sezione nella propria
-dashboard (vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md))
+## Scenario: assegnare una maestra o un'assistente a una sezione
+Dato che un utente ha ruolo `maestra` o `assistente`
+Quando su `/admin/maestre` scelgo l'utente e la sezione, e confermo
+Allora quell'utente vede i bambini di quella sezione nella propria
+dashboard (vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md)) —
+una maestra anche in Pasti, un'assistente solo in Presenze (vedi
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
-## Scenario: rimuovere l'assegnazione di una maestra a una sezione
+## Scenario: rimuovere l'assegnazione di una maestra o assistente a una sezione
 Quando su `/admin/maestre` premo la ✕ su una sezione già assegnata a una
-maestra
-Allora l'assegnazione viene rimossa e quella maestra non vede più i
+maestra o a un'assistente
+Allora l'assegnazione viene rimossa e quell'utente non vede più i
 bambini di quella sezione
 
 ## Regole
 - Solo un profilo con ruolo `admin` può creare sezioni/bambini, cambiare
-  il ruolo di un profilo, o assegnare/rimuovere maestre dalle sezioni
-  (RLS in `supabase/migrations/0002_admin_e_maestre.sql`).
+  il ruolo di un profilo, o assegnare/rimuovere maestre e assistenti
+  dalle sezioni (RLS in `supabase/migrations/0002_admin_e_maestre.sql`,
+  tabella `maestre_sezioni` usata per entrambi i ruoli — il nome della
+  tabella non è stato cambiato per non introdurre una rinomina ad ampio
+  raggio, vedi [04 - data-types.md](04%20-%20data-types.md)).
 - L'admin crea/modifica/elimina utenti direttamente da `/admin/maestre`
   (email, password, nome, cognome, telefono, ruolo) — non serve più il
   dashboard di Supabase Auth. Vedi

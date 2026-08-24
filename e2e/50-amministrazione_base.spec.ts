@@ -210,7 +210,9 @@ test.describe('50 — Amministrazione base', () => {
   test('/admin/maestre: elementi presenti + accessibilità', async ({ page }) => {
     await page.goto('/admin/maestre');
     await expect(page.getByRole('heading', { name: 'Utenti e ruoli' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Assegna maestre alle sezioni' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Assegna maestre e assistenti alle sezioni' })
+    ).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
   });
 

@@ -3,14 +3,21 @@
 // nuove dipendenze senza chiederlo prima). RESEND_API_KEY va impostata
 // come variabile d'ambiente (locale: .env.local; produzione: Vercel),
 // mai committata — vedi TASKS.md per la procedura di attivazione.
+export type AllegatoEmail = {
+  filename: string;
+  content: Uint8Array;
+};
+
 export async function inviaEmail({
   a,
   oggetto,
   html,
+  allegati,
 }: {
   a: string;
   oggetto: string;
   html: string;
+  allegati?: AllegatoEmail[];
 }): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY non configurata.');
@@ -23,7 +30,16 @@ export async function inviaEmail({
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: mittente, to: [a], subject: oggetto, html }),
+    body: JSON.stringify({
+      from: mittente,
+      to: [a],
+      subject: oggetto,
+      html,
+      attachments: allegati?.map((a) => ({
+        filename: a.filename,
+        content: Buffer.from(a.content).toString('base64'),
+      })),
+    }),
   });
 
   if (!risposta.ok) {

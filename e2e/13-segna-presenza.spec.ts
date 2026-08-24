@@ -128,6 +128,88 @@ test.describe('13 — Segna presenza', () => {
       await expect(page.getByRole('button', { name: 'Assente' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Malattia' })).toHaveCount(0);
     });
+
+    test('riepilogo mostra i conteggi pre-asilo/post-asilo', async ({ page }) => {
+      await expect(page.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
+      await expect(page.getByText(/^Post-asilo: \d+$/)).toBeVisible();
+    });
+
+    test('segnare pre-asilo forza presente e attiva l\'indicatore', async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      const bottonePreAsilo = primaRiga.getByRole('button', { name: 'Pre-asilo' });
+      await bottonePreAsilo.click();
+
+      await expect(bottonePreAsilo).toHaveClass(/bg-sky-700/);
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+    });
+
+    test('pre-asilo e post-asilo sono indipendenti e cumulabili', async ({ page }) => {
+      const primaRiga = page
+        .locator('li', { has: page.getByRole('button', { name: 'Post-asilo' }) })
+        .first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      // Riparte da una base nota (nessun pre/post-asilo attivo): un test
+      // precedente in questo stesso describe può aver già lasciato
+      // pre-asilo attivo sullo stesso bambino, e un secondo click su un
+      // toggle già attivo lo disattiva invece di (ri)attivarlo.
+      await primaRiga.getByRole('button', { name: 'Presente' }).click();
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+
+      await primaRiga.getByRole('button', { name: 'Pre-asilo' }).click();
+      const bottonePostAsilo = primaRiga.getByRole('button', { name: 'Post-asilo' });
+      await bottonePostAsilo.click();
+
+      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+      await expect(bottonePostAsilo).toHaveClass(/bg-sky-700/);
+    });
+
+    test('ripremere pre-asilo lo disattiva, restando presente', async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      const bottonePreAsilo = primaRiga.getByRole('button', { name: 'Pre-asilo' });
+      await bottonePreAsilo.click();
+      await expect(bottonePreAsilo).toHaveClass(/bg-sky-700/);
+
+      await bottonePreAsilo.click();
+      await expect(bottonePreAsilo).not.toHaveClass(/bg-sky-700/);
+      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+    });
+
+    test('segnare assente resetta pre-asilo e post-asilo', async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      await primaRiga.getByRole('button', { name: 'Pre-asilo' }).click();
+      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+
+      await primaRiga.getByRole('button', { name: 'Assente' }).click();
+      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).not.toHaveClass(/bg-sky-700/);
+      await expect(primaRiga.getByRole('button', { name: 'Post-asilo' })).not.toHaveClass(/bg-sky-700/);
+    });
+  });
+
+  test.describe('come assistente, sulla data odierna', () => {
+    test.use({ storageState: statoAutenticazione('assistente') });
+
+    test.beforeEach(async ({ page }) => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+      const haClassi = await apriPrimaClassePresenze(page, dataOggiRoma());
+      test.skip(!haClassi, 'nessuna classe attiva per questo account');
+    });
+
+    test("l'assistente può segnare una presenza, come una maestra", async ({ page }) => {
+      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+
+      const bottonePresente = primaRiga.getByRole('button', { name: 'Presente' });
+      await bottonePresente.click();
+
+      await expect(bottonePresente).toHaveClass(/bg-emerald-700/);
+    });
   });
 
   test.describe("come admin, l'admin può modificare qualunque data", () => {
@@ -146,26 +228,6 @@ test.describe('13 — Segna presenza', () => {
       const bottonePresente = primaRiga.getByRole('button', { name: 'Presente' });
       await bottonePresente.click();
       await expect(bottonePresente).toHaveClass(/bg-emerald-700/);
-    });
-  });
-
-  test.describe('riepilogo giornaliero via email a mezzanotte', () => {
-    test('il job invocato due volte per la stessa data invia una sola mail (idempotenza)', async ({
-      request,
-    }) => {
-      test.skip(
-        !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-        'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
-      );
-
-      const intestazioni = { Authorization: `Bearer ${process.env.CRON_SECRET}` };
-      const primaChiamata = await request.get('/api/cron/report-presenze', { headers: intestazioni });
-      expect(primaChiamata.ok()).toBe(true);
-
-      const secondaChiamata = await request.get('/api/cron/report-presenze', { headers: intestazioni });
-      expect(secondaChiamata.ok()).toBe(true);
-      const corpo = await secondaChiamata.json();
-      expect(corpo.giaInviato).toBe(true);
     });
   });
 });

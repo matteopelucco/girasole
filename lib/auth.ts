@@ -52,27 +52,41 @@ export async function requireAdmin() {
 }
 
 // Come requireProfilo(), ma reindirizza a /dashboard se il ruolo non è
-// admin né maestra, e legge subito la data selezionata (query string
-// ?data=, di default oggi) — usato dalle pagine di Presenze/Pasti
-// (specs/12 - dashboard-maestre.md), che condividono esattamente questo
-// bootstrap.
+// admin, maestra o assistente, e legge subito la data selezionata
+// (query string ?data=, di default oggi) — usato dalle pagine di
+// Presenze/Report (specs/12 - dashboard-maestre.md), che condividono
+// esattamente questo bootstrap. L'assistente ha lo stesso perimetro
+// della maestra ovunque TRANNE che sui pasti: le pagine di Pasti
+// chiamano in più assicuraAccessoPasti() (vedi sotto) per escluderla
+// esplicitamente (specs/03 - utenti-e-ruoli.md, matrice permessi).
 export async function requireStaff(searchParams: { data?: string }) {
   const { supabase, user, profilo } = await requireProfilo();
   const ruolo = profilo?.ruolo ?? null;
-  if (ruolo !== 'admin' && ruolo !== 'maestra') redirect('/dashboard');
+  if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') redirect('/dashboard');
   const data = searchParams.data || oggi();
   return { supabase, user, profilo, ruolo, data };
 }
 
-// La maestra può scrivere (inserire/modificare) presenze e pasti solo
-// per la data odierna; l'admin su qualunque data (specs/13 - segna-presenza.md,
-// specs/14 - segna-pasto.md). Rispecchia il vincolo imposto anche a
-// livello di RLS in supabase/migrations/0009_scrittura_solo_oggi_maestra.sql
-// — usata sia per decidere se mostrare i pulsanti (pagine) sia come
-// controllo esplicito prima della scrittura (server action), per un
-// messaggio d'errore chiaro invece del solo rifiuto della RLS.
+// L'assistente non ha alcun accesso al registro pasti, né in lettura né
+// in scrittura (specs/14 - segna-pasto.md): da chiamare, dopo
+// requireStaff(), su ogni pagina/azione di Pasti.
+export function assicuraAccessoPasti(ruolo: string | null | undefined): void {
+  if (ruolo === 'assistente') redirect('/dashboard');
+}
+
+// La maestra e l'assistente possono scrivere (inserire/modificare)
+// presenze solo per la data odierna; l'admin su qualunque data
+// (specs/13 - segna-presenza.md). Per i pasti vale la stessa regola,
+// ma solo per admin/maestra: l'assistente non vi accede affatto (vedi
+// assicuraAccessoPasti sopra), quindi non serve distinguerla qui.
+// Rispecchia il vincolo imposto anche a livello di RLS in
+// supabase/migrations/0009_scrittura_solo_oggi_maestra.sql e
+// 0016_assistente_e_pre_post_asilo.sql — usata sia per decidere se
+// mostrare i pulsanti (pagine) sia come controllo esplicito prima della
+// scrittura (server action), per un messaggio d'errore chiaro invece
+// del solo rifiuto della RLS.
 export function puoScrivereData(ruolo: string | null | undefined, data: string): boolean {
-  return ruolo === 'admin' || (ruolo === 'maestra' && data === oggi());
+  return ruolo === 'admin' || ((ruolo === 'maestra' || ruolo === 'assistente') && data === oggi());
 }
 
 export function assicuraScrivibile(ruolo: string | null | undefined, data: string): void {

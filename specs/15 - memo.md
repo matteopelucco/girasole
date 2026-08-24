@@ -1,16 +1,16 @@
 # 15 — Promemoria
 
 ## Attori
-Maestra, admin (creazione e lettura). Genitore: sola lettura dei
-promemoria a lui destinati.
+Maestra, assistente, admin (creazione e lettura). Genitore: sola lettura
+dei promemoria a lui destinati.
 
 ## Obiettivo
-Permettere a maestra o admin di pubblicare, modificare e cancellare una comunicazione per tutte le
+Permettere a maestra, assistente o admin di pubblicare, modificare e cancellare una comunicazione per tutte le
 famiglie, per una sezione, o per un singolo bambino, e vederne lo storico.
-La comunicazione ha opzionalmente una data di validità: oltre quella data, non viene più mostrata ai genitori, ma solo a admin e insegnanti, che possono cancellarlo.
+La comunicazione ha opzionalmente una data di validità: oltre quella data, non viene più mostrata ai genitori, ma solo allo staff (admin, maestre, assistenti), che può cancellarlo.
 
 ## Scenario: creare un promemoria per tutti
-Dato che sono autenticata come maestra o admin
+Dato che sono autenticata come maestra, assistente o admin
 Quando compilo titolo e testo, scelgo nel campo "destinatari" "Tutti" e pubblico
 Allora il promemoria compare in cima alla lista, visibile a tutti gli utenti
 
@@ -31,7 +31,7 @@ valori iniziali), pronto per inserirne subito un altro senza dover
 cancellare a mano il contenuto precedente
 
 ## Scenario: lista dei promemoria in dashboard
-Dato che sono staff (maestra o admin)
+Dato che sono staff (maestra, assistente o admin)
 Quando apro la dashboard
 Allora vedo gli ultimi promemoria pubblicati, più recenti per primi, con
 titolo, testo, tipo di destinatario e data
@@ -51,13 +51,14 @@ se premo "annulla", il sistema nasconde il form di conferma
 ## Regole
 - `destinatario_tipo` è uno tra `tutti`, `sezione`, `bambino`; solo il
   campo coerente (`sezione_id` o `bambino_id`) viene valorizzato.
-- Solo lo staff (maestra o admin) può creare promemoria (RLS su
-  `promemoria` in `supabase/migrations/0001_init.sql`).
+- Solo lo staff (maestra, assistente o admin) può creare promemoria (RLS
+  su `promemoria` in `supabase/migrations/0001_init.sql`).
 - Lo staff vede tutti i promemoria, indipendentemente dal destinatario;
   un genitore (quando la UI esisterà, Fase 3) vedrà solo quelli
   destinati a "tutti", alla sezione di suo figlio, o a suo figlio.
 - Modificare o cancellare un promemoria è permesso a qualunque membro
-  dello staff (maestra o admin), non solo a chi lo ha creato — coerente
+  dello staff (maestra, assistente o admin), non solo a chi lo ha
+  creato — coerente
   con "lo staff vede tutti i promemoria" (RLS in
   `supabase/migrations/0012_pasto_senza_parziale.sql`).
 - La cancellazione richiede una conferma esplicita ("sì"/"annulla") per

@@ -22,6 +22,17 @@ test.describe('51 — Report', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
+    test('la tabella include le colonne pre-asilo e post-asilo', async ({ page }) => {
+      await page.goto('/dashboard/report?tipo=mensile');
+      const intestazioni = page.getByRole('columnheader');
+      test.skip((await intestazioni.count()) === 0, 'nessuna classe con bambini per questo account');
+
+      await expect(page.getByRole('columnheader', { name: 'Presenze' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Pre-asilo' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Post-asilo' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Pasti' })).toBeVisible();
+    });
+
     test('navigare tra i mesi aggiorna il periodo mostrato', async ({ page }) => {
       await page.goto('/dashboard/report?tipo=mensile');
       const periodoIniziale = await page.locator('span.text-amber-900').textContent();
@@ -74,19 +85,23 @@ test.describe('51 — Report', () => {
 
       await expect(page.getByRole('columnheader', { name: 'Giorno' })).toBeVisible();
       await expect(page.getByRole('columnheader', { name: 'Presenza' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Pre-asilo' })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Post-asilo' })).toBeVisible();
       await expect(page.getByRole('columnheader', { name: 'Pasto' })).toBeVisible();
       await expect(page.getByText('Non segnato').first()).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('anagrafica classi mostra maestre, bambini e genitori', async ({ page }) => {
+    test('anagrafica classi mostra lo staff assegnato (con ruolo), bambini e genitori', async ({
+      page,
+    }) => {
       await page.goto('/dashboard/report');
       await page.getByRole('link', { name: 'Anagrafica classi' }).click();
       await page.waitForURL(/\/dashboard\/report\/anagrafica/);
 
       await expect(page.getByRole('heading', { name: 'Anagrafica classi' })).toBeVisible();
-      await expect(page.getByText(/^Maestre:/).first()).toBeVisible();
+      await expect(page.getByText(/^Staff assegnato:/).first()).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -97,6 +112,19 @@ test.describe('51 — Report', () => {
 
     test('una maestra vede solo le proprie classi nel report', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard/report');
+      await expect(page.getByRole('heading', { name: 'Report' })).toBeVisible();
+    });
+  });
+
+  test.describe('come assistente', () => {
+    test.use({ storageState: statoAutenticazione('assistente') });
+
+    test("un'assistente vede solo le proprie classi nel report, incluse le colonne pasti", async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
 
       await page.goto('/dashboard/report');
       await expect(page.getByRole('heading', { name: 'Report' })).toBeVisible();

@@ -43,11 +43,16 @@ export default async function DrillDownBambinoPage({
   if (!bambino) redirect('/dashboard/report');
 
   const [{ data: presenze }, { data: pasti }] = await Promise.all([
-    supabase.from('presenze').select('data, stato').eq('bambino_id', params.id).gte('data', inizio).lte('data', fine),
+    supabase
+      .from('presenze')
+      .select('data, stato, pre_asilo, post_asilo')
+      .eq('bambino_id', params.id)
+      .gte('data', inizio)
+      .lte('data', fine),
     supabase.from('pasti').select('data, mangiato').eq('bambino_id', params.id).gte('data', inizio).lte('data', fine),
   ]);
 
-  const presenzaPerGiorno = new Map((presenze ?? []).map((p) => [p.data, p.stato]));
+  const presenzaPerGiorno = new Map((presenze ?? []).map((p) => [p.data, p]));
   const pastoPerGiorno = new Map((pasti ?? []).map((p) => [p.data, p.mangiato]));
   const giorni = giorniInRange(inizio, fine);
 
@@ -73,19 +78,24 @@ export default async function DrillDownBambinoPage({
             <tr className="text-left text-xs text-stone-500">
               <th className="py-1">Giorno</th>
               <th className="py-1">Presenza</th>
+              <th className="py-1">Pre-asilo</th>
+              <th className="py-1">Post-asilo</th>
               <th className="py-1">Pasto</th>
             </tr>
           </thead>
           <tbody>
-            {giorni.map((g) => (
-              <tr key={g} className="border-t border-stone-100">
-                <td className="py-1 capitalize">{formattaDataItaliana(g)}</td>
-                <td className="py-1">
-                  {ETICHETTE_PRESENZA[presenzaPerGiorno.get(g) ?? ''] ?? 'Non segnato'}
-                </td>
-                <td className="py-1">{ETICHETTE_PASTO[pastoPerGiorno.get(g) ?? ''] ?? 'Non segnato'}</td>
-              </tr>
-            ))}
+            {giorni.map((g) => {
+              const presenza = presenzaPerGiorno.get(g);
+              return (
+                <tr key={g} className="border-t border-stone-100">
+                  <td className="py-1 capitalize">{formattaDataItaliana(g)}</td>
+                  <td className="py-1">{ETICHETTE_PRESENZA[presenza?.stato ?? ''] ?? 'Non segnato'}</td>
+                  <td className="py-1">{presenza?.pre_asilo ? 'Sì' : '—'}</td>
+                  <td className="py-1">{presenza?.post_asilo ? 'Sì' : '—'}</td>
+                  <td className="py-1">{ETICHETTE_PASTO[pastoPerGiorno.get(g) ?? ''] ?? 'Non segnato'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </main>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { risolviPeriodoReport } from './report';
+import { aggregaConteggiPresenzePasti, risolviPeriodoReport } from './report';
 
 describe('risolviPeriodoReport — mensile', () => {
   it('risolve un mese esplicito', () => {
@@ -61,5 +61,60 @@ describe('risolviPeriodoReport — giornaliero', () => {
   it('ignora un giorno malformato e usa oggi', () => {
     const periodo = risolviPeriodoReport('giornaliero', undefined);
     expect(periodo.periodoAttuale).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('aggregaConteggiPresenzePasti', () => {
+  const bambini = [
+    { id: 'b1', nome: 'Anna', cognome: 'Bianchi' },
+    { id: 'b2', nome: 'Marco', cognome: 'Verdi' },
+  ];
+
+  it('conta solo lo stato "presente", non "assente"/"malattia"', () => {
+    const presenze = [
+      { bambino_id: 'b1', stato: 'presente' },
+      { bambino_id: 'b1', stato: 'assente' },
+      { bambino_id: 'b2', stato: 'malattia' },
+    ];
+    const righe = aggregaConteggiPresenzePasti(bambini, presenze, []);
+    expect(righe.find((r) => r.id === 'b1')?.presenze).toBe(1);
+    expect(righe.find((r) => r.id === 'b2')?.presenze).toBe(0);
+  });
+
+  it('conta pre-asilo e post-asilo separatamente, solo quando veri', () => {
+    const presenze = [
+      { bambino_id: 'b1', stato: 'presente', pre_asilo: true, post_asilo: false },
+      { bambino_id: 'b1', stato: 'presente', pre_asilo: true, post_asilo: true },
+      { bambino_id: 'b1', stato: 'presente', pre_asilo: false, post_asilo: false },
+    ];
+    const righe = aggregaConteggiPresenzePasti(bambini, presenze, []);
+    const riga = righe.find((r) => r.id === 'b1')!;
+    expect(riga.presenze).toBe(3);
+    expect(riga.preAsilo).toBe(2);
+    expect(riga.postAsilo).toBe(1);
+  });
+
+  it('conta solo i pasti "si", non "no"', () => {
+    const pasti = [
+      { bambino_id: 'b1', mangiato: 'si' },
+      { bambino_id: 'b1', mangiato: 'no' },
+      { bambino_id: 'b2', mangiato: 'si' },
+    ];
+    const righe = aggregaConteggiPresenzePasti(bambini, [], pasti);
+    expect(righe.find((r) => r.id === 'b1')?.pasti).toBe(1);
+    expect(righe.find((r) => r.id === 'b2')?.pasti).toBe(1);
+  });
+
+  it('un bambino senza nessun record ha tutti i conteggi a zero', () => {
+    const righe = aggregaConteggiPresenzePasti(bambini, [], []);
+    expect(righe).toEqual([
+      { id: 'b1', nome: 'Anna', cognome: 'Bianchi', presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 },
+      { id: 'b2', nome: 'Marco', cognome: 'Verdi', presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 },
+    ]);
+  });
+
+  it('mantiene l\'ordine e la lista dei bambini passati in input', () => {
+    const righe = aggregaConteggiPresenzePasti(bambini, [], []);
+    expect(righe.map((r) => r.id)).toEqual(['b1', 'b2']);
   });
 });

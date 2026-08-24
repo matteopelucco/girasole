@@ -1,7 +1,7 @@
 # 12 — Dashboard maestra/admin
 
 ## Attori
-Maestra, admin. (Genitore: fuori scope in questa fase.)
+Maestra, assistente, admin. (Genitore: fuori scope in questa fase.)
 
 ## Obiettivo
 Un punto d'ingresso unico da cui maestra e admin scelgono una data e
@@ -32,11 +32,26 @@ E selezionando una classe vedo l'elenco dei bambini di quella classe, per
 consultare/segnare il pasto di ciascuno (dettagli in
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
+## Scenario: l'assistente apre la dashboard
+Dato che sono autenticata come assistente (con almeno una sezione
+assegnata)
+Quando apro la dashboard
+Allora vedo il selettore di data e il pulsante/scheda "Presenze", con lo
+stesso comportamento di una maestra (vedi
+[13 - segna-presenza.md](13%20-%20segna-presenza.md))
+E NON vedo il pulsante/scheda "Pasti": il registro pasti non è
+accessibile al ruolo assistente (vedi
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
+E vedo comunque la sezione promemoria, con la possibilità di crearne uno
+per le sezioni a cui sono assegnata o per i loro bambini
+
 ## Scenario: la maestra non ha sezioni assegnate
-Dato che sono autenticata come maestra ma non ho ancora nessuna sezione
+Dato che sono autenticata come maestra o assistente ma non ho ancora
+nessuna sezione
 Quando apro la dashboard
 Allora vedo un messaggio che mi invita a chiedere all'admin di assegnarmi
-una sezione, e non vedo i pulsanti Presenze/Pasti
+una sezione, e non vedo i pulsanti Presenze/Pasti (né Presenze soltanto,
+per l'assistente)
 
 ## Scenario: l'admin apre la dashboard
 Dato che sono autenticato come admin
@@ -56,7 +71,7 @@ successiva, e nessun dato di altri bambini
 - L'accesso a `/dashboard` richiede autenticazione (vedi
   [11 - login.md](11%20-%20login.md)).
 - Il contenuto mostrato dipende dal ruolo del profilo (`admin`, `maestra`,
-  altro), non dal solo fatto di essere autenticati.
+  `assistente`, altro), non dal solo fatto di essere autenticati.
 - Il selettore di data permette di consultare presenze/pasti di qualunque
   data passata o futura; se e quando quei dati sono modificabili dipende
   dal ruolo e dalla data (vedi le Regole in

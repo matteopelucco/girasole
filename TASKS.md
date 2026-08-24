@@ -343,6 +343,86 @@ scope per un run di analisi statica. Da valutare a parte.
       duplicati (le asserzioni ripetute per casi diversi non sono
       duplicazione reale).
 
+## Ruolo Assistente, pre/post-asilo, report email automatico
+Requisiti (specs 00, 03, 04, 12, 13, 14, 15, 50, 51 aggiornati, nuovo
+specs/52) implementati: migration, RLS, server action, pagine,
+componenti, unit test (Vitest) e test e2e (Playwright) scritti.
+`npm run analyze` (lint + unit test + duplicati) è verde. Libreria PDF
+usata: `pdf-lib` (pura JS, nessun binario nativo — concordata prima di
+installarla).
+
+- [x] Ruolo `assistente`: nuovo valore dell'enum `ruolo_utente`
+      (`supabase/migrations/0015_ruolo_assistente.sql`, isolato in una
+      migration a parte perché un valore aggiunto a un enum non è
+      utilizzabile nella stessa transazione in cui viene aggiunto).
+      Selezionabile da `/admin/maestre` in creazione/modifica utente.
+- [x] Permessi assistente (matrice in specs/03): stesso perimetro della
+      maestra su `presenze` (RLS ridefinita) e `promemoria`; **nessun
+      accesso** a `pasti` (RLS + UI, `lib/auth.ts:assicuraAccessoPasti`)
+      — vedi `supabase/migrations/0016_assistente_e_pre_post_asilo.sql`,
+      che corregge anche un buco di RLS pre-esistente sui pasti (le
+      policy insert/update di `0009` non controllavano il ruolo, solo
+      l'appartenenza a `maestre_sezioni` — innocuo finché solo le
+      maestre vi comparivano, non più ora che vi compaiono anche le
+      assistenti). `maestre_sezioni` resta la tabella di assegnazione
+      condivisa (non rinominata).
+- [x] Dashboard (specs/12), `app/dashboard/page.tsx`: un'assistente vede
+      "Presenze" ma non "Pasti".
+- [x] Colonne `presenze.pre_asilo`/`presenze.post_asilo` (booleane,
+      default falso) con vincolo "vere solo se `stato = 'presente'`" —
+      in `0016_assistente_e_pre_post_asilo.sql`.
+- [x] Pulsanti "Pre-asilo"/"Post-asilo" (specs/13): toggle indipendenti
+      — logica pura in `lib/presenza.ts:prossimaPresenza` (unit test in
+      `lib/presenza.test.ts`), azioni in
+      `app/dashboard/presenze/actions.ts`.
+- [x] Riepilogo Presenze: "Pre-asilo: P" / "Post-asilo: Q" accanto a
+      "Presenti: X/Y" (`components/RiepilogoConteggio.tsx`, denominatore
+      ora opzionale).
+- [x] Report (specs/51): colonne pre-asilo/post-asilo nella tabella e
+      nel drill-down; anagrafica classi mostra il ruolo di ogni membro
+      dello staff assegnato. Aggregazione estratta in
+      `lib/report.ts:aggregaConteggiPresenzePasti` (pura, unit test),
+      riusata sia dalla pagina Report sia dal report email notturno.
+- [x] Report email automatico (nuovo specs/52),
+      `app/api/cron/report-presenze/route.ts`: genera e allega fino a 3
+      PDF (giornaliero/settimanale/mensile — `lib/pdfReport.ts`, unit
+      test in `lib/pdfReport.test.ts`), idempotenza per tipo+giorno
+      (`report_giornalieri_inviati` per il giornaliero, invariata; nuova
+      `report_periodici_inviati` per settimanale/mensile). Configurabile
+      via `REPORT_EMAIL_DESTINATARIO` (default `info@asilosartorio.it`)
+      e `REPORT_EMAIL_MODALITA_PERIODICI` (`sempre` di default, o
+      `fine_periodo` — vedi `lib/date.ts:isUltimoGiornoSettimana/Mese`).
+
+- [x] Migration `0015_ruolo_assistente.sql` e
+      `0016_assistente_e_pre_post_asilo.sql` applicate sul progetto
+      Supabase di test. Verificato: `npx playwright test` sulle suite
+      toccate da questi requisiti (03, 12, 13, 14, 15, 50, 51) è verde —
+      66+ scenari passano, gli unici skip sono quelli che richiedono
+      l'account di test assistente (punto successivo). **Da fare da
+      parte tua**: applica le stesse due migration (in quest'ordine,
+      come "Run" separati) anche sul progetto di produzione prima del
+      deploy.
+- [ ] **Da fare da parte tua**: l'account di test
+      `assistente.test@example.com` non esiste ancora in Supabase Auth
+      (la query di `supabase/helper.sql` ha girato ma non ha trovato
+      nessuna riga da collegare, quindi non ha inserito nulla) — crealo
+      da Supabase Dashboard → Authentication → Add user (stessa
+      email/password di `E2E_ASSISTENTE_EMAIL`/`PASSWORD` in
+      `.env.local`, "Auto Confirm User" attivo), poi rilancia il blocco
+      SQL in `supabase/helper.sql` per impostare ruolo e sezione. Dopo
+      questo passaggio gli scenario assistente di specs/03, 12, 13, 14,
+      15, 51 smettono di saltarsi.
+- [ ] Lo scenario "idempotenza per tipo" di `e2e/52-report-email-automatico.spec.ts`
+      chiama davvero l'API di Resend: non verificabile dall'ambiente
+      sandbox di sviluppo usato per questa sessione (nessun accesso di
+      rete in uscita). La sotto-parte "rifiuta senza il secret corretto"
+      (nessuna chiamata di rete) è verde. Consigliato un giro manuale
+      (`npx playwright test e2e/52-report-email-automatico.spec.ts`) dal
+      tuo ambiente locale con accesso a Internet.
+- [ ] Facoltativo: se vuoi provare l'invio reale del report notturno con
+      PDF allegati, `RESEND_API_KEY`/`CRON_SECRET` sono già configurati
+      da requisiti precedenti — nessun secret nuovo necessario.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

@@ -5,7 +5,7 @@ import { EtichettaAssente } from '@/components/EtichettaAssente';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
-import { requireStaff, puoScrivereData } from '@/lib/auth';
+import { requireStaff, puoScrivereData, assicuraAccessoPasti } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
 import { segnaPasto, salvaNotaPasto } from '../actions';
@@ -22,6 +22,7 @@ export default async function PastiClassePage({
   searchParams: { data?: string };
 }) {
   const { supabase, user, profilo, ruolo, data } = await requireStaff(searchParams);
+  assicuraAccessoPasti(ruolo);
   const { sezioneId } = params;
 
   const sezione = await sezionePerId(supabase, sezioneId);

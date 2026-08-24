@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classePulsanteStato } from './classiStato';
+import { classePulsanteStato, classePulsanteToggle } from './classiStato';
 
 describe('classePulsanteStato', () => {
   it('restituisce una classe non selezionata quando selezionato è false', () => {
@@ -14,5 +14,15 @@ describe('classePulsanteStato', () => {
     ['malattia', 'bg-rose-600'],
   ])('stato "%s" selezionato usa il colore %s', (stato, colore) => {
     expect(classePulsanteStato(stato, true)).toContain(colore);
+  });
+});
+
+describe('classePulsanteToggle', () => {
+  it('restituisce una classe non selezionata quando selezionato è false', () => {
+    expect(classePulsanteToggle(false)).toContain('border-stone-300');
+  });
+
+  it('restituisce il colore sky quando selezionato è true', () => {
+    expect(classePulsanteToggle(true)).toContain('bg-sky-700');
   });
 });

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { requireStaff } from '@/lib/auth';
 import { sezioniAttiveVisibili } from '@/lib/sezioni';
-import { risolviPeriodoReport, type TipoReport } from '@/lib/report';
+import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +54,7 @@ export default async function ReportPage({
     ? await Promise.all([
         supabase
           .from('presenze')
-          .select('bambino_id, stato')
+          .select('bambino_id, stato, pre_asilo, post_asilo')
           .in('bambino_id', idBambini)
           .gte('data', inizio)
           .lte('data', fine),
@@ -65,16 +65,14 @@ export default async function ReportPage({
           .gte('data', inizio)
           .lte('data', fine),
       ])
-    : [{ data: [] as { bambino_id: string; stato: string }[] }, { data: [] as { bambino_id: string; mangiato: string }[] }];
+    : [
+        { data: [] as { bambino_id: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[] },
+        { data: [] as { bambino_id: string; mangiato: string }[] },
+      ];
 
-  const presenzeCount = new Map<string, number>();
-  for (const p of presenze ?? []) {
-    if (p.stato === 'presente') presenzeCount.set(p.bambino_id, (presenzeCount.get(p.bambino_id) ?? 0) + 1);
-  }
-  const pastiCount = new Map<string, number>();
-  for (const p of pasti ?? []) {
-    if (p.mangiato === 'si') pastiCount.set(p.bambino_id, (pastiCount.get(p.bambino_id) ?? 0) + 1);
-  }
+  const righePerBambino = new Map(
+    aggregaConteggiPresenzePasti(bambini, presenze ?? [], pasti ?? []).map((r) => [r.id, r])
+  );
 
   const bambiniPerSezione = new Map<string, typeof bambini>();
   for (const b of bambini) {
@@ -151,30 +149,37 @@ export default async function ReportPage({
                     <tr className="text-left text-xs text-stone-500">
                       <th className="py-1">Bambino</th>
                       <th className="py-1 text-right">Presenze</th>
+                      <th className="py-1 text-right">Pre-asilo</th>
+                      <th className="py-1 text-right">Post-asilo</th>
                       <th className="py-1 text-right">Pasti</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {lista.map((b) => (
-                      <tr key={b.id} className="border-t border-stone-100">
-                        <td className="py-1">
-                          {puoFareDrillDown ? (
-                            <Link
-                              href={`/dashboard/report/bambino/${b.id}?tipo=${tipo}&periodo=${periodoAttuale}`}
-                              className="hover:underline"
-                            >
-                              {b.nome} {b.cognome}
-                            </Link>
-                          ) : (
-                            <span>
-                              {b.nome} {b.cognome}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-1 text-right">{presenzeCount.get(b.id) ?? 0}</td>
-                        <td className="py-1 text-right">{pastiCount.get(b.id) ?? 0}</td>
-                      </tr>
-                    ))}
+                    {lista.map((b) => {
+                      const riga = righePerBambino.get(b.id);
+                      return (
+                        <tr key={b.id} className="border-t border-stone-100">
+                          <td className="py-1">
+                            {puoFareDrillDown ? (
+                              <Link
+                                href={`/dashboard/report/bambino/${b.id}?tipo=${tipo}&periodo=${periodoAttuale}`}
+                                className="hover:underline"
+                              >
+                                {b.nome} {b.cognome}
+                              </Link>
+                            ) : (
+                              <span>
+                                {b.nome} {b.cognome}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1 text-right">{riga?.presenze ?? 0}</td>
+                          <td className="py-1 text-right">{riga?.preAsilo ?? 0}</td>
+                          <td className="py-1 text-right">{riga?.postAsilo ?? 0}</td>
+                          <td className="py-1 text-right">{riga?.pasti ?? 0}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}

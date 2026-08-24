@@ -9,7 +9,7 @@ Utente, Classe, Anno Scolastico, Alunno.
 
 ## Utente
 È l'utente che si connette all'applicativo per soddisfare un bisogno
-(admin, maestra o genitore — vedi
+(admin, maestra, assistente o genitore — vedi
 [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
 
 Dati obbligatori: Nome, Cognome, e-mail, Numero di telefono
@@ -53,7 +53,8 @@ identici — evita inserimenti duplicati dello stesso bambino.
   anno scolastico.
 - **Alunno → Utente "genitore"**: relazione 1:n, ma limitata — massimo
   un padre e una madre per alunno.
-- **Utente "maestra" → Classe**: una maestra gestisce N classi (vedi
+- **Utente "maestra"/"assistente" → Classe**: una maestra o un'assistente
+  gestisce N classi (vedi
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
 
 ## Scenario: admin crea un anno scolastico

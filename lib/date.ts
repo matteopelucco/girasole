@@ -90,6 +90,17 @@ export function formattaDataBreve(data: string): string {
   );
 }
 
+// L'invio automatico dei report periodici (specs/52 - report-email-automatico.md)
+// in modalità "fine_periodo" scatta solo l'ultima notte della settimana/
+// del mese: queste due funzioni rispondono "è oggi l'ultimo giorno?".
+export function isUltimoGiornoSettimana(data: string): boolean {
+  return data === domenicaSettimana(data);
+}
+
+export function isUltimoGiornoMese(data: string): boolean {
+  return data === ultimoGiornoMese(meseDaData(data));
+}
+
 // Tutte le date da `inizio` a `fine` (incluse), in ordine.
 export function giorniInRange(inizio: string, fine: string): string[] {
   const giorni: string[] = [];

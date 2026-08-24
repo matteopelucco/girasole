@@ -13,6 +13,11 @@ describe('puoScrivereData', () => {
     expect(puoScrivereData('maestra', '2020-01-01')).toBe(false);
   });
 
+  it("l'assistente può scrivere solo sulla data odierna, come la maestra", () => {
+    expect(puoScrivereData('assistente', oggi())).toBe(true);
+    expect(puoScrivereData('assistente', '2020-01-01')).toBe(false);
+  });
+
   it('nessun altro ruolo può scrivere', () => {
     expect(puoScrivereData('genitore', oggi())).toBe(false);
     expect(puoScrivereData(null, oggi())).toBe(false);
@@ -33,5 +38,13 @@ describe('assicuraScrivibile', () => {
     expect(() => assicuraScrivibile('maestra', '2020-01-01')).toThrow(
       'Le maestre possono modificare solo i dati della giornata odierna.'
     );
+  });
+
+  it("non lancia per l'assistente sulla data odierna", () => {
+    expect(() => assicuraScrivibile('assistente', oggi())).not.toThrow();
+  });
+
+  it("lancia per l'assistente su una data diversa da oggi", () => {
+    expect(() => assicuraScrivibile('assistente', '2020-01-01')).toThrow();
   });
 });

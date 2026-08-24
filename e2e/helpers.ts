@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-export type Ruolo = 'admin' | 'maestra' | 'genitore';
+export type Ruolo = 'admin' | 'maestra' | 'assistente' | 'genitore';
 
 // "Oggi"/"ieri" nel fuso Europe/Rome, per i test che devono navigare a
 // una data diversa da oggi (specs/13 - segna-presenza.md, specs/14 -

@@ -5,6 +5,23 @@
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
+test.describe("15 — Promemoria, come assistente (stesso perimetro della maestra)", () => {
+  test.use({ storageState: statoAutenticazione('assistente') });
+
+  test('un\'assistente può creare un promemoria per tutti', async ({ page }) => {
+    test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+    await page.goto('/dashboard');
+
+    const titolo = `Promemoria E2E assistente ${Date.now()}`;
+    await page.getByPlaceholder('Titolo').fill(titolo);
+    await page.getByPlaceholder('Testo del promemoria').fill('Testo generato dal test end-to-end.');
+    await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+    await page.getByRole('button', { name: 'Pubblica promemoria' }).click();
+
+    await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+  });
+});
+
 test.describe('15 — Promemoria', () => {
   test.use({ storageState: statoAutenticazione('maestra') });
 

@@ -7,7 +7,7 @@
 import { test as setup } from '@playwright/test';
 import { credenziali, fileSessione, hasCredenziali, type Ruolo } from './helpers';
 
-const RUOLI: Ruolo[] = ['admin', 'maestra', 'genitore'];
+const RUOLI: Ruolo[] = ['admin', 'maestra', 'assistente', 'genitore'];
 
 for (const ruolo of RUOLI) {
   setup(`autentica ${ruolo}`, async ({ page }) => {

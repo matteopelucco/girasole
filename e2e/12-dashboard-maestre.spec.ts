@@ -63,6 +63,23 @@ test.describe('12 — Dashboard maestra/admin', () => {
     });
   });
 
+  test.describe("come assistente", () => {
+    test.use({ storageState: statoAutenticazione('assistente') });
+
+    test('la dashboard mostra Presenze ma non Pasti', async ({ page }) => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
+
+      await expect(linkPresenze).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
   test('maestra senza sezioni assegnate vede il messaggio corretto, non un errore', async ({
     page,
   }) => {

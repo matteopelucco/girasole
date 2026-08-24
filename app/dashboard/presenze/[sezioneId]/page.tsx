@@ -6,8 +6,9 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
-import { classePulsanteStato } from '@/lib/classiStato';
-import { segnaPresenza, salvaNotaPresenza } from '../actions';
+import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
+import type { RigaPresenza } from '@/lib/presenza';
+import { segnaPresenza, segnaPreAsilo, segnaPostAsilo, salvaNotaPresenza } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,14 +43,24 @@ export default async function PresenzeClassePage({
   const { data: presenzeData } = idBambini.length
     ? await supabase
         .from('presenze')
-        .select('bambino_id, stato, note')
+        .select('bambino_id, stato, note, pre_asilo, post_asilo')
         .eq('data', data)
         .in('bambino_id', idBambini)
-    : { data: [] as { bambino_id: string; stato: string; note: string | null }[] };
+    : {
+        data: [] as {
+          bambino_id: string;
+          stato: string;
+          note: string | null;
+          pre_asilo: boolean;
+          post_asilo: boolean;
+        }[],
+      };
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
   const editable = puoScrivereData(ruolo, data);
   const numeroPresenti = bambini.filter((b) => presenzaPerBambino.get(b.id)?.stato === 'presente').length;
+  const numeroPreAsilo = bambini.filter((b) => presenzaPerBambino.get(b.id)?.pre_asilo).length;
+  const numeroPostAsilo = bambini.filter((b) => presenzaPerBambino.get(b.id)?.post_asilo).length;
 
   return (
     <PaginaClasseAttivita
@@ -63,12 +74,24 @@ export default async function PresenzeClassePage({
       vuoto={!bambini.length}
       riepilogo={
         bambini.length > 0 && (
-          <RiepilogoConteggio etichetta="Presenti" numeratore={numeroPresenti} denominatore={bambini.length} />
+          <div className="flex flex-wrap gap-2">
+            <RiepilogoConteggio etichetta="Presenti" numeratore={numeroPresenti} denominatore={bambini.length} />
+            <RiepilogoConteggio etichetta="Pre-asilo" numeratore={numeroPreAsilo} />
+            <RiepilogoConteggio etichetta="Post-asilo" numeratore={numeroPostAsilo} />
+          </div>
         )
       }
     >
       {bambini.map((bambino) => {
         const presenza = presenzaPerBambino.get(bambino.id);
+        const rigaAttuale: RigaPresenza | null = presenza
+          ? {
+              stato: presenza.stato as 'presente' | 'assente' | 'malattia',
+              preAsilo: presenza.pre_asilo,
+              postAsilo: presenza.post_asilo,
+            }
+          : null;
+
         return (
           <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -90,6 +113,20 @@ export default async function PresenzeClassePage({
                     {ETICHETTE[stato]}
                   </PulsanteInvio>
                 ))}
+                <PulsanteInvio
+                  mantieniTesto
+                  formAction={segnaPreAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
+                  className={classePulsanteToggle(!!presenza?.pre_asilo)}
+                >
+                  Pre-asilo
+                </PulsanteInvio>
+                <PulsanteInvio
+                  mantieniTesto
+                  formAction={segnaPostAsilo.bind(null, bambino.id, rigaAttuale, sezioneId, data)}
+                  className={classePulsanteToggle(!!presenza?.post_asilo)}
+                >
+                  Post-asilo
+                </PulsanteInvio>
                 <input
                   name="nota_presenza"
                   defaultValue={presenza?.note ?? ''}
@@ -98,14 +135,8 @@ export default async function PresenzeClassePage({
                 />
                 <BottoneSalvaNota
                   formAction={
-                    presenza
-                      ? salvaNotaPresenza.bind(
-                          null,
-                          bambino.id,
-                          sezioneId,
-                          data,
-                          presenza.stato as 'presente' | 'assente' | 'malattia'
-                        )
+                    rigaAttuale
+                      ? salvaNotaPresenza.bind(null, bambino.id, sezioneId, data, rigaAttuale)
                       : null
                   }
                 />
@@ -113,6 +144,8 @@ export default async function PresenzeClassePage({
             ) : (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600">
                 <span>{presenza ? ETICHETTE[presenza.stato] : 'Non ancora segnato'}</span>
+                {presenza?.pre_asilo && <span className="text-sky-700">Pre-asilo</span>}
+                {presenza?.post_asilo && <span className="text-sky-700">Post-asilo</span>}
                 {presenza?.note && <span className="text-stone-500">— {presenza.note}</span>}
               </div>
             )}

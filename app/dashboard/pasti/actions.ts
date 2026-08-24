@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
+import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti } from '@/lib/auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type StatoPasto = 'si' | 'no';
@@ -45,6 +45,7 @@ export async function segnaPasto(
   formData: FormData
 ) {
   const { supabase, user, profilo } = await requireProfilo();
+  assicuraAccessoPasti(profilo?.ruolo);
   assicuraScrivibile(profilo?.ruolo, data);
   await assicuraNonAssente(supabase, bambinoId, data);
 
@@ -65,6 +66,7 @@ export async function salvaNotaPasto(
   formData: FormData
 ) {
   const { supabase, user, profilo } = await requireProfilo();
+  assicuraAccessoPasti(profilo?.ruolo);
   assicuraScrivibile(profilo?.ruolo, data);
 
   if (!mangiatoAttuale) {

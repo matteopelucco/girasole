@@ -6,6 +6,8 @@ import {
   formattaIntervalloItaliano,
   formattaMeseItaliano,
   giorniInRange,
+  isUltimoGiornoMese,
+  isUltimoGiornoSettimana,
   lunediSettimana,
   meseDaData,
   mesePrecedente,
@@ -142,6 +144,31 @@ describe('formattaIntervalloItaliano', () => {
 describe('formattaDataBreve', () => {
   it('formatta una data breve con anno', () => {
     expect(formattaDataBreve('2026-08-23')).toBe('23 ago 2026');
+  });
+});
+
+describe('isUltimoGiornoSettimana', () => {
+  it('è vero per una domenica', () => {
+    expect(isUltimoGiornoSettimana('2026-08-23')).toBe(true);
+  });
+
+  it('è falso per un giorno feriale', () => {
+    expect(isUltimoGiornoSettimana('2026-08-20')).toBe(false);
+  });
+});
+
+describe('isUltimoGiornoMese', () => {
+  it('è vero per il 31 di un mese di 31 giorni', () => {
+    expect(isUltimoGiornoMese('2026-08-31')).toBe(true);
+  });
+
+  it('è falso per un giorno che non è l\'ultimo del mese', () => {
+    expect(isUltimoGiornoMese('2026-08-30')).toBe(false);
+  });
+
+  it('gestisce febbraio bisestile', () => {
+    expect(isUltimoGiornoMese('2024-02-29')).toBe(true);
+    expect(isUltimoGiornoMese('2024-02-28')).toBe(false);
   });
 });
 

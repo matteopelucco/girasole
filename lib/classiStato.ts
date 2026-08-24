@@ -19,3 +19,13 @@ const CLASSE_NON_SELEZIONATO =
 export function classePulsanteStato(stato: string, selezionato: boolean): string {
   return selezionato ? CLASSI_SELEZIONATO[stato] : CLASSE_NON_SELEZIONATO;
 }
+
+// Pulsanti "Pre-asilo"/"Post-asilo" (specs/13): toggle indipendenti dai
+// tre stati primari, colore distinto (sky) per non essere confusi con
+// "Presente" (emerald) pur implicandolo.
+const CLASSE_TOGGLE_ATTIVO =
+  'rounded-full bg-sky-700 px-3 py-1 text-xs font-semibold text-white shadow-sm';
+
+export function classePulsanteToggle(selezionato: boolean): string {
+  return selezionato ? CLASSE_TOGGLE_ATTIVO : CLASSE_NON_SELEZIONATO;
+}

@@ -2,6 +2,9 @@
 
 ## Attori
 Maestra (sui bambini delle sue sezioni), Admin (su tutti i bambini).
+**L'assistente non è un attore di questo requisito**: non ha alcun
+accesso al registro pasti, né in lettura né in scrittura (vedi
+[03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
 
 ## Obiettivo
 Registrare in pochi tap se un bambino ha mangiato a pranzo, con particolare
@@ -58,6 +61,13 @@ Quando guardo l'elenco bambini di una mia classe
 Allora vedo lo stato eventualmente già registrato ma senza pulsanti per
 modificarlo: è in sola lettura
 
+## Scenario: l'assistente non vede la sezione Pasti
+Dato che sono autenticata come assistente
+Quando apro la dashboard, oppure provo ad aprire direttamente `/dashboard/pasti`
+Allora non vedo il pulsante/scheda "Pasti" in dashboard, e aprendo
+l'indirizzo direttamente vengo reindirizzata alla dashboard senza vedere
+alcun dato pasto
+
 ## Regole
 - Stati validi: `si`, `no`. (Lo stato `parziale` è stato rimosso dopo
   un test con un'insegnante: nella pratica un pasto è mangiato o no, un
@@ -77,9 +87,11 @@ modificarlo: è in sola lettura
   `supabase/migrations/0012_pasto_senza_parziale.sql`), non solo in UI
   — riguarda solo lo stato "assente", non "malattia" (un bambino
   malato può comunque aver mangiato, es. a casa poi rientrato).
-- Scrittura consentita solo allo staff: la maestra della sezione del
-  bambino, o l'admin (vedi RLS su `pasti` in
-  `supabase/migrations/0001_init.sql`).
+- Scrittura consentita solo alla maestra della sezione del bambino o
+  all'admin (vedi RLS su `pasti` in
+  `supabase/migrations/0001_init.sql`) — **l'assistente è esclusa
+  esplicitamente**, sia dalla RLS sia dalla UI (vedi
+  [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
 - La data usata è "oggi" nel fuso orario Europe/Rome (non UTC), vedi
   `lib/date.ts`.
 - Il ruolo "maestra" può scrivere solo sulla data odierna, l'admin su

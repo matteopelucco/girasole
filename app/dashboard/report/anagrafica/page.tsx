@@ -6,6 +6,7 @@ import { formattaDataBreve } from '@/lib/date';
 export const dynamic = 'force-dynamic';
 
 const ETICHETTA_SESSO: Record<string, string> = { M: 'Maschio', F: 'Femmina' };
+const ETICHETTA_RUOLO_STAFF: Record<string, string> = { maestra: 'Maestra', assistente: 'Assistente' };
 
 export default async function AnagraficaClassiPage() {
   const { supabase, user, profilo, ruolo } = await requireStaff({});
@@ -18,7 +19,7 @@ export default async function AnagraficaClassiPage() {
     sezioneIds.length
       ? supabase.from('maestre_sezioni').select('maestra_id, sezione_id').in('sezione_id', sezioneIds)
       : Promise.resolve({ data: [] as { maestra_id: string; sezione_id: string }[] }),
-    supabase.from('profili').select('id, nome, cognome').eq('ruolo', 'maestra'),
+    supabase.from('profili').select('id, nome, cognome, ruolo').in('ruolo', ['maestra', 'assistente']),
     sezioneIds.length
       ? supabase
           .from('bambini')
@@ -99,10 +100,12 @@ export default async function AnagraficaClassiPage() {
             <div key={sezione.id} className="rounded-lg border border-stone-200 p-4">
               <h2 className="text-base font-semibold">{sezione.nome}</h2>
               <p className="mt-1 text-sm text-stone-600">
-                Maestre:{' '}
+                Staff assegnato:{' '}
                 {maestre.length
-                  ? maestre.map((m) => `${m.nome} ${m.cognome}`).join(', ')
-                  : 'Nessuna maestra assegnata.'}
+                  ? maestre
+                      .map((m) => `${m.nome} ${m.cognome} (${ETICHETTA_RUOLO_STAFF[m.ruolo] ?? m.ruolo})`)
+                      .join(', ')
+                  : 'Nessuno staff assegnato.'}
               </p>
 
               <ul className="mt-3 space-y-2">

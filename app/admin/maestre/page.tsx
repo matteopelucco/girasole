@@ -15,6 +15,7 @@ import {
 const ETICHETTE_RUOLO: Record<string, string> = {
   admin: 'Admin',
   maestra: 'Maestra',
+  assistente: 'Assistente',
   genitore: 'Genitore',
 };
 
@@ -32,7 +33,7 @@ export default async function MaestrePage() {
     supabase.from('maestre_sezioni').select('maestra_id, sezione_id'),
   ]);
 
-  const maestre = profili?.filter((p) => p.ruolo === 'maestra') ?? [];
+  const staffAssegnabile = profili?.filter((p) => p.ruolo === 'maestra' || p.ruolo === 'assistente') ?? [];
   const sezioniPerMaestra = new Map<string, string[]>();
   for (const a of assegnazioni ?? []) {
     const nomeSezione = sezioni?.find((s) => s.id === a.sezione_id)?.nome ?? a.sezione_id;
@@ -52,7 +53,8 @@ export default async function MaestrePage() {
           <h1 className="text-lg font-medium">Utenti e ruoli</h1>
           <p className="mt-1 text-sm text-stone-500">
             Crea, modifica ed elimina gli account direttamente da qui — email, password,
-            nome, cognome, telefono, indirizzo, note e ruolo (admin / maestra / genitore).
+            nome, cognome, telefono, indirizzo, note e ruolo (admin / maestra / assistente /
+            genitore).
           </p>
 
           <div className="mt-4 rounded-xl border border-stone-200 p-4">
@@ -182,22 +184,22 @@ export default async function MaestrePage() {
         </section>
 
         <section>
-          <h1 className="text-lg font-medium">Assegna maestre alle sezioni</h1>
+          <h1 className="text-lg font-medium">Assegna maestre e assistenti alle sezioni</h1>
 
           <FormConEsito action={assegnaSezione} className="mt-3 flex flex-wrap gap-2">
             <select
               name="maestra_id"
               required
               defaultValue=""
-              aria-label="Maestra"
+              aria-label="Maestra o assistente"
               className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             >
               <option value="" disabled>
-                Maestra
+                Maestra o assistente
               </option>
-              {maestre.map((m) => (
+              {staffAssegnabile.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.nome} {m.cognome}
+                  {m.nome} {m.cognome} ({ETICHETTE_RUOLO[m.ruolo]})
                 </option>
               ))}
             </select>
@@ -221,18 +223,19 @@ export default async function MaestrePage() {
               Assegna
             </PulsanteInvio>
           </FormConEsito>
-          {!maestre.length && (
+          {!staffAssegnabile.length && (
             <p className="mt-2 text-sm text-stone-600">
-              Nessun utente ha ancora il ruolo maestra: creane uno o promuovilo nella sezione qui
-              sopra.
+              Nessun utente ha ancora il ruolo maestra o assistente: creane uno o promuovilo nella
+              sezione qui sopra.
             </p>
           )}
 
           <ul className="mt-4 space-y-1">
-            {maestre.map((m) => (
+            {staffAssegnabile.map((m) => (
               <li key={m.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
                 <div className="font-medium">
-                  {m.nome} {m.cognome}
+                  {m.nome} {m.cognome}{' '}
+                  <span className="font-normal text-stone-500">({ETICHETTE_RUOLO[m.ruolo]})</span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {(sezioniPerMaestra.get(m.id) ?? []).length === 0 && (

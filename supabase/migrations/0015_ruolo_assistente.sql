@@ -1,0 +1,14 @@
+-- Girasole — Requisito "Assistente" (specs/03 - utenti-e-ruoli.md).
+--
+-- Aggiunge il nuovo ruolo all'enum. Isolato nella propria migration,
+-- separata dalle policy che lo useranno (0016): in PostgreSQL un valore
+-- aggiunto a un enum con ALTER TYPE ... ADD VALUE non è utilizzabile
+-- all'interno della STESSA transazione in cui viene aggiunto — se lo
+-- incolli nel SQL Editor di Supabase insieme a policy che referenziano
+-- 'assistente' nello stesso "Run", fallisce con un errore del tipo
+-- "unsafe use of new value of enum type".
+--
+-- Incolla questo file nel SQL Editor di Supabase (dopo 0014) ed
+-- eseguilo da solo, poi esegui 0016 in un secondo momento (anche
+-- subito dopo, ma come "Run" separato).
+alter type public.ruolo_utente add value if not exists 'assistente';

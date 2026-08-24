@@ -34,13 +34,42 @@ Un utente ha uno e un solo ruolo, tra:
   [14 - segna-pasto.md](14%20-%20segna-pasto.md),
   [15 - memo.md](15%20-%20memo.md)). La gestione diretta degli account
   genitore da parte della maestra è backlog (vedi Fuori scope sotto).
+- **assistente** — segue i bambini durante le attività in sostegno alle
+  maestre. Assegnata a una o più sezioni esattamente come una maestra
+  (stessa tabella `maestre_sezioni`, vedi
+  [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)), con
+  **gli stessi permessi di una maestra tranne sul registro pasti**, a cui
+  non ha accesso né in lettura né in scrittura (vedi
+  [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Vale in particolare
+  anche per le presenze a pre-asilo/post-asilo (vedi
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md)). Come la maestra,
+  può scrivere solo sulla data odierna (vedi Regole in
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
 - **genitore** — accesso in sola lettura ai dati del proprio figlio e
   alle comunicazioni di maestre/admin.
+
+## Matrice permessi per funzionalità
+Riepilogo di chi può fare cosa, per evitare di ripetere la stessa regola
+in ogni file — il dettaglio di ciascuna riga resta nel file linkato.
+
+| Funzionalità | admin | maestra | assistente | genitore |
+| --- | --- | --- | --- | --- |
+| Sezioni/bambini/utenti ([50](50%20-%20amministrazione_base.md)) | crud | — | — | — |
+| Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | crud, solo oggi, proprie sezioni | lettura, solo il proprio figlio (fuori scope UI) |
+| Pasti ([14](14%20-%20segna-pasto.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | **nessun accesso** | lettura, solo il proprio figlio (fuori scope UI) |
+| Promemoria ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli promemoria a lui destinati (fuori scope UI) |
+| Report/anagrafica classi ([51](51%20-%20report.md)) | tutte le classi | proprie classi | proprie classi | — |
+
+Nota: "assistente" è stato assunto con lo stesso perimetro di una maestra
+su promemoria e report (nessuna indicazione contraria nel requisito che
+ha introdotto il ruolo) — se in pratica dovesse restare più limitata, è
+una riga sola da correggere in questa tabella.
 
 ## Scenario: admin crea un nuovo utente
 Dato che sono autenticato come admin
 Quando su `/admin/maestre` compilo nome, cognome, email, telefono,
-password e scelgo un ruolo (admin, maestra o genitore), e confermo
+password e scelgo un ruolo (admin, maestra, assistente o genitore), e
+confermo
 Allora l'utente viene creato e compare subito nell'elenco con i dati e il
 ruolo scelti
 E può accedere subito a `/login` con quell'email e quella password
@@ -91,14 +120,14 @@ Quando su `/admin/maestre` provo a eliminare il mio stesso account
 Allora vedo un messaggio d'errore e il mio account resta attivo
 
 ## Scenario: accesso negato a chi non è admin
-Dato che sono autenticato come maestra o genitore
+Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/maestre`
 Allora vengo reindirizzato alla dashboard
 
 ## Regole
-- Un utente ha sempre e solo uno dei tre ruoli (`admin`, `maestra`,
-  `genitore`): non è un insieme di permessi combinabili, è una colonna
-  singola (`profili.ruolo`).
+- Un utente ha sempre e solo uno dei quattro ruoli (`admin`, `maestra`,
+  `assistente`, `genitore`): non è un insieme di permessi combinabili, è
+  una colonna singola (`profili.ruolo`).
 - La creazione/eliminazione di un account avviene lato server con la
   service_role key di Supabase (`lib/supabase/admin.ts`), mai esposta al
   browser — vedi `supabase/migrations/0005_utenti_gestiti_da_app.sql` per

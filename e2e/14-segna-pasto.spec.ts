@@ -137,4 +137,23 @@ test.describe('14 — Segna pasto', () => {
       await expect(rigaPasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
     });
   });
+
+  test.describe("l'assistente non ha accesso al registro pasti", () => {
+    test.use({ storageState: statoAutenticazione('assistente') });
+
+    test.beforeEach(async () => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+    });
+
+    test("aprire /dashboard/pasti reindirizza alla dashboard, niente pulsante Pasti visibile", async ({
+      page,
+    }) => {
+      await page.goto('/dashboard');
+      await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+
+      await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
+      await page.waitForURL('/dashboard');
+    });
+  });
 });

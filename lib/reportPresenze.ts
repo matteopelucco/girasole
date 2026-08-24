@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formattaDataItaliana } from '@/lib/date';
+import { aggregaConteggiPresenzePasti, type RigaReportBambino } from '@/lib/report';
 
 const ETICHETTE_STATO: Record<string, string> = {
   presente: 'Presente',
@@ -8,19 +9,22 @@ const ETICHETTE_STATO: Record<string, string> = {
 };
 
 // Scheda HTML delle presenze/assenze/malattie di una data, raggruppata
-// per classe attiva — usata dal report notturno (specs/13 -
-// segna-presenza.md). Usa la service_role key (bypassa la RLS): il cron
-// non ha una sessione utente e deve poter leggere tutte le classi.
+// per classe attiva — usata dal report notturno (specs/52 -
+// report-email-automatico.md). Usa la service_role key (bypassa la
+// RLS): il cron non ha una sessione utente e deve poter leggere tutte
+// le classi.
 export async function generaSchedaGiornalieraHtml(data: string): Promise<string> {
   const supabase = createAdminClient();
 
-  const [{ data: sezioni }, { data: bambini }, { data: presenze }] = await Promise.all([
+  const [{ data: sezioni }, { data: bambini }, { data: presenze }, { data: pasti }] = await Promise.all([
     supabase.from('sezioni').select('id, nome').eq('attiva', true).order('nome'),
     supabase.from('bambini').select('id, nome, cognome, sezione_id').order('cognome'),
-    supabase.from('presenze').select('bambino_id, stato, note').eq('data', data),
+    supabase.from('presenze').select('bambino_id, stato, note, pre_asilo, post_asilo').eq('data', data),
+    supabase.from('pasti').select('bambino_id, mangiato').eq('data', data),
   ]);
 
   const presenzaPerBambino = new Map((presenze ?? []).map((p) => [p.bambino_id, p]));
+  const pastoPerBambino = new Map((pasti ?? []).map((p) => [p.bambino_id, p.mangiato]));
 
   const sezioniHtml = (sezioni ?? [])
     .map((sezione) => {
@@ -31,8 +35,14 @@ export async function generaSchedaGiornalieraHtml(data: string): Promise<string>
         .map((b) => {
           const presenza = presenzaPerBambino.get(b.id);
           const stato = presenza ? ETICHETTE_STATO[presenza.stato] ?? presenza.stato : 'Non segnato';
+          const extra: string[] = [];
+          if (presenza?.pre_asilo) extra.push('pre-asilo');
+          if (presenza?.post_asilo) extra.push('post-asilo');
+          const pasto = pastoPerBambino.get(b.id);
+          if (pasto) extra.push(`pasto: ${pasto === 'si' ? 'sì' : 'no'}`);
+          const dettaglio = extra.length ? ` (${extra.join(', ')})` : '';
           const nota = presenza?.note ? ` — ${presenza.note}` : '';
-          return `<li>${b.nome} ${b.cognome}: <strong>${stato}</strong>${nota}</li>`;
+          return `<li>${b.nome} ${b.cognome}: <strong>${stato}</strong>${dettaglio}${nota}</li>`;
         })
         .join('');
 
@@ -43,4 +53,54 @@ export async function generaSchedaGiornalieraHtml(data: string): Promise<string>
   return `<h1>Presenze del ${formattaDataItaliana(data)}</h1>${
     sezioniHtml || '<p>Nessuna classe attiva.</p>'
   }`;
+}
+
+export type SezioneConRighe = { nome: string; righe: RigaReportBambino[] };
+
+// Aggrega presenze (incluse pre-asilo/post-asilo) e pasti per ogni
+// classe attiva, nel periodo [inizio, fine] — usata dal report
+// notturno settimanale/mensile (specs/52). Riusa la stessa funzione di
+// aggregazione della pagina Report (lib/report.ts:aggregaConteggiPresenzePasti),
+// per non duplicare la logica di conteggio (CLAUDE.md, jscpd). Usa la
+// service_role key: il cron non ha una sessione utente e deve vedere
+// tutte le classi, non solo quelle di un singolo staff.
+export async function aggregaReportPeriodoTutteLeClassi(
+  inizio: string,
+  fine: string
+): Promise<SezioneConRighe[]> {
+  const supabase = createAdminClient();
+
+  const [{ data: sezioni }, { data: bambini }] = await Promise.all([
+    supabase.from('sezioni').select('id, nome').eq('attiva', true).order('nome'),
+    supabase.from('bambini').select('id, nome, cognome, sezione_id').eq('attiva', true).order('cognome'),
+  ]);
+
+  const idBambini = (bambini ?? []).map((b) => b.id);
+  const [{ data: presenze }, { data: pasti }] = idBambini.length
+    ? await Promise.all([
+        supabase
+          .from('presenze')
+          .select('bambino_id, stato, pre_asilo, post_asilo')
+          .in('bambino_id', idBambini)
+          .gte('data', inizio)
+          .lte('data', fine),
+        supabase
+          .from('pasti')
+          .select('bambino_id, mangiato')
+          .in('bambino_id', idBambini)
+          .gte('data', inizio)
+          .lte('data', fine),
+      ])
+    : [{ data: [] as { bambino_id: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[] }, { data: [] as { bambino_id: string; mangiato: string }[] }];
+
+  return (sezioni ?? []).map((sezione) => {
+    const bambiniSezione = (bambini ?? []).filter((b) => b.sezione_id === sezione.id);
+    const idBambiniSezione = new Set(bambiniSezione.map((b) => b.id));
+    const righe = aggregaConteggiPresenzePasti(
+      bambiniSezione,
+      (presenze ?? []).filter((p) => idBambiniSezione.has(p.bambino_id)),
+      (pasti ?? []).filter((p) => idBambiniSezione.has(p.bambino_id))
+    );
+    return { nome: sezione.nome, righe };
+  });
 }

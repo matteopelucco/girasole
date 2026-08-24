@@ -20,7 +20,7 @@ export default async function DashboardPage({
   const ruolo = profilo?.ruolo ?? null;
   const nomeVisualizzato = profilo?.nome || user.email || '';
 
-  if (ruolo !== 'admin' && ruolo !== 'maestra') {
+  if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') {
     return (
       <>
         <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
@@ -94,19 +94,21 @@ export default async function DashboardPage({
           )}
 
           {haSezioni && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className={ruolo === 'assistente' ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'}>
               <Link
                 href={`/dashboard/presenze?data=${data}`}
                 className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-emerald-800"
               >
                 Presenze
               </Link>
-              <Link
-                href={`/dashboard/pasti?data=${data}`}
-                className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-amber-800"
-              >
-                Pasti
-              </Link>
+              {ruolo !== 'assistente' && (
+                <Link
+                  href={`/dashboard/pasti?data=${data}`}
+                  className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-amber-800"
+                >
+                  Pasti
+                </Link>
+              )}
             </div>
           )}
 

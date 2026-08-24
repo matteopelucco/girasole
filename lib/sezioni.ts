@@ -3,10 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type SezioneAttiva = { id: string; nome: string };
 
 // Classi rilevanti per l'utente corrente: tutte per l'admin, solo quelle
-// assegnate per la maestra (specs/12 - dashboard-maestre.md). Con
-// `soloAttive` (default true) filtra anche le classi disattivate — le
-// pagine operative (Presenze/Pasti/promemoria) non ne hanno bisogno,
-// solo l'anagrafica classi (specs/51 - report.md) vuole vederle tutte.
+// assegnate per la maestra o l'assistente (specs/12 - dashboard-maestre.md,
+// specs/03 - utenti-e-ruoli.md). Con `soloAttive` (default true) filtra
+// anche le classi disattivate — le pagine operative (Presenze/Pasti/
+// promemoria) non ne hanno bisogno, solo l'anagrafica classi
+// (specs/51 - report.md) vuole vederle tutte.
 async function sezioniPerRuolo(
   supabase: SupabaseClient,
   userId: string,
@@ -20,7 +21,7 @@ async function sezioniPerRuolo(
     return data ?? [];
   }
 
-  if (ruolo === 'maestra') {
+  if (ruolo === 'maestra' || ruolo === 'assistente') {
     const { data } = await supabase
       .from('maestre_sezioni')
       .select('sezioni(id, nome, attiva)')

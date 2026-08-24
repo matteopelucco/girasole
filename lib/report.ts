@@ -69,3 +69,51 @@ export function risolviPeriodoReport(tipo: TipoReport, periodo: string | undefin
     periodoAttuale: giorno,
   };
 }
+
+export type RigaReportBambino = {
+  id: string;
+  nome: string;
+  cognome: string;
+  presenze: number;
+  preAsilo: number;
+  postAsilo: number;
+  pasti: number;
+};
+
+// Aggrega presenze/pasti di un periodo per bambino (specs/51 - report.md):
+// funzione pura, nessun I/O — chi chiama (la pagina Report, il job
+// notturno di specs/52 - report-email-automatico.md) ha già eseguito le
+// query e passa solo le righe. Condivisa tra i due, per non duplicare
+// la stessa logica di conteggio (CLAUDE.md, sezione jscpd).
+export function aggregaConteggiPresenzePasti(
+  bambini: { id: string; nome: string; cognome: string }[],
+  presenze: { bambino_id: string; stato: string; pre_asilo?: boolean; post_asilo?: boolean }[],
+  pasti: { bambino_id: string; mangiato: string }[]
+): RigaReportBambino[] {
+  const conteggi = new Map<string, { presenze: number; preAsilo: number; postAsilo: number; pasti: number }>();
+  const contaBambino = (id: string) => {
+    let voce = conteggi.get(id);
+    if (!voce) {
+      voce = { presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 };
+      conteggi.set(id, voce);
+    }
+    return voce;
+  };
+
+  for (const p of presenze) {
+    if (p.stato !== 'presente') continue;
+    const voce = contaBambino(p.bambino_id);
+    voce.presenze += 1;
+    if (p.pre_asilo) voce.preAsilo += 1;
+    if (p.post_asilo) voce.postAsilo += 1;
+  }
+  for (const p of pasti) {
+    if (p.mangiato !== 'si') continue;
+    contaBambino(p.bambino_id).pasti += 1;
+  }
+
+  return bambini.map((b) => {
+    const voce = conteggi.get(b.id) ?? { presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 };
+    return { id: b.id, nome: b.nome, cognome: b.cognome, ...voce };
+  });
+}

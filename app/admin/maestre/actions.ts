@@ -6,7 +6,7 @@ import { requireAdmin } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
-const RUOLI_VALIDI = ['admin', 'maestra', 'genitore'] as const;
+const RUOLI_VALIDI = ['admin', 'maestra', 'assistente', 'genitore'] as const;
 
 // Campi condivisi da creazione e modifica di un utente (specs/03).
 function campiUtente(formData: FormData) {
