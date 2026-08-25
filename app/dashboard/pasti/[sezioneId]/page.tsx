@@ -79,7 +79,7 @@ export default async function PastiClassePage({
         const assente = statoPresenza === 'assente';
 
         return (
-          <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4">
+          <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium">
                 {bambino.nome} {bambino.cognome}
@@ -96,7 +96,7 @@ export default async function PastiClassePage({
             </div>
 
             {assente ? (
-              <p className="mt-3 text-sm text-stone-500">
+              <p className="mt-3 text-sm text-stone-600">
                 Bambino assente: il pasto non è applicabile.
               </p>
             ) : editable ? (
@@ -128,7 +128,7 @@ export default async function PastiClassePage({
             ) : (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-stone-600">
                 <span>{pasto ? ETICHETTE[pasto.mangiato] : 'Non ancora segnato'}</span>
-                {pasto?.note && <span className="text-stone-500">— {pasto.note}</span>}
+                {pasto?.note && <span className="text-stone-600">— {pasto.note}</span>}
               </div>
             )}
           </li>

@@ -75,7 +75,7 @@ export default async function ReportPage({
       <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         <div>
-          <a href="/dashboard" className="text-sm text-stone-500 hover:text-stone-900">
+          <a href="/dashboard" className="text-sm text-stone-600 hover:text-stone-900">
             ← Torna alla dashboard
           </a>
           <h1 className="mt-2 text-lg font-medium">Report</h1>
@@ -126,13 +126,13 @@ export default async function ReportPage({
         {sezioni.map((sezione) => {
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
           return (
-            <div key={sezione.id} className="rounded-lg border border-stone-200 p-3">
+            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
               <h2 className="text-sm font-semibold">{sezione.nome}</h2>
               {!lista.length && <p className="mt-2 text-sm text-stone-600">Nessun bambino in questa classe.</p>}
               {!!lista.length && (
                 <table className="mt-2 w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-stone-500">
+                    <tr className="text-left text-xs text-stone-600">
                       <th className="py-1">Bambino</th>
                       <th className="py-1 text-right">Presenze</th>
                       <th className="py-1 text-right">Pre-asilo</th>

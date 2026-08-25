@@ -30,7 +30,7 @@ export default async function ReimpostaPasswordPage({
     <main className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-xl font-medium">Imposta una nuova password</h1>
-        <p className="mb-6 text-sm text-stone-500">{REGOLA_PASSWORD}</p>
+        <p className="mb-6 text-sm text-stone-600">{REGOLA_PASSWORD}</p>
 
         <form action={impostaNuovaPassword} className="space-y-4">
           <div>

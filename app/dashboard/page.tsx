@@ -27,8 +27,8 @@ export default async function DashboardPage({
         <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
         <main className="mx-auto max-w-2xl px-4 py-10">
           <h1 className="text-xl font-medium">Ciao {nomeVisualizzato}</h1>
-          <p className="mt-1 text-sm text-stone-500">Ruolo: {ruolo ?? 'non impostato'}</p>
-          <div className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-500">
+          <p className="mt-1 text-sm text-stone-600">Ruolo: {ruolo ?? 'non impostato'}</p>
+          <div className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-600">
             Il portale genitori è in arrivo in una fase successiva.
           </div>
         </main>
@@ -57,7 +57,7 @@ export default async function DashboardPage({
       <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         {ruolo === 'admin' && (
-          <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-500">
+          <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600">
             Per creare sezioni e bambini o gestire gli utenti vai su{' '}
             <a href="/admin" className="underline">
               Sezioni e bambini
@@ -83,14 +83,14 @@ export default async function DashboardPage({
             <div className={ruolo === 'assistente' ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'}>
               <Link
                 href={`/dashboard/presenze?data=${data}`}
-                className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-emerald-800"
+                className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md"
               >
                 Presenze
               </Link>
               {ruolo !== 'assistente' && (
                 <Link
                   href={`/dashboard/pasti?data=${data}`}
-                  className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm hover:bg-amber-800"
+                  className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-800 hover:shadow-md"
                 >
                   Pasti
                 </Link>
@@ -100,7 +100,7 @@ export default async function DashboardPage({
 
           <Link
             href="/dashboard/report"
-            className="block rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm hover:bg-sky-800"
+            className="block rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-800 hover:shadow-md"
           >
             Report
           </Link>
@@ -116,7 +116,7 @@ export default async function DashboardPage({
           <FormConEsito
             action={creaPromemoria}
             resetSuOk
-            className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4"
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
           >
             <input
               name="titolo"
@@ -139,7 +139,7 @@ export default async function DashboardPage({
 
           <ul className="mt-4 space-y-2">
             {promemoria?.map((p) => (
-              <li key={p.id} className="rounded-lg border border-stone-200 p-3 text-sm">
+              <li key={p.id} className="rounded-lg border border-stone-200 bg-white p-3 text-sm shadow-sm">
                 <Link href={`/dashboard/promemoria/${p.id}`} className="font-medium hover:underline">
                   {p.titolo}
                 </Link>

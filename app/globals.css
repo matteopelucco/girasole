@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Titoli in Poppins (font-heading), corpo in Open Sans (font-sans, di
+   default su tutto — vedi tailwind.config.ts): applicato una sola
+   volta qui invece che pagina per pagina su ogni <h1>. */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading;
+  }
+}

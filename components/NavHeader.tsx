@@ -10,10 +10,10 @@ export function NavHeader({
   ruolo: string | null;
 }) {
   return (
-    <header className="border-b-2 border-amber-400 bg-white">
+    <header className="sticky top-0 z-10 border-b-2 border-amber-400 bg-white shadow-sm">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold text-stone-900">
+          <Link href="/dashboard" className="flex items-center gap-2 font-heading text-base font-semibold text-stone-900">
             <span aria-hidden className="text-lg">
               🌻
             </span>
@@ -31,9 +31,9 @@ export function NavHeader({
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-stone-500">{nome}</span>
+          <span className="text-sm text-stone-600">{nome}</span>
           <form action={logout}>
-            <PulsanteInvio mantieniTesto className="text-sm text-stone-500 hover:text-stone-900">
+            <PulsanteInvio mantieniTesto className="text-sm text-stone-600 hover:text-stone-900">
               Esci
             </PulsanteInvio>
           </form>

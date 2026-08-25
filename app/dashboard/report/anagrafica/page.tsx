@@ -85,7 +85,7 @@ export default async function AnagraficaClassiPage() {
       <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         <div>
-          <a href="/dashboard/report" className="text-sm text-stone-500 hover:text-stone-900">
+          <a href="/dashboard/report" className="text-sm text-stone-600 hover:text-stone-900">
             ← Torna al report
           </a>
           <h1 className="mt-2 text-lg font-medium">Anagrafica classi</h1>
@@ -97,7 +97,7 @@ export default async function AnagraficaClassiPage() {
           const maestre = maestrePerSezione.get(sezione.id) ?? [];
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
           return (
-            <div key={sezione.id} className="rounded-lg border border-stone-200 p-4">
+            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold">{sezione.nome}</h2>
               <p className="mt-1 text-sm text-stone-600">
                 Staff assegnato:{' '}
@@ -131,7 +131,7 @@ export default async function AnagraficaClassiPage() {
                     </li>
                   );
                 })}
-                {!lista.length && <li className="text-xs text-stone-500">Nessun bambino.</li>}
+                {!lista.length && <li className="text-xs text-stone-600">Nessun bambino.</li>}
               </ul>
             </div>
           );

@@ -17,7 +17,12 @@ utenti da `/admin/maestre`.
   digitata due volte (password + conferma), con un riscontro in tempo
   reale se le due coincidono o no — evita di scoprire un errore di
   battitura solo al momento del primo login. Entrambi i campi hanno un
-  pulsante "occhio" per mostrare/nascondere il testo in chiaro.
+  pulsante "occhio" per mostrare/nascondere il testo in chiaro, ancorato
+  verticalmente al proprio campo — non si sposta quando compare il
+  riscontro "le password coincidono/non coincidono" sotto al campo
+  conferma (bug corretto: il riscontro, comparendo, allungava la cella
+  del campo password nel layout a griglia, e l'occhio — assoluto rispetto
+  al proprio contenitore, non al campo — seguiva quell'allungamento).
 - **nome**
 - **cognome**
 - **numero di telefono**
@@ -73,6 +78,9 @@ confermo
 Allora l'utente viene creato e compare subito nell'elenco con i dati e il
 ruolo scelti
 E può accedere subito a `/login` con quell'email e quella password
+E il form torna vuoto (tutti i campi ripristinati ai valori iniziali,
+ruolo compreso), pronto per crearne subito un altro senza dover
+cancellare a mano i dati dell'utente appena creato
 
 ## Scenario: creazione con password troppo debole
 Quando su `/admin/maestre` provo a creare un utente con una password che

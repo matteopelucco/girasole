@@ -36,13 +36,13 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
     <>
       <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo} />
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-        <a href="/dashboard" className="text-sm text-stone-500 hover:text-stone-900">
+        <a href="/dashboard" className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna alla dashboard
         </a>
 
         <h1 className="text-lg font-medium">Modifica avviso</h1>
 
-        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-stone-200 p-4">
+        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <input type="hidden" name="promemoria_id" value={promemoria.id} />
           <input
             name="titolo"

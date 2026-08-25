@@ -35,7 +35,7 @@ export function PaginaClasseAttivita({
       <NavHeader nome={nome} ruolo={ruolo} />
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <div>
-          <a href={backHref} className="text-sm text-stone-500 hover:text-stone-900">
+          <a href={backHref} className="text-sm text-stone-600 hover:text-stone-900">
             ← Torna alle classi
           </a>
           <h1 className="mt-2 text-lg font-medium">{titolo}</h1>

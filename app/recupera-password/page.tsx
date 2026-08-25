@@ -15,7 +15,7 @@ export default function RecuperaPasswordPage({
     <main className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
         <h1 className="mb-1 text-xl font-medium">Recupera password</h1>
-        <p className="mb-6 text-sm text-stone-500">
+        <p className="mb-6 text-sm text-stone-600">
           Inserisci l&apos;email con cui accedi: se l&apos;account esiste, riceverai un link per
           reimpostare la password.
         </p>
@@ -54,7 +54,7 @@ export default function RecuperaPasswordPage({
           <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
         )}
 
-        <Link href="/login" className="mt-6 block text-center text-sm text-stone-500 underline">
+        <Link href="/login" className="mt-6 block text-center text-sm text-stone-600 underline">
           Torna al login
         </Link>
       </div>

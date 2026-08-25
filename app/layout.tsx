@@ -1,6 +1,25 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Poppins, Open_Sans } from 'next/font/google';
 import { VERSIONE_APP, DATA_BUILD } from '@/lib/versione';
+
+// Coppia di font ispirata al riferimento grafico Falcon (Poppins per i
+// titoli, Open Sans per il testo): next/font ottimizza il caricamento
+// (self-hosting automatico, nessuna richiesta a Google in runtime) e fa
+// già parte di Next.js, nessuna dipendenza nuova.
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
+
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-open-sans',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Girasole — Asilo Sartorio',
@@ -9,8 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="it">
-      <body className="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <html lang="it" className={`${poppins.variable} ${openSans.variable}`}>
+      <body className="min-h-screen bg-slate-100 text-stone-900 antialiased">
         <div className="flex min-h-screen flex-col">
           <div className="flex flex-1 flex-col">{children}</div>
           <footer className="py-3 text-center text-xs text-stone-600">

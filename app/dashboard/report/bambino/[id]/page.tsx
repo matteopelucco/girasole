@@ -63,7 +63,7 @@ export default async function DrillDownBambinoPage({
         <div>
           <a
             href={`/dashboard/report?tipo=${tipo}&periodo=${periodoAttuale}`}
-            className="text-sm text-stone-500 hover:text-stone-900"
+            className="text-sm text-stone-600 hover:text-stone-900"
           >
             ← Torna al report
           </a>
@@ -75,7 +75,7 @@ export default async function DrillDownBambinoPage({
 
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-stone-500">
+            <tr className="text-left text-xs text-stone-600">
               <th className="py-1">Giorno</th>
               <th className="py-1">Presenza</th>
               <th className="py-1">Pre-asilo</th>

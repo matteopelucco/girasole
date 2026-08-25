@@ -93,7 +93,7 @@ export default async function PresenzeClassePage({
           : null;
 
         return (
-          <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4">
+          <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="font-medium">
                 {bambino.nome} {bambino.cognome}
@@ -164,7 +164,7 @@ export default async function PresenzeClassePage({
                 <span>{presenza ? ETICHETTE[presenza.stato] : 'Non ancora segnato'}</span>
                 {presenza?.pre_asilo && <span className="text-sky-700">Pre-asilo</span>}
                 {presenza?.post_asilo && <span className="text-sky-700">Post-asilo</span>}
-                {presenza?.note && <span className="text-stone-500">— {presenza.note}</span>}
+                {presenza?.note && <span className="text-stone-600">— {presenza.note}</span>}
               </div>
             )}
           </li>

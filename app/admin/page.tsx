@@ -57,7 +57,7 @@ export default async function AdminPage() {
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
-              <li key={anno.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
+              <li key={anno.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
                 {anno.nome}
               </li>
             ))}
@@ -98,7 +98,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => (
               <li
                 key={sezione.id}
-                className="flex items-center justify-between rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
               >
                 <span>
                   {sezione.nome}
@@ -111,7 +111,7 @@ export default async function AdminPage() {
                 <FormConEsito action={toggleAttivaSezione}>
                   <input type="hidden" name="sezione_id" value={sezione.id} />
                   <input type="hidden" name="attiva_attuale" value={String(sezione.attiva)} />
-                  <PulsanteInvio className="text-xs text-stone-500 underline hover:text-stone-900">
+                  <PulsanteInvio className="text-xs text-stone-600 underline hover:text-stone-900">
                     {sezione.attiva ? 'Disattiva' : 'Riattiva'}
                   </PulsanteInvio>
                 </FormConEsito>
@@ -127,7 +127,7 @@ export default async function AdminPage() {
           <h1 className="text-lg font-medium">Bambini</h1>
           <FormConEsito
             action={creaBambino}
-            className="mt-3 space-y-2 rounded-xl border border-stone-200 p-4"
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
           >
             <div className="flex gap-2">
               <input
@@ -198,7 +198,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => {
               const lista = bambiniPerSezione.get(sezione.id) ?? [];
               return (
-                <div key={sezione.id} className="rounded-lg border border-stone-200 p-3">
+                <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
                   <h3 className="text-sm font-semibold">{sezione.nome}</h3>
                   <ul className="mt-2 space-y-1">
                     {lista.map((bambino) => (
@@ -217,7 +217,7 @@ export default async function AdminPage() {
                       </li>
                     ))}
                     {!lista.length && (
-                      <li className="text-xs text-stone-500">Nessun bambino assegnato.</li>
+                      <li className="text-xs text-stone-600">Nessun bambino assegnato.</li>
                     )}
                   </ul>
                 </div>
@@ -228,7 +228,7 @@ export default async function AdminPage() {
             )}
           </div>
 
-          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 p-3">
+          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
             <h2 className="text-sm font-medium text-stone-700">Bambini senza classe o disattivati</h2>
             <ul className="mt-2 space-y-2">
               {bambiniSenzaClasseODisattivati.map((bambino) => (
@@ -268,7 +268,7 @@ export default async function AdminPage() {
                 </li>
               ))}
               {!bambiniSenzaClasseODisattivati.length && (
-                <li className="text-xs text-stone-500">Nessuno.</li>
+                <li className="text-xs text-stone-600">Nessuno.</li>
               )}
             </ul>
           </div>

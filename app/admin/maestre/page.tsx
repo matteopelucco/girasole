@@ -51,16 +51,16 @@ export default async function MaestrePage() {
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         <section>
           <h1 className="text-lg font-medium">Utenti e ruoli</h1>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-1 text-sm text-stone-600">
             Crea, modifica ed elimina gli account direttamente da qui — email, password,
             nome, cognome, telefono, indirizzo, note e ruolo (admin / maestra / assistente /
             genitore).
           </p>
 
-          <div className="mt-4 rounded-xl border border-stone-200 p-4">
+          <div className="mt-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
-            <p className="mt-1 text-xs text-stone-500">{REGOLA_PASSWORD}</p>
-            <FormConEsito action={creaUtente} className="mt-3 grid gap-2 sm:grid-cols-2">
+            <p className="mt-1 text-xs text-stone-600">{REGOLA_PASSWORD}</p>
+            <FormConEsito action={creaUtente} resetSuOk className="mt-3 grid gap-2 sm:grid-cols-2">
               <input
                 name="nome"
                 required
@@ -119,7 +119,7 @@ export default async function MaestrePage() {
 
           <ul className="mt-4 space-y-2">
             {profili?.map((p) => (
-              <li key={p.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
+              <li key={p.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
                 <div className="mb-2 text-xs text-stone-600">{p.email}</div>
                 <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
@@ -232,10 +232,10 @@ export default async function MaestrePage() {
 
           <ul className="mt-4 space-y-1">
             {staffAssegnabile.map((m) => (
-              <li key={m.id} className="rounded-lg border border-stone-200 px-3 py-2 text-sm">
+              <li key={m.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
                 <div className="font-medium">
                   {m.nome} {m.cognome}{' '}
-                  <span className="font-normal text-stone-500">({ETICHETTE_RUOLO[m.ruolo]})</span>
+                  <span className="font-normal text-stone-600">({ETICHETTE_RUOLO[m.ruolo]})</span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   {(sezioniPerMaestra.get(m.id) ?? []).length === 0 && (

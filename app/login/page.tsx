@@ -29,7 +29,7 @@ export default function LoginPage({
           <img src="/girasole.svg" alt="Girasole" className="h-auto w-full" />
         </div>
         <h1 className="mb-1 text-center text-xl font-medium">Girasole</h1>
-        <p className="mb-6 text-center text-sm text-stone-500">
+        <p className="mb-6 text-center text-sm text-stone-600">
           Registro elettronico — Asilo Sartorio
         </p>
 
@@ -65,7 +65,7 @@ export default function LoginPage({
               <p className="text-sm text-red-600">
                 {MESSAGGI_ERRORE[searchParams.errore] ?? MESSAGGI_ERRORE.credenziali}
               </p>
-              <Link href="/recupera-password" className="text-sm text-stone-500 underline">
+              <Link href="/recupera-password" className="text-sm text-stone-600 underline">
                 Non ricordi la password?
               </Link>
             </div>

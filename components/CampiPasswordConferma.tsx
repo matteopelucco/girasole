@@ -24,7 +24,7 @@ export function CampiPasswordConferma() {
         autoComplete="new-password"
         onChange={setPassword}
       />
-      <div>
+      <div className="self-start">
         <CampoPassword
           name="conferma_password"
           required

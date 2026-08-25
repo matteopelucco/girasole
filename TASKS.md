@@ -472,6 +472,77 @@ installarla).
       verde (30 scenari passano, gli unici skip richiedono l'account di
       test assistente, vedi sopra).
 
+## Rinfresco grafico ispirato a Falcon (specs/01 - ux.md)
+- [x] Tipografia Poppins (titoli, `font-heading`) + Open Sans (testo,
+      `font-sans`) via `next/font/google` (`app/layout.tsx`,
+      `tailwind.config.ts`) — self-hosting automatico, nessuna
+      dipendenza nuova. `font-heading` applicato una volta sola a
+      `h1`-`h4` in `app/globals.css` (`@layer base`), non pagina per
+      pagina.
+- [x] Sfondo pagina `bg-slate-100` (era `bg-stone-50`) contro cui le
+      card `bg-white` risaltano; card uniformate con `shadow-sm` in
+      ~12 pagine; `NavHeader` ora `sticky` con ombra leggera; le tessere
+      principali (Presenze/Pasti/Report, classi) hanno una leggera
+      elevazione al passaggio del mouse.
+- [x] Non toccati (deliberatamente): i 4 colori di stato verificati dai
+      test e2e (`bg-emerald-700`, `bg-stone-600`, `bg-rose-600`,
+      `bg-sky-700`) e lo stile "subtle badge" già esistente per
+      allergie/malattia/assente (era già in linea con l'ispirazione).
+- [x] **Bug trovato e corretto durante la verifica**: il nuovo sfondo
+      `bg-slate-100`, leggermente più scuro del precedente `bg-stone-50`,
+      faceva scendere il contrasto di `text-stone-500` sotto la soglia
+      WCAG AA (4.37:1 invece di 4.5:1) ovunque quel testo comparisse
+      direttamente sullo sfondo pagina (non dentro una card bianca) —
+      scoperto da un test di accessibilità (axe-core) su `/login`,
+      poi verificato sistemico e corretto ovunque
+      (`text-stone-500` → `text-stone-600`, ~24 punti in app/ e
+      components/, tranne l'icona emoji "occhio" che non ne risente).
+- [x] Verificato: `npx tsc`/`next lint` puliti, 85 unit test invariati,
+      e2e verde su tutte le pagine toccate (73 scenari passano su
+      server "caldo" — vedi nota sulla lentezza a freddo qui sotto).
+      Le vere glyph di Poppins/Open Sans non sono verificabili
+      dall'ambiente sandbox di questa sessione (nessun accesso di rete
+      in uscita per scaricarle da Google Fonts): degradano in modo
+      pulito a un font di sistema equivalente (nessun crash, nessun
+      layout rotto — verificato), ma vanno controllate visivamente nel
+      tuo ambiente con accesso a Internet.
+
+## Bug: form utente non si svuotava + occhietto password disallineato
+Due bug segnalati dopo l'uso reale di `/admin/maestre`.
+- [x] **Bug 1**: dopo aver creato un utente con successo, il form
+      restava compilato con i suoi dati. Fix: aggiunto `resetSuOk` al
+      `FormConEsito` di creazione (stesso pattern già in uso per gli
+      avvisi, specs/15) — `app/admin/maestre/page.tsx`. Nuovo scenario
+      in specs/03 e test in `e2e/03-utenti-e-ruoli.spec.ts`.
+- [x] **Bug 2**: quando compariva il riscontro "le password
+      coincidono/non coincidono" sotto al campo conferma, l'occhietto
+      del campo *password* si spostava dal campo. Causa: il form usa
+      una griglia a 2 colonne (`grid sm:grid-cols-2`); il riscontro
+      comparendo allungava la cella "conferma password", e CSS Grid
+      (`align-items: stretch`, il default) stirava anche la cella
+      "password" — più corta — alla stessa altezza; l'occhio, posizionato
+      in assoluto rispetto al proprio contenitore (non al campo), seguiva
+      quello stiramento. Fix: `self-start` sul contenitore di
+      `CampoPassword` (`components/CampoPassword.tsx`,
+      `components/CampiPasswordConferma.tsx`), che impedisce a
+      griglia/flex di stirarlo — resta sempre alto quanto il suo
+      contenuto. Nota in specs/03 e test dedicato in
+      `e2e/03-utenti-e-ruoli.spec.ts` (confronta le bounding box di
+      occhio e campo, prima e dopo la comparsa del riscontro).
+- [x] **Test scoperto instabile durante la verifica** (non un bug
+      applicativo): "creazione con campi obbligatori mancanti" rimuoveva
+      l'attributo `required` via JS troppo presto, in corsa con
+      l'idratazione React — a volte l'idratazione "vinceva" e
+      ripristinava l'attributo, facendo bloccare l'invio dal tooltip
+      nativo del browser invece di arrivare alla validazione server (il
+      comportamento dell'app era sempre corretto, testato anche a mano).
+      Corretto aspettando un segnale di idratazione completa (comparsa
+      del pulsante "occhio", componente client) prima di rimuovere
+      l'attributo.
+- [x] Verificato: `npx tsc`/`next lint` puliti, e2e verde (rieseguito 3
+      volte di fila lo scenario dell'occhietto e quello del "required",
+      nessuna intermittenza residua).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

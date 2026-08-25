@@ -27,7 +27,7 @@ export function CampoPassword({
   const [visibile, setVisibile] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="relative self-start">
       <input
         id={id}
         name={name}

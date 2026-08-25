@@ -25,7 +25,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
     <>
       <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null} />
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-        <a href="/admin" className="text-sm text-stone-500 hover:text-stone-900">
+        <a href="/admin" className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna a Sezioni e bambini
         </a>
 
@@ -42,7 +42,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
 
         <FormConEsito
           action={aggiornaBambino}
-          className="space-y-2 rounded-xl border border-stone-200 p-4"
+          className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
         >
           <input type="hidden" name="bambino_id" value={bambino.id} />
           <div className="flex gap-2">

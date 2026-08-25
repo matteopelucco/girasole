@@ -49,6 +49,39 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
+  test('il form si svuota dopo aver creato un utente con successo', async ({ page }) => {
+    const email = `e2e-svuota-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
+
+    await page.getByPlaceholder('Nome').first().fill('Svuota');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await formCreazione.getByLabel('Ruolo').selectOption('maestra');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+
+    // Bug segnalato dopo l'uso reale: il form restava compilato con i
+    // dati dell'utente appena creato, costringendo a cancellarlo a mano
+    // prima di inserirne un altro (stesso pattern già corretto per gli
+    // avvisi, specs/15 - memo.md).
+    await expect(page.getByPlaceholder('Nome').first()).toHaveValue('');
+    await expect(page.getByPlaceholder('Cognome').first()).toHaveValue('');
+    await expect(page.getByPlaceholder('Email')).toHaveValue('');
+    await expect(page.getByPlaceholder('Telefono').first()).toHaveValue('');
+    await expect(formCreazione.getByLabel('Ruolo')).toHaveValue('genitore');
+
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
   test('admin crea un nuovo utente con ruolo assistente', async ({ page }) => {
     const email = `e2e-assistente-${Date.now()}@example.com`;
 
@@ -87,6 +120,45 @@ test.describe('03 — Utenti e ruoli', () => {
 
     await conferma.fill('PasswordE2E!1');
     await expect(page.getByText('Le password coincidono.')).toBeVisible();
+  });
+
+  test("l'occhietto della password resta ancorato al campo quando compare il riscontro conferma", async ({
+    page,
+  }) => {
+    await page.goto('/admin/maestre');
+    const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
+    // Entrambi i campi (password e conferma) partono nascosti, quindi
+    // condividono la stessa etichetta "Mostra password": il primo nel
+    // DOM è quello del campo "Password".
+    const occhioPassword = formCreazione.getByRole('button', { name: 'Mostra password' }).first();
+    const campoPassword = formCreazione.getByLabel('Password', { exact: true });
+    // CampoPassword è un componente client ('use client'): l'occhio
+    // compare solo dopo l'idratazione, un attimo dopo l'input (già
+    // presente via SSR) — aspetto che sia visibile prima di misurare,
+    // altrimenti la prima lettura rischia di arrivare a bottone non
+    // ancora montato.
+    await occhioPassword.waitFor({ state: 'visible' });
+
+    const boxOcchioPrima = await occhioPassword.boundingBox();
+    const boxCampoPrima = await campoPassword.boundingBox();
+
+    // Il riscontro "coincidono/non coincidono" compare solo quando il
+    // campo conferma non è vuoto: prima che compaia, verifico che
+    // l'occhio sia già allineato al campo (non solo dopo).
+    expect(Math.abs((boxOcchioPrima?.y ?? 0) - (boxCampoPrima?.y ?? 0))).toBeLessThan(2);
+
+    await campoPassword.fill('PasswordE2E!1');
+    await formCreazione.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await expect(page.getByText('Le password coincidono.')).toBeVisible();
+
+    // Bug: il riscontro comparendo allungava la cella del campo password
+    // nel layout a griglia, e l'occhio (assoluto rispetto al proprio
+    // contenitore, non al campo) seguiva quell'allungamento, finendo
+    // centrato su un'area che comprendeva anche il testo del riscontro.
+    const boxOcchioDopo = await occhioPassword.boundingBox();
+    const boxCampoDopo = await campoPassword.boundingBox();
+    expect(Math.abs((boxOcchioDopo?.y ?? 0) - (boxCampoDopo?.y ?? 0))).toBeLessThan(2);
+    expect(Math.abs((boxOcchioDopo?.height ?? 0) - (boxCampoDopo?.height ?? 0))).toBeLessThan(2);
   });
 
   test('creazione con password non confermata correttamente', async ({ page }) => {
@@ -159,6 +231,13 @@ test.describe('03 — Utenti e ruoli', () => {
 
   test('creazione con campi obbligatori mancanti mostra un errore', async ({ page }) => {
     await page.goto('/admin/maestre');
+    // CampiPasswordConferma è un componente client: la sua comparsa
+    // segnala che l'idratazione React è completa. Senza aspettarla, la
+    // rimozione dell'attributo required via JS subito dopo può correre
+    // contro l'idratazione e perdere — React la ripristina riconciliando
+    // il DOM, e il browser blocca l'invio con il proprio tooltip nativo
+    // invece di lasciar passare la richiesta alla validazione server.
+    await page.getByRole('button', { name: 'Mostra password' }).first().waitFor({ state: 'visible' });
     // Compilo solo l'email, lascio nome/cognome/telefono/password vuoti:
     // il required lato browser impedirebbe l'invio, quindi rimuovo gli
     // attributi required via JS per verificare la validazione server-side.
