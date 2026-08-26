@@ -85,6 +85,9 @@ export default async function DashboardPage({
                 href={`/dashboard/presenze?data=${data}`}
                 className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md"
               >
+                <span className="block text-3xl" aria-hidden="true">
+                  ☑️
+                </span>
                 Presenze
               </Link>
               {ruolo !== 'assistente' && (
@@ -92,6 +95,9 @@ export default async function DashboardPage({
                   href={`/dashboard/pasti?data=${data}`}
                   className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-800 hover:shadow-md"
                 >
+                  <span className="block text-3xl" aria-hidden="true">
+                    🍝
+                  </span>
                   Pasti
                 </Link>
               )}
@@ -100,8 +106,9 @@ export default async function DashboardPage({
 
           <Link
             href="/dashboard/report"
-            className="block rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-800 hover:shadow-md"
+            className="flex items-center justify-center gap-2 rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-800 hover:shadow-md"
           >
+            <span aria-hidden="true">📊</span>
             Report
           </Link>
         </section>

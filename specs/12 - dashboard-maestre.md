@@ -13,7 +13,9 @@ Dato che sono autenticata come maestra (con almeno una sezione assegnata)
 o come admin
 Quando apro la dashboard
 Allora vedo un selettore di data con selezionata la data odierna
-E vedo due pulsanti/schede "Presenze" e "Pasti"
+E vedo due pulsanti/schede "Presenze" e "Pasti", ciascuno con un'icona
+(☑️ per Presenze, 🍝 per Pasti) oltre al testo
+E vedo anche il pulsante/scheda "Report" con la sua icona (📊)
 
 ## Scenario: da Presenze si arriva alle classi e poi ai bambini
 Dato che sono sulla dashboard con una data selezionata

@@ -747,6 +747,18 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       duplicazione nuova. Suite e2e non eseguibile da questo ambiente
       sandbox (nessun dev server/credenziali Supabase).
 
+## Icone sui 3 box della dashboard (specs/12)
+- [x] Le tre schede della dashboard (`app/dashboard/page.tsx`) hanno ora
+      un'icona oltre al testo: ☑️ Presenze, 🍝 Pasti, 📊 Report. Stesso
+      linguaggio visivo già in uso nell'app (emoji, come 🌻 nel logo, 🚫
+      Assente, 🤒 Malattia, ⚠️ Inconsistenza) — nessuna dipendenza nuova
+      (niente set di icone SVG). Icone `aria-hidden="true"` (decorative,
+      il testo del pulsante resta il nome accessibile).
+- [x] Aggiornato `specs/12 - dashboard-maestre.md` e il test in
+      `e2e/12-dashboard-maestre.spec.ts` (verifica la presenza delle tre
+      icone).
+- [x] Verificato: `npm run analyze` e `npx tsc --noEmit` puliti.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

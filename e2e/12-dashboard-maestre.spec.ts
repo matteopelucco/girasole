@@ -20,6 +20,9 @@ test.describe('12 — Dashboard maestra/admin', () => {
 
       await expect(linkPresenze).toBeVisible();
       await expect(linkPasti).toBeVisible();
+      await expect(linkPresenze).toContainText('☑️');
+      await expect(linkPasti).toContainText('🍝');
+      await expect(page.getByRole('link', { name: 'Report' })).toContainText('📊');
 
       await nessunaViolazioneA11yGrave(page);
     });
