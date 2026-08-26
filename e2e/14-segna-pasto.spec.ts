@@ -136,6 +136,33 @@ test.describe('14 — Segna pasto', () => {
       await expect(rigaPasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
       await expect(rigaPasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
     });
+
+    // Anche questo va per ultimo nel describe, per lo stesso motivo del
+    // test sull'assente sopra: un bambino malato non ha più pulsanti
+    // Sì/No in questa pagina, il che condizionerebbe i test precedenti.
+    test('un bambino malato non è selezionabile per il pasto', async ({ page }) => {
+      await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
+      const primaClassePresenze = page.locator('a.bg-emerald-50').first();
+      test.skip((await primaClassePresenze.count()) === 0, 'nessuna classe attiva per questo account');
+      await primaClassePresenze.click();
+      await page.waitForURL(/\/dashboard\/presenze\/.+/);
+
+      const primaRigaPresenza = page
+        .locator('li', { has: page.getByRole('button', { name: 'Malattia' }) })
+        .first();
+      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino in questa classe');
+      const nomeBambino = (await primaRigaPresenza.locator('span.font-medium').first().textContent())?.trim();
+
+      await primaRigaPresenza.getByRole('button', { name: 'Malattia' }).click();
+      await expect(primaRigaPresenza.getByRole('button', { name: 'Malattia' })).toHaveClass(/bg-rose-600/);
+
+      const sezioneId = new URL(page.url()).pathname.split('/').pop();
+      await page.goto(`/dashboard/pasti/${sezioneId}?data=${dataOggiRoma()}`);
+      const rigaPasto = page.locator('li', { hasText: nomeBambino ?? '' }).first();
+      await expect(rigaPasto.getByText('🤒 Malattia')).toBeVisible();
+      await expect(rigaPasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
+      await expect(rigaPasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
+    });
   });
 
   test.describe("l'assistente non ha accesso al registro pasti", () => {

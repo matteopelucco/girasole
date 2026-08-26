@@ -23,8 +23,8 @@ quella data, se già segnato
 Dato che ho aperto l'elenco bambini di una classe, per una data
 Allora vedo in cima un riepilogo "Pasti: X/Y", dove X è il numero di
 bambini segnati "sì" per quella data e Y il numero di bambini della
-classe che non risultano "assente" quel giorno (i soli per cui ha senso
-segnare il pasto)
+classe che non risultano "assente" né "malattia" quel giorno (i soli per
+cui ha senso segnare il pasto)
 
 ## Scenario: le allergie sono visibili prima di segnare il pasto
 Dato che un bambino ha `note_allergie` compilato (es. "Allergia alle
@@ -51,6 +51,13 @@ Allora lo stato pasto di oggi per quel bambino diventa "no"
 Dato che un bambino è segnato "assente" per la data in questione
 Quando apro l'elenco Pasti della sua classe per quella data
 Allora al posto dei pulsanti Sì/No vedo l'etichetta "Assente"
+E non posso selezionare alcuno stato pasto per quel bambino, nemmeno
+come admin
+
+## Scenario: un bambino malato non è selezionabile per il pasto
+Dato che un bambino è segnato "malattia" per la data in questione
+Quando apro l'elenco Pasti della sua classe per quella data
+Allora al posto dei pulsanti Sì/No vedo l'etichetta "🤒 Malattia"
 E non posso selezionare alcuno stato pasto per quel bambino, nemmeno
 come admin
 
@@ -81,12 +88,16 @@ alcun dato pasto
   già uno stato pasto segnato per la data in questione (stesso motivo di
   [13 - segna-presenza.md](13%20-%20segna-presenza.md): il record
   richiede sempre uno stato).
-- Un bambino con presenza "assente" per la data in questione non può
-  avere un pasto segnato per quella data: vincolo imposto anche a
-  livello di database (trigger, vedi
-  `supabase/migrations/0012_pasto_senza_parziale.sql`), non solo in UI
-  — riguarda solo lo stato "assente", non "malattia" (un bambino
-  malato può comunque aver mangiato, es. a casa poi rientrato).
+- Un bambino con presenza "assente" oppure "malattia" per la data in
+  questione non può avere un pasto segnato per quella data: vincolo
+  imposto anche a livello di database (trigger, vedi
+  `supabase/migrations/0012_pasto_senza_parziale.sql`, esteso a
+  "malattia" da `supabase/migrations/0017_pasto_blocca_anche_malattia.sql`),
+  non solo in UI. Riguardava inizialmente solo "assente" ("un bambino
+  malato può comunque aver mangiato, es. a casa poi rientrato"), ma è
+  stato esteso su richiesta esplicita: in pratica un bambino segnato
+  malato non viene servito a pranzo, quindi il pasto non è selezionabile
+  per lui quanto per un assente.
 - Scrittura consentita solo alla maestra della sezione del bambino o
   all'admin (vedi RLS su `pasti` in
   `supabase/migrations/0001_init.sql`) — **l'assistente è esclusa

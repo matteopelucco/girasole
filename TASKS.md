@@ -543,6 +543,45 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       volte di fila lo scenario dell'occhietto e quello del "required",
       nessuna intermittenza residua).
 
+## Bug: report notturno "Nessuna classe attiva" nonostante dati presenti
+- [x] Diagnosticato in produzione: `aggregaReportPeriodoTutteLeClassi`/
+      `generaSchedaGiornalieraHtml` (`lib/reportPresenze.ts`) non
+      controllano l'errore delle query Supabase — se falliscono (es.
+      `SUPABASE_SERVICE_ROLE_KEY` mancante/sbagliata su Vercel), `data`
+      arriva `null` e `(sezioni ?? []).map(...)` lo tratta in modo
+      indistinguibile da "davvero zero classi attive", producendo PDF
+      con "Nessuna classe attiva" senza alcun errore visibile nei log.
+      Causa reale nel caso segnalato: `SUPABASE_SERVICE_ROLE_KEY` non
+      era impostata su Vercel (env var separata da quelle usate
+      dall'app normale via RLS) — vedi specs/52.
+
+## Il pasto non è selezionabile anche per un bambino malato (specs/14)
+- [x] Estesa a "malattia" la stessa regola già in vigore per "assente"
+      (specs/14 - segna-pasto.md): un bambino malato non viene servito
+      a pranzo, quindi non è più selezionabile il pasto per lui — prima
+      la regola valeva solo per "assente" (un malato poteva comunque
+      aver mangiato a casa prima di rientrare), scelta esplicitamente
+      ribaltata su richiesta.
+- [x] `app/dashboard/pasti/[sezioneId]/page.tsx`: pulsanti Sì/No
+      sostituiti dall'etichetta "🤒 Malattia" e dal messaggio "Bambino
+      malato: il pasto non è applicabile", stesso trattamento
+      dell'assente. Il denominatore del riepilogo "Pasti: X/Y" ora
+      esclude anche i bambini malati (rinominato
+      `bambiniConPastoApplicabile`).
+- [x] Vincolo esteso anche a livello di database (non solo UI), stesso
+      approccio già usato per "assente":
+      `supabase/migrations/0017_pasto_blocca_anche_malattia.sql`
+      ridefinisce la funzione trigger esistente per bloccare l'insert/
+      update su `pasti` sia per "assente" sia per "malattia".
+- [x] Nuovo scenario in specs/14 ("un bambino malato non è selezionabile
+      per il pasto") e test corrispondente in
+      `e2e/14-segna-pasto.spec.ts`.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0017_pasto_blocca_anche_malattia.sql` nel SQL
+      Editor di Supabase (test e produzione) — senza, il blocco vale
+      solo in UI: un tentativo diretto via API/DB potrebbe ancora
+      inserire un pasto per un bambino malato.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

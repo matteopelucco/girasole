@@ -50,8 +50,11 @@ export default async function PastiClassePage({
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p.stato]));
   const editable = puoScrivereData(ruolo, data);
 
-  const bambiniNonAssenti = bambini.filter((b) => presenzaPerBambino.get(b.id) !== 'assente');
-  const numeroMangiato = bambiniNonAssenti.filter((b) => pastoPerBambino.get(b.id)?.mangiato === 'si').length;
+  const bambiniConPastoApplicabile = bambini.filter((b) => {
+    const stato = presenzaPerBambino.get(b.id);
+    return stato !== 'assente' && stato !== 'malattia';
+  });
+  const numeroMangiato = bambiniConPastoApplicabile.filter((b) => pastoPerBambino.get(b.id)?.mangiato === 'si').length;
 
   return (
     <PaginaClasseAttivita
@@ -68,7 +71,7 @@ export default async function PastiClassePage({
           <RiepilogoConteggio
             etichetta="Pasti"
             numeratore={numeroMangiato}
-            denominatore={bambiniNonAssenti.length}
+            denominatore={bambiniConPastoApplicabile.length}
           />
         )
       }
@@ -77,6 +80,8 @@ export default async function PastiClassePage({
         const pasto = pastoPerBambino.get(bambino.id);
         const statoPresenza = presenzaPerBambino.get(bambino.id);
         const assente = statoPresenza === 'assente';
+        const malato = statoPresenza === 'malattia';
+        const pastoNonApplicabile = assente || malato;
 
         return (
           <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -86,7 +91,7 @@ export default async function PastiClassePage({
               </span>
               <div className="flex flex-wrap gap-1">
                 {assente && <EtichettaAssente />}
-                {!assente && statoPresenza === 'malattia' && <EtichettaMalattia />}
+                {malato && <EtichettaMalattia />}
                 {bambino.note_allergie && (
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
                     ⚠ {bambino.note_allergie}
@@ -95,9 +100,9 @@ export default async function PastiClassePage({
               </div>
             </div>
 
-            {assente ? (
+            {pastoNonApplicabile ? (
               <p className="mt-3 text-sm text-stone-600">
-                Bambino assente: il pasto non è applicabile.
+                {assente ? 'Bambino assente: il pasto non è applicabile.' : 'Bambino malato: il pasto non è applicabile.'}
               </p>
             ) : editable ? (
               <form className="mt-3 flex flex-wrap items-center gap-2">
