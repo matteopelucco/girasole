@@ -3,8 +3,18 @@ import { NavHeader } from '@/components/NavHeader';
 import { ElencoClassi } from '@/components/ElencoClassi';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { CardRiepilogo } from '@/components/CardRiepilogo';
-import { requireStaff, assicuraAccessoPasti } from '@/lib/auth';
+import { ConfermaAzione } from '@/components/ConfermaAzione';
+import { requireStaff, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
+import { formattaDataOraItaliana, formattaDataItaliana } from '@/lib/date';
+import { contaPastiSiOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
+// Import "a ritroso" (components/ → app/), deliberato: comunicaPastiRojac
+// (specs/16 - comunicazione-pasti-rojac.md) va mostrato solo qui, ma
+// richiede lo stesso ruolo/data/supabase già risolti da requireStaff()
+// poco sotto — duplicarli nella route chiamante (app/dashboard/pasti/page.tsx)
+// avrebbe replicato la logica di bootstrap che questo componente esiste
+// apposta per condividere (vedi commento sotto).
+import { comunicaPastiRojac } from '@/app/dashboard/pasti/actions';
 
 // Schermata "elenco classi" completa (header + navigazione + elenco),
 // condivisa dalle route app/dashboard/presenze/page.tsx e
@@ -69,6 +79,45 @@ export async function PaginaClassi({
     }
   }
 
+  // Comunicazione pasti a Rojac (specs/16): un'unica azione al giorno
+  // sull'intero asilo, non sulle sole classi visibili a chi guarda —
+  // per questo il riquadro compare in cima all'elenco classi di Pasti,
+  // non dentro una singola classe.
+  let riepilogoRojac: ReactNode = null;
+  if (tipo === 'pasti') {
+    const { data: comunicazione } = await supabase
+      .from('pasti_comunicati')
+      .select('numero_pasti, comunicato_at, comunicato_da_nome')
+      .eq('data', data)
+      .maybeSingle();
+
+    if (comunicazione) {
+      riepilogoRojac = (
+        <CardRiepilogo titolo="Comunicazione pasti a Rojac">
+          <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Pasti comunicati a Rojac il {formattaDataOraItaliana(comunicazione.comunicato_at)}:{' '}
+            {comunicazione.numero_pasti} pasti (da {comunicazione.comunicato_da_nome}).
+            {ruolo === 'admin' && ' Come admin puoi comunque modificare i pasti di qualunque classe.'}
+          </p>
+        </CardRiepilogo>
+      );
+    } else if (puoScrivereData(ruolo, data)) {
+      const numeroPastiOggi = await contaPastiSiOggiTuttoAsilo(data);
+      riepilogoRojac = (
+        <CardRiepilogo titolo="Comunicazione pasti a Rojac">
+          <ConfermaAzione
+            azione={comunicaPastiRojac}
+            campiNascosti={{ data }}
+            etichetta="Conferma pasti"
+            messaggioConferma={`Comunichi a Rojac (tel. ${TELEFONO_ROJAC}) ${numeroPastiOggi} pasti per il ${formattaDataItaliana(data)}? Da questo momento nessuna maestra potrà più modificare i pasti di nessuna classe per oggi (l'admin potrà comunque farlo).`}
+            etichettaConferma="Conferma"
+            tono="neutro"
+          />
+        </CardRiepilogo>
+      );
+    }
+  }
+
   return (
     <>
       <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo} />
@@ -81,7 +130,14 @@ export async function PaginaClassi({
           basePath={basePath}
           data={data}
           sezioni={sezioni}
-          riepilogo={riepilogo}
+          riepilogo={
+            (riepilogo || riepilogoRojac) && (
+              <div className="space-y-4">
+                {riepilogo}
+                {riepilogoRojac}
+              </div>
+            )
+          }
           messaggioVuoto={
             ruolo === 'maestra' || ruolo === 'assistente'
               ? 'Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.'

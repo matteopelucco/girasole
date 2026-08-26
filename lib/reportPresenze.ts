@@ -84,7 +84,7 @@ export async function generaSchedaGiornalieraHtml(data: string): Promise<string>
   }`;
 }
 
-export type SezioneConRighe = { nome: string; righe: RigaReportBambino[]; comunicazioniPasti: ComunicazionePasto[] };
+export type SezioneConRighe = { nome: string; righe: RigaReportBambino[] };
 
 // Aggrega presenze (incluse pre-asilo/post-asilo) e pasti per ogni
 // classe attiva, nel periodo [inizio, fine] — usata dal report
@@ -128,24 +128,6 @@ export async function aggregaReportPeriodoTutteLeClassi(
     pasti = righeOSollevaErrore(rPasti, 'lettura pasti');
   }
 
-  const idSezioni = sezioni.map((s) => s.id);
-  let comunicazioni: (ComunicazionePasto & { sezioneId: string })[] = [];
-  if (idSezioni.length) {
-    const rComunicazioni = await supabase
-      .from('pasti_comunicati')
-      .select('sezione_id, comunicato_at, numero_pasti, comunicato_da_nome')
-      .in('sezione_id', idSezioni)
-      .gte('data', inizio)
-      .lte('data', fine)
-      .order('data', { ascending: true });
-    comunicazioni = righeOSollevaErrore(rComunicazioni, 'lettura comunicazioni pasti').map((c) => ({
-      sezioneId: c.sezione_id,
-      comunicatoAt: c.comunicato_at,
-      numeroPasti: c.numero_pasti,
-      comunicatoDaNome: c.comunicato_da_nome,
-    }));
-  }
-
   return sezioni.map((sezione) => {
     const bambiniSezione = bambini.filter((b) => b.sezione_id === sezione.id);
     const idBambiniSezione = new Set(bambiniSezione.map((b) => b.id));
@@ -154,7 +136,28 @@ export async function aggregaReportPeriodoTutteLeClassi(
       presenze.filter((p) => idBambiniSezione.has(p.bambino_id)),
       pasti.filter((p) => idBambiniSezione.has(p.bambino_id))
     );
-    const comunicazioniPasti = comunicazioni.filter((c) => c.sezioneId === sezione.id);
-    return { nome: sezione.nome, righe, comunicazioniPasti };
+    return { nome: sezione.nome, righe };
   });
+}
+
+// Comunicazioni pasti a Rojac nel periodo (specs/16 -
+// comunicazione-pasti-rojac.md): un'unica cosa al giorno per l'intero
+// asilo, non per classe — elenco piatto, nessun raggruppamento per
+// sezione. Usata dal report notturno per la sezione "Comunicazione
+// pasti" degli allegati PDF.
+export async function recuperaComunicazioniPastiPeriodo(inizio: string, fine: string): Promise<ComunicazionePasto[]> {
+  const supabase = createAdminClient();
+
+  const rComunicazioni = await supabase
+    .from('pasti_comunicati')
+    .select('comunicato_at, numero_pasti, comunicato_da_nome')
+    .gte('data', inizio)
+    .lte('data', fine)
+    .order('data', { ascending: true });
+
+  return righeOSollevaErrore(rComunicazioni, 'lettura comunicazioni pasti').map((c) => ({
+    comunicatoAt: c.comunicato_at,
+    numeroPasti: c.numero_pasti,
+    comunicatoDaNome: c.comunicato_da_nome,
+  }));
 }

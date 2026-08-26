@@ -2,6 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { contaPastiSiOggiTuttoAsilo } from '@/lib/pastiRojac';
+import { inviaEmail } from '@/lib/email';
+import { formattaDataItaliana } from '@/lib/date';
 import type { EsitoAzione } from '@/components/FormConEsito';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -81,49 +85,39 @@ export async function salvaNotaPasto(
   revalidatePath(`/dashboard/pasti/${sezioneId}`);
 }
 
-// Comunica a Rojac i pasti di una classe per una data (specs/16 -
-// comunicazione-pasti-rojac.md): registra un log immutabile (numero di
-// pasti "sì" in quel momento, chi ha comunicato) che da quel momento
-// blocca la modifica dei pasti per la maestra (non per l'admin, vedi
-// il trigger pasti_blocca_se_comunicato in
-// supabase/migrations/0019_pasti_comunicati_rojac.sql, che è la difesa
-// reale). Segue la firma di useFormState (FormConEsito/ConfermaAzione),
-// a differenza di segnaPasto/salvaNotaPasto sopra che non hanno bisogno
+// Comunica a Rojac il totale dei pasti dell'INTERO asilo per una data
+// (specs/16 - comunicazione-pasti-rojac.md — corretto in corso d'opera:
+// non è un'azione per singola classe, è un'unica comunicazione al
+// giorno su tutte le classi). Registra un log immutabile (numero di
+// pasti "sì" ricalcolato in quel momento su tutto l'asilo, chi ha
+// confermato) che da quel momento blocca la modifica dei pasti per la
+// maestra, in qualunque classe (non per l'admin — vedi il trigger
+// pasti_blocca_se_comunicato in
+// supabase/migrations/0020_pasti_comunicati_globale.sql, che è la
+// difesa reale). Usa la service_role key per il conteggio e
+// l'inserimento: una sessione maestra vede via RLS solo le proprie
+// sezioni, ma il totale da comunicare è sull'intero asilo — l'app
+// stessa (assicuraAccessoPasti + il controllo data sotto) resta il
+// gate di autorizzazione, dato che qui by-passiamo la RLS di proposito.
+// Segue la firma di useFormState (FormConEsito/ConfermaAzione), a
+// differenza di segnaPasto/salvaNotaPasto sopra che non hanno bisogno
 // del feedback avviato/riuscito/fallita di specs/05.
 export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase, user, profilo } = await requireProfilo();
+  const { profilo, user } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
 
-  const sezioneId = formData.get('sezione_id') as string;
   const data = formData.get('data') as string;
-  if (!sezioneId || !data) return { ok: false, messaggio: 'Dati non validi.' };
+  if (!data) return { ok: false, messaggio: 'Dati non validi.' };
 
   if (!puoScrivereData(profilo?.ruolo, data)) {
     return { ok: false, messaggio: 'Le maestre possono comunicare solo i pasti della giornata odierna.' };
   }
 
-  const { data: bambiniSezione } = await supabase
-    .from('bambini')
-    .select('id')
-    .eq('sezione_id', sezioneId)
-    .eq('attiva', true);
-  const idBambini = (bambiniSezione ?? []).map((b) => b.id);
-
-  let numeroPasti = 0;
-  if (idBambini.length) {
-    const { count } = await supabase
-      .from('pasti')
-      .select('id', { count: 'exact', head: true })
-      .eq('data', data)
-      .eq('mangiato', 'si')
-      .in('bambino_id', idBambini);
-    numeroPasti = count ?? 0;
-  }
-
+  const numeroPasti = await contaPastiSiOggiTuttoAsilo(data);
   const comunicatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
 
-  const { error } = await supabase.from('pasti_comunicati').insert({
-    sezione_id: sezioneId,
+  const admin = createAdminClient();
+  const { error } = await admin.from('pasti_comunicati').insert({
     data,
     numero_pasti: numeroPasti,
     comunicato_da: user.id,
@@ -131,14 +125,26 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
   });
   if (error) {
     if (error.code === '23505') {
-      return {
-        ok: false,
-        messaggio: 'I pasti di questa classe per questa data sono già stati comunicati a Rojac.',
-      };
+      return { ok: false, messaggio: 'I pasti di oggi sono già stati comunicati a Rojac.' };
     }
     return { ok: false, messaggio: 'Impossibile comunicare i pasti a Rojac.', dettaglio: error.message };
   }
 
-  revalidatePath(`/dashboard/pasti/${sezioneId}`);
+  // Best-effort (specs/16, "l'email di notifica è un effetto
+  // collaterale"): un problema del servizio email non deve invalidare
+  // la comunicazione già registrata, che è il dato che conta per il
+  // confronto con la fattura Rojac.
+  try {
+    await inviaEmail({
+      a: 'info@asilosartorio.it',
+      oggetto: `Pasti comunicati a Rojac — ${formattaDataItaliana(data)}`,
+      html: `<p>${comunicatoDaNome} ha comunicato a Rojac <strong>${numeroPasti}</strong> pasti per il ${formattaDataItaliana(data)}.</p>`,
+    });
+  } catch (erroreEmail) {
+    console.error('comunicaPastiRojac: invio email di notifica fallito', erroreEmail);
+  }
+
+  revalidatePath('/dashboard/pasti');
+  revalidatePath('/dashboard/pasti/[sezioneId]', 'page');
   return { ok: true };
 }
