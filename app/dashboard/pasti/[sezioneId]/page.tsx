@@ -4,6 +4,7 @@ import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { EtichettaAssente } from '@/components/EtichettaAssente';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
+import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData, assicuraAccessoPasti } from '@/lib/auth';
@@ -70,11 +71,13 @@ export default async function PastiClassePage({
       vuoto={!bambini.length}
       riepilogo={
         bambini.length > 0 && (
-          <RiepilogoConteggio
-            etichetta="Pasti"
-            numeratore={numeroMangiato}
-            denominatore={bambiniConPastoApplicabile.length}
-          />
+          <CardRiepilogo titolo={`Pasti giornalieri - Sezione ${sezione.nome}`}>
+            <RiepilogoConteggio
+              etichetta="Pasti"
+              numeratore={numeroMangiato}
+              denominatore={bambiniConPastoApplicabile.length}
+            />
+          </CardRiepilogo>
         )
       }
     >

@@ -30,6 +30,7 @@ test.describe('13 — Segna presenza', () => {
 
     test('riepilogo presenze della classe', async ({ page }) => {
       await expect(page.getByText(/^Presenti: \d+\/\d+$/)).toBeVisible();
+      await expect(page.getByRole('heading', { name: /^Presenze giornaliere - Sezione /i })).toBeVisible();
     });
 
     test('segnare un bambino presente evidenzia il pulsante corretto', async ({ page }) => {

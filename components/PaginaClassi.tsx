@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { NavHeader } from '@/components/NavHeader';
 import { ElencoClassi } from '@/components/ElencoClassi';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
+import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { requireStaff, assicuraAccessoPasti } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 
@@ -45,11 +46,13 @@ export async function PaginaClassi({
       const preAsilo = righe.filter((r) => r.pre_asilo).length;
       const postAsilo = righe.filter((r) => r.post_asilo).length;
       riepilogo = (
-        <div className="flex flex-wrap gap-2">
-          <RiepilogoConteggio etichetta="Presenti" numeratore={presenti} denominatore={bambini.length} />
-          <RiepilogoConteggio etichetta="Pre-asilo" numeratore={preAsilo} />
-          <RiepilogoConteggio etichetta="Post-asilo" numeratore={postAsilo} />
-        </div>
+        <CardRiepilogo titolo="Presenze giornaliere">
+          <div className="flex flex-wrap gap-2">
+            <RiepilogoConteggio etichetta="Presenti" numeratore={presenti} denominatore={bambini.length} />
+            <RiepilogoConteggio etichetta="Pre-asilo" numeratore={preAsilo} />
+            <RiepilogoConteggio etichetta="Post-asilo" numeratore={postAsilo} />
+          </div>
+        </CardRiepilogo>
       );
     } else {
       const { data: pasti } = await supabase
@@ -59,7 +62,9 @@ export async function PaginaClassi({
         .in('bambino_id', idBambini);
       const numeroMangiato = (pasti ?? []).filter((p) => p.mangiato === 'si').length;
       riepilogo = (
-        <RiepilogoConteggio etichetta="Pasti" numeratore={numeroMangiato} denominatore={bambini.length} />
+        <CardRiepilogo titolo="Pasti giornalieri">
+          <RiepilogoConteggio etichetta="Pasti" numeratore={numeroMangiato} denominatore={bambini.length} />
+        </CardRiepilogo>
       );
     }
   }

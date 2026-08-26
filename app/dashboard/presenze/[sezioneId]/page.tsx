@@ -3,6 +3,7 @@ import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
+import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData } from '@/lib/auth';
@@ -83,11 +84,13 @@ export default async function PresenzeClassePage({
       vuoto={!bambini.length}
       riepilogo={
         bambini.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <RiepilogoConteggio etichetta="Presenti" numeratore={numeroPresenti} denominatore={bambini.length} />
-            <RiepilogoConteggio etichetta="Pre-asilo" numeratore={numeroPreAsilo} />
-            <RiepilogoConteggio etichetta="Post-asilo" numeratore={numeroPostAsilo} />
-          </div>
+          <CardRiepilogo titolo={`Presenze giornaliere - Sezione ${sezione.nome}`}>
+            <div className="flex flex-wrap gap-2">
+              <RiepilogoConteggio etichetta="Presenti" numeratore={numeroPresenti} denominatore={bambini.length} />
+              <RiepilogoConteggio etichetta="Pre-asilo" numeratore={numeroPreAsilo} />
+              <RiepilogoConteggio etichetta="Post-asilo" numeratore={numeroPostAsilo} />
+            </div>
+          </CardRiepilogo>
         )
       }
     >

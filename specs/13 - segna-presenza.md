@@ -41,8 +41,9 @@ il pulsante "Salva nota".
 
 ## Scenario: riepilogo presenze della classe
 Dato che ho aperto l'elenco bambini di una classe, per una data
-Allora vedo in cima un riepilogo "Presenti: X/Y", dove X è il numero di
-bambini segnati "presente" per quella data e Y il totale dei bambini
+Allora vedo in cima, in una card con titolo "Presenze giornaliere -
+Sezione {nome classe}", un riepilogo "Presenti: X/Y", dove X è il numero
+di bambini segnati "presente" per quella data e Y il totale dei bambini
 attivi della classe
 E accanto vedo altri due riepiloghi, "Pre-asilo: P" e "Post-asilo: Q",
 dove P e Q sono rispettivamente il numero di bambini con pre-asilo e con

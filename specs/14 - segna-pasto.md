@@ -21,7 +21,8 @@ quella data, se già segnato
 
 ## Scenario: riepilogo pasti della classe
 Dato che ho aperto l'elenco bambini di una classe, per una data
-Allora vedo in cima un riepilogo "Pasti: X/Y", dove X è il numero di
+Allora vedo in cima, in una card con titolo "Pasti giornalieri - Sezione
+{nome classe}", un riepilogo "Pasti: X/Y", dove X è il numero di
 bambini segnati "sì" per quella data e Y il numero di bambini della
 classe che non risultano "assente" né "malattia" quel giorno (i soli per
 cui ha senso segnare il pasto)

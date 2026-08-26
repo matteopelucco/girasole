@@ -33,6 +33,7 @@ test.describe('14 — Segna pasto', () => {
 
     test('riepilogo pasti della classe', async ({ page }) => {
       await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+      await expect(page.getByRole('heading', { name: /^Pasti giornalieri - Sezione /i })).toBeVisible();
     });
 
     test('le allergie sono visibili accanto al nome, indipendentemente dallo stato pasto', async ({

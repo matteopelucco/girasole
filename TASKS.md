@@ -699,6 +699,23 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       da verificare con `npx playwright test e2e/12-dashboard-maestre.spec.ts`
       dal tuo ambiente locale.
 
+## Card con titolo per gli specchietti riassuntivi (specs/12, 13, 14)
+- [x] Gli specchietti riassuntivi di Presenze/Pasti sono ora dentro una
+      card con titolo, invece di stare "nudi" in pagina — stesso stile
+      card già usato altrove (`components/CardRiepilogo.tsx`): "Presenze
+      giornaliere" / "Pasti giornalieri" sull'elenco classi (aggregato su
+      tutte le classi), "Presenze giornaliere - Sezione {nome}" /
+      "Pasti giornalieri - Sezione {nome}" dentro la singola classe.
+- [x] Aggiornati `specs/12 - dashboard-maestre.md`,
+      `specs/13 - segna-presenza.md`, `specs/14 - segna-pasto.md` e i
+      rispettivi test in `e2e/12-dashboard-maestre.spec.ts`,
+      `e2e/13-segna-presenza.spec.ts`, `e2e/14-segna-pasto.spec.ts`
+      (verificano l'heading della card, oltre al testo del numero già
+      controllato prima).
+- [x] Verificato: `npm run analyze` e `npx tsc --noEmit` puliti, nessuna
+      duplicazione nuova. Suite e2e non eseguibile da questo ambiente
+      sandbox (nessun dev server/credenziali Supabase).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

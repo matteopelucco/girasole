@@ -50,6 +50,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       const riepilogo = page.getByText(/^Presenti: \d+\/\d+$/);
       test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
 
+      await expect(page.getByRole('heading', { name: 'Presenze giornaliere', exact: true })).toBeVisible();
       await expect(riepilogo).toBeVisible();
       await expect(page.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
       await expect(page.getByText(/^Post-asilo: \d+$/)).toBeVisible();
@@ -70,6 +71,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       const riepilogo = page.getByText(/^Pasti: \d+\/\d+$/);
       test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
 
+      await expect(page.getByRole('heading', { name: 'Pasti giornalieri', exact: true })).toBeVisible();
       await expect(riepilogo).toBeVisible();
     });
 

@@ -36,8 +36,11 @@ consultare/segnare il pasto di ciascuno (dettagli in
 Dato che sono sull'elenco classi di Presenze o di Pasti, per una data,
 prima ancora di aver selezionato una classe
 Quando guardo la pagina
-Allora vedo in cima, sotto il selettore data, uno specchietto identico a
-quello mostrato dentro una classe, ma con la somma di **tutte** le classi
+Allora vedo in cima, sotto il selettore data, una card con titolo
+"Presenze giornaliere" (in Presenze) o "Pasti giornalieri" (in Pasti) —
+senza il suffisso "- Sezione ..." che invece compare dentro una singola
+classe, essendo la somma di tutte — con lo stesso tipo di specchietto
+mostrato dentro una classe, ma con la somma di **tutte** le classi
 visibili (tutte le mie sezioni assegnate se sono maestra o assistente,
 tutte le classi attive se sono admin): in Presenze "Presenti: X/Y" (X =
 somma dei bambini presenti di tutte le classi, Y = totale bambini di
