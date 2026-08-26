@@ -567,6 +567,26 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       cron e leggere il messaggio d'errore ora visibile nei log Vercel
       per individuare la causa reale (permessi RLS/service_role, dati
       mancanti in `sezioni`/`bambini`, o altro).
+- [x] **Causa reale trovata**, grazie al fix sopra: l'errore nei log era
+      `permission denied for table sezioni` — non un filtro RLS (che dà 0
+      righe, non un errore), ma la mancanza del GRANT di base sulla
+      tabella per il ruolo `service_role` usato dal cron
+      (`lib/supabase/admin.ts:createAdminClient`). **Stesso bug già
+      capitato una volta nel progetto per il ruolo `authenticated`**,
+      corretto allora da `0004_fix_grant_tabelle.sql`/
+      `0008_fix_grant_tabelle_04.sql` — mai esteso a `service_role`,
+      perché finora nessuna route lo usava per leggere tabelle
+      `public.*` (le altre azioni con la service_role key, creare/
+      eliminare utenti in `app/admin/maestre/actions.ts`, passano
+      dall'Admin Auth API su `auth.users`, non da tabelle `public.*`).
+      Fix: `supabase/migrations/0018_grant_service_role_report.sql`,
+      grant `select` a `service_role` su `sezioni`/`bambini`/`presenze`/
+      `pasti`, `select, insert` su `report_giornalieri_inviati`/
+      `report_periodici_inviati`.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0018_grant_service_role_report.sql` nel SQL
+      Editor di Supabase (test e produzione) — senza, il report notturno
+      continua a fallire con lo stesso errore di permessi.
 
 ## Il pasto non è selezionabile anche per un bambino malato (specs/14)
 - [x] Estesa a "malattia" la stessa regola già in vigore per "assente"
