@@ -1,0 +1,12 @@
+-- Girasole — fix: comunicaPastiRojac (app/dashboard/pasti/actions.ts)
+-- inserisce in pasti_comunicati con la service_role key
+-- (createAdminClient), non con il client autenticato — serve perché il
+-- totale pasti è sull'intero asilo, non solo sulle classi visibili alla
+-- maestra via RLS (vedi specs/16 - comunicazione-pasti-rojac.md).
+-- 0020_pasti_comunicati_globale.sql aveva concesso a service_role solo
+-- "select" (serviva per il report notturno): il pulsante "Conferma pasti"
+-- falliva in produzione con "permission denied for table
+-- pasti_comunicati". Stesso tipo di bug già capitato una volta con
+-- 0018_grant_service_role_report.sql — un GRANT di tabella non è coperto
+-- dalle policy RLS, va concesso esplicitamente per ogni operazione usata.
+grant insert on public.pasti_comunicati to service_role;
