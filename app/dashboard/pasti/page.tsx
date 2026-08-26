@@ -8,6 +8,12 @@ export default function PastiClassiPage({
   searchParams: { data?: string };
 }) {
   return (
-    <PaginaClassi titolo="Pasti" basePath="/dashboard/pasti" searchParams={searchParams} escludiAssistente />
+    <PaginaClassi
+      titolo="Pasti"
+      basePath="/dashboard/pasti"
+      searchParams={searchParams}
+      tipo="pasti"
+      escludiAssistente
+    />
   );
 }

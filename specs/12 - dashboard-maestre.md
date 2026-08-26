@@ -32,6 +32,22 @@ E selezionando una classe vedo l'elenco dei bambini di quella classe, per
 consultare/segnare il pasto di ciascuno (dettagli in
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
+## Scenario: riepilogo aggregato di tutte le classi nell'elenco classi
+Dato che sono sull'elenco classi di Presenze o di Pasti, per una data,
+prima ancora di aver selezionato una classe
+Quando guardo la pagina
+Allora vedo in cima, sotto il selettore data, uno specchietto identico a
+quello mostrato dentro una classe, ma con la somma di **tutte** le classi
+visibili (tutte le mie sezioni assegnate se sono maestra o assistente,
+tutte le classi attive se sono admin): in Presenze "Presenti: X/Y" (X =
+somma dei bambini presenti di tutte le classi, Y = totale bambini di
+tutte le classi), "Pre-asilo: P" e "Post-asilo: Q" (somma su tutte le
+classi); in Pasti "Pasti: X/Y" (X = somma dei pasti "sì" segnati oggi in
+tutte le classi, Y = totale bambini di tutte le classi, **senza
+escludere** chi risulta assente o malato)
+E se non c'è ancora nessun bambino in nessuna classe visibile, non vedo
+alcuno specchietto (solo il messaggio che non ci sono classi/bambini)
+
 ## Scenario: l'assistente apre la dashboard
 Dato che sono autenticata come assistente (con almeno una sezione
 assegnata)
@@ -80,3 +96,12 @@ successiva, e nessun dato di altri bambini
 - Priorità a interfaccia rapida, pochi tap, testo leggibile: le maestre
   useranno l'app prevalentemente da smartphone, opzionalmente da tablet e
   desktop in sezione — vedi [01 - ux.md](01%20-%20ux.md).
+- Il denominatore "Y" del riepilogo aggregato "Pasti: X/Y" conta **tutti**
+  i bambini attivi di tutte le classi visibili, indipendentemente dal
+  loro stato di presenza/assenza/malattia — a differenza del riepilogo
+  "Pasti: X/Y" dentro una singola classe (vedi
+  [14 - segna-pasto.md](14%20-%20segna-pasto.md)), che invece esclude dal
+  denominatore chi risulta assente o malato. Scelta esplicita, non un
+  refuso: questo specchietto è pensato come vista d'insieme rapida prima
+  di entrare in una classe, non come conteggio operativo di "quanti pasti
+  restano da segnare".

@@ -1,21 +1,26 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { SelettoreData } from '@/components/SelettoreData';
 import type { SezioneAttiva } from '@/lib/sezioni';
 
 // Schermata "elenco classi", condivisa da Presenze e Pasti (specs/12 -
 // dashboard-maestre.md): stesso layout, cambiano solo titolo, percorso e
-// messaggio quando non ci sono classi.
+// messaggio quando non ci sono classi. `riepilogo` (opzionale) mostra la
+// sommatoria di tutte le classi visibili, ancora prima di sceglierne una
+// (specs/12, scenario "riepilogo aggregato di tutte le classi").
 export function ElencoClassi({
   titolo,
   basePath,
   data,
   sezioni,
+  riepilogo,
   messaggioVuoto,
 }: {
   titolo: string;
   basePath: string;
   data: string;
   sezioni: SezioneAttiva[];
+  riepilogo?: ReactNode;
   messaggioVuoto: string;
 }) {
   return (
@@ -23,6 +28,8 @@ export function ElencoClassi({
       <h1 className="text-lg font-medium">{titolo}</h1>
 
       <SelettoreData basePath={basePath} data={data} />
+
+      {riepilogo}
 
       {!sezioni.length && <p className="text-sm text-stone-600">{messaggioVuoto}</p>}
 

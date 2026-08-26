@@ -667,6 +667,38 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       `npx playwright test e2e/06-controllo-consistenza.spec.ts` (e le
       altre suite toccate: 13, 14, 51) dal tuo ambiente locale.
 
+## Riepilogo aggregato di tutte le classi su Presenze/Pasti (specs/12)
+- [x] Nuovo scenario in `specs/12 - dashboard-maestre.md`: l'elenco
+      classi di Presenze e di Pasti mostra, ancora prima di selezionare
+      una classe, uno specchietto identico a quello di una singola
+      classe ma con la somma di tutte le classi visibili (tutte le mie
+      sezioni se maestra/assistente, tutte le classi attive se admin) —
+      "Presenti: X/Y" + "Pre-asilo: P" + "Post-asilo: Q" su Presenze,
+      "Pasti: X/Y" su Pasti.
+- [x] **Denominatore "Pasti: X/Y" diverso di proposito** da quello della
+      singola classe: qui Y conta *tutti* i bambini, senza escludere chi
+      è assente o malato (a differenza di `bambiniConPastoApplicabile`
+      nella pagina di dettaglio) — richiesto esplicitamente, documentato
+      in specs/12 per non sembrare un'incoerenza.
+- [x] `components/PaginaClassi.tsx` (già condivisa da entrambe le
+      route) ora accetta un prop `tipo: 'presenze' | 'pasti'` e calcola
+      il riepilogo con una query dedicata; `components/ElencoClassi.tsx`
+      espone lo slot `riepilogo` (stesso pattern già usato in
+      `PaginaClasseAttivita`, per coerenza).
+- [x] Duplicazione reale eliminata (segnalata da `jscpd` durante lo
+      sviluppo): la sequenza "sezioni visibili → bambini visibili" era
+      ripetuta identica in `PaginaClassi.tsx` e
+      `app/dashboard/report/page.tsx` — estratta in
+      `lib/sezioni.ts:sezioniEBambiniVisibili`.
+- [x] Test aggiunti in `e2e/12-dashboard-maestre.spec.ts` (riepilogo
+      presente su entrambe le pagine, posizionato prima dell'elenco
+      classi).
+- [x] Verificato: `npm run analyze` (lint, 102 unit test, jscpd sotto
+      soglia) e `npx tsc --noEmit` puliti. Suite e2e non eseguibile da
+      questo ambiente sandbox (nessun dev server/credenziali Supabase),
+      da verificare con `npx playwright test e2e/12-dashboard-maestre.spec.ts`
+      dal tuo ambiente locale.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

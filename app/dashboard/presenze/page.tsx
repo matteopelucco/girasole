@@ -7,5 +7,7 @@ export default function PresenzeClassiPage({
 }: {
   searchParams: { data?: string };
 }) {
-  return <PaginaClassi titolo="Presenze" basePath="/dashboard/presenze" searchParams={searchParams} />;
+  return (
+    <PaginaClassi titolo="Presenze" basePath="/dashboard/presenze" searchParams={searchParams} tipo="presenze" />
+  );
 }

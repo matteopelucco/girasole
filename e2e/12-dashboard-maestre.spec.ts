@@ -43,6 +43,36 @@ test.describe('12 — Dashboard maestra/admin', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
+    test('riepilogo aggregato di tutte le classi nell\'elenco classi di Presenze', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard/presenze');
+      const riepilogo = page.getByText(/^Presenti: \d+\/\d+$/);
+      test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
+
+      await expect(riepilogo).toBeVisible();
+      await expect(page.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
+      await expect(page.getByText(/^Post-asilo: \d+$/)).toBeVisible();
+
+      // Compare prima dell'elenco classi, non dopo (specs/12).
+      const elenco = page.locator('a.bg-emerald-50').first();
+      if ((await elenco.count()) > 0) {
+        const yPosRiepilogo = await riepilogo.first().evaluate((el) => el.getBoundingClientRect().top);
+        const yPosElenco = await elenco.evaluate((el) => el.getBoundingClientRect().top);
+        expect(yPosRiepilogo).toBeLessThan(yPosElenco);
+      }
+    });
+
+    test('riepilogo aggregato di tutte le classi nell\'elenco classi di Pasti', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard/pasti');
+      const riepilogo = page.getByText(/^Pasti: \d+\/\d+$/);
+      test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
+
+      await expect(riepilogo).toBeVisible();
+    });
+
     test('da Pasti si arriva alle classi e poi ai bambini', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 

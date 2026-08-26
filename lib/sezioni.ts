@@ -96,3 +96,22 @@ export async function bambiniAttiviVisibili(
     .order('cognome');
   return data ?? [];
 }
+
+// Sezioni e bambini visibili per l'utente corrente, in un solo giro: le
+// due chiamate vanno sempre in coppia (il secondo elenco dipende dal
+// primo) — usata dalla pagina Report (specs/51) e dall'elenco classi di
+// Presenze/Pasti (specs/12), per non ripetere la stessa sequenza di
+// query in più punti (CLAUDE.md, jscpd).
+export async function sezioniEBambiniVisibili(
+  supabase: SupabaseClient,
+  userId: string,
+  ruolo: string | null | undefined
+): Promise<{ sezioni: SezioneAttiva[]; bambini: BambinoBase[] }> {
+  const sezioni = await sezioniAttiveVisibili(supabase, userId, ruolo);
+  const bambini = await bambiniAttiviVisibili(
+    supabase,
+    ruolo,
+    sezioni.map((s) => s.id)
+  );
+  return { sezioni, bambini };
+}

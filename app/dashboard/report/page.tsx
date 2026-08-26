@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { requireStaff } from '@/lib/auth';
-import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
+import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
 
 export const dynamic = 'force-dynamic';
@@ -29,12 +29,7 @@ export default async function ReportPage({
   const { inizio, fine, etichettaPeriodo, periodoPrecedente, periodoSuccessivo, periodoAttuale } =
     risolviPeriodoReport(tipo, searchParams.periodo);
 
-  const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
-  const bambini = await bambiniAttiviVisibili(
-    supabase,
-    ruolo,
-    sezioni.map((s) => s.id)
-  );
+  const { sezioni, bambini } = await sezioniEBambiniVisibili(supabase, user.id, ruolo);
 
   const idBambini = bambini.map((b) => b.id);
   const [{ data: presenze }, { data: pasti }] = idBambini.length
