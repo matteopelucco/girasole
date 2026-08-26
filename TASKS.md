@@ -900,12 +900,29 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
 - [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
       (113 test) e `npx jscpd` (2 clone preesistenti tollerati, sotto
       soglia) tutti puliti.
+- [x] Bug trovato in produzione dopo l'applicazione di `0020`: il
+      pulsante "Conferma pasti" falliva con "permission denied for
+      table pasti_comunicati". Causa: `0020` concedeva a `service_role`
+      solo `select` (serviva per il report notturno), ma
+      `comunicaPastiRojac` (`app/dashboard/pasti/actions.ts`) *inserisce*
+      con la service_role key, non con il client autenticato — stesso
+      tipo di bug già capitato con `0018_grant_service_role_report.sql`
+      (un GRANT di tabella non è coperto dalle policy RLS, va concesso
+      esplicitamente per ogni operazione usata, non solo per quelle
+      previste all'inizio). Fix in
+      `supabase/migrations/0021_fix_grant_insert_pasti_comunicati.sql`
+      (nuova migration, quella già applicata `0020` non si tocca).
 - [ ] **Da fare da parte tua**:
       1. Applica `supabase/migrations/0020_pasti_comunicati_globale.sql`
          nel SQL Editor di Supabase (test e produzione) — sostituisce
          `0019`, sicuro da eseguire anche se `0019` non è mai stata
          applicata.
-      2. Verifica manualmente **una volta** il click reale su "Conferma"
+      2. Applica anche
+         `supabase/migrations/0021_fix_grant_insert_pasti_comunicati.sql`
+         (dopo la 0020) — senza questo grant il pulsante "Conferma
+         pasti" fallisce con "permission denied", come già capitato in
+         produzione.
+      3. Verifica manualmente **una volta** il click reale su "Conferma"
          (numero pasti, invio mail a info@asilosartorio.it, blocco
          effettivo su tutte le classi) — non coperto da e2e per il
          motivo spiegato sopra.
