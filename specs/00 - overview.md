@@ -51,6 +51,10 @@ della maestra, `5x` amministrazione.
   opzionale ed evidenza delle allergie del bambino
 - [15 - memo.md](15%20-%20memo.md) — avvisi per tutti, una sezione o
   un bambino
+- [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md) —
+  comunicare i pasti di una classe a Rojac (mensa esterna), blocco
+  successivo delle modifiche per la maestra e log delle comunicazioni
+  nei report
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
 - [51 - report.md](51%20-%20report.md) — report tabellari di

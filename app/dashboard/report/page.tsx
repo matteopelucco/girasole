@@ -4,6 +4,7 @@ import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { requireStaff } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
+import { rigaComunicazione, totalePasti, raggruppaPerSezione, type ComunicazionePasto } from '@/lib/comunicazionePasti';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,27 @@ export default async function ReportPage({
   const righePerBambino = new Map(
     aggregaConteggiPresenzePasti(bambini, presenze ?? [], pasti ?? []).map((r) => [r.id, r])
   );
+
+  const idSezioni = sezioni.map((s) => s.id);
+  const { data: comunicazioniData } = idSezioni.length
+    ? await supabase
+        .from('pasti_comunicati')
+        .select('sezione_id, comunicato_at, numero_pasti, comunicato_da_nome')
+        .in('sezione_id', idSezioni)
+        .gte('data', inizio)
+        .lte('data', fine)
+        .order('data', { ascending: true })
+    : {
+        data: [] as { sezione_id: string; comunicato_at: string; numero_pasti: number; comunicato_da_nome: string }[],
+      };
+  const comunicazioni: ComunicazionePasto[] = (comunicazioniData ?? []).map((c) => ({
+    sezioneId: c.sezione_id,
+    comunicatoAt: c.comunicato_at,
+    numeroPasti: c.numero_pasti,
+    comunicatoDaNome: c.comunicato_da_nome,
+  }));
+  const comunicazioniPerSezione = raggruppaPerSezione(comunicazioni);
+  const totaleComplessivo = totalePasti(comunicazioni);
 
   const bambiniPerSezione = new Map<string, typeof bambini>();
   for (const b of bambini) {
@@ -123,6 +145,7 @@ export default async function ReportPage({
 
         {sezioni.map((sezione) => {
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
+          const comunicazioniSezione = comunicazioniPerSezione.get(sezione.id) ?? [];
           return (
             <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
               <h2 className="text-sm font-semibold">{sezione.nome}</h2>
@@ -170,9 +193,28 @@ export default async function ReportPage({
                   </tbody>
                 </table>
               )}
+              {!!comunicazioniSezione.length && (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <h3 className="text-xs font-semibold text-amber-900">Comunicazione pasti</h3>
+                  <ul className="mt-1 space-y-0.5 text-xs text-amber-900">
+                    {comunicazioniSezione.map((c, i) => (
+                      <li key={i}>{rigaComunicazione(c)}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-1 text-xs font-semibold text-amber-900">
+                    Totale: {totalePasti(comunicazioniSezione)} pasti
+                  </p>
+                </div>
+              )}
             </div>
           );
         })}
+
+        {comunicazioni.length > 0 && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
+            Totale complessivo pasti comunicati a Rojac nel periodo: {totaleComplessivo}
+          </p>
+        )}
       </main>
     </>
   );

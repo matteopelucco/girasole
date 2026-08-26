@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, type AllegatoEmail } from '@/lib/email';
-import { generaSchedaGiornalieraHtml, aggregaReportPeriodoTutteLeClassi } from '@/lib/reportPresenze';
+import { generaSchedaGiornalieraHtml, aggregaReportPeriodoTutteLeClassi, type SezioneConRighe } from '@/lib/reportPresenze';
 import { generaPdfTabellare, type SezionePdf } from '@/lib/pdfReport';
+import { rigaComunicazione, totalePasti } from '@/lib/comunicazionePasti';
 import type { RigaReportBambino } from '@/lib/report';
 import {
   oggi,
@@ -48,6 +49,37 @@ function righeInCelle(righe: RigaReportBambino[]): string[][] {
   ]);
 }
 
+// Mappa le sezioni aggregate (lib/reportPresenze.ts) sulle sezioni PDF
+// (lib/pdfReport.ts), includendo il log "Comunicazione pasti" per
+// sezione e il totale complessivo del periodo (specs/16 -
+// comunicazione-pasti-rojac.md) — condiviso tra giornaliero e
+// periodico per non duplicare questa logica in due punti (CLAUDE.md,
+// jscpd).
+function sezioniPdfConComunicazioni(
+  sezioniDati: SezioneConRighe[],
+  intestazioni: string[]
+): { sezioniPdf: SezionePdf[]; totaleGeneralePasti?: string } {
+  const totaleComplessivo = totalePasti(sezioniDati.flatMap((s) => s.comunicazioniPasti));
+  const sezioniPdf: SezionePdf[] = sezioniDati.map((s) => ({
+    nome: s.nome,
+    intestazioni,
+    righe: righeInCelle(s.righe),
+    comunicazionePasti: s.comunicazioniPasti.length
+      ? {
+          righe: s.comunicazioniPasti.map(rigaComunicazione),
+          totale: `Totale: ${totalePasti(s.comunicazioniPasti)} pasti`,
+        }
+      : undefined,
+  }));
+  return {
+    sezioniPdf,
+    totaleGeneralePasti:
+      totaleComplessivo > 0
+        ? `Totale complessivo pasti comunicati a Rojac nel periodo: ${totaleComplessivo}`
+        : undefined,
+  };
+}
+
 async function allegatoPeriodico(
   tipo: 'settimanale' | 'mensile',
   inizio: string,
@@ -56,23 +88,27 @@ async function allegatoPeriodico(
   sottotitolo: string
 ): Promise<AllegatoEmail> {
   const sezioniDati = await aggregaReportPeriodoTutteLeClassi(inizio, fine);
-  const sezioniPdf: SezionePdf[] = sezioniDati.map((s) => ({
-    nome: s.nome,
-    intestazioni: ['Bambino', 'Presenze', 'Pre-asilo', 'Post-asilo', 'Pasti'],
-    righe: righeInCelle(s.righe),
-  }));
-  const pdf = await generaPdfTabellare(titolo, sottotitolo, sezioniPdf);
+  const { sezioniPdf, totaleGeneralePasti } = sezioniPdfConComunicazioni(sezioniDati, [
+    'Bambino',
+    'Presenze',
+    'Pre-asilo',
+    'Post-asilo',
+    'Pasti',
+  ]);
+  const pdf = await generaPdfTabellare(titolo, sottotitolo, sezioniPdf, totaleGeneralePasti);
   return { filename: `report-${tipo}-${fine}.pdf`, content: pdf };
 }
 
 async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
   const sezioniDati = await aggregaReportPeriodoTutteLeClassi(data, data);
-  const sezioniPdf: SezionePdf[] = sezioniDati.map((s) => ({
-    nome: s.nome,
-    intestazioni: ['Bambino', 'Presente', 'Pre-asilo', 'Post-asilo', 'Pasto'],
-    righe: righeInCelle(s.righe),
-  }));
-  const pdf = await generaPdfTabellare('Report giornaliero', formattaDataItaliana(data), sezioniPdf);
+  const { sezioniPdf, totaleGeneralePasti } = sezioniPdfConComunicazioni(sezioniDati, [
+    'Bambino',
+    'Presente',
+    'Pre-asilo',
+    'Post-asilo',
+    'Pasto',
+  ]);
+  const pdf = await generaPdfTabellare('Report giornaliero', formattaDataItaliana(data), sezioniPdf, totaleGeneralePasti);
   return { filename: `report-giornaliero-${data}.pdf`, content: pdf };
 }
 

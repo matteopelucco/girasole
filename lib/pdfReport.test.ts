@@ -44,4 +44,45 @@ describe('generaPdfTabellare', () => {
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
+
+  it('include la sezione "Comunicazione pasti" quando presente, resta apribile', async () => {
+    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [
+      {
+        nome: 'Girasoli',
+        intestazioni: ['Bambino'],
+        righe: [['Anna Bianchi']],
+        comunicazionePasti: {
+          righe: ['26/08/2026_12:05: 12 pasti (Maria Rossi)'],
+          totale: 'Totale: 12 pasti',
+        },
+      },
+    ]);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it('una sezione senza comunicazioni non aggiunge il blocco (nessun errore)', async () => {
+    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [
+      { nome: 'Girasoli', intestazioni: ['Bambino'], righe: [['Anna Bianchi']] },
+    ]);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('include il totale generale in fondo al documento, se passato', async () => {
+    const bytes = await generaPdfTabellare(
+      'Report',
+      'sottotitolo',
+      [{ nome: 'Girasoli', intestazioni: ['Bambino'], righe: [['Anna Bianchi']] }],
+      'Totale complessivo: 42 pasti'
+    );
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
+  });
+
+  it('il totale generale non causa errori anche con un elenco sezioni vuoto', async () => {
+    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [], 'Totale complessivo: 0 pasti');
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
 });

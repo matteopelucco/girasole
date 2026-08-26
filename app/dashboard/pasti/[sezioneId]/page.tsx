@@ -5,13 +5,15 @@ import { EtichettaAssente } from '@/components/EtichettaAssente';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { CardRiepilogo } from '@/components/CardRiepilogo';
+import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData, assicuraAccessoPasti } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
-import { segnaPasto, salvaNotaPasto } from '../actions';
+import { formattaDataOraItaliana } from '@/lib/date';
+import { segnaPasto, salvaNotaPasto, comunicaPastiRojac } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,18 +42,28 @@ export default async function PastiClassePage({
   const bambini = bambiniSezione ?? [];
   const idBambini = bambini.map((b) => b.id);
 
-  const [{ data: pastiData }, { data: presenzeData }] = await Promise.all([
+  const [{ data: pastiData }, { data: presenzeData }, { data: comunicazione }] = await Promise.all([
     idBambini.length
       ? supabase.from('pasti').select('bambino_id, mangiato, note').eq('data', data).in('bambino_id', idBambini)
       : Promise.resolve({ data: [] as { bambino_id: string; mangiato: string; note: string | null }[] }),
     idBambini.length
       ? supabase.from('presenze').select('bambino_id, stato').eq('data', data).in('bambino_id', idBambini)
       : Promise.resolve({ data: [] as { bambino_id: string; stato: string }[] }),
+    supabase
+      .from('pasti_comunicati')
+      .select('numero_pasti, comunicato_at, comunicato_da_nome')
+      .eq('sezione_id', sezioneId)
+      .eq('data', data)
+      .maybeSingle(),
   ]);
 
   const pastoPerBambino = new Map((pastiData ?? []).map((p) => [p.bambino_id, p]));
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p.stato]));
   const editable = puoScrivereData(ruolo, data);
+  // L'admin può sempre modificare, anche dopo una comunicazione a
+  // Rojac (specs/16 - comunicazione-pasti-rojac.md): il blocco riguarda
+  // solo la maestra.
+  const editabileRiga = editable && (ruolo === 'admin' || !comunicazione);
 
   const bambiniConPastoApplicabile = bambini.filter((b) => {
     const stato = presenzaPerBambino.get(b.id);
@@ -72,11 +84,30 @@ export default async function PastiClassePage({
       riepilogo={
         bambini.length > 0 && (
           <CardRiepilogo titolo={`Pasti giornalieri - Sezione ${sezione.nome}`}>
-            <RiepilogoConteggio
-              etichetta="Pasti"
-              numeratore={numeroMangiato}
-              denominatore={bambiniConPastoApplicabile.length}
-            />
+            <div className="space-y-3">
+              <RiepilogoConteggio
+                etichetta="Pasti"
+                numeratore={numeroMangiato}
+                denominatore={bambiniConPastoApplicabile.length}
+              />
+              {comunicazione ? (
+                <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  Pasti comunicati a Rojac il {formattaDataOraItaliana(comunicazione.comunicato_at)}:{' '}
+                  {comunicazione.numero_pasti} pasti (da {comunicazione.comunicato_da_nome}).
+                  {ruolo === 'admin' && ' Come admin puoi comunque modificare i pasti.'}
+                </p>
+              ) : (
+                editable && (
+                  <ConfermaAzione
+                    azione={comunicaPastiRojac}
+                    campiNascosti={{ sezione_id: sezioneId, data }}
+                    etichetta="Pasti comunicati a Rojac"
+                    messaggioConferma="Confermi? Da questo momento i pasti di oggi per questa classe non saranno più modificabili (per l'admin restano comunque modificabili)."
+                    tono="neutro"
+                  />
+                )
+              )}
+            </div>
           </CardRiepilogo>
         )
       }
@@ -114,7 +145,7 @@ export default async function PastiClassePage({
               <p className="mt-3 text-sm text-stone-600">
                 {assente ? 'Bambino assente: il pasto non è applicabile.' : 'Bambino malato: il pasto non è applicabile.'}
               </p>
-            ) : editable ? (
+            ) : editabileRiga ? (
               <form className="mt-3 flex flex-wrap items-center gap-2">
                 {(['si', 'no'] as const).map((mangiato) => (
                   <PulsanteInvio

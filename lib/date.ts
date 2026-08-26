@@ -101,6 +101,29 @@ export function isUltimoGiornoMese(data: string): boolean {
   return data === ultimoGiornoMese(meseDaData(data));
 }
 
+// Data e ora (fuso Europe/Rome) di un istante reale (timestamptz),
+// formattate come "gg/mm/aaaa_hh:mm" — usata per il log delle
+// comunicazioni pasti a Rojac (specs/16 -
+// comunicazione-pasti-rojac.md). A differenza delle altre funzioni di
+// questo file (che operano su un calendario "YYYY-MM-DD", senza un
+// orario reale), questa prende un istante vero e ne mostra anche l'ora.
+export function formattaDataOraItaliana(istante: string | Date): string {
+  const d = typeof istante === 'string' ? new Date(istante) : istante;
+  const data = new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+  const ora = new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d);
+  return `${data}_${ora}`;
+}
+
 // Tutte le date da `inizio` a `fine` (incluse), in ordine.
 export function giorniInRange(inizio: string, fine: string): string[] {
   const giorni: string[] = [];

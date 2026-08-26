@@ -3,6 +3,7 @@ import {
   domenicaSettimana,
   formattaDataBreve,
   formattaDataItaliana,
+  formattaDataOraItaliana,
   formattaIntervalloItaliano,
   formattaMeseItaliano,
   giorniInRange,
@@ -184,5 +185,23 @@ describe('giorniInRange', () => {
 
   it('restituisce un solo giorno se inizio e fine coincidono', () => {
     expect(giorniInRange('2026-08-23', '2026-08-23')).toEqual(['2026-08-23']);
+  });
+});
+
+describe('formattaDataOraItaliana', () => {
+  it('converte un istante UTC in ora legale (CEST, UTC+2) in Europe/Rome', () => {
+    expect(formattaDataOraItaliana('2026-08-26T15:30:00Z')).toBe('26/08/2026_17:30');
+  });
+
+  it('converte un istante UTC in ora solare (CET, UTC+1) in Europe/Rome', () => {
+    expect(formattaDataOraItaliana('2026-01-15T10:05:00Z')).toBe('15/01/2026_11:05');
+  });
+
+  it('accetta anche un oggetto Date, non solo una stringa ISO', () => {
+    expect(formattaDataOraItaliana(new Date('2026-08-26T15:30:00Z'))).toBe('26/08/2026_17:30');
+  });
+
+  it('aggiunge lo zero iniziale a giorno/mese/ora/minuti a una cifra', () => {
+    expect(formattaDataOraItaliana('2026-03-05T07:09:00Z')).toBe('05/03/2026_08:09');
   });
 });

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
-import { ConfermaEliminazione } from '@/components/ConfermaEliminazione';
+import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
@@ -71,10 +71,11 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
           </PulsanteInvio>
         </FormConEsito>
 
-        <ConfermaEliminazione
+        <ConfermaAzione
           azione={eliminaPromemoria}
           campiNascosti={{ promemoria_id: promemoria.id }}
           etichetta="Elimina avviso"
+          messaggioConferma="Confermi l'eliminazione?"
         />
       </main>
     </>

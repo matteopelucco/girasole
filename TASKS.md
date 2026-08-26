@@ -759,6 +759,73 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       icone).
 - [x] Verificato: `npm run analyze` e `npx tsc --noEmit` puliti.
 
+## Comunicazione pasti a Rojac (nuovo specs/16)
+- [x] Nuovo requisito `specs/16 - comunicazione-pasti-rojac.md`: la
+      maestra comunica i pasti di una classe a Rojac (mensa esterna)
+      con un pulsante dedicato in Pasti; da quel momento non può più
+      modificare i pasti di quella classe/data (l'admin sì, sempre —
+      corretto in corso d'opera su richiesta esplicita, nessuna
+      eccezione di ruolo per l'admin). Ogni comunicazione resta in un
+      log immutabile, consultabile nei report (a schermo e via email)
+      per il confronto con la fattura Rojac di fine mese.
+- [x] `supabase/migrations/0019_pasti_comunicati_rojac.sql`: tabella
+      `pasti_comunicati` (una per sezione+data, `unique`), nome di chi
+      ha comunicato salvato come testo al momento dell'azione (non solo
+      come riferimento al profilo — un log contabile non deve cambiare
+      retroattivamente). Nessuna policy update/delete: immutabile per
+      costruzione. Trigger `pasti_blocca_se_comunicato` su `pasti` che
+      blocca insert/update per la maestra (non per l'admin, controllato
+      via `ruolo_corrente()`) quando esiste già una comunicazione per
+      quella sezione/data. Grant a `service_role` incluso da subito
+      (imparato dal bug del report notturno, vedi sopra in questo file).
+- [x] `lib/comunicazionePasti.ts` (puro): formato del log
+      `{data}_{ora}: {numero} pasti ({chi})`, totale periodo,
+      raggruppamento per sezione — riusato identico a schermo e nei PDF
+      email. `lib/date.ts:formattaDataOraItaliana` (nuova, con test per
+      cambio ora legale/solare).
+- [x] `components/ConfermaAzione.tsx` (nuovo, generalizzato da
+      `ConfermaEliminazione.tsx`, rimosso): conferma sì/annulla prima
+      di un'azione irreversibile, con una palette "distruttivo" (rosso,
+      comportamento identico a prima) o "neutro" (ambra, per il
+      pulsante "Pasti comunicati a Rojac"). `app/dashboard/promemoria/[id]/page.tsx`
+      aggiornato di conseguenza, stesso comportamento/testi di prima
+      (verificato contro `e2e/15-memo.spec.ts`, invariato).
+- [x] `app/dashboard/pasti/actions.ts:comunicaPastiRojac` — conta i
+      pasti "sì" al momento dell'azione, registra la comunicazione.
+      `app/dashboard/pasti/[sezioneId]/page.tsx`: pulsante/banner nel
+      riepilogo, pulsanti Sì/No/Salva nota nascosti per la maestra dopo
+      la comunicazione (resta attivo per l'admin, con nota esplicita a
+      schermo).
+- [x] Sezione "Comunicazione pasti" (log + totale per classe + totale
+      complessivo) aggiunta al Report a schermo
+      (`app/dashboard/report/page.tsx`) e ai 3 PDF del report email
+      (`lib/reportPresenze.ts`, `lib/pdfReport.ts`,
+      `app/api/cron/report-presenze/route.ts`) — non alla scheda HTML
+      giornaliera rapida, che resta invariata (specs/52). Testo
+      semplice nei PDF, niente emoji (stessa nota di specs/06).
+- [x] Test: `e2e/16-comunicazione-pasti-rojac.spec.ts` (nuovo — conferma
+      con Annulla, comunicazione con blocco per la maestra, persistenza
+      dopo reload, override admin, sezione nel report). Sceglie
+      deliberatamente l'**ultima** classe della lista, non la prima
+      (usata invece da `e2e/13`/`e2e/14`): la comunicazione è
+      irreversibile e Playwright esegue i file in parallelo
+      (`fullyParallel: true`), quindi evita che i due si contendano la
+      stessa classe/giorno. Unit test nuovi/estesi:
+      `lib/comunicazionePasti.test.ts`, `lib/date.test.ts`,
+      `lib/pdfReport.test.ts` (116 unit test totali).
+- [x] Verificato: `npm run analyze` (lint, unit test, jscpd sotto
+      soglia) e `npx tsc --noEmit` puliti. Suite e2e Playwright non
+      eseguibile da questo ambiente sandbox (nessun dev server/
+      credenziali Supabase) — da verificare con
+      `npx playwright test e2e/16-comunicazione-pasti-rojac.spec.ts`
+      (e rieseguire `e2e/13`, `e2e/14`, `e2e/15`, `e2e/51`, `e2e/52` per
+      la parte toccata) dal tuo ambiente locale.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0019_pasti_comunicati_rojac.sql` nel SQL
+      Editor di Supabase (test e produzione) — senza, il pulsante
+      "Pasti comunicati a Rojac" fallisce (tabella inesistente) e il
+      trigger di blocco non esiste.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
