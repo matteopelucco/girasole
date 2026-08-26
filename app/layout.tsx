@@ -26,6 +26,13 @@ const openSans = Open_Sans({
 export const metadata: Metadata = {
   title: 'Girasole — Asilo Sartorio',
   description: 'Gestione presenze, pasti e comunicazioni',
+  appleWebApp: {
+    title: 'Girasole',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

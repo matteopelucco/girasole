@@ -910,6 +910,43 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
          effettivo su tutte le classi) — non coperto da e2e per il
          motivo spiegato sopra.
 
+## Icona per "Aggiungi a schermata Home" (Android/iOS)
+- [x] Prima di questa modifica il progetto non aveva né favicon né web
+      manifest: su Android, "Aggiungi a schermata Home" mostrava
+      un'icona generica (la "V" di Vercel, di fallback per un deploy
+      senza favicon) e il titolo intero della pagina ("Girasole — Asilo
+      Sartorio"), troppo lungo per stare sotto l'icona.
+- [x] `app/icon.svg` (nuovo, convenzione file di Next.js — servito in
+      automatico come favicon): un ritaglio quadrato del solo fiore del
+      logo esistente (`public/girasole.svg`, invariato — resta usato
+      così com'è nella pagina di login), senza smartphone/scritta/
+      tagline, che a icona piccola sarebbero illeggibili.
+- [x] `public/icons/*.png` (nuovi, generati dallo stesso SVG via
+      Chromium headless — nessuna dipendenza nuova, riusa
+      `@playwright/test` già presente): `icon-192.png`/`icon-512.png`
+      ("any", fiore a piena pagina) e `icon-maskable-512.png` (fiore
+      ridotto al 65% con margine, per non farlo tagliare dalla maschera
+      circolare/squircle di Android) e `apple-touch-icon.png` (180×180,
+      iOS).
+- [x] `app/manifest.ts` (nuovo, convenzione Next.js —
+      `/manifest.webmanifest` automatico): `short_name: "Girasole"` è
+      quello che compare sotto l'icona in home (risolve il testo
+      lungo), più `name` completo, icone sopra, `theme_color`/
+      `background_color`, `display: "standalone"`.
+- [x] `app/layout.tsx`: aggiunto `icons.apple` (per l'apple-touch-icon,
+      Safari/iOS non legge il manifest per questo) e `appleWebApp.title`
+      ("Girasole", stesso motivo di `short_name` ma per iOS).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (113 test), `npx jscpd` (2 clone preesistenti, sotto soglia) e
+      `npx next build` (le nuove route `/icon.svg` e
+      `/manifest.webmanifest` compilano ed entrano nell'output).
+- [ ] **Da verificare da parte tua**: su un telefono Android, apri il
+      sito, menu Chrome → "Aggiungi a schermata Home" — deve comparire
+      l'icona del girasole (non più la "V") e la scritta "Girasole"
+      sotto (non più il titolo intero). L'icona già installata prima di
+      questa modifica non si aggiorna da sola: va rimossa e
+      riaggiunta.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
