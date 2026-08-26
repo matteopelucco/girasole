@@ -29,9 +29,11 @@ Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
 la data odierna (l'elenco delle classi, non ancora entrata in una
 classe specifica) e i pasti di oggi non sono ancora stati comunicati
 Quando premo "Conferma pasti"
-Allora si apre un riquadro di conferma con: il numero totale di pasti
-segnati "sì" oggi in tutte le classi dell'asilo, il numero di telefono
-di Rojac (0331 955630) e la data odierna
+Allora si apre un riquadro di conferma con un messaggio breve — il
+numero totale di pasti segnati "sì" oggi in tutte le classi dell'asilo
+(mostrato in evidenza, più grande del resto del testo) e il numero di
+telefono di Rojac (0331 955630); la data non è ripetuta nel riquadro
+perché è già quella selezionata in cima alla pagina
 E vedo due pulsanti, "Conferma" e "Annulla"
 
 ## Scenario: confermare la comunicazione

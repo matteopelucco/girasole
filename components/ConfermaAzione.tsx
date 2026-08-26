@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { FormConEsito, type EsitoAzione } from './FormConEsito';
 import { PulsanteInvio } from './PulsanteInvio';
 
@@ -37,7 +37,7 @@ export function ConfermaAzione({
   azione: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   campiNascosti: Record<string, string>;
   etichetta: string;
-  messaggioConferma: string;
+  messaggioConferma: ReactNode;
   etichettaConferma?: string;
   tono?: keyof typeof PALETTE;
 }) {

@@ -6,7 +6,7 @@ import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { requireStaff, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
-import { formattaDataOraItaliana, formattaDataItaliana } from '@/lib/date';
+import { formattaDataOraItaliana } from '@/lib/date';
 import { contaPastiSiOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
 // Import "a ritroso" (components/ → app/), deliberato: comunicaPastiRojac
 // (specs/16 - comunicazione-pasti-rojac.md) va mostrato solo qui, ma
@@ -109,7 +109,12 @@ export async function PaginaClassi({
             azione={comunicaPastiRojac}
             campiNascosti={{ data }}
             etichetta="Conferma pasti"
-            messaggioConferma={`Comunichi a Rojac (tel. ${TELEFONO_ROJAC}) ${numeroPastiOggi} pasti per il ${formattaDataItaliana(data)}? Da questo momento nessuna maestra potrà più modificare i pasti di nessuna classe per oggi (l'admin potrà comunque farlo).`}
+            messaggioConferma={
+              <>
+                Conferma <strong className="text-2xl font-extrabold">{numeroPastiOggi}</strong> pasti a Rojac (
+                {TELEFONO_ROJAC})
+              </>
+            }
             etichettaConferma="Conferma"
             tono="neutro"
           />
