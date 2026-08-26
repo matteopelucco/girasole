@@ -92,7 +92,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       await primaClasse.click();
       await page.waitForURL(/\/dashboard\/pasti\/.+/);
 
-      await expect(page.getByText('Come admin puoi comunque modificare i pasti di qualunque classe.')).toBeVisible();
+      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false })).toBeVisible();
       const primoSi = page.getByRole('button', { name: 'Sì', exact: true }).first();
       test.skip((await primoSi.count()) === 0, 'nessun bambino in questa classe');
       await expect(primoSi).toBeEnabled();
