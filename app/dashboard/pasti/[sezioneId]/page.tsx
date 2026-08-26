@@ -91,10 +91,12 @@ export default async function PastiClassePage({
               />
               {comunicazione && (
                 <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                  <span aria-hidden="true" className="text-green-600">
+                    ✓
+                  </span>{' '}
                   I pasti di oggi (tutte le classi) sono stati comunicati a Rojac il{' '}
                   {formattaDataOraItaliana(comunicazione.comunicato_at)}: {comunicazione.numero_pasti} pasti totali
                   (da {comunicazione.comunicato_da_nome}).
-                  {ruolo === 'admin' && ' Come admin puoi comunque modificare i pasti di qualunque classe.'}
                 </p>
               )}
             </div>
