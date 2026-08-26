@@ -13,3 +13,18 @@
     @apply font-heading;
   }
 }
+
+/* Barra di caricamento durante la navigazione (specs/01 - ux.md,
+   components/BarraCaricamento.tsx): striscia che scorre da sinistra a
+   destra, pattern standard di avanzamento indeterminato. */
+@keyframes barra-caricamento {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(60%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}

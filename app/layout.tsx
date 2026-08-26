@@ -1,6 +1,8 @@
 import './globals.css';
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Poppins, Open_Sans } from 'next/font/google';
+import { BarraCaricamento } from '@/components/BarraCaricamento';
 import { VERSIONE_APP, DATA_BUILD } from '@/lib/versione';
 
 // Coppia di font ispirata al riferimento grafico Falcon (Poppins per i
@@ -30,6 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="it" className={`${poppins.variable} ${openSans.variable}`}>
       <body className="min-h-screen bg-slate-100 text-stone-900 antialiased">
+        <Suspense fallback={null}>
+          <BarraCaricamento />
+        </Suspense>
         <div className="flex min-h-screen flex-col">
           <div className="flex flex-1 flex-col">{children}</div>
           <footer className="py-3 text-center text-xs text-stone-600">

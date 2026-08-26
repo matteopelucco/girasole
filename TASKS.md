@@ -716,6 +716,37 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       duplicazione nuova. Suite e2e non eseguibile da questo ambiente
       sandbox (nessun dev server/credenziali Supabase).
 
+## Barra di caricamento durante la navigazione (specs/01 - ux.md)
+- [x] Nuovo requisito trasversale in `specs/01 - ux.md`: ogni
+      navigazione tra pagine mostra una sottile barra di avanzamento in
+      cima allo schermo (pattern standard del web, es.
+      YouTube/GitHub), non invasiva — segnala il "giro di rete" di
+      qualche secondo che un'app a Server Components come questa
+      comporta ad ogni cambio pagina, prima silenzioso.
+- [x] `components/BarraCaricamento.tsx` (client component, montato una
+      sola volta in `app/layout.tsx` dentro un `<Suspense>` per
+      `useSearchParams`): un listener globale sul click intercetta i
+      link interni (esclusi link esterni, ancore `#`, `mailto:`/`tel:`,
+      `target` diverso da `_self`, download, click con modificatori) e
+      avvia l'animazione; il cambio di pathname/query — segno che la
+      nuova pagina è arrivata — la interrompe. Nessuna dipendenza nuova:
+      solo `next/navigation` (già in uso) e un `@keyframes` CSS in
+      `app/globals.css`.
+- [x] Deliberatamente **distinto** dal feedback già esistente su
+      `PulsanteInvio` (specs/05 - feedback.md): quello è locale al
+      pulsante di un form/Server Action, questo è globale e riguarda
+      solo il passaggio da una pagina all'altra — i due casi non si
+      sovrappongono (un click su un pulsante di stato in Presenze/Pasti
+      non cambia pagina, quindi non attiva la barra).
+- [x] Test aggiunto in `e2e/01-ux.spec.ts`: rallenta deliberatamente
+      (via `page.route`) la richiesta di navigazione per rendere
+      l'assert sulla barra deterministico, invece di dipendere dalla
+      velocità reale della rete (che la farebbe comparire/sparire
+      troppo in fretta per un assert affidabile).
+- [x] Verificato: `npm run analyze` e `npx tsc --noEmit` puliti, nessuna
+      duplicazione nuova. Suite e2e non eseguibile da questo ambiente
+      sandbox (nessun dev server/credenziali Supabase).
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

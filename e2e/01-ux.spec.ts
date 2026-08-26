@@ -65,6 +65,39 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
+  test.describe('barra di caricamento durante la navigazione', () => {
+    test.use({ storageState: statoAutenticazione('maestra') });
+
+    test('compare al click su un link e scompare quando la nuova pagina è pronta', async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      const barra = page.getByRole('status', { name: 'Caricamento in corso' });
+      await expect(barra).toHaveCount(0);
+
+      // Rallenta le richieste di navigazione (non gli asset già in
+      // cache) quanto basta perché il test possa osservare in modo
+      // affidabile la barra, invece di dipendere dalla velocità reale
+      // della rete (che la farebbe comparire e sparire troppo in
+      // fretta per un assert deterministico).
+      await page.route('**/dashboard/presenze*', async (route) => {
+        await new Promise((r) => setTimeout(r, 400));
+        await route.continue();
+      });
+
+      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
+
+      await linkPresenze.click();
+      await expect(barra).toBeVisible();
+
+      await page.waitForURL(/\/dashboard\/presenze\?/);
+      await expect(barra).toHaveCount(0);
+    });
+  });
+
   test.describe('flusso Pasti (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
