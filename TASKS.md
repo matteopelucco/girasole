@@ -546,14 +546,27 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
 ## Bug: report notturno "Nessuna classe attiva" nonostante dati presenti
 - [x] Diagnosticato in produzione: `aggregaReportPeriodoTutteLeClassi`/
       `generaSchedaGiornalieraHtml` (`lib/reportPresenze.ts`) non
-      controllano l'errore delle query Supabase — se falliscono (es.
+      controllavano l'errore delle query Supabase — se falliscono (es.
       `SUPABASE_SERVICE_ROLE_KEY` mancante/sbagliata su Vercel), `data`
-      arriva `null` e `(sezioni ?? []).map(...)` lo tratta in modo
+      arrivava `null` e `(sezioni ?? []).map(...)` lo trattava in modo
       indistinguibile da "davvero zero classi attive", producendo PDF
       con "Nessuna classe attiva" senza alcun errore visibile nei log.
-      Causa reale nel caso segnalato: `SUPABASE_SERVICE_ROLE_KEY` non
-      era impostata su Vercel (env var separata da quelle usate
-      dall'app normale via RLS) — vedi specs/52.
+      Prima ipotesi (SUPABASE_SERVICE_ROLE_KEY mancante su Vercel) non
+      confermata: dopo aver verificato le chiavi il report è arrivato
+      ancora vuoto, quindi il vero errore restava comunque mascherato.
+- [x] **Fix**: `lib/reportPresenze.ts` ora controlla l'`error` di ogni
+      query e solleva un'eccezione con il messaggio reale di Postgrest
+      invece di trattarlo come "nessun dato" (nuova `righeOSollevaErrore`,
+      unit test in `lib/reportPresenze.test.ts` — è pura, nessun I/O).
+      Un errore di query fa quindi fallire la route con un 500
+      diagnosticabile nei log Vercel (stesso comportamento già visto per
+      l'errore Resend), invece di restituire silenziosamente "ok" con un
+      PDF vuoto — e, come già garantito dal flusso esistente, non marca
+      il periodo come inviato (l'insert in `report_*_inviati` avviene
+      solo dopo un invio riuscito). **Prossimo passo**: rilanciare il
+      cron e leggere il messaggio d'errore ora visibile nei log Vercel
+      per individuare la causa reale (permessi RLS/service_role, dati
+      mancanti in `sezioni`/`bambini`, o altro).
 
 ## Il pasto non è selezionabile anche per un bambino malato (specs/14)
 - [x] Estesa a "malattia" la stessa regola già in vigore per "assente"
