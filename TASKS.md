@@ -826,6 +826,90 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       "Pasti comunicati a Rojac" fallisce (tabella inesistente) e il
       trigger di blocco non esiste.
 
+### Correzione: comunicazione unica per l'intero asilo, non per classe
+- [x] Errore nella prima versione: la comunicazione a Rojac era pensata
+      per singola sezione (pulsante dentro `pasti/[sezioneId]`, tabella
+      `pasti_comunicati` con chiave `sezione_id + data`). Corretto su
+      richiesta esplicita: Rojac fattura sull'intero asilo, quindi la
+      comunicazione è **una sola al giorno, cumulativa su tutte le
+      sezioni**. Il pulsante si sposta sulla pagina lista `/dashboard/pasti`
+      (prima di scegliere una classe); una volta confermata, blocca la
+      modifica dei pasti per la maestra in **ogni** classe per quel
+      giorno (l'admin può sempre modificare, invariato). `specs/16 -
+      comunicazione-pasti-rojac.md` riscritto di conseguenza, con una
+      nota esplicita "Correzione rispetto a una prima versione".
+- [x] Nuova UX richiesta esplicitamente: 1) la maestra apre
+      `/dashboard/pasti` sulla data odierna; 2) clicca "Conferma pasti";
+      3) un popup di conferma (`components/ConfermaAzione.tsx`, tono
+      "neutro") mostra il numero di pasti da comunicare (ricalcolato al
+      momento del click), il telefono di Rojac (**0331 955630**) e la
+      data odierna; 4) due pulsanti, Conferma/Annulla; 5) alla conferma,
+      parte anche una mail (best-effort, non bloccante) a
+      `info@asilosartorio.it` con il numero di pasti comunicati e chi
+      l'ha fatto.
+- [x] `supabase/migrations/0020_pasti_comunicati_globale.sql` (nuovo,
+      **sostituisce** `0019_pasti_comunicati_rojac.sql`): elimina
+      trigger/tabella `0019` (`drop ... if exists ... cascade`, sicuro
+      sia che `0019` non sia mai stata applicata sia che lo sia stata
+      senza dati reali) e ricrea `pasti_comunicati` con chiave `data`
+      **unique** (non più `sezione_id + data`). Stessa logica di
+      immutabilità/grant/trigger di prima, solo senza `sezione_id`.
+- [x] `lib/pastiRojac.ts` (nuovo): `contaPastiSiOggiTuttoAsilo(data)` —
+      conta i pasti "sì" su tutti i bambini attivi dell'asilo (non filtra
+      per sezione), usa `createAdminClient()` perché una maestra vede
+      via RLS solo le proprie sezioni ma il totale Rojac deve coprire
+      tutto l'asilo; l'autorizzazione per questa azione è quindi a
+      livello applicativo (`assicuraAccessoPasti` + `puoScrivereData`),
+      non RLS. `TELEFONO_ROJAC` esportata da qui. `lib/comunicazionePasti.ts`
+      semplificato: rimossi `sezioneId` e `raggruppaPerSezione` (non più
+      pertinenti con una comunicazione unica per asilo).
+- [x] `app/dashboard/pasti/actions.ts:comunicaPastiRojac` riscritta:
+      nessun parametro sezione, conta e registra il totale asilo,
+      gestisce l'errore di unicità (`23505`, già comunicato oggi) con un
+      messaggio dedicato, invia la mail di notifica in un `try/catch`
+      separato (un fallimento dell'email non deve far fallire la
+      comunicazione già registrata).
+- [x] `components/PaginaClassi.tsx` (pagina lista, non più
+      `pasti/[sezioneId]/page.tsx`) mostra ora il pulsante/popup o, se
+      già comunicato oggi, il banner con data/ora/numero — condizionato
+      a `tipo === 'pasti'`. Importa deliberatamente `comunicaPastiRojac`
+      da `app/dashboard/pasti/actions.ts` (commento nel codice che
+      spiega la scelta: evita di duplicare in un componente condiviso la
+      logica di bootstrap già centralizzata nella action). La pagina di
+      classe (`pasti/[sezioneId]/page.tsx`) ora mostra solo un banner
+      informativo di sola lettura (query globale sulla data, senza
+      filtro sezione) e blocca comunque Sì/No/nota per la maestra.
+- [x] Report a schermo (`app/dashboard/report/page.tsx`) e i 3 PDF
+      email (`lib/reportPresenze.ts:recuperaComunicazioniPastiPeriodo`,
+      `lib/pdfReport.ts`, `app/api/cron/report-presenze/route.ts`):
+      **una sola** sezione "Comunicazione pasti" per l'intero documento
+      (non più una per sezione).
+- [x] `e2e/16-comunicazione-pasti-rojac.spec.ts` riscritto — con una
+      differenza importante rispetto agli altri file e2e del progetto:
+      **non preme mai "Conferma"**. La comunicazione ora è unica per
+      l'intero asilo e blocca la maestra in ogni classe per il resto
+      della giornata sul progetto Supabase di test condiviso; un click
+      automatico romperebbe `e2e/06-controllo-consistenza.spec.ts` e
+      `e2e/14-segna-pasto.spec.ts` per il resto del giorno
+      (`fullyParallel: true`). I test verificano quindi solo che il
+      popup mostri i dati corretti e che "Annulla" non registri nulla;
+      gli scenari che presuppongono una comunicazione già avvenuta
+      (blocco su ogni classe, override admin, sezione nel report) si
+      attivano da soli (`test.skip` altrimenti) solo se qualcuno l'ha
+      già confermata manualmente nello stesso giorno.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (113 test) e `npx jscpd` (2 clone preesistenti tollerati, sotto
+      soglia) tutti puliti.
+- [ ] **Da fare da parte tua**:
+      1. Applica `supabase/migrations/0020_pasti_comunicati_globale.sql`
+         nel SQL Editor di Supabase (test e produzione) — sostituisce
+         `0019`, sicuro da eseguire anche se `0019` non è mai stata
+         applicata.
+      2. Verifica manualmente **una volta** il click reale su "Conferma"
+         (numero pasti, invio mail a info@asilosartorio.it, blocco
+         effettivo su tutte le classi) — non coperto da e2e per il
+         motivo spiegato sopra.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, type AllegatoEmail } from '@/lib/email';
-import { generaSchedaGiornalieraHtml, aggregaReportPeriodoTutteLeClassi, type SezioneConRighe } from '@/lib/reportPresenze';
-import { generaPdfTabellare, type SezionePdf } from '@/lib/pdfReport';
-import { rigaComunicazione, totalePasti } from '@/lib/comunicazionePasti';
+import {
+  generaSchedaGiornalieraHtml,
+  aggregaReportPeriodoTutteLeClassi,
+  recuperaComunicazioniPastiPeriodo,
+  type SezioneConRighe,
+} from '@/lib/reportPresenze';
+import { generaPdfTabellare, type SezionePdf, type ComunicazionePastiPdf } from '@/lib/pdfReport';
+import { rigaComunicazione, totalePasti, type ComunicazionePasto } from '@/lib/comunicazionePasti';
 import type { RigaReportBambino } from '@/lib/report';
 import {
   oggi,
@@ -49,34 +54,20 @@ function righeInCelle(righe: RigaReportBambino[]): string[][] {
   ]);
 }
 
-// Mappa le sezioni aggregate (lib/reportPresenze.ts) sulle sezioni PDF
-// (lib/pdfReport.ts), includendo il log "Comunicazione pasti" per
-// sezione e il totale complessivo del periodo (specs/16 -
-// comunicazione-pasti-rojac.md) — condiviso tra giornaliero e
-// periodico per non duplicare questa logica in due punti (CLAUDE.md,
-// jscpd).
-function sezioniPdfConComunicazioni(
-  sezioniDati: SezioneConRighe[],
-  intestazioni: string[]
-): { sezioniPdf: SezionePdf[]; totaleGeneralePasti?: string } {
-  const totaleComplessivo = totalePasti(sezioniDati.flatMap((s) => s.comunicazioniPasti));
-  const sezioniPdf: SezionePdf[] = sezioniDati.map((s) => ({
-    nome: s.nome,
-    intestazioni,
-    righe: righeInCelle(s.righe),
-    comunicazionePasti: s.comunicazioniPasti.length
-      ? {
-          righe: s.comunicazioniPasti.map(rigaComunicazione),
-          totale: `Totale: ${totalePasti(s.comunicazioniPasti)} pasti`,
-        }
-      : undefined,
-  }));
+function sezioniPdf(sezioniDati: SezioneConRighe[], intestazioni: string[]): SezionePdf[] {
+  return sezioniDati.map((s) => ({ nome: s.nome, intestazioni, righe: righeInCelle(s.righe) }));
+}
+
+// Blocco "Comunicazione pasti" per il PDF (specs/16 -
+// comunicazione-pasti-rojac.md): un'unica sezione per l'intero
+// documento (la comunicazione è per l'intero asilo, non per classe) —
+// condiviso tra giornaliero e periodico per non duplicare questa
+// logica in due punti (CLAUDE.md, jscpd).
+function comunicazionePastiPdf(comunicazioni: ComunicazionePasto[]): ComunicazionePastiPdf | undefined {
+  if (!comunicazioni.length) return undefined;
   return {
-    sezioniPdf,
-    totaleGeneralePasti:
-      totaleComplessivo > 0
-        ? `Totale complessivo pasti comunicati a Rojac nel periodo: ${totaleComplessivo}`
-        : undefined,
+    righe: comunicazioni.map(rigaComunicazione),
+    totale: `Totale del periodo: ${totalePasti(comunicazioni)} pasti`,
   };
 }
 
@@ -87,28 +78,30 @@ async function allegatoPeriodico(
   titolo: string,
   sottotitolo: string
 ): Promise<AllegatoEmail> {
-  const sezioniDati = await aggregaReportPeriodoTutteLeClassi(inizio, fine);
-  const { sezioniPdf, totaleGeneralePasti } = sezioniPdfConComunicazioni(sezioniDati, [
-    'Bambino',
-    'Presenze',
-    'Pre-asilo',
-    'Post-asilo',
-    'Pasti',
+  const [sezioniDati, comunicazioni] = await Promise.all([
+    aggregaReportPeriodoTutteLeClassi(inizio, fine),
+    recuperaComunicazioniPastiPeriodo(inizio, fine),
   ]);
-  const pdf = await generaPdfTabellare(titolo, sottotitolo, sezioniPdf, totaleGeneralePasti);
+  const pdf = await generaPdfTabellare(
+    titolo,
+    sottotitolo,
+    sezioniPdf(sezioniDati, ['Bambino', 'Presenze', 'Pre-asilo', 'Post-asilo', 'Pasti']),
+    comunicazionePastiPdf(comunicazioni)
+  );
   return { filename: `report-${tipo}-${fine}.pdf`, content: pdf };
 }
 
 async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
-  const sezioniDati = await aggregaReportPeriodoTutteLeClassi(data, data);
-  const { sezioniPdf, totaleGeneralePasti } = sezioniPdfConComunicazioni(sezioniDati, [
-    'Bambino',
-    'Presente',
-    'Pre-asilo',
-    'Post-asilo',
-    'Pasto',
+  const [sezioniDati, comunicazioni] = await Promise.all([
+    aggregaReportPeriodoTutteLeClassi(data, data),
+    recuperaComunicazioniPastiPeriodo(data, data),
   ]);
-  const pdf = await generaPdfTabellare('Report giornaliero', formattaDataItaliana(data), sezioniPdf, totaleGeneralePasti);
+  const pdf = await generaPdfTabellare(
+    'Report giornaliero',
+    formattaDataItaliana(data),
+    sezioniPdf(sezioniDati, ['Bambino', 'Presente', 'Pre-asilo', 'Post-asilo', 'Pasto']),
+    comunicazionePastiPdf(comunicazioni)
+  );
   return { filename: `report-giornaliero-${data}.pdf`, content: pdf };
 }
 

@@ -11,12 +11,14 @@ export type SezionePdf = {
   nome: string;
   intestazioni: string[];
   righe: string[][];
-  // Log delle comunicazioni pasti a Rojac per questa sezione nel
-  // periodo (specs/16 - comunicazione-pasti-rojac.md), già formattate
-  // come stringhe pronte da stampare (lib/comunicazionePasti.ts) —
-  // assente/vuoto se nessuna comunicazione nel periodo.
-  comunicazionePasti?: { righe: string[]; totale: string };
 };
+
+// Log delle comunicazioni pasti a Rojac nel periodo (specs/16 -
+// comunicazione-pasti-rojac.md), già formattate come stringhe pronte da
+// stampare (lib/comunicazionePasti.ts): un'unica sezione per l'intero
+// documento (la comunicazione è per l'intero asilo, non per classe),
+// non una per sezione.
+export type ComunicazionePastiPdf = { righe: string[]; totale: string };
 
 const MARGINE = 40;
 const LARGHEZZA_PAGINA = 595.28; // A4 verticale, punti
@@ -57,9 +59,9 @@ function disegnaRiga(
 
 // Genera un PDF A4 con una tabella per ogni sezione/classe passata,
 // con titolo/sottotitolo in testa e interruzione di pagina quando le
-// righe non entrano più nella pagina corrente. `totaleGeneralePasti`
-// (opzionale) aggiunge, in fondo al documento, il totale complessivo
-// dei pasti comunicati a Rojac su tutte le sezioni nel periodo
+// righe non entrano più nella pagina corrente. `comunicazionePasti`
+// (opzionale) aggiunge, in fondo al documento, un'unica sezione col log
+// delle comunicazioni pasti a Rojac del periodo e il loro totale
 // (specs/16 - comunicazione-pasti-rojac.md) — niente emoji: il font
 // standard di pdf-lib (Helvetica, WinAnsi/Latin-1) non li supporta,
 // stessa nota già in lib/consistenza.ts.
@@ -67,7 +69,7 @@ export async function generaPdfTabellare(
   titolo: string,
   sottotitolo: string,
   sezioni: SezionePdf[],
-  totaleGeneralePasti?: string
+  comunicazionePasti?: ComunicazionePastiPdf
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -90,7 +92,7 @@ export async function generaPdfTabellare(
 
   if (!sezioni.length) {
     page.drawText('Nessuna classe attiva.', { x: MARGINE, y, size: DIMENSIONE_TESTO, font });
-    return doc.save();
+    y -= ALTEZZA_RIGA + 12;
   }
 
   for (const sezione of sezioni) {
@@ -116,32 +118,21 @@ export async function generaPdfTabellare(
     }
 
     y -= 12;
-
-    if (sezione.comunicazionePasti?.righe.length) {
-      nuovaPaginaSeServe(2);
-      page.drawText('Comunicazione pasti', { x: MARGINE, y, size: 10, font: fontGrassetto });
-      y -= ALTEZZA_RIGA;
-
-      for (const riga of sezione.comunicazionePasti.righe) {
-        nuovaPaginaSeServe(1);
-        page.drawText(riga, { x: MARGINE, y, size: DIMENSIONE_TESTO, font, color: rgb(0.1, 0.1, 0.1) });
-        y -= ALTEZZA_RIGA;
-      }
-
-      nuovaPaginaSeServe(1);
-      page.drawText(sezione.comunicazionePasti.totale, {
-        x: MARGINE,
-        y,
-        size: DIMENSIONE_TESTO,
-        font: fontGrassetto,
-      });
-      y -= ALTEZZA_RIGA + 12;
-    }
   }
 
-  if (totaleGeneralePasti) {
+  if (comunicazionePasti?.righe.length) {
+    nuovaPaginaSeServe(2);
+    page.drawText('Comunicazione pasti', { x: MARGINE, y, size: 12, font: fontGrassetto });
+    y -= ALTEZZA_RIGA;
+
+    for (const riga of comunicazionePasti.righe) {
+      nuovaPaginaSeServe(1);
+      page.drawText(riga, { x: MARGINE, y, size: DIMENSIONE_TESTO, font, color: rgb(0.1, 0.1, 0.1) });
+      y -= ALTEZZA_RIGA;
+    }
+
     nuovaPaginaSeServe(1);
-    page.drawText(totaleGeneralePasti, { x: MARGINE, y, size: 11, font: fontGrassetto });
+    page.drawText(comunicazionePasti.totale, { x: MARGINE, y, size: DIMENSIONE_TESTO, font: fontGrassetto });
   }
 
   return doc.save();

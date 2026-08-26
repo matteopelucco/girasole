@@ -45,23 +45,18 @@ describe('generaPdfTabellare', () => {
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
-  it('include la sezione "Comunicazione pasti" quando presente, resta apribile', async () => {
-    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [
-      {
-        nome: 'Girasoli',
-        intestazioni: ['Bambino'],
-        righe: [['Anna Bianchi']],
-        comunicazionePasti: {
-          righe: ['26/08/2026_12:05: 12 pasti (Maria Rossi)'],
-          totale: 'Totale: 12 pasti',
-        },
-      },
-    ]);
+  it('include la sezione "Comunicazione pasti" (unica per il documento) quando presente, resta apribile', async () => {
+    const bytes = await generaPdfTabellare(
+      'Report',
+      'sottotitolo',
+      [{ nome: 'Girasoli', intestazioni: ['Bambino'], righe: [['Anna Bianchi']] }],
+      { righe: ['26/08/2026_12:05: 12 pasti (Maria Rossi)'], totale: 'Totale del periodo: 12 pasti' }
+    );
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
-  it('una sezione senza comunicazioni non aggiunge il blocco (nessun errore)', async () => {
+  it('senza comunicazioni non aggiunge il blocco (nessun errore)', async () => {
     const bytes = await generaPdfTabellare('Report', 'sottotitolo', [
       { nome: 'Girasoli', intestazioni: ['Bambino'], righe: [['Anna Bianchi']] },
     ]);
@@ -69,19 +64,11 @@ describe('generaPdfTabellare', () => {
     expect(doc.getPageCount()).toBe(1);
   });
 
-  it('include il totale generale in fondo al documento, se passato', async () => {
-    const bytes = await generaPdfTabellare(
-      'Report',
-      'sottotitolo',
-      [{ nome: 'Girasoli', intestazioni: ['Bambino'], righe: [['Anna Bianchi']] }],
-      'Totale complessivo: 42 pasti'
-    );
-    const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
-  });
-
-  it('il totale generale non causa errori anche con un elenco sezioni vuoto', async () => {
-    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [], 'Totale complessivo: 0 pasti');
+  it('la sezione "Comunicazione pasti" compare anche con un elenco sezioni vuoto', async () => {
+    const bytes = await generaPdfTabellare('Report', 'sottotitolo', [], {
+      righe: ['26/08/2026_12:05: 5 pasti (Maria Rossi)'],
+      totale: 'Totale del periodo: 5 pasti',
+    });
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBe(1);
   });
