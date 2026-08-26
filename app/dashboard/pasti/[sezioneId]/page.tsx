@@ -2,12 +2,14 @@ import { redirect } from 'next/navigation';
 import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { EtichettaAssente } from '@/components/EtichettaAssente';
+import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { requireStaff, puoScrivereData, assicuraAccessoPasti } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
+import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { segnaPasto, salvaNotaPasto } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -82,6 +84,10 @@ export default async function PastiClassePage({
         const assente = statoPresenza === 'assente';
         const malato = statoPresenza === 'malattia';
         const pastoNonApplicabile = assente || malato;
+        const problemiConsistenza = inconsistenzeGiorno({
+          stato: statoPresenza as StatoPresenza | undefined,
+          mangiato: pasto?.mangiato as StatoPasto | undefined,
+        });
 
         return (
           <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -97,6 +103,7 @@ export default async function PastiClassePage({
                     ⚠ {bambino.note_allergie}
                   </span>
                 )}
+                <AvvisoInconsistenza messaggi={problemiConsistenza} />
               </div>
             </div>
 

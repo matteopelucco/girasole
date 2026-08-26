@@ -72,9 +72,9 @@ describe('aggregaConteggiPresenzePasti', () => {
 
   it('conta solo lo stato "presente", non "assente"/"malattia"', () => {
     const presenze = [
-      { bambino_id: 'b1', stato: 'presente' },
-      { bambino_id: 'b1', stato: 'assente' },
-      { bambino_id: 'b2', stato: 'malattia' },
+      { bambino_id: 'b1', data: '2026-08-01', stato: 'presente' },
+      { bambino_id: 'b1', data: '2026-08-02', stato: 'assente' },
+      { bambino_id: 'b2', data: '2026-08-01', stato: 'malattia' },
     ];
     const righe = aggregaConteggiPresenzePasti(bambini, presenze, []);
     expect(righe.find((r) => r.id === 'b1')?.presenze).toBe(1);
@@ -83,9 +83,9 @@ describe('aggregaConteggiPresenzePasti', () => {
 
   it('conta pre-asilo e post-asilo separatamente, solo quando veri', () => {
     const presenze = [
-      { bambino_id: 'b1', stato: 'presente', pre_asilo: true, post_asilo: false },
-      { bambino_id: 'b1', stato: 'presente', pre_asilo: true, post_asilo: true },
-      { bambino_id: 'b1', stato: 'presente', pre_asilo: false, post_asilo: false },
+      { bambino_id: 'b1', data: '2026-08-01', stato: 'presente', pre_asilo: true, post_asilo: false },
+      { bambino_id: 'b1', data: '2026-08-02', stato: 'presente', pre_asilo: true, post_asilo: true },
+      { bambino_id: 'b1', data: '2026-08-03', stato: 'presente', pre_asilo: false, post_asilo: false },
     ];
     const righe = aggregaConteggiPresenzePasti(bambini, presenze, []);
     const riga = righe.find((r) => r.id === 'b1')!;
@@ -96,21 +96,66 @@ describe('aggregaConteggiPresenzePasti', () => {
 
   it('conta solo i pasti "si", non "no"', () => {
     const pasti = [
-      { bambino_id: 'b1', mangiato: 'si' },
-      { bambino_id: 'b1', mangiato: 'no' },
-      { bambino_id: 'b2', mangiato: 'si' },
+      { bambino_id: 'b1', data: '2026-08-01', mangiato: 'si' },
+      { bambino_id: 'b1', data: '2026-08-02', mangiato: 'no' },
+      { bambino_id: 'b2', data: '2026-08-01', mangiato: 'si' },
     ];
     const righe = aggregaConteggiPresenzePasti(bambini, [], pasti);
     expect(righe.find((r) => r.id === 'b1')?.pasti).toBe(1);
     expect(righe.find((r) => r.id === 'b2')?.pasti).toBe(1);
   });
 
-  it('un bambino senza nessun record ha tutti i conteggi a zero', () => {
+  it('un bambino senza nessun record ha tutti i conteggi a zero e nessuna inconsistenza', () => {
     const righe = aggregaConteggiPresenzePasti(bambini, [], []);
     expect(righe).toEqual([
-      { id: 'b1', nome: 'Anna', cognome: 'Bianchi', presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 },
-      { id: 'b2', nome: 'Marco', cognome: 'Verdi', presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 },
+      {
+        id: 'b1',
+        nome: 'Anna',
+        cognome: 'Bianchi',
+        presenze: 0,
+        preAsilo: 0,
+        postAsilo: 0,
+        pasti: 0,
+        inconsistenze: [],
+      },
+      {
+        id: 'b2',
+        nome: 'Marco',
+        cognome: 'Verdi',
+        presenze: 0,
+        preAsilo: 0,
+        postAsilo: 0,
+        pasti: 0,
+        inconsistenze: [],
+      },
     ]);
+  });
+
+  it('segnala un giorno con pasto "sì" e presenza assente, senza confondere altri giorni coerenti', () => {
+    const presenze = [
+      { bambino_id: 'b1', data: '2026-08-01', stato: 'presente' },
+      { bambino_id: 'b1', data: '2026-08-02', stato: 'assente' },
+    ];
+    const pasti = [
+      { bambino_id: 'b1', data: '2026-08-01', mangiato: 'si' },
+      { bambino_id: 'b1', data: '2026-08-02', mangiato: 'si' },
+    ];
+    const righe = aggregaConteggiPresenzePasti(bambini, presenze, pasti);
+    const riga = righe.find((r) => r.id === 'b1')!;
+    expect(riga.inconsistenze).toEqual(['Pasto segnato "sì" ma il bambino risulta assente.']);
+  });
+
+  it('non duplica lo stesso messaggio di inconsistenza se ricorre su più giorni', () => {
+    const presenze = [
+      { bambino_id: 'b1', data: '2026-08-01', stato: 'assente' },
+      { bambino_id: 'b1', data: '2026-08-02', stato: 'assente' },
+    ];
+    const pasti = [
+      { bambino_id: 'b1', data: '2026-08-01', mangiato: 'si' },
+      { bambino_id: 'b1', data: '2026-08-02', mangiato: 'si' },
+    ];
+    const righe = aggregaConteggiPresenzePasti(bambini, presenze, pasti);
+    expect(righe.find((r) => r.id === 'b1')?.inconsistenze).toHaveLength(1);
   });
 
   it('mantiene l\'ordine e la lista dei bambini passati in input', () => {

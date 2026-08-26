@@ -1,8 +1,10 @@
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
+import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { requireStaff } from '@/lib/auth';
 import { formattaDataItaliana, giorniInRange } from '@/lib/date';
 import { risolviPeriodoReport } from '@/lib/report';
+import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,18 +83,29 @@ export default async function DrillDownBambinoPage({
               <th className="py-1">Pre-asilo</th>
               <th className="py-1">Post-asilo</th>
               <th className="py-1">Pasto</th>
+              <th className="py-1">Avviso</th>
             </tr>
           </thead>
           <tbody>
             {giorni.map((g) => {
               const presenza = presenzaPerGiorno.get(g);
+              const mangiato = pastoPerGiorno.get(g);
+              const problemi = inconsistenzeGiorno({
+                stato: presenza?.stato as StatoPresenza | undefined,
+                preAsilo: presenza?.pre_asilo,
+                postAsilo: presenza?.post_asilo,
+                mangiato: mangiato as StatoPasto | undefined,
+              });
               return (
                 <tr key={g} className="border-t border-stone-100">
                   <td className="py-1 capitalize">{formattaDataItaliana(g)}</td>
                   <td className="py-1">{ETICHETTE_PRESENZA[presenza?.stato ?? ''] ?? 'Non segnato'}</td>
                   <td className="py-1">{presenza?.pre_asilo ? 'Sì' : '—'}</td>
                   <td className="py-1">{presenza?.post_asilo ? 'Sì' : '—'}</td>
-                  <td className="py-1">{ETICHETTE_PASTO[pastoPerGiorno.get(g) ?? ''] ?? 'Non segnato'}</td>
+                  <td className="py-1">{ETICHETTE_PASTO[mangiato ?? ''] ?? 'Non segnato'}</td>
+                  <td className="py-1">
+                    <AvvisoInconsistenza messaggi={problemi} />
+                  </td>
                 </tr>
               );
             })}

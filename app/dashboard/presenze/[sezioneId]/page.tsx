@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PaginaClasseAttivita } from '@/components/PaginaClasseAttivita';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
+import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
@@ -8,6 +9,7 @@ import { requireStaff, puoScrivereData } from '@/lib/auth';
 import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza } from '@/lib/presenza';
+import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo, salvaNotaPresenza } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -40,23 +42,30 @@ export default async function PresenzeClassePage({
   const bambini = bambiniSezione ?? [];
   const idBambini = bambini.map((b) => b.id);
 
-  const { data: presenzeData } = idBambini.length
-    ? await supabase
-        .from('presenze')
-        .select('bambino_id, stato, note, pre_asilo, post_asilo')
-        .eq('data', data)
-        .in('bambino_id', idBambini)
-    : {
-        data: [] as {
-          bambino_id: string;
-          stato: string;
-          note: string | null;
-          pre_asilo: boolean;
-          post_asilo: boolean;
-        }[],
-      };
+  const [{ data: presenzeData }, { data: pastiData }] = idBambini.length
+    ? await Promise.all([
+        supabase
+          .from('presenze')
+          .select('bambino_id, stato, note, pre_asilo, post_asilo')
+          .eq('data', data)
+          .in('bambino_id', idBambini),
+        supabase.from('pasti').select('bambino_id, mangiato').eq('data', data).in('bambino_id', idBambini),
+      ])
+    : [
+        {
+          data: [] as {
+            bambino_id: string;
+            stato: string;
+            note: string | null;
+            pre_asilo: boolean;
+            post_asilo: boolean;
+          }[],
+        },
+        { data: [] as { bambino_id: string; mangiato: string }[] },
+      ];
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
+  const pastoPerBambino = new Map((pastiData ?? []).map((p) => [p.bambino_id, p.mangiato]));
   const editable = puoScrivereData(ruolo, data);
   const numeroPresenti = bambini.filter((b) => presenzaPerBambino.get(b.id)?.stato === 'presente').length;
   const numeroPreAsilo = bambini.filter((b) => presenzaPerBambino.get(b.id)?.pre_asilo).length;
@@ -91,6 +100,12 @@ export default async function PresenzeClassePage({
               postAsilo: presenza.post_asilo,
             }
           : null;
+        const problemiConsistenza = inconsistenzeGiorno({
+          stato: presenza?.stato as StatoPresenza | undefined,
+          preAsilo: presenza?.pre_asilo,
+          postAsilo: presenza?.post_asilo,
+          mangiato: pastoPerBambino.get(bambino.id) as StatoPasto | undefined,
+        });
 
         return (
           <li key={bambino.id} className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -98,7 +113,10 @@ export default async function PresenzeClassePage({
               <span className="font-medium">
                 {bambino.nome} {bambino.cognome}
               </span>
-              {presenza?.stato === 'malattia' && <EtichettaMalattia />}
+              <div className="flex flex-wrap gap-1">
+                {presenza?.stato === 'malattia' && <EtichettaMalattia />}
+                <AvvisoInconsistenza messaggi={problemiConsistenza} />
+              </div>
             </div>
 
             {editable ? (

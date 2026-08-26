@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formattaDataItaliana } from '@/lib/date';
 import { aggregaConteggiPresenzePasti, type RigaReportBambino } from '@/lib/report';
+import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 
 const ETICHETTE_STATO: Record<string, string> = {
   presente: 'Presente',
@@ -62,7 +63,14 @@ export async function generaSchedaGiornalieraHtml(data: string): Promise<string>
           if (pasto) extra.push(`pasto: ${pasto === 'si' ? 'sì' : 'no'}`);
           const dettaglio = extra.length ? ` (${extra.join(', ')})` : '';
           const nota = presenza?.note ? ` — ${presenza.note}` : '';
-          return `<li>${b.nome} ${b.cognome}: <strong>${stato}</strong>${dettaglio}${nota}</li>`;
+          const problemi = inconsistenzeGiorno({
+            stato: presenza?.stato as StatoPresenza | undefined,
+            preAsilo: presenza?.pre_asilo,
+            postAsilo: presenza?.post_asilo,
+            mangiato: pasto as StatoPasto | undefined,
+          });
+          const avviso = problemi.length ? ` ⚠️ <em>${problemi.join(' ')}</em>` : '';
+          return `<li>${b.nome} ${b.cognome}: <strong>${stato}</strong>${dettaglio}${nota}${avviso}</li>`;
         })
         .join('');
 
@@ -98,19 +106,19 @@ export async function aggregaReportPeriodoTutteLeClassi(
   const bambini = righeOSollevaErrore(rBambini, 'lettura bambini');
 
   const idBambini = bambini.map((b) => b.id);
-  let presenze: { bambino_id: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[] = [];
-  let pasti: { bambino_id: string; mangiato: string }[] = [];
+  let presenze: { bambino_id: string; data: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[] = [];
+  let pasti: { bambino_id: string; data: string; mangiato: string }[] = [];
   if (idBambini.length) {
     const [rPresenze, rPasti] = await Promise.all([
       supabase
         .from('presenze')
-        .select('bambino_id, stato, pre_asilo, post_asilo')
+        .select('bambino_id, data, stato, pre_asilo, post_asilo')
         .in('bambino_id', idBambini)
         .gte('data', inizio)
         .lte('data', fine),
       supabase
         .from('pasti')
-        .select('bambino_id, mangiato')
+        .select('bambino_id, data, mangiato')
         .in('bambino_id', idBambini)
         .gte('data', inizio)
         .lte('data', fine),

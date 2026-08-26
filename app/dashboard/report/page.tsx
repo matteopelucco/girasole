@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { requireStaff } from '@/lib/auth';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
@@ -40,20 +41,22 @@ export default async function ReportPage({
     ? await Promise.all([
         supabase
           .from('presenze')
-          .select('bambino_id, stato, pre_asilo, post_asilo')
+          .select('bambino_id, data, stato, pre_asilo, post_asilo')
           .in('bambino_id', idBambini)
           .gte('data', inizio)
           .lte('data', fine),
         supabase
           .from('pasti')
-          .select('bambino_id, mangiato')
+          .select('bambino_id, data, mangiato')
           .in('bambino_id', idBambini)
           .gte('data', inizio)
           .lte('data', fine),
       ])
     : [
-        { data: [] as { bambino_id: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[] },
-        { data: [] as { bambino_id: string; mangiato: string }[] },
+        {
+          data: [] as { bambino_id: string; data: string; stato: string; pre_asilo: boolean; post_asilo: boolean }[],
+        },
+        { data: [] as { bambino_id: string; data: string; mangiato: string }[] },
       ];
 
   const righePerBambino = new Map(
@@ -146,18 +149,21 @@ export default async function ReportPage({
                       return (
                         <tr key={b.id} className="border-t border-stone-100">
                           <td className="py-1">
-                            {puoFareDrillDown ? (
-                              <Link
-                                href={`/dashboard/report/bambino/${b.id}?tipo=${tipo}&periodo=${periodoAttuale}`}
-                                className="hover:underline"
-                              >
-                                {b.nome} {b.cognome}
-                              </Link>
-                            ) : (
-                              <span>
-                                {b.nome} {b.cognome}
-                              </span>
-                            )}
+                            <span className="flex flex-wrap items-center gap-1">
+                              {puoFareDrillDown ? (
+                                <Link
+                                  href={`/dashboard/report/bambino/${b.id}?tipo=${tipo}&periodo=${periodoAttuale}`}
+                                  className="hover:underline"
+                                >
+                                  {b.nome} {b.cognome}
+                                </Link>
+                              ) : (
+                                <span>
+                                  {b.nome} {b.cognome}
+                                </span>
+                              )}
+                              <AvvisoInconsistenza messaggi={riga?.inconsistenze ?? []} />
+                            </span>
                           </td>
                           <td className="py-1 text-right">{riga?.presenze ?? 0}</td>
                           <td className="py-1 text-right">{riga?.preAsilo ?? 0}</td>

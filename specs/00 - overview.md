@@ -37,6 +37,9 @@ della maestra, `5x` amministrazione.
 - [05 - feedback.md](05%20-%20feedback.md) — feedback visivo sulle
   azioni (avviata/in corso/riuscita/fallita), trasversale a tutti gli
   scenari che scrivono sul database
+- [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md) —
+  warning quando presenza/pasto/pre-asilo/post-asilo di un bambino sono
+  incoerenti fra loro, in Presenze, Pasti, Report e report email
 - [11 - login.md](11%20-%20login.md) — login e schermata di login
 - [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
   maestra: lista bambini della sezione con stato presenza/pasto del

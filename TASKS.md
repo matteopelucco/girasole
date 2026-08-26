@@ -615,6 +615,58 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       solo in UI: un tentativo diretto via API/DB potrebbe ancora
       inserire un pasto per un bambino malato.
 
+## Controllo di consistenza dei dati (nuovo specs/06)
+- [x] Nuovo requisito trasversale `specs/06 - controllo-consistenza.md`:
+      warning quando presenza/pasto/pre-asilo/post-asilo di un bambino
+      sono incoerenti fra loro, in Presenze, Pasti, Report (tabella
+      aggregata e drill-down) e report via email. Regole controllate:
+      pasto "sì" con presenza assente o malattia; pre-asilo o post-asilo
+      attivi con presenza diversa da "presente". Due combinazioni chieste
+      ma **omesse** perché strutturalmente impossibili con lo schema
+      attuale (`presente` insieme ad `assente`/`malattia`: è un'unica
+      colonna a valore singolo, non tre flag indipendenti) — vedi la nota
+      nello spec.
+- [x] `lib/consistenza.ts:inconsistenzeGiorno` — funzione pura, nessun
+      I/O, unit test in `lib/consistenza.test.ts`. Riusata ovunque per
+      non duplicare le regole (CLAUDE.md, jscpd).
+- [x] `lib/report.ts:aggregaConteggiPresenzePasti` estesa con un nuovo
+      campo `inconsistenze: string[]` per riga: correla presenze e pasti
+      per giorno (richiede ora `data` nei record passati, prima non
+      necessaria per i soli conteggi) e applica `inconsistenzeGiorno` a
+      ogni giorno del periodo. Questa funzione è già il punto condiviso
+      tra report a schermo (`app/dashboard/report/page.tsx`) e report
+      email (`lib/reportPresenze.ts:aggregaReportPeriodoTutteLeClassi`):
+      un solo cambiamento copre entrambe le superfici.
+- [x] UI: badge "⚠️ Inconsistenza" (`components/AvvisoInconsistenza.tsx`,
+      col messaggio specifico nel tooltip) in Presenze e Pasti (la
+      pagina Presenze ora recupera anche i pasti del giorno, prima non
+      le servivano), nella tabella aggregata di Report e nel drill-down
+      giorno per giorno (nuova colonna "Avviso").
+- [x] Email: la scheda HTML giornaliera (`generaSchedaGiornalieraHtml`)
+      mostra lo stesso avviso in corsivo accanto alla riga; i PDF
+      allegati (`app/api/cron/report-presenze/route.ts:righeInCelle`)
+      usano un marcatore testuale ASCII (`[!] INCONSISTENZA`) invece
+      dell'emoji, perché il font standard di pdf-lib (Helvetica,
+      WinAnsi/Latin-1) non può codificare "⚠".
+- [x] Test: `e2e/06-controllo-consistenza.spec.ts` (nuovo, in sequenza —
+      crea deliberatamente l'incoerenza segnando prima il pasto "sì" e
+      poi correggendo la presenza in "assente" sullo stesso bambino,
+      verificando il warning in Presenze, Pasti, report giornaliero a
+      schermo e drill-down mensile). Non è stato scritto un test e2e
+      dedicato per il contenuto dei PDF/HTML email: nessun test esistente
+      in questo progetto ispeziona il contenuto dei PDF via Playwright
+      (solo `lib/pdfReport.test.ts` verifica che il PDF sia valido), la
+      logica di inconsistenza è comunque la stessa già coperta da unit
+      test (`lib/consistenza.test.ts`, `lib/report.test.ts`) e riusata
+      dallo stesso codice del report a schermo.
+- [x] Verificato: `npm run analyze` (lint, unit test — 102 ora, jscpd
+      sotto soglia) e `npx tsc --noEmit` puliti. La suite e2e Playwright
+      non è eseguibile da questo ambiente sandbox (nessun dev server né
+      credenziali Supabase — stesso limite di sempre, vedi note
+      precedenti in questo file): va verificata con
+      `npx playwright test e2e/06-controllo-consistenza.spec.ts` (e le
+      altre suite toccate: 13, 14, 51) dal tuo ambiente locale.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

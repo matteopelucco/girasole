@@ -12,6 +12,7 @@ import {
   formattaIntervalloItaliano,
   formattaDataItaliana,
 } from '@/lib/date';
+import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 
 export type TipoReport = 'mensile' | 'settimanale' | 'giornaliero';
 
@@ -78,17 +79,44 @@ export type RigaReportBambino = {
   preAsilo: number;
   postAsilo: number;
   pasti: number;
+  inconsistenze: string[];
 };
 
-// Aggrega presenze/pasti di un periodo per bambino (specs/51 - report.md):
-// funzione pura, nessun I/O — chi chiama (la pagina Report, il job
-// notturno di specs/52 - report-email-automatico.md) ha già eseguito le
-// query e passa solo le righe. Condivisa tra i due, per non duplicare
-// la stessa logica di conteggio (CLAUDE.md, sezione jscpd).
+type PresenzaGiorno = {
+  bambino_id: string;
+  data: string;
+  stato: string;
+  pre_asilo?: boolean;
+  post_asilo?: boolean;
+};
+type PastoGiorno = { bambino_id: string; data: string; mangiato: string };
+
+// Raggruppa le righe di un bambino per giorno (bambino_id -> data ->
+// riga), per poterle correlare una alla volta con inconsistenzeGiorno.
+function perBambinoEGiorno<T extends { bambino_id: string; data: string }>(righe: T[]): Map<string, Map<string, T>> {
+  const mappa = new Map<string, Map<string, T>>();
+  for (const r of righe) {
+    let perGiorno = mappa.get(r.bambino_id);
+    if (!perGiorno) {
+      perGiorno = new Map();
+      mappa.set(r.bambino_id, perGiorno);
+    }
+    perGiorno.set(r.data, r);
+  }
+  return mappa;
+}
+
+// Aggrega presenze/pasti di un periodo per bambino (specs/51 - report.md),
+// incluso il controllo di consistenza per ogni giorno del periodo
+// (specs/06 - controllo-consistenza.md): funzione pura, nessun I/O — chi
+// chiama (la pagina Report, il job notturno di specs/52 -
+// report-email-automatico.md) ha già eseguito le query e passa solo le
+// righe. Condivisa tra i due, per non duplicare la stessa logica di
+// conteggio/consistenza in più punti (CLAUDE.md, sezione jscpd).
 export function aggregaConteggiPresenzePasti(
   bambini: { id: string; nome: string; cognome: string }[],
-  presenze: { bambino_id: string; stato: string; pre_asilo?: boolean; post_asilo?: boolean }[],
-  pasti: { bambino_id: string; mangiato: string }[]
+  presenze: PresenzaGiorno[],
+  pasti: PastoGiorno[]
 ): RigaReportBambino[] {
   const conteggi = new Map<string, { presenze: number; preAsilo: number; postAsilo: number; pasti: number }>();
   const contaBambino = (id: string) => {
@@ -112,8 +140,29 @@ export function aggregaConteggiPresenzePasti(
     contaBambino(p.bambino_id).pasti += 1;
   }
 
+  const presenzePerBambino = perBambinoEGiorno(presenze);
+  const pastiPerBambino = perBambinoEGiorno(pasti);
+
   return bambini.map((b) => {
     const voce = conteggi.get(b.id) ?? { presenze: 0, preAsilo: 0, postAsilo: 0, pasti: 0 };
-    return { id: b.id, nome: b.nome, cognome: b.cognome, ...voce };
+
+    const giorniPresenza = presenzePerBambino.get(b.id);
+    const giorniPasto = pastiPerBambino.get(b.id);
+    const giorni = new Set<string>([...(giorniPresenza?.keys() ?? []), ...(giorniPasto?.keys() ?? [])]);
+    const inconsistenze = new Set<string>();
+    for (const giorno of giorni) {
+      const presenza = giorniPresenza?.get(giorno);
+      const mangiato = giorniPasto?.get(giorno)?.mangiato;
+      for (const problema of inconsistenzeGiorno({
+        stato: presenza?.stato as StatoPresenza | undefined,
+        preAsilo: presenza?.pre_asilo,
+        postAsilo: presenza?.post_asilo,
+        mangiato: mangiato as StatoPasto | undefined,
+      })) {
+        inconsistenze.add(problema);
+      }
+    }
+
+    return { id: b.id, nome: b.nome, cognome: b.cognome, ...voce, inconsistenze: [...inconsistenze] };
   });
 }

@@ -34,9 +34,13 @@ function modalitaPeriodici(): 'sempre' | 'fine_periodo' {
   return process.env.REPORT_EMAIL_MODALITA_PERIODICI === 'fine_periodo' ? 'fine_periodo' : 'sempre';
 }
 
+// Il PDF usa un font standard (Helvetica, codifica WinAnsi/Latin-1): un
+// simbolo emoji come "⚠" non è codificabile, quindi il warning va in
+// testo semplice, non nella stessa forma usata su schermo/email HTML
+// (specs/06 - controllo-consistenza.md).
 function righeInCelle(righe: RigaReportBambino[]): string[][] {
   return righe.map((r) => [
-    `${r.nome} ${r.cognome}`,
+    `${r.nome} ${r.cognome}${r.inconsistenze.length ? ' [!] INCONSISTENZA' : ''}`,
     String(r.presenze),
     String(r.preAsilo),
     String(r.postAsilo),
