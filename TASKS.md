@@ -964,6 +964,76 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       questa modifica non si aggiorna da sola: va rimossa e
       riaggiunta.
 
+## Calendario scolastico: giorni di chiusura (nuovo specs/53)
+- [x] Nuovo requisito `specs/53 - calendario-scolastico.md`: l'admin
+      inserisce/modifica/elimina giorni di chiusura scolastica (intervallo
+      da/a + nota opzionale) su `/admin/calendario`. In un giorno chiuso
+      (registrato dall'admin, oppure sabato/domenica — chiusura implicita,
+      nessun record necessario) non è possibile registrare presenze o
+      pasti, per **nessun ruolo, admin incluso** — a differenza della
+      regola "sola data odierna" di specs/13/14, che esenta l'admin,
+      questo è un vincolo di coerenza dei dati (asilo chiuso = nessuna
+      presenza/pasto da registrare), non un permesso di scrittura. Le
+      pagine Presenze/Pasti mostrano l'informazione (nota, se presente) al
+      posto dei pulsanti. specs/13 e specs/14 aggiornate (sezione Regole)
+      con un rimando incrociato a specs/53, stesso pattern già usato per
+      specs/06 - controllo-consistenza.md (nessuna duplicazione di
+      scenario/test tra i requisiti).
+- [x] `supabase/migrations/0022_calendario_scolastico.sql`: tabella
+      `giorni_chiusura` (intervallo con vincolo `data_fine >= data_inizio`,
+      nota libera), RLS (select per tutto lo staff, insert/update/delete
+      solo admin), funzione `giorno_chiuso(data)` (weekend via
+      `extract(isodow ...)` OR intervallo registrato) e due trigger
+      (`presenze_blocca_se_chiuso`, `pasti_blocca_se_chiuso`) che
+      bloccano insert/update su `presenze`/`pasti` per qualunque ruolo —
+      stesso principio già in vigore per "pasto di un bambino
+      assente/malato" (0012/0017), non un'eccezione per l'admin come
+      invece 0009. Grant a `service_role` incluso da subito (imparato dal
+      bug del report notturno, vedi sopra in questo file).
+- [x] `lib/date.ts:isWeekend` (pura, unit test) + `lib/calendarioScolastico.ts`:
+      `trovaChiusura`/`isGiornoChiuso`/`messaggioChiusura` (pure, unit
+      test in `lib/calendarioScolastico.test.ts`) e `chiusuraPerData`/
+      `assicuraGiornoApribile` (fanno I/O, coperte solo da e2e — stesso
+      criterio di ammissione già in uso per `lib/auth.ts`).
+- [x] `/admin/calendario` (elenco + form di creazione) e
+      `/admin/calendario/[id]` (modifica + eliminazione con conferma,
+      `ConfermaAzione` già esistente) — stesso pattern list+detail già
+      usato per `/admin/bambini/[id]`. Nuove server action in
+      `app/admin/calendario/actions.ts`
+      (`creaGiornoChiusura`/`aggiornaGiornoChiusura`/`eliminaGiornoChiusura`).
+      Link "Calendario scolastico" aggiunto a `NavHeader` per l'admin.
+- [x] `app/dashboard/presenze/[sezioneId]/page.tsx` e
+      `app/dashboard/pasti/[sezioneId]/page.tsx`: caricano il giorno di
+      chiusura per la data corrente, ricalcolano `editable` includendo
+      `!chiuso` (per tutti i ruoli) e passano il messaggio a
+      `PaginaClasseAttivita` (nuovo prop `messaggioChiusura`, banner
+      rosso con priorità sul banner "sola lettura" esistente, che riguarda
+      solo maestra/assistente). Le server action `segnaPresenza`/
+      `segnaPreAsilo`/`segnaPostAsilo`/`salvaNotaPresenza`/`segnaPasto`/
+      `salvaNotaPasto` chiamano `assicuraGiornoApribile` prima di
+      scrivere, per un messaggio d'errore chiaro oltre al trigger DB.
+- [x] Test aggiunti: `lib/date.test.ts` (`isWeekend`),
+      `lib/calendarioScolastico.test.ts` (funzioni pure), nuovo
+      `e2e/53-calendario-scolastico.spec.ts` (un test per ogni
+      `## Scenario:` di specs/53, incluso il controllo axe-core su
+      `/admin/calendario` e sulla scheda di dettaglio). I test che creano
+      un giorno di chiusura usano date lontane nel futuro (per non
+      collidere con "oggi"/"ieri" di altri test) e lo eliminano a fine
+      test (anche in caso di asserzione fallita, via `try`/`finally` nel
+      test che verifica il blocco di Presenze/Pasti).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (131 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Suite e2e Playwright non eseguibile da questo
+      ambiente sandbox (nessun dev server né credenziali Supabase — stesso
+      limite di sempre, vedi note precedenti in questo file): da
+      verificare con `npx playwright test e2e/53-calendario-scolastico.spec.ts`
+      (e le altre suite toccate: 13, 14) dal tuo ambiente locale.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0022_calendario_scolastico.sql` nel SQL Editor
+      di Supabase (test e produzione) prima di usare `/admin/calendario`
+      — senza, la tabella `giorni_chiusura` non esiste e la pagina fallisce
+      nel caricare l'elenco.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

@@ -168,7 +168,10 @@ attivi e posso modificare lo stato di quella data
   solo in UI (vedi
   `supabase/migrations/0009_scrittura_solo_oggi_maestra.sql`); possono
   comunque consultare in sola lettura le altre date.
-- Il ruolo "admin" può scrivere su qualunque data, passata o futura.
+- Il ruolo "admin" può scrivere su qualunque data, passata o futura,
+  **tranne** un giorno di chiusura scolastica (vedi
+  [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)):
+  quel blocco non fa eccezioni di ruolo.
 - L'elenco bambini di una classe mostra solo i bambini attivi
   (`bambini.attiva = true`): un bambino disattivato dall'admin non
   compare più qui, pur restando collegate le sue presenze passate (vedi

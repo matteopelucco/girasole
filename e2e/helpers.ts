@@ -21,6 +21,41 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Oggi + n giorni (fuso Europe/Rome, n può essere negativo) — usata dai
+// test di specs/53 - calendario-scolastico.md per trovare un prossimo
+// sabato/domenica e una data lontana su cui creare un giorno di chiusura
+// di prova senza collidere con "oggi"/"ieri", usate da altri test.
+export function dataFraGiorni(giorni: number): string {
+  const [anno, mese, giorno] = dataOggiRoma().split('-').map(Number);
+  const d = new Date(Date.UTC(anno, mese - 1, giorno + giorni, 12));
+  return d.toISOString().slice(0, 10);
+}
+
+// Il prossimo sabato, oggi compreso se oggi stesso è sabato (specs/53,
+// scenario "sabato e domenica sono chiusura implicita").
+export function dataProssimoSabato(): string {
+  for (let i = 0; i < 7; i++) {
+    const candidata = dataFraGiorni(i);
+    const [anno, mese, giorno] = candidata.split('-').map(Number);
+    if (new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay() === 6) return candidata;
+  }
+  throw new Error('impossibile trovare un sabato entro 7 giorni');
+}
+
+// Il prossimo giorno feriale (lun-ven), oggi compreso se oggi stesso lo
+// è già — usata dai test che devono verificare "nessuna chiusura" su un
+// giorno qualunque senza dipendere da che giorno della settimana sia
+// "oggi" quando la suite viene eseguita (specs/53).
+export function dataProssimoGiornoFeriale(): string {
+  for (let i = 0; i < 7; i++) {
+    const candidata = dataFraGiorni(i);
+    const [anno, mese, giorno] = candidata.split('-').map(Number);
+    const giornoSettimana = new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay();
+    if (giornoSettimana !== 0 && giornoSettimana !== 6) return candidata;
+  }
+  throw new Error('impossibile trovare un giorno feriale entro 7 giorni');
+}
+
 // Il form di creazione bambino su /admin (specs/50 - amministrazione_base.md)
 // e i mini-form "assegna rapidamente" (uno per bambino "senza classe")
 // condividono lo stesso name="sezione_id": gli <form> non si annidano

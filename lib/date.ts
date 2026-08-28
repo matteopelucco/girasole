@@ -124,6 +124,16 @@ export function formattaDataOraItaliana(istante: string | Date): string {
   return `${data}_${ora}`;
 }
 
+// Vero se `data` è un sabato o una domenica (specs/53 - calendario-
+// scolastico.md: l'asilo è sempre chiuso in questi giorni, senza bisogno
+// di un giorno di chiusura registrato dall'admin). getUTCDay(): 0 =
+// domenica, 6 = sabato.
+export function isWeekend(data: string): boolean {
+  const [anno, mese, giorno] = data.split('-').map(Number);
+  const giornoSettimana = new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay();
+  return giornoSettimana === 0 || giornoSettimana === 6;
+}
+
 // Tutte le date da `inizio` a `fine` (incluse), in ordine.
 export function giorniInRange(inizio: string, fine: string): string[] {
   const giorni: string[] = [];

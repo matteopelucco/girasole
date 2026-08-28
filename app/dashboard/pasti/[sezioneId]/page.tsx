@@ -12,6 +12,7 @@ import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { formattaDataOraItaliana } from '@/lib/date';
+import { chiusuraPerData, isGiornoChiuso, messaggioChiusura as calcolaMessaggioChiusura } from '@/lib/calendarioScolastico';
 import { segnaPasto, salvaNotaPasto } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -41,7 +42,7 @@ export default async function PastiClassePage({
   const bambini = bambiniSezione ?? [];
   const idBambini = bambini.map((b) => b.id);
 
-  const [{ data: pastiData }, { data: presenzeData }, { data: comunicazione }] = await Promise.all([
+  const [{ data: pastiData }, { data: presenzeData }, { data: comunicazione }, chiusura] = await Promise.all([
     idBambini.length
       ? supabase.from('pasti').select('bambino_id, mangiato, note').eq('data', data).in('bambino_id', idBambini)
       : Promise.resolve({ data: [] as { bambino_id: string; mangiato: string; note: string | null }[] }),
@@ -53,11 +54,18 @@ export default async function PastiClassePage({
       .select('numero_pasti, comunicato_at, comunicato_da_nome')
       .eq('data', data)
       .maybeSingle(),
+    chiusuraPerData(supabase, data),
   ]);
 
   const pastoPerBambino = new Map((pastiData ?? []).map((p) => [p.bambino_id, p]));
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p.stato]));
-  const editable = puoScrivereData(ruolo, data);
+
+  const chiusure = chiusura ? [chiusura] : [];
+  const chiuso = isGiornoChiuso(data, chiusure);
+  const messaggioChiuso = calcolaMessaggioChiusura(data, chiusure);
+  // Un giorno di chiusura scolastica non è scrivibile da nessuno, admin
+  // incluso (specs/53 - calendario-scolastico.md).
+  const editable = puoScrivereData(ruolo, data) && !chiuso;
   // La comunicazione a Rojac è per l'intero asilo (specs/16 -
   // comunicazione-pasti-rojac.md), non per questa sola classe: blocca
   // comunque la maestra qui, come in ogni altra classe. L'admin può
@@ -79,6 +87,7 @@ export default async function PastiClassePage({
       basePath={`/dashboard/pasti/${sezioneId}`}
       data={data}
       editable={editable}
+      messaggioChiusura={messaggioChiuso}
       vuoto={!bambini.length}
       riepilogo={
         bambini.length > 0 && (

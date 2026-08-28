@@ -108,7 +108,9 @@ alcun dato pasto
   `lib/date.ts`.
 - Il ruolo "maestra" può scrivere solo sulla data odierna, l'admin su
   qualunque data — stessa regola e stesso meccanismo (RLS) di
-  [13 - segna-presenza.md](13%20-%20segna-presenza.md).
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md). **Eccezione
+  valida per entrambi, admin incluso**: un giorno di chiusura scolastica
+  (vedi [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)).
 - Presenza e pasto sono indipendenti: si può segnare il pasto anche senza
   aver ancora segnato la presenza (utile se la maestra segna prima il
   pranzo e la presenza a fine giornata) — a meno che la presenza non sia

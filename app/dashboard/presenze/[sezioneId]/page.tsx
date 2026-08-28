@@ -11,6 +11,7 @@ import { sezionePerId } from '@/lib/sezioni';
 import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza } from '@/lib/presenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
+import { chiusuraPerData, isGiornoChiuso, messaggioChiusura as calcolaMessaggioChiusura } from '@/lib/calendarioScolastico';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo, salvaNotaPresenza } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +68,15 @@ export default async function PresenzeClassePage({
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
   const pastoPerBambino = new Map((pastiData ?? []).map((p) => [p.bambino_id, p.mangiato]));
-  const editable = puoScrivereData(ruolo, data);
+
+  const chiusura = await chiusuraPerData(supabase, data);
+  const chiusure = chiusura ? [chiusura] : [];
+  const chiuso = isGiornoChiuso(data, chiusure);
+  const messaggioChiuso = calcolaMessaggioChiusura(data, chiusure);
+  // Un giorno di chiusura scolastica non è scrivibile da nessuno, admin
+  // incluso (specs/53 - calendario-scolastico.md, a differenza della
+  // regola "sola data odierna" sotto, che esenta l'admin).
+  const editable = puoScrivereData(ruolo, data) && !chiuso;
   const numeroPresenti = bambini.filter((b) => presenzaPerBambino.get(b.id)?.stato === 'presente').length;
   const numeroPreAsilo = bambini.filter((b) => presenzaPerBambino.get(b.id)?.pre_asilo).length;
   const numeroPostAsilo = bambini.filter((b) => presenzaPerBambino.get(b.id)?.post_asilo).length;
@@ -81,6 +90,7 @@ export default async function PresenzeClassePage({
       basePath={`/dashboard/presenze/${sezioneId}`}
       data={data}
       editable={editable}
+      messaggioChiusura={messaggioChiuso}
       vuoto={!bambini.length}
       riepilogo={
         bambini.length > 0 && (

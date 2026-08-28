@@ -27,6 +27,9 @@ export function NavHeader({
               <Link href="/admin/maestre" className="text-sm text-stone-600 hover:text-emerald-700">
                 Utenti
               </Link>
+              <Link href="/admin/calendario" className="text-sm text-stone-600 hover:text-emerald-700">
+                Calendario scolastico
+              </Link>
             </>
           )}
         </div>
