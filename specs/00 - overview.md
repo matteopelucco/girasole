@@ -63,6 +63,9 @@ della maestra, `5x` amministrazione.
 - [52 - report-email-automatico.md](52%20-%20report-email-automatico.md) —
   invio automatico notturno dei report (giornaliero/settimanale/mensile)
   in PDF via email
+- [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md) —
+  giorni di chiusura scolastica (admin) e blocco di presenze/pasti nei
+  giorni chiusi, weekend inclusi
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
+import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import { prossimaPresenza, type AzionePresenza, type RigaPresenza } from '@/lib/presenza';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -43,6 +44,7 @@ async function applicaAzionePresenza(
 ) {
   const { supabase, user, profilo } = await requireProfilo();
   assicuraScrivibile(profilo?.ruolo, data);
+  await assicuraGiornoApribile(supabase, data);
 
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
   const prossima = prossimaPresenza(rigaAttuale, azione);
@@ -101,6 +103,7 @@ export async function salvaNotaPresenza(
 ) {
   const { supabase, user, profilo } = await requireProfilo();
   assicuraScrivibile(profilo?.ruolo, data);
+  await assicuraGiornoApribile(supabase, data);
 
   if (!rigaAttuale) {
     throw new Error('Segna prima uno stato di presenza per poter salvare una nota.');

@@ -15,6 +15,7 @@ export function PaginaClasseAttivita({
   basePath,
   data,
   editable,
+  messaggioChiusura,
   vuoto,
   riepilogo,
   children,
@@ -26,6 +27,11 @@ export function PaginaClasseAttivita({
   basePath: string;
   data: string;
   editable: boolean;
+  // Messaggio di chiusura scolastica (specs/53 - calendario-scolastico.md)
+  // per la data corrente, o null se scrivibile. Ha priorità sul banner
+  // "sola lettura" sotto: vale per QUALUNQUE ruolo, admin incluso, a
+  // differenza di quel banner (che riguarda solo maestra/assistente).
+  messaggioChiusura?: string | null;
   vuoto: boolean;
   riepilogo?: ReactNode;
   children: ReactNode;
@@ -45,10 +51,16 @@ export function PaginaClasseAttivita({
 
         {riepilogo}
 
-        {!editable && (
-          <p className="rounded-xl border border-stone-300 bg-stone-50 p-3 text-sm text-stone-600">
-            Sola lettura: puoi modificare solo la data di oggi.
+        {messaggioChiusura ? (
+          <p className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">
+            🔒 {messaggioChiusura}
           </p>
+        ) : (
+          !editable && (
+            <p className="rounded-xl border border-stone-300 bg-stone-50 p-3 text-sm text-stone-600">
+              Sola lettura: puoi modificare solo la data di oggi.
+            </p>
+          )
         )}
 
         {vuoto && <p className="text-sm text-stone-600">Nessun bambino in questa classe.</p>}

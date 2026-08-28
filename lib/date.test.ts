@@ -9,6 +9,7 @@ import {
   giorniInRange,
   isUltimoGiornoMese,
   isUltimoGiornoSettimana,
+  isWeekend,
   lunediSettimana,
   meseDaData,
   mesePrecedente,
@@ -203,5 +204,24 @@ describe('formattaDataOraItaliana', () => {
 
   it('aggiunge lo zero iniziale a giorno/mese/ora/minuti a una cifra', () => {
     expect(formattaDataOraItaliana('2026-03-05T07:09:00Z')).toBe('05/03/2026_08:09');
+  });
+});
+
+describe('isWeekend', () => {
+  it('riconosce un sabato', () => {
+    expect(isWeekend('2026-08-29')).toBe(true);
+  });
+
+  it('riconosce una domenica', () => {
+    expect(isWeekend('2026-08-30')).toBe(true);
+  });
+
+  it('riconosce un giorno feriale', () => {
+    expect(isWeekend('2026-08-28')).toBe(false);
+  });
+
+  it("riconosce un venerdì e un lunedì come feriali (confini del weekend)", () => {
+    expect(isWeekend('2026-08-28')).toBe(false);
+    expect(isWeekend('2026-08-31')).toBe(false);
   });
 });

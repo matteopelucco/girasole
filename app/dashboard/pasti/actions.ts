@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
+import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { contaPastiSiOggiTuttoAsilo } from '@/lib/pastiRojac';
 import { inviaEmail } from '@/lib/email';
@@ -52,6 +53,7 @@ export async function segnaPasto(
   const { supabase, user, profilo } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
   assicuraScrivibile(profilo?.ruolo, data);
+  await assicuraGiornoApribile(supabase, data);
   await assicuraNonAssente(supabase, bambinoId, data);
 
   const note = (formData.get('nota_pasto') as string)?.trim() || null;
@@ -73,6 +75,7 @@ export async function salvaNotaPasto(
   const { supabase, user, profilo } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
   assicuraScrivibile(profilo?.ruolo, data);
+  await assicuraGiornoApribile(supabase, data);
 
   if (!mangiatoAttuale) {
     throw new Error('Segna prima uno stato pasto per poter salvare una nota.');
