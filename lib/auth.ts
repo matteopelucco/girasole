@@ -6,6 +6,7 @@ export type Profilo = {
   nome: string;
   cognome: string;
   ruolo: string;
+  abilitato_ore_lavoro: boolean;
 };
 
 // Richiede una sessione autenticata, senza requisiti di ruolo — usato
@@ -28,7 +29,7 @@ export async function requireProfilo() {
 
   const { data: profilo, error } = await supabase
     .from('profili')
-    .select('nome, cognome, ruolo')
+    .select('nome, cognome, ruolo, abilitato_ore_lavoro')
     .eq('id', user.id)
     .single();
 
@@ -72,6 +73,15 @@ export async function requireStaff(searchParams: { data?: string }) {
 // requireStaff(), su ogni pagina/azione di Pasti.
 export function assicuraAccessoPasti(ruolo: string | null | undefined): void {
   if (ruolo === 'assistente') redirect('/dashboard');
+}
+
+// L'accesso alla sezione "Ore di lavoro" (specs/17 -
+// ore-di-lavoro.md) dipende da un'abilitazione per singolo utente
+// decisa dall'admin (profili.abilitato_ore_lavoro), non dal ruolo —
+// nessun bypass nemmeno per l'admin: da chiamare, dopo requireStaff(),
+// sulla pagina di quella sezione.
+export function assicuraAccessoOreLavoro(abilitato: boolean | null | undefined): void {
+  if (!abilitato) redirect('/dashboard');
 }
 
 // La maestra e l'assistente possono scrivere (inserire/modificare)

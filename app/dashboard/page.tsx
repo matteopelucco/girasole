@@ -7,6 +7,7 @@ import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioA
 import { requireProfilo } from '@/lib/auth';
 import { oggi } from '@/lib/date';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
+import { cardsDashboard } from '@/lib/dashboardSezioni';
 import { creaPromemoria } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,7 @@ export default async function DashboardPage({
   const data = searchParams.data || oggi();
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
+  const cards = cardsDashboard({ data, haSezioni, ruolo, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
 
   const bambini = await bambiniAttiviVisibili(
     supabase,
@@ -79,38 +81,22 @@ export default async function DashboardPage({
             </p>
           )}
 
-          {haSezioni && (
-            <div className={ruolo === 'assistente' ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'}>
+          <div className="grid grid-cols-2 gap-4">
+            {cards.map((c) => (
               <Link
-                href={`/dashboard/presenze?data=${data}`}
-                className="rounded-2xl bg-emerald-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md"
+                key={c.href}
+                href={c.href}
+                className={`rounded-2xl ${c.classi} px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                  c.spanIntero ? 'col-span-2' : ''
+                }`}
               >
                 <span className="block text-3xl" aria-hidden="true">
-                  ☑️
+                  {c.icona}
                 </span>
-                Presenze
+                {c.etichetta}
               </Link>
-              {ruolo !== 'assistente' && (
-                <Link
-                  href={`/dashboard/pasti?data=${data}`}
-                  className="rounded-2xl bg-amber-700 px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-800 hover:shadow-md"
-                >
-                  <span className="block text-3xl" aria-hidden="true">
-                    🍝
-                  </span>
-                  Pasti
-                </Link>
-              )}
-            </div>
-          )}
-
-          <Link
-            href="/dashboard/report"
-            className="flex items-center justify-center gap-2 rounded-xl bg-sky-700 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-800 hover:shadow-md"
-          >
-            <span aria-hidden="true">📊</span>
-            Report
-          </Link>
+            ))}
+          </div>
         </section>
 
         <section>
