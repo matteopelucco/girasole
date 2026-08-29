@@ -27,7 +27,7 @@ export default async function MaestrePage() {
   const [{ data: profili }, { data: sezioni }, { data: assegnazioni }] = await Promise.all([
     supabase
       .from('profili')
-      .select('id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note')
+      .select('id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro')
       .order('cognome'),
     supabase.from('sezioni').select('id, nome').order('nome'),
     supabase.from('maestre_sezioni').select('maestra_id, sezione_id'),
@@ -111,6 +111,10 @@ export default async function MaestrePage() {
                 placeholder="Note (opzionale)"
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
               />
+              <label className="flex items-center gap-2 text-sm text-stone-700 sm:col-span-2">
+                <input type="checkbox" name="abilitato_ore_lavoro" className="h-4 w-4" />
+                Abilita al report ore di lavoro
+              </label>
               <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
@@ -165,6 +169,15 @@ export default async function MaestrePage() {
                       </option>
                     ))}
                   </select>
+                  <label className="flex items-center gap-1 text-xs text-stone-700">
+                    <input
+                      type="checkbox"
+                      name="abilitato_ore_lavoro"
+                      defaultChecked={p.abilitato_ore_lavoro}
+                      className="h-3.5 w-3.5"
+                    />
+                    Ore di lavoro
+                  </label>
                   <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
                     Aggiorna
                   </PulsanteInvio>

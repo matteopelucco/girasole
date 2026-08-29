@@ -16,6 +16,9 @@ Allora vedo un selettore di data con selezionata la data odierna
 E vedo due pulsanti/schede "Presenze" e "Pasti", ciascuno con un'icona
 (☑️ per Presenze, 🍝 per Pasti) oltre al testo
 E vedo anche il pulsante/scheda "Report" con la sua icona (📊)
+E se il mio profilo è abilitato al report ore, vedo anche il
+pulsante/scheda "Ore di lavoro" con la sua icona (🕒) — vedi
+[17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)
 
 ## Scenario: da Presenze si arriva alle classi e poi ai bambini
 Dato che sono sulla dashboard con una data selezionata
@@ -101,6 +104,12 @@ successiva, e nessun dato di altri bambini
 - Priorità a interfaccia rapida, pochi tap, testo leggibile: le maestre
   useranno l'app prevalentemente da smartphone, opzionalmente da tablet e
   desktop in sezione — vedi [01 - ux.md](01%20-%20ux.md).
+- Le card/pulsanti Presenze/Pasti/Report/Ore di lavoro condividono
+  un'unica griglia bilanciata a due colonne: quali card compaiono dipende
+  da ruolo, sezioni assegnate e abilitazione (vedi
+  [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)), ma quando il
+  numero di card visibili è dispari l'ultima occupa l'intera larghezza,
+  per non lasciare un buco vuoto in griglia.
 - Il denominatore "Y" del riepilogo aggregato "Pasti: X/Y" conta **tutti**
   i bambini attivi di tutte le classi visibili, indipendentemente dal
   loro stato di presenza/assenza/malattia — a differenza del riepilogo

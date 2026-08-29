@@ -8,7 +8,8 @@ import type { EsitoAzione } from '@/components/FormConEsito';
 
 const RUOLI_VALIDI = ['admin', 'maestra', 'assistente', 'genitore'] as const;
 
-// Campi condivisi da creazione e modifica di un utente (specs/03).
+// Campi condivisi da creazione e modifica di un utente (specs/03,
+// specs/17 - ore-di-lavoro.md per abilitatoOreLavoro).
 function campiUtente(formData: FormData) {
   return {
     nome: ((formData.get('nome') as string) || '').trim(),
@@ -17,6 +18,7 @@ function campiUtente(formData: FormData) {
     ruolo: formData.get('ruolo') as string,
     indirizzoResidenza: ((formData.get('indirizzo_residenza') as string) || '').trim(),
     note: ((formData.get('note') as string) || '').trim(),
+    abilitatoOreLavoro: formData.get('abilitato_ore_lavoro') === 'on',
   };
 }
 
@@ -32,7 +34,7 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
   const confermaPassword = (formData.get('conferma_password') as string) || '';
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note } = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro } = campiUtente(formData);
 
   if (
     !email ||
@@ -67,10 +69,10 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
     return { ok: false, messaggio: "Non è stato possibile creare l'utente. Riprova.", dettaglio: error.message };
   }
 
-  if (indirizzoResidenza || note) {
+  if (indirizzoResidenza || note || abilitatoOreLavoro) {
     await supabase
       .from('profili')
-      .update({ indirizzo_residenza: indirizzoResidenza, note })
+      .update({ indirizzo_residenza: indirizzoResidenza, note, abilitato_ore_lavoro: abilitatoOreLavoro })
       .eq('id', data.user!.id);
   }
 
@@ -84,7 +86,7 @@ export async function aggiornaUtente(
 ): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note } = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro } = campiUtente(formData);
 
   if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) {
     return { ok: false, messaggio: 'Dati utente non validi.' };
@@ -92,7 +94,15 @@ export async function aggiornaUtente(
 
   const { error } = await supabase
     .from('profili')
-    .update({ nome, cognome, telefono, ruolo, indirizzo_residenza: indirizzoResidenza, note })
+    .update({
+      nome,
+      cognome,
+      telefono,
+      ruolo,
+      indirizzo_residenza: indirizzoResidenza,
+      note,
+      abilitato_ore_lavoro: abilitatoOreLavoro,
+    })
     .eq('id', profiloId);
   if (error) {
     return { ok: false, messaggio: "Impossibile aggiornare l'utente.", dettaglio: error.message };

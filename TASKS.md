@@ -1077,6 +1077,59 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       nella suite), solo sull'idempotenza della route, quindi non è
       impattato dal cambio di formato.
 
+## Ore di lavoro: abilitazione per utente e quarta sezione in dashboard (v0.13.0)
+- [x] Richiesta dell'utente: primo passo verso la possibilità, per il
+      personale retribuito, di segnare le ore di lavoro effettuate o le
+      assenze. In questa fase si abilita solo l'accesso a una nuova
+      sezione "Ore di lavoro" (quarta, insieme a Presenze/Pasti/Report),
+      per utente, decisa dall'admin — **non** come le ore vengono
+      effettivamente registrate (fuori scope, fase successiva).
+- [x] Nuovo `specs/17 - ore-di-lavoro.md` (aggiunto all'indice in
+      `specs/00 - overview.md`); `specs/03 - utenti-e-ruoli.md` esteso
+      con il nuovo campo utente; `specs/12 - dashboard-maestre.md`
+      esteso con lo scenario della quarta card e la regola della griglia
+      bilanciata.
+- [x] `supabase/migrations/0023_ore_lavoro_abilitazione.sql`: nuova
+      colonna `profili.abilitato_ore_lavoro` (booleano, default falso).
+      Nessuna nuova policy RLS necessaria (colonna coperta dalle policy
+      di riga già esistenti su `profili`).
+- [x] `lib/auth.ts`: `Profilo` include ora `abilitato_ore_lavoro`
+      (letto da `requireProfilo`); nuova `assicuraAccessoOreLavoro`
+      (redirect a `/dashboard` se non abilitato — stesso pattern di
+      `assicuraAccessoPasti`), usata dalla nuova pagina
+      `app/dashboard/ore-lavoro/page.tsx` (placeholder: nessuna form,
+      solo il messaggio che la funzione arriva in una fase successiva).
+- [x] `lib/dashboardSezioni.ts` (nuovo, puro): `cardsDashboard` costruisce
+      l'elenco delle card Presenze/Pasti/Report/Ore di lavoro secondo
+      ruolo/sezioni assegnate/abilitazione, con la logica della griglia
+      bilanciata a due colonne (l'ultima card occupa l'intera larghezza
+      quando il numero visibile è dispari) — unit test in
+      `lib/dashboardSezioni.test.ts`. `app/dashboard/page.tsx`
+      semplificata: un'unica griglia invece del blocco Presenze/Pasti
+      più il pulsante Report separato di prima (Report ora ha lo stesso
+      stile "card grande" degli altri, non più una barra sottile).
+- [x] `/admin/maestre`: nuovo checkbox "Abilita al report ore di lavoro"
+      nel form di creazione e "Ore di lavoro" nella riga di modifica di
+      ogni utente (`app/admin/maestre/page.tsx`,
+      `app/admin/maestre/actions.ts:campiUtente/creaUtente/aggiornaUtente`).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (144 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Suite e2e Playwright non eseguibile da
+      questo ambiente sandbox (nessun dev server né credenziali
+      Supabase): nuovo `e2e/17-ore-di-lavoro.spec.ts` (un test per
+      ciascuno dei 5 scenari di specs/17, incluso axe-core sulla nuova
+      pagina) da verificare con
+      `npx playwright test e2e/17-ore-di-lavoro.spec.ts` (e riesegui
+      12, 03) dal tuo ambiente locale.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0023_ore_lavoro_abilitazione.sql` nel SQL
+      Editor di Supabase (test e produzione) prima di usare la nuova
+      abilitazione — senza, `/admin/maestre` e la dashboard falliscono
+      a leggere/scrivere la colonna `abilitato_ore_lavoro`.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
+- [ ] Ore di lavoro: come il personale segna effettivamente ore
+      lavorate/assenze (form, calcolo, riepiloghi, export) — questa
+      abilitazione (v0.13.0) è solo il primo passo

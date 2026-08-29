@@ -55,6 +55,10 @@ della maestra, `5x` amministrazione.
   comunicare i pasti di una classe a Rojac (mensa esterna), blocco
   successivo delle modifiche per la maestra e log delle comunicazioni
   nei report
+- [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md) — abilitazione per
+  utente (decisa dall'admin) e punto d'ingresso in dashboard per la
+  futura registrazione delle ore di lavoro/assenze del personale
+  retribuito
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
 - [51 - report.md](51%20-%20report.md) — report tabellari di

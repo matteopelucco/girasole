@@ -26,6 +26,9 @@ utenti da `/admin/maestre`.
 - **nome**
 - **cognome**
 - **numero di telefono**
+- **abilitazione al report ore di lavoro** — checkbox, falsa di default;
+  decide se l'utente vede la sezione "Ore di lavoro" in dashboard (vedi
+  [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
 
 ## Ruoli
 Un utente ha uno e un solo ruolo, tra:
