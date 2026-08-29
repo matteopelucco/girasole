@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, type AllegatoEmail } from '@/lib/email';
 import {
-  generaSchedaGiornalieraHtml,
+  generaTabellaGiornalieraHtml,
   aggregaReportPeriodoTutteLeClassi,
   recuperaComunicazioniPastiPeriodo,
   type SezioneConRighe,
@@ -193,7 +193,7 @@ export async function GET(request: Request) {
   if (daPreparare.length) {
     const allegati = await Promise.all(daPreparare.map((d) => d.genera()));
     const htmlGiornaliero = daPreparare.some((d) => d.tipo === 'giornaliero')
-      ? await generaSchedaGiornalieraHtml(dataReport)
+      ? await generaTabellaGiornalieraHtml(dataReport)
       : `<p>In allegato: ${daPreparare.map((d) => d.tipo).join(', ')}.</p>`;
 
     await inviaEmail({

@@ -36,6 +36,12 @@ per classe attiva, con presenze, presenze pre-asilo, presenze post-asilo
 e pasti "sì"
 E ciascun PDF riporta in intestazione il periodo a cui si riferisce e la
 data di generazione, in un formato adatto alla stampa (A4 verticale)
+E il corpo stesso dell'email (non solo gli allegati PDF) mostra il
+riepilogo del giorno appena concluso in forma tabellare — una tabella
+per classe attiva, con le stesse colonne del report giornaliero a
+schermo (Bambino, Presenze, Pre-asilo, Post-asilo, Pasti) — non più un
+elenco puntato: così il contenuto è leggibile anche senza aprire un
+allegato, sia su client email desktop che mobile
 
 ## Scenario: idempotenza per giorno
 Dato che il job è già stato eseguito con successo per il giorno X
@@ -116,8 +122,9 @@ un'informazione utile quanto la presenza)
   libreria PDF leggera lato server, oppure il rendering HTML→PDF di una
   pagina già esistente) resta un passaggio da concordare esplicitamente
   in fase di implementazione, non è stata decisa qui.
-- Il contenuto dei tre PDF riusa la stessa logica di aggregazione già
-  scritta per la UI di [51 - report.md](51%20-%20report.md)
-  (`lib/report.ts`), per evitare di duplicare il calcolo di presenze/
-  pasti/pre-asilo/post-asilo in due posti (vedi `CLAUDE.md`, sezione
-  Analisi statica — `jscpd`).
+- Il contenuto dei tre PDF, e quello della tabella nel corpo
+  dell'email, riusano la stessa logica di aggregazione già scritta per
+  la UI di [51 - report.md](51%20-%20report.md) (`lib/report.ts`), per
+  evitare di duplicare il calcolo di presenze/pasti/pre-asilo/
+  post-asilo in più posti (vedi `CLAUDE.md`, sezione Analisi statica —
+  `jscpd`).
