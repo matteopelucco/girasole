@@ -1034,6 +1034,49 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       — senza, la tabella `giorni_chiusura` non esiste e la pagina fallisce
       nel caricare l'elenco.
 
+## Corpo dell'email del report notturno in forma tabellare (v0.12.1)
+- [x] Richiesta dell'utente: il report notturno via email
+      (specs/52 - report-email-automatico.md) arrivava con i 3 PDF già
+      tabellari, ma il corpo dell'email stessa (visibile senza aprire
+      allegati) era ancora un elenco puntato (`<ul><li>`), residuo della
+      versione precedente all'introduzione dei PDF. Richiesto che anche
+      il corpo mostri la stessa tabella vista nella sezione Report a
+      schermo.
+- [x] `specs/52 - report-email-automatico.md` aggiornata: nuova frase
+      nello scenario "invio notturno dei tre report" e nella nota di
+      implementazione che richiede esplicitamente che anche il corpo
+      dell'email (non solo gli allegati PDF) sia una tabella per classe
+      con le colonne del report a schermo.
+- [x] `lib/reportPresenze.ts`: nuova funzione pura
+      `formattaTabellaReportHtml(titolo, sezioni)` (una `<table>` per
+      classe attiva, colonne Bambino/Presenze/Pre-asilo/Post-asilo/
+      Pasti, avviso ⚠️ accanto al nome quando ci sono inconsistenze —
+      stessa dicitura di `components/AvvisoInconsistenza.tsx`), unit
+      test in `lib/reportPresenze.test.ts`. `generaSchedaGiornalieraHtml`
+      (che eseguiva query proprie e produceva l'elenco puntato) sostituita
+      da `generaTabellaGiornalieraHtml`, che riusa
+      `aggregaReportPeriodoTutteLeClassi` (già usata per gli allegati PDF
+      settimanale/mensile) con `inizio = fine = data`, evitando di
+      duplicare la logica di aggregazione (CLAUDE.md, jscpd) — effetto
+      collaterale positivo: il corpo mail ora filtra bambini/classi
+      attivi come lo schermo (prima interrogava anche i bambini non
+      attivi).
+- [x] `app/api/cron/report-presenze/route.ts` aggiornata al nuovo nome di
+      funzione.
+- [x] Nessuna modifica alla generazione dei 3 PDF allegati
+      (`lib/pdfReport.ts`), già tabellari e allineati al report a schermo
+      da una sessione precedente.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (136 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Suite e2e Playwright non eseguibile da
+      questo ambiente sandbox (nessun dev server né credenziali
+      Supabase): da verificare con
+      `npx playwright test e2e/52-report-email-automatico.spec.ts` dal
+      tuo ambiente locale — quel file non fa assert sul contenuto HTML
+      del corpo email (nessuna infrastruttura di lettura casella email
+      nella suite), solo sull'idempotenza della route, quindi non è
+      impattato dal cambio di formato.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

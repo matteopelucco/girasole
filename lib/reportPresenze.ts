@@ -1,14 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formattaDataItaliana } from '@/lib/date';
 import { aggregaConteggiPresenzePasti, type RigaReportBambino } from '@/lib/report';
-import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import type { ComunicazionePasto } from '@/lib/comunicazionePasti';
-
-const ETICHETTE_STATO: Record<string, string> = {
-  presente: 'Presente',
-  assente: 'Assente',
-  malattia: 'Malattia',
-};
 
 // Se la query Supabase è fallita (es. service_role key mancante/non
 // valida, permessi), solleva un errore invece di trattarla come "nessun
@@ -26,65 +19,59 @@ export function righeOSollevaErrore<T>(
   return risultato.data ?? [];
 }
 
-// Scheda HTML delle presenze/assenze/malattie di una data, raggruppata
-// per classe attiva — usata dal report notturno (specs/52 -
-// report-email-automatico.md). Usa la service_role key (bypassa la
-// RLS): il cron non ha una sessione utente e deve poter leggere tutte
-// le classi.
-export async function generaSchedaGiornalieraHtml(data: string): Promise<string> {
-  const supabase = createAdminClient();
+export type SezioneConRighe = { nome: string; righe: RigaReportBambino[] };
 
-  const [rSezioni, rBambini, rPresenze, rPasti] = await Promise.all([
-    supabase.from('sezioni').select('id, nome').eq('attiva', true).order('nome'),
-    supabase.from('bambini').select('id, nome, cognome, sezione_id').order('cognome'),
-    supabase.from('presenze').select('bambino_id, stato, note, pre_asilo, post_asilo').eq('data', data),
-    supabase.from('pasti').select('bambino_id, mangiato').eq('data', data),
-  ]);
-  const sezioni = righeOSollevaErrore(rSezioni, 'lettura sezioni');
-  const bambini = righeOSollevaErrore(rBambini, 'lettura bambini');
-  const presenze = righeOSollevaErrore(rPresenze, 'lettura presenze');
-  const pasti = righeOSollevaErrore(rPasti, 'lettura pasti');
+const STILE_TABELLA = 'border-collapse:collapse;width:100%';
+const STILE_CELLA = 'border:1px solid #ccc;padding:4px 8px;text-align:left';
+const STILE_CELLA_NUMERO = 'border:1px solid #ccc;padding:4px 8px;text-align:right';
 
-  const presenzaPerBambino = new Map(presenze.map((p) => [p.bambino_id, p]));
-  const pastoPerBambino = new Map(pasti.map((p) => [p.bambino_id, p.mangiato]));
+// Riga di una tabella HTML per un bambino, con lo stesso avviso ⚠️
+// mostrato accanto al nome nella tabella a schermo
+// (components/AvvisoInconsistenza.tsx) quando ci sono inconsistenze
+// (specs/06 - controllo-consistenza.md).
+function rigaHtml(r: RigaReportBambino): string {
+  const avviso = r.inconsistenze.length
+    ? ` <span title="${r.inconsistenze.join(' ')}">⚠️ Inconsistenza</span>`
+    : '';
+  return `<tr><td style="${STILE_CELLA}">${r.nome} ${r.cognome}${avviso}</td><td style="${STILE_CELLA_NUMERO}">${r.presenze}</td><td style="${STILE_CELLA_NUMERO}">${r.preAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.postAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.pasti}</td></tr>`;
+}
 
+// Corpo HTML del report notturno (specs/52 - report-email-automatico.md):
+// una tabella per classe attiva, stesse colonne e stesso raggruppamento
+// del report a schermo (app/dashboard/report/page.tsx) — non più un
+// elenco puntato. Funzione pura (nessun I/O): chi chiama ha già
+// aggregato i dati (aggregaReportPeriodoTutteLeClassi), stessa forma
+// usata per i PDF (lib/pdfReport.ts), per non duplicare la logica di
+// presentazione in più posti (CLAUDE.md, jscpd).
+export function formattaTabellaReportHtml(titolo: string, sezioni: SezioneConRighe[]): string {
   const sezioniHtml = sezioni
     .map((sezione) => {
-      const bambiniSezione = bambini.filter((b) => b.sezione_id === sezione.id);
-      if (!bambiniSezione.length) return '';
-
-      const righe = bambiniSezione
-        .map((b) => {
-          const presenza = presenzaPerBambino.get(b.id);
-          const stato = presenza ? ETICHETTE_STATO[presenza.stato] ?? presenza.stato : 'Non segnato';
-          const extra: string[] = [];
-          if (presenza?.pre_asilo) extra.push('pre-asilo');
-          if (presenza?.post_asilo) extra.push('post-asilo');
-          const pasto = pastoPerBambino.get(b.id);
-          if (pasto) extra.push(`pasto: ${pasto === 'si' ? 'sì' : 'no'}`);
-          const dettaglio = extra.length ? ` (${extra.join(', ')})` : '';
-          const nota = presenza?.note ? ` — ${presenza.note}` : '';
-          const problemi = inconsistenzeGiorno({
-            stato: presenza?.stato as StatoPresenza | undefined,
-            preAsilo: presenza?.pre_asilo,
-            postAsilo: presenza?.post_asilo,
-            mangiato: pasto as StatoPasto | undefined,
-          });
-          const avviso = problemi.length ? ` ⚠️ <em>${problemi.join(' ')}</em>` : '';
-          return `<li>${b.nome} ${b.cognome}: <strong>${stato}</strong>${dettaglio}${nota}${avviso}</li>`;
-        })
-        .join('');
-
-      return `<h2>${sezione.nome}</h2><ul>${righe}</ul>`;
+      const corpo = sezione.righe.length
+        ? `<table style="${STILE_TABELLA}"><thead><tr>` +
+          `<th style="${STILE_CELLA}">Bambino</th>` +
+          `<th style="${STILE_CELLA_NUMERO}">Presenze</th>` +
+          `<th style="${STILE_CELLA_NUMERO}">Pre-asilo</th>` +
+          `<th style="${STILE_CELLA_NUMERO}">Post-asilo</th>` +
+          `<th style="${STILE_CELLA_NUMERO}">Pasti</th>` +
+          `</tr></thead><tbody>${sezione.righe.map(rigaHtml).join('')}</tbody></table>`
+        : '<p>Nessun bambino in questa classe.</p>';
+      return `<h2>${sezione.nome}</h2>${corpo}`;
     })
     .join('');
 
-  return `<h1>Presenze del ${formattaDataItaliana(data)}</h1>${
-    sezioniHtml || '<p>Nessuna classe attiva.</p>'
-  }`;
+  return `<h1>${titolo}</h1>${sezioniHtml || '<p>Nessuna classe attiva.</p>'}`;
 }
 
-export type SezioneConRighe = { nome: string; righe: RigaReportBambino[] };
+// Corpo HTML del report notturno per un solo giorno — usata come corpo
+// dell'email dal job notturno (specs/52). Usa la service_role key
+// (bypassa la RLS): il cron non ha una sessione utente e deve poter
+// leggere tutte le classi. Riusa aggregaReportPeriodoTutteLeClassi (con
+// inizio = fine = data) per non duplicare la logica di aggregazione già
+// scritta per il settimanale/mensile e per i PDF (CLAUDE.md, jscpd).
+export async function generaTabellaGiornalieraHtml(data: string): Promise<string> {
+  const sezioni = await aggregaReportPeriodoTutteLeClassi(data, data);
+  return formattaTabellaReportHtml(`Presenze del ${formattaDataItaliana(data)}`, sezioni);
+}
 
 // Aggrega presenze (incluse pre-asilo/post-asilo) e pasti per ogni
 // classe attiva, nel periodo [inizio, fine] — usata dal report
