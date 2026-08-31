@@ -30,6 +30,9 @@ export function NavHeader({
               <Link href="/admin/calendario" className="text-sm text-stone-600 hover:text-emerald-700">
                 Calendario scolastico
               </Link>
+              <Link href="/admin/profili-orari" className="text-sm text-stone-600 hover:text-emerald-700">
+                Profili orari
+              </Link>
             </>
           )}
         </div>

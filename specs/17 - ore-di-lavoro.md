@@ -68,3 +68,7 @@ l'accesso alla sezione, non la sua funzione
   registrate (form di inserimento, calcolo ore/assenze, riepiloghi,
   export, eventuali approvazioni) — qui si abilita solo l'accesso al
   punto d'ingresso della sezione.
+- L'admin può anche definire un "orario tipo" settimanale (ore previste
+  per giorno) e assegnarlo a ciascuna persona, indipendentemente
+  dall'abilitazione descritta qui — vedi
+  [54 - profili-orari.md](54%20-%20profili-orari.md).

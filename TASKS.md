@@ -1127,9 +1127,61 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       abilitazione — senza, `/admin/maestre` e la dashboard falliscono
       a leggere/scrivere la colonna `abilitato_ore_lavoro`.
 
+## Profili orari: definizione e assegnazione al personale (v0.14.0)
+- [x] Richiesta dell'utente: secondo passo verso le ore di lavoro del
+      personale. L'admin deve poter definire "orari tipo" settimanali
+      (es. "35 ore settimanali" = 7h lun-ven, "32 ore settimanali" = 4
+      giorni a 7h + 1 a 4h, "Assistente 15h" = 3h lun-ven) in un pannello
+      dedicato, e assegnarne uno a ciascuna persona. **Non** come questi
+      profili verranno poi usati per calcolare/validare le ore segnate
+      (fuori scope, fase successiva).
+- [x] Nuovo `specs/54 - profili-orari.md` (aggiunto all'indice in
+      `specs/00 - overview.md`); `specs/17 - ore-di-lavoro.md` e
+      `specs/03 - utenti-e-ruoli.md` estese con un riferimento incrociato
+      — l'assegnazione del profilo orario è **indipendente**
+      dall'abilitazione al report ore (due controlli separati, scelta
+      esplicita per restare semplici: CLAUDE.md, niente validazioni per
+      scenari che non servono ora).
+- [x] `supabase/migrations/0024_profili_orari.sql`: nuova tabella
+      `profili_orari` (nome + ore lun-ven, `numeric(4,2)`), RLS solo
+      admin (nessun altro ruolo la legge ancora); nuova colonna
+      `profili.profilo_orario_id` (`on delete set null`: eliminare un
+      profilo non blocca nulla, svuota solo l'assegnazione — stesso
+      pattern di `sezioni.anno_scolastico_id`).
+- [x] `lib/profiliOrari.ts` (nuovo, puro): `totaleOreSettimanali` somma
+      i 5 giorni (accetta anche stringhe numeriche, per come Postgres
+      può restituire una colonna `numeric` via PostgREST) — unit test in
+      `lib/profiliOrari.test.ts`.
+- [x] Nuova sezione admin `/admin/profili-orari` (elenco + creazione) e
+      `/admin/profili-orari/[id]` (modifica/eliminazione), stesso
+      pattern list+detail già usato per `/admin/calendario` (specs/53).
+      `components/CampiOreSettimana.tsx` (nuovo) condivide i 5 input
+      ore lun-ven tra creazione e modifica (CLAUDE.md, jscpd — evitato un
+      duplicato reale, non solo simile per forma). Link "Profili orari"
+      aggiunto a `NavHeader` per l'admin.
+- [x] `/admin/maestre`: nuovo menu "Profilo orario" (opzionale) nel form
+      di creazione e nella riga di modifica di ogni utente
+      (`app/admin/maestre/page.tsx`,
+      `app/admin/maestre/actions.ts:campiUtente/creaUtente/aggiornaUtente`),
+      indipendente dal checkbox "Ore di lavoro" già esistente.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (150 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Suite e2e Playwright non eseguibile da
+      questo ambiente sandbox (nessun dev server né credenziali
+      Supabase): nuovo `e2e/54-profili-orari.spec.ts` (7 test, uno per
+      scenario di specs/54, incluso axe-core) da verificare con
+      `npx playwright test e2e/54-profili-orari.spec.ts` dal tuo
+      ambiente locale.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0024_profili_orari.sql` nel SQL Editor di
+      Supabase (test e produzione) prima di usare `/admin/profili-orari`
+      — senza, la tabella `profili_orari` e la colonna
+      `profili.profilo_orario_id` non esistono.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
 - [ ] Ore di lavoro: come il personale segna effettivamente ore
-      lavorate/assenze (form, calcolo, riepiloghi, export) — questa
+      lavorate/assenze (form, calcolo, riepiloghi, export), e come i
+      profili orari (v0.14.0) entrano in quel calcolo — questa
       abilitazione (v0.13.0) è solo il primo passo

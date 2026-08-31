@@ -29,6 +29,9 @@ utenti da `/admin/maestre`.
 - **abilitazione al report ore di lavoro** — checkbox, falsa di default;
   decide se l'utente vede la sezione "Ore di lavoro" in dashboard (vedi
   [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
+- **profilo orario** — menu a tendina opzionale, tra i profili definiti
+  dall'admin (vedi [54 - profili-orari.md](54%20-%20profili-orari.md)),
+  indipendente dall'abilitazione al report ore
 
 ## Ruoli
 Un utente ha uno e un solo ruolo, tra:

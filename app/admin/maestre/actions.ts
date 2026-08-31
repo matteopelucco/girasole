@@ -9,8 +9,11 @@ import type { EsitoAzione } from '@/components/FormConEsito';
 const RUOLI_VALIDI = ['admin', 'maestra', 'assistente', 'genitore'] as const;
 
 // Campi condivisi da creazione e modifica di un utente (specs/03,
-// specs/17 - ore-di-lavoro.md per abilitatoOreLavoro).
+// specs/17 - ore-di-lavoro.md per abilitatoOreLavoro, specs/54 -
+// profili-orari.md per profiloOrarioId).
 function campiUtente(formData: FormData) {
+  const profiloOrarioId = (formData.get('profilo_orario_id') as string) || '';
+
   return {
     nome: ((formData.get('nome') as string) || '').trim(),
     cognome: ((formData.get('cognome') as string) || '').trim(),
@@ -19,6 +22,9 @@ function campiUtente(formData: FormData) {
     indirizzoResidenza: ((formData.get('indirizzo_residenza') as string) || '').trim(),
     note: ((formData.get('note') as string) || '').trim(),
     abilitatoOreLavoro: formData.get('abilitato_ore_lavoro') === 'on',
+    // Stringa vuota ("Nessun profilo orario") diventa null, non una FK
+    // verso una riga inesistente.
+    profiloOrarioId: profiloOrarioId || null,
   };
 }
 
@@ -34,7 +40,8 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
   const confermaPassword = (formData.get('conferma_password') as string) || '';
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro } = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro, profiloOrarioId } =
+    campiUtente(formData);
 
   if (
     !email ||
@@ -69,10 +76,15 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
     return { ok: false, messaggio: "Non è stato possibile creare l'utente. Riprova.", dettaglio: error.message };
   }
 
-  if (indirizzoResidenza || note || abilitatoOreLavoro) {
+  if (indirizzoResidenza || note || abilitatoOreLavoro || profiloOrarioId) {
     await supabase
       .from('profili')
-      .update({ indirizzo_residenza: indirizzoResidenza, note, abilitato_ore_lavoro: abilitatoOreLavoro })
+      .update({
+        indirizzo_residenza: indirizzoResidenza,
+        note,
+        abilitato_ore_lavoro: abilitatoOreLavoro,
+        profilo_orario_id: profiloOrarioId,
+      })
       .eq('id', data.user!.id);
   }
 
@@ -86,7 +98,8 @@ export async function aggiornaUtente(
 ): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro } = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro, profiloOrarioId } =
+    campiUtente(formData);
 
   if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) {
     return { ok: false, messaggio: 'Dati utente non validi.' };
@@ -102,6 +115,7 @@ export async function aggiornaUtente(
       indirizzo_residenza: indirizzoResidenza,
       note,
       abilitato_ore_lavoro: abilitatoOreLavoro,
+      profilo_orario_id: profiloOrarioId,
     })
     .eq('id', profiloId);
   if (error) {
