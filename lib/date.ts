@@ -124,14 +124,22 @@ export function formattaDataOraItaliana(istante: string | Date): string {
   return `${data}_${ora}`;
 }
 
-// Vero se `data` è un sabato o una domenica (specs/53 - calendario-
-// scolastico.md: l'asilo è sempre chiuso in questi giorni, senza bisogno
-// di un giorno di chiusura registrato dall'admin). getUTCDay(): 0 =
-// domenica, 6 = sabato.
-export function isWeekend(data: string): boolean {
+// Giorno della settimana in formato ISO (1 = lunedì ... 7 = domenica),
+// usato da isWeekend e dal report ore di lavoro (specs/18 -
+// report-ore-lavoro.md) per sapere quale campo ore_* del profilo orario
+// (specs/54) corrisponde a una data.
+export function giornoSettimanaIso(data: string): number {
   const [anno, mese, giorno] = data.split('-').map(Number);
   const giornoSettimana = new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay();
-  return giornoSettimana === 0 || giornoSettimana === 6;
+  return giornoSettimana === 0 ? 7 : giornoSettimana;
+}
+
+// Vero se `data` è un sabato o una domenica (specs/53 - calendario-
+// scolastico.md: l'asilo è sempre chiuso in questi giorni, senza bisogno
+// di un giorno di chiusura registrato dall'admin).
+export function isWeekend(data: string): boolean {
+  const giorno = giornoSettimanaIso(data);
+  return giorno === 6 || giorno === 7;
 }
 
 // Tutte le date da `inizio` a `fine` (incluse), in ordine.
@@ -143,4 +151,14 @@ export function giorniInRange(inizio: string, fine: string): string[] {
     corrente = sommaGiorni(corrente, 1);
   }
   return giorni;
+}
+
+// I 5 giorni feriali (lunedì-venerdì) della settimana che contiene
+// `data` — usati dal report ore di lavoro (specs/18 -
+// report-ore-lavoro.md), che mostra/registra solo questi giorni: sabato
+// e domenica sono chiusura implicita (specs/53), coerente con i profili
+// orari (specs/54) che non prevedono ore in quei due giorni.
+export function giorniLavorativiSettimana(data: string): string[] {
+  const lunedi = lunediSettimana(data);
+  return giorniInRange(lunedi, sommaGiorni(lunedi, 4));
 }

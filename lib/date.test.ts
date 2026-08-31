@@ -7,6 +7,8 @@ import {
   formattaIntervalloItaliano,
   formattaMeseItaliano,
   giorniInRange,
+  giorniLavorativiSettimana,
+  giornoSettimanaIso,
   isUltimoGiornoMese,
   isUltimoGiornoSettimana,
   isWeekend,
@@ -223,5 +225,39 @@ describe('isWeekend', () => {
   it("riconosce un venerdì e un lunedì come feriali (confini del weekend)", () => {
     expect(isWeekend('2026-08-28')).toBe(false);
     expect(isWeekend('2026-08-31')).toBe(false);
+  });
+});
+
+describe('giorniLavorativiSettimana', () => {
+  it('restituisce i 5 giorni feriali lunedì-venerdì della settimana, partendo da un giorno feriale', () => {
+    expect(giorniLavorativiSettimana('2026-09-02')).toEqual([
+      '2026-08-31',
+      '2026-09-01',
+      '2026-09-02',
+      '2026-09-03',
+      '2026-09-04',
+    ]);
+  });
+
+  it('partendo da un weekend restituisce comunque i giorni feriali della stessa settimana ISO', () => {
+    expect(giorniLavorativiSettimana('2026-09-06')).toEqual([
+      '2026-08-31',
+      '2026-09-01',
+      '2026-09-02',
+      '2026-09-03',
+      '2026-09-04',
+    ]);
+  });
+});
+
+describe('giornoSettimanaIso', () => {
+  it('restituisce 1 per lunedì e 7 per domenica, in ordine per tutta la settimana', () => {
+    expect(giornoSettimanaIso('2026-08-31')).toBe(1); // lunedì
+    expect(giornoSettimanaIso('2026-09-01')).toBe(2); // martedì
+    expect(giornoSettimanaIso('2026-09-02')).toBe(3); // mercoledì
+    expect(giornoSettimanaIso('2026-09-03')).toBe(4); // giovedì
+    expect(giornoSettimanaIso('2026-09-04')).toBe(5); // venerdì
+    expect(giornoSettimanaIso('2026-09-05')).toBe(6); // sabato
+    expect(giornoSettimanaIso('2026-09-06')).toBe(7); // domenica
   });
 });

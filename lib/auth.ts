@@ -7,6 +7,7 @@ export type Profilo = {
   cognome: string;
   ruolo: string;
   abilitato_ore_lavoro: boolean;
+  profilo_orario_id: string | null;
 };
 
 // Richiede una sessione autenticata, senza requisiti di ruolo — usato
@@ -29,7 +30,7 @@ export async function requireProfilo() {
 
   const { data: profilo, error } = await supabase
     .from('profili')
-    .select('nome, cognome, ruolo, abilitato_ore_lavoro')
+    .select('nome, cognome, ruolo, abilitato_ore_lavoro, profilo_orario_id')
     .eq('id', user.id)
     .single();
 

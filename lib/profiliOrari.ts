@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 // I campi ore_* arrivano da una colonna `numeric` di Postgres via
 // PostgREST: a seconda della versione può essere già un number oppure
 // una stringa (per non perdere precisione) — number | string accetta
@@ -20,4 +22,23 @@ export function totaleOreSettimanali(profilo: ProfiloOrario): number {
   return [profilo.ore_lunedi, profilo.ore_martedi, profilo.ore_mercoledi, profilo.ore_giovedi, profilo.ore_venerdi]
     .map(Number)
     .reduce((totale, ore) => totale + ore, 0);
+}
+
+// Il profilo orario assegnato a un utente (specs/18 -
+// report-ore-lavoro.md, precarica le ore ordinarie del report
+// settimanale), null se `profiloOrarioId` è null o non esiste più (fa
+// I/O, resta coperta solo da e2e — vedi CLAUDE.md, criterio unit test).
+export async function recuperaProfiloOrario(
+  supabase: SupabaseClient,
+  profiloOrarioId: string | null | undefined
+): Promise<ProfiloOrario | null> {
+  if (!profiloOrarioId) return null;
+
+  const { data } = await supabase
+    .from('profili_orari')
+    .select('ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi')
+    .eq('id', profiloOrarioId)
+    .maybeSingle();
+
+  return data;
 }
