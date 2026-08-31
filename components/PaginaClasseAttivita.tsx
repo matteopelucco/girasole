@@ -37,8 +37,7 @@ export function PaginaClasseAttivita({
   children: ReactNode;
 }) {
   return (
-    <>
-      <NavHeader nome={nome} ruolo={ruolo} />
+    <NavHeader nome={nome} ruolo={ruolo}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <div>
           <a href={backHref} className="text-sm text-stone-600 hover:text-stone-900">
@@ -67,6 +66,6 @@ export function PaginaClasseAttivita({
 
         <ul className="space-y-3">{children}</ul>
       </main>
-    </>
+    </NavHeader>
   );
 }

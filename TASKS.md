@@ -1293,6 +1293,33 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       nel SQL Editor di Supabase (test e produzione) — senza, il
       trigger continua a bloccare le ore nei giorni di chiusura.
 
+## Evoluzione navigazione: sidebar ispirata a TailAdmin (specs/01 - ux.md)
+- [x] `NavHeader` non è più una singola riga di link orizzontali (con le
+      4 voci admin non ci stava più a larghezza mobile) ma una sidebar:
+      fissa a sinistra da schermo `lg` in su, drawer nascosto aperto da
+      un pulsante hamburger sotto quella soglia (overlay per richiuderlo
+      con un tap, si chiude anche subito dopo il tap su una voce).
+      Riceve ora `children` (il `<main>` della pagina) invece di essere
+      un semplice sibling — aggiornati tutti i 15 punti di chiamata
+      (`app/admin/**`, `app/dashboard/**`, `components/PaginaClassi.tsx`,
+      `components/PaginaClasseAttivita.tsx`).
+- [x] `lib/navigazione.ts` (nuovo, con unit test): `vociMenu` (elenco
+      voci in base al ruolo — solo "Dashboard" per maestra/assistente/
+      genitore, la navigazione loro resta via le card della dashboard;
+      in più le 4 voci admin per l'admin) e `vociMenuConStato` (quale
+      voce evidenziare in base al pathname corrente, prefisso più
+      lungo che corrisponde — così `/admin/maestre/x` evidenzia
+      "Utenti" e non il generico "Sezioni e bambini").
+- [x] `e2e/01-ux.spec.ts`: due nuovi scenari, "sidebar chiusa di default
+      e apribile/richiudibile con l'hamburger" (mobile) e "sidebar
+      sempre visibile con voci admin e voce corrente evidenziata"
+      (desktop) — non eseguibili in questo ambiente sandbox (nessun
+      server dev, nessuna credenziale E2E_*), da verificare con
+      `npx playwright test e2e/01-ux.spec.ts` in locale.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (179 test, +6 nuovi in `lib/navigazione.test.ts`) e `npx jscpd`
+      (3 clone preesistenti, sotto soglia, nessuno nuovo) puliti.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

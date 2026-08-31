@@ -98,6 +98,57 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
+  test.describe('sidebar di navigazione (mobile: drawer)', () => {
+    test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
+
+    test('la sidebar è chiusa di default e si apre/chiude con il pulsante hamburger', async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+
+      const sidebar = page.getByRole('link', { name: 'Dashboard' });
+      const hamburger = page.getByRole('button', { name: 'Apri il menu' });
+      await expect(hamburger).toBeVisible();
+      await expect(sidebar).not.toBeInViewport();
+      expect(await nessunOverflowOrizzontale(page)).toBe(false);
+
+      await hamburger.click();
+      await expect(sidebar).toBeInViewport();
+      await nessunaViolazioneA11yGrave(page);
+
+      await page.getByRole('button', { name: 'Chiudi il menu' }).click();
+      await expect(sidebar).not.toBeInViewport();
+    });
+  });
+
+  test.describe('sidebar di navigazione (desktop)', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
+
+    test('è sempre visibile e mostra le voci di amministrazione, con quella corrente evidenziata', async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+      await page.goto('/admin');
+
+      // Da schermo lg in su niente hamburger: la sidebar è sempre in vista.
+      await expect(page.getByRole('button', { name: 'Apri il menu' })).toBeHidden();
+      for (const voce of ['Dashboard', 'Sezioni e bambini', 'Utenti', 'Calendario scolastico', 'Profili orari']) {
+        await expect(page.getByRole('link', { name: voce })).toBeVisible();
+      }
+
+      await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+
+      expect(await nessunOverflowOrizzontale(page)).toBe(false);
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
   test.describe('flusso Pasti (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 

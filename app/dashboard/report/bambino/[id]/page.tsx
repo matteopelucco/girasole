@@ -59,8 +59,7 @@ export default async function DrillDownBambinoPage({
   const giorni = giorniInRange(inizio, fine);
 
   return (
-    <>
-      <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
+    <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <div>
           <a
@@ -112,6 +111,6 @@ export default async function DrillDownBambinoPage({
           </tbody>
         </table>
       </main>
-    </>
+    </NavHeader>
   );
 }

@@ -38,8 +38,7 @@ export default async function AdminPage() {
   );
 
   return (
-    <>
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null} />
+    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         <section>
           <h1 className="text-lg font-medium">Anni scolastici</h1>
@@ -274,6 +273,6 @@ export default async function AdminPage() {
           </div>
         </section>
       </main>
-    </>
+    </NavHeader>
   );
 }

@@ -20,8 +20,7 @@ export default async function GiornoChiusuraDettaglioPage({ params }: { params: 
   if (!giorno) redirect('/admin/calendario');
 
   return (
-    <>
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null} />
+    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <a href="/admin/calendario" className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna al calendario scolastico
@@ -70,6 +69,6 @@ export default async function GiornoChiusuraDettaglioPage({ params }: { params: 
           messaggioConferma="Confermi l'eliminazione?"
         />
       </main>
-    </>
+    </NavHeader>
   );
 }

@@ -126,8 +126,7 @@ export async function PaginaClassi({
   }
 
   return (
-    <>
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo} />
+    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo}>
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-8">
         <a href={`/dashboard?data=${data}`} className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna alla dashboard
@@ -152,6 +151,6 @@ export async function PaginaClassi({
           }
         />
       </main>
-    </>
+    </NavHeader>
   );
 }

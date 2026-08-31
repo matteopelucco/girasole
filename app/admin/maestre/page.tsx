@@ -46,11 +46,10 @@ export default async function MaestrePage() {
   }
 
   return (
-    <>
-      <NavHeader
-        nome={profiloCorrente?.nome || user.email || ''}
-        ruolo={profiloCorrente?.ruolo ?? null}
-      />
+    <NavHeader
+      nome={profiloCorrente?.nome || user.email || ''}
+      ruolo={profiloCorrente?.ruolo ?? null}
+    >
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         <section>
           <h1 className="text-lg font-medium">Utenti e ruoli</h1>
@@ -309,6 +308,6 @@ export default async function MaestrePage() {
           </ul>
         </section>
       </main>
-    </>
+    </NavHeader>
   );
 }

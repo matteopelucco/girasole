@@ -24,8 +24,7 @@ export default async function DashboardPage({
 
   if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') {
     return (
-      <>
-        <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
+      <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
         <main className="mx-auto max-w-2xl px-4 py-10">
           <h1 className="text-xl font-medium">Ciao {nomeVisualizzato}</h1>
           <p className="mt-1 text-sm text-stone-600">Ruolo: {ruolo ?? 'non impostato'}</p>
@@ -33,7 +32,7 @@ export default async function DashboardPage({
             Il portale genitori è in arrivo in una fase successiva.
           </div>
         </main>
-      </>
+      </NavHeader>
     );
   }
 
@@ -55,8 +54,7 @@ export default async function DashboardPage({
     .limit(20);
 
   return (
-    <>
-      <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
+    <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         {ruolo === 'admin' && (
           <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600">
@@ -152,6 +150,6 @@ export default async function DashboardPage({
           </ul>
         </section>
       </main>
-    </>
+    </NavHeader>
   );
 }

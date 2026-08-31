@@ -87,8 +87,7 @@ export default async function ReportPage({
   const puoFareDrillDown = tipo !== 'giornaliero';
 
   return (
-    <>
-      <NavHeader nome={nomeVisualizzato} ruolo={ruolo} />
+    <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         <div>
           <a href="/dashboard" className="text-sm text-stone-600 hover:text-stone-900">
@@ -204,6 +203,6 @@ export default async function ReportPage({
           </div>
         )}
       </main>
-    </>
+    </NavHeader>
   );
 }

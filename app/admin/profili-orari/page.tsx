@@ -18,8 +18,7 @@ export default async function ProfiliOrariPage() {
     .order('nome');
 
   return (
-    <>
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null} />
+    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <div>
           <h1 className="text-lg font-medium">Profili orari</h1>
@@ -66,6 +65,6 @@ export default async function ProfiliOrariPage() {
           )}
         </ul>
       </main>
-    </>
+    </NavHeader>
   );
 }

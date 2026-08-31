@@ -33,8 +33,7 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
   );
 
   return (
-    <>
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo} />
+    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <a href="/dashboard" className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna alla dashboard
@@ -78,6 +77,6 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
           messaggioConferma="Confermi l'eliminazione?"
         />
       </main>
-    </>
+    </NavHeader>
   );
 }
