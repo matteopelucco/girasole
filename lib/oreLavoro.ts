@@ -1,7 +1,21 @@
 import { formattaDataItaliana, giornoSettimanaIso } from '@/lib/date';
+import { isGiornoChiuso, trovaChiusura, type GiornoChiusura } from '@/lib/calendarioScolastico';
 import type { ProfiloOrario } from '@/lib/profiliOrari';
 
 export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza';
+
+// Nota puramente informativa per un giorno di chiusura scolastica nel
+// report ore di lavoro (specs/18, specs/53): a differenza del messaggio
+// usato in Presenze/Pasti (lib/calendarioScolastico.ts:messaggioChiusura,
+// che parla di un blocco reale), qui il giorno resta scrivibile — il
+// testo lo dice esplicitamente, per non suggerire un blocco che non
+// c'è. null se il giorno non è chiuso. Funzione pura, nessun I/O.
+export function notaGiornoChiusoOreLavoro(data: string, chiusure: GiornoChiusura[]): string | null {
+  if (!isGiornoChiuso(data, chiusure)) return null;
+  const chiusura = trovaChiusura(data, chiusure);
+  const dettaglio = chiusura ? (chiusura.nota ? `: ${chiusura.nota}` : '') : ' (weekend)';
+  return `Giorno di chiusura scolastica${dettaglio} — puoi comunque registrare le ore.`;
+}
 
 // Ore ordinarie previste per `data` dal profilo orario assegnato
 // all'utente (specs/54 - profili-orari.md), 0 se non ne ha uno

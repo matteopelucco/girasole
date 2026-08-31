@@ -2,9 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
-import { oggi, giorniLavorativiSettimana } from '@/lib/date';
+import { oggi, giorniSettimana } from '@/lib/date';
 import { validaGiornoOreLavoro, oreOrdinariePreviste } from '@/lib/oreLavoro';
-import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -14,7 +13,7 @@ import type { EsitoAzione } from '@/components/FormConEsito';
 // arrivasse dal campo nascosto settimana_inizio.
 function settimanaCorrenteOSbagliata(formData: FormData): string | null {
   const settimanaInizio = (formData.get('settimana_inizio') as string) || '';
-  const giorni = giorniLavorativiSettimana(oggi());
+  const giorni = giorniSettimana(oggi());
   return settimanaInizio === giorni[0] ? settimanaInizio : null;
 }
 
@@ -31,14 +30,10 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
     return { ok: false, messaggio: 'Puoi modificare solo la settimana corrente.' };
   }
 
-  const giorni = giorniLavorativiSettimana(settimanaInizio);
-  const venerdi = giorni[giorni.length - 1];
-  const chiusure = await chiusurePerPeriodo(supabase, settimanaInizio, venerdi);
+  const giorni = giorniSettimana(settimanaInizio);
 
   const daScrivere = [];
   for (const data of giorni) {
-    if (isGiornoChiuso(data, chiusure)) continue;
-
     const esito = validaGiornoOreLavoro({
       data,
       stato: (formData.get(`stato_${data}`) as string) || 'lavorativo',
@@ -95,9 +90,7 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     return { ok: false, messaggio: 'Puoi confermare solo la settimana corrente.' };
   }
 
-  const giorni = giorniLavorativiSettimana(settimanaInizio);
-  const venerdi = giorni[giorni.length - 1];
-  const chiusure = await chiusurePerPeriodo(supabase, settimanaInizio, venerdi);
+  const giorni = giorniSettimana(settimanaInizio);
 
   const { data: esistenti } = await supabase
     .from('ore_lavoro_giorni')
@@ -109,7 +102,7 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
   const profiloOrario = await recuperaProfiloOrario(supabase, profilo?.profilo_orario_id);
 
   const daCompletare = giorni
-    .filter((data) => !isGiornoChiuso(data, chiusure) && !dateEsistenti.has(data))
+    .filter((data) => !dateEsistenti.has(data))
     .map((data) => ({
       utente_id: user.id,
       data,

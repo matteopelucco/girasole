@@ -7,8 +7,13 @@ assistente) vede l'informazione in Presenze e Pasti.
 ## Obiettivo
 Permettere all'admin di dichiarare i giorni in cui l'asilo è chiuso
 (vacanze, ponti, chiusure straordinarie), e impedire che in quei giorni
-— così come ogni sabato e domenica — vengano registrate presenze o pasti
-(in futuro anche ore di lavoro del personale).
+— così come ogni sabato e domenica — vengano registrate presenze o
+pasti. Le ore di lavoro del personale (vedi
+[18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md)) sono
+un'eccezione deliberata: il personale può lavorare (es. pulizie,
+attività amministrative, formazione) anche quando l'asilo non è
+operativo, quindi quel registro mostra l'informazione di chiusura ma
+non blocca la scrittura.
 
 ## Scenario: creare un giorno di chiusura
 Dato che sono autenticato come admin
@@ -104,6 +109,8 @@ mio ruolo (admin incluso)
   inseriti dall'admin: intervalli sovrapposti sono innocui (il giorno
   risulta comunque chiuso), quindi non è un vincolo necessario per il
   comportamento descritto sopra.
-- In futuro, lo stesso vincolo si applicherà anche alla registrazione
-  delle ore di lavoro del personale (fuori dallo scope di questa fase,
-  che non ha ancora quella funzionalità).
+- Il registro ore di lavoro del personale
+  ([18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md)) mostra
+  la stessa informazione di chiusura ma **non** applica questo blocco:
+  scelta esplicita, non un'omissione — il personale può lavorare anche
+  nei giorni in cui l'asilo è chiuso.

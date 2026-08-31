@@ -19,10 +19,12 @@ Dato che sono autenticata come personale abilitato al report ore, con un
 profilo orario assegnato (vedi
 [54 - profili-orari.md](54%20-%20profili-orari.md))
 Quando apro "Ore di lavoro"
-Allora vedo una tabella con una riga per ciascun giorno feriale
-(lunedì-venerdì) della settimana corrente
-E per ogni giorno il campo "Ore ordinarie" è precompilato con le ore
-previste dal mio profilo orario per quel giorno della settimana
+Allora vedo una tabella con una riga per ciascun giorno della settimana
+corrente, da lunedì a domenica
+E per i giorni lunedì-venerdì il campo "Ore ordinarie" è precompilato
+con le ore previste dal mio profilo orario per quel giorno della
+settimana; per sabato e domenica (non previsti dal profilo, vedi
+specs/54) parte da 0
 E vedo anche un campo "Ore straordinarie", a 0 di default
 
 ## Scenario: senza profilo orario assegnato le ore ordinarie partono da zero
@@ -83,13 +85,16 @@ Quando apro "Ore di lavoro"
 Allora vedo i dati della settimana in sola lettura (nessun campo
 modificabile, nessun pulsante "Salva modifiche" o "Conferma settimana")
 
-## Scenario: un giorno di chiusura scolastica non è modificabile
+## Scenario: il personale può registrare ore anche nei giorni di chiusura scolastica
 Dato che un giorno della settimana corrente è un giorno di chiusura
 scolastica (weekend, o un intervallo registrato dall'admin — vedi
 [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
 Quando apro "Ore di lavoro"
-Allora quel giorno mostra l'informazione di chiusura, senza alcun campo
-da compilare
+Allora quel giorno mostra comunque un'informazione di chiusura, ma resta
+pienamente modificabile: posso registrare ore ordinarie/straordinarie o
+malattia/assenza esattamente come per un giorno normale — il personale
+può lavorare (es. pulizie, attività amministrative, formazione) anche
+quando l'asilo non è operativo
 
 ## Scenario: accesso negato senza abilitazione
 Dato che il mio profilo non è abilitato al report ore
@@ -98,10 +103,14 @@ Allora vengo reindirizzata alla dashboard (vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
 
 ## Regole
-- Solo i giorni feriali (lunedì-venerdì) della settimana corrente sono
-  mostrati: sabato e domenica sono chiusura implicita
-  (specs/53), coerente con i profili orari (specs/54) che non prevedono
-  ore in quei due giorni.
+- Tutti i 7 giorni della settimana corrente sono mostrati (lunedì-
+  domenica), non solo i feriali: a differenza di presenze/pasti
+  (specs/53), il registro ore di lavoro non considera sabato/domenica o
+  un giorno di chiusura registrato dall'admin come "non scrivibili" — il
+  personale può lavorare anche quando l'asilo non è operativo (es.
+  pulizie, attività amministrative, formazione). Un giorno di chiusura
+  mostra comunque l'informazione (stessa provenienza dati di specs/53),
+  a puro scopo informativo, senza bloccare nulla.
 - Un giorno è in uno di tre stati, esclusivi: **lavorativo** (ore
   ordinarie/straordinarie), **malattia** (richiede il codice ricevuto
   dal medico) o **assenza** (richiede una nota giustificativa). Passare
@@ -123,11 +132,6 @@ Allora vengo reindirizzata alla dashboard (vedi
   più modificare i giorni di quella settimana (RLS in
   `supabase/migrations/0025_report_ore_lavoro.sql`); l'admin sì, sempre
   — anche se non c'è ancora un'interfaccia per farlo (vedi Fuori scope).
-- Il blocco di un giorno di chiusura scolastica vale per QUALUNQUE ruolo,
-  admin incluso — stesso principio già in vigore per presenze e pasti
-  (specs/53): un asilo chiuso non ha ore di lavoro da registrare per
-  nessuno, non è un permesso di scrittura ma un vincolo di coerenza dei
-  dati. Imposto anche con un trigger sul database, non solo in UI.
 - Nessuna scrittura silenziosa: un salvataggio che fallisce la
   validazione (motivo/codice/nota mancante) non salva nessuno dei giorni
   di quel submit, nemmeno quelli validi — il personale corregge il

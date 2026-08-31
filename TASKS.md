@@ -1250,6 +1250,49 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       `/dashboard/ore-lavoro` — senza, la pagina fallisce a leggere/
       scrivere le tabelle `ore_lavoro_giorni`/`ore_lavoro_settimane`.
 
+## Ore di lavoro: registrabili anche nei giorni di chiusura scolastica (v0.15.1)
+- [x] Richiesta esplicita dell'utente, correzione rispetto a v0.15.0: il
+      personale può lavorare (pulizie, attività amministrative,
+      formazione...) anche nei giorni in cui l'asilo è chiuso (weekend
+      o chiusura registrata dall'admin) — il blocco introdotto in
+      0025_report_ore_lavoro.sql (che riprendeva la nota "in futuro" di
+      specs/53/0022) era quindi sbagliato per questo registro.
+- [x] `specs/18 - report-ore-lavoro.md`: la tabella mostra ora tutti i 7
+      giorni della settimana (non solo lunedì-venerdì), tutti
+      pienamente modificabili; un giorno di chiusura mostra solo
+      un'informazione, senza bloccare nulla. `specs/53 -
+      calendario-scolastico.md` corretta di conseguenza (l'eccezione
+      per le ore di lavoro è ora dichiarata esplicitamente, non più "in
+      futuro varrà anche lì").
+- [x] `supabase/migrations/0026_ore_lavoro_permesse_giorni_chiusi.sql`
+      (nuova, non modifica 0025 già applicata): rimuove il trigger
+      `ore_lavoro_giorni_blocca_se_chiuso` e la funzione
+      `impedisci_ore_lavoro_giorno_chiuso`. Le RLS restano invariate
+      (non facevano riferimento alla chiusura).
+- [x] `lib/date.ts:giorniLavorativiSettimana` (5 giorni) sostituita da
+      `giorniSettimana` (7 giorni, lunedì-domenica) — unico punto d'uso.
+      `lib/oreLavoro.ts`: nuova `notaGiornoChiusoOreLavoro` (pura, con
+      unit test), testo dedicato che non riusa
+      `calendarioScolastico.ts:messaggioChiusura` (che parla di un
+      blocco reale, fuorviante qui) — dice esplicitamente "puoi comunque
+      registrare le ore". `components/RigaOreLavoro.tsx` mostra questa
+      nota come avviso informativo, non più una card "chiusa" senza
+      campi. `app/dashboard/ore-lavoro/actions.ts` non salta più i
+      giorni chiusi nel salvataggio/completamento pre-conferma.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (173 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. `e2e/18-report-ore-lavoro.spec.ts`
+      aggiornato (sabato/domenica ora editabili e verificati, niente
+      più skip legato a un giorno chiuso) — non eseguibile in questo
+      ambiente sandbox, da verificare con
+      `npx playwright test e2e/18-report-ore-lavoro.spec.ts` dal tuo
+      ambiente locale (stessa cautela di v0.15.0: non preme mai "Sì" su
+      "Conferma settimana").
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0026_ore_lavoro_permesse_giorni_chiusi.sql`
+      nel SQL Editor di Supabase (test e produzione) — senza, il
+      trigger continua a bloccare le ore nei giorni di chiusura.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

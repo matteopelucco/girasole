@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { oreOrdinariePreviste, totaliSettimanaOreLavoro, validaGiornoOreLavoro, type InputGiornoOreLavoro } from './oreLavoro';
+import {
+  notaGiornoChiusoOreLavoro,
+  oreOrdinariePreviste,
+  totaliSettimanaOreLavoro,
+  validaGiornoOreLavoro,
+  type InputGiornoOreLavoro,
+} from './oreLavoro';
+import type { GiornoChiusura } from './calendarioScolastico';
 
 // Tutte funzioni pure (nessun I/O): specs/18 - report-ore-lavoro.md.
 
@@ -156,5 +163,34 @@ describe('totaliSettimanaOreLavoro', () => {
 
   it('nessun giorno dà totale zero', () => {
     expect(totaliSettimanaOreLavoro([])).toEqual({ ordinarie: 0, straordinarie: 0, totale: 0 });
+  });
+});
+
+describe('notaGiornoChiusoOreLavoro', () => {
+  it('null per un giorno feriale normale', () => {
+    expect(notaGiornoChiusoOreLavoro('2026-08-31', [])).toBeNull(); // lunedì
+  });
+
+  it('un sabato: nota generica "(weekend)", nessun blocco menzionato', () => {
+    const nota = notaGiornoChiusoOreLavoro('2026-09-05', []); // sabato
+    expect(nota).toContain('weekend');
+    expect(nota).toContain('puoi comunque registrare le ore');
+  });
+
+  it('un giorno di chiusura registrata senza nota', () => {
+    const chiusure: GiornoChiusura[] = [
+      { id: '1', dataInizio: '2026-12-23', dataFine: '2026-12-31', nota: null },
+    ];
+    const nota = notaGiornoChiusoOreLavoro('2026-12-27', chiusure);
+    expect(nota).toContain('Giorno di chiusura scolastica');
+    expect(nota).toContain('puoi comunque registrare le ore');
+  });
+
+  it('un giorno di chiusura registrata con nota la include', () => {
+    const chiusure: GiornoChiusura[] = [
+      { id: '1', dataInizio: '2026-12-23', dataFine: '2026-12-31', nota: 'Vacanze di Natale' },
+    ];
+    const nota = notaGiornoChiusoOreLavoro('2026-12-27', chiusure);
+    expect(nota).toContain('Vacanze di Natale');
   });
 });
