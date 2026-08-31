@@ -73,6 +73,15 @@ export function domenicaSettimana(data: string): string {
   return sommaGiorni(lunediSettimana(data), 6);
 }
 
+// Intervallo (lunedì-domenica) della settimana immediatamente precedente
+// a quella che contiene `data` — usata dall'allarme "settimana ore di
+// lavoro non confermata" (specs/07 - allarmi.md) per sapere quale
+// settimana controllare rispetto a oggi.
+export function settimanaPrecedente(data: string): { inizio: string; fine: string } {
+  const inizio = sommaGiorni(lunediSettimana(data), -7);
+  return { inizio, fine: sommaGiorni(inizio, 6) };
+}
+
 export function formattaIntervalloItaliano(inizio: string, fine: string): string {
   const formatta = (data: string) => {
     const [anno, mese, giorno] = data.split('-').map(Number);

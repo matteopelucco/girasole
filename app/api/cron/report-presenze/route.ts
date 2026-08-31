@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { inviaEmail, type AllegatoEmail } from '@/lib/email';
+import { inviaEmail, destinatarioNotifiche, type AllegatoEmail } from '@/lib/email';
 import {
   generaTabellaGiornalieraHtml,
   aggregaReportPeriodoTutteLeClassi,
@@ -23,15 +24,9 @@ import {
   isUltimoGiornoMese,
 } from '@/lib/date';
 
-const DESTINATARIO_DEFAULT = 'info@asilosartorio.it';
-
 export const dynamic = 'force-dynamic';
 
 type TipoReportNotturno = 'giornaliero' | 'settimanale' | 'mensile';
-
-function destinatarioReport(): string {
-  return process.env.REPORT_EMAIL_DESTINATARIO || DESTINATARIO_DEFAULT;
-}
 
 // specs/52 - report-email-automatico.md: 'sempre' (default) ricalcola e
 // invia settimanale/mensile ogni notte "a tutt'oggi"; 'fine_periodo' li
@@ -112,12 +107,8 @@ async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
 // invia in automatico in Authorization: Bearer $CRON_SECRET quando la
 // variabile d'ambiente CRON_SECRET è configurata sul progetto.
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ errore: 'non autorizzato' }, { status: 401 });
-    }
+  if (!autorizzaCron(request)) {
+    return NextResponse.json({ errore: 'non autorizzato' }, { status: 401 });
   }
 
   // Il cron gira poco dopo la mezzanotte Rome: oggi() è già il nuovo
@@ -197,7 +188,7 @@ export async function GET(request: Request) {
       : `<p>In allegato: ${daPreparare.map((d) => d.tipo).join(', ')}.</p>`;
 
     await inviaEmail({
-      a: destinatarioReport(),
+      a: destinatarioNotifiche(),
       oggetto: `Report del ${formattaDataItaliana(dataReport)}`,
       html: htmlGiornaliero,
       allegati,

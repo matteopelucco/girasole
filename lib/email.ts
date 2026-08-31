@@ -8,6 +8,15 @@ export type AllegatoEmail = {
   content: Uint8Array;
 };
 
+const DESTINATARIO_NOTIFICHE_DEFAULT = 'info@asilosartorio.it';
+
+// Indirizzo per tutte le notifiche email automatiche dell'asilo (report
+// notturno, specs/52; allarmi, specs/07): stessa variabile d'ambiente e
+// stesso default per tutte, un solo posto da cambiare.
+export function destinatarioNotifiche(): string {
+  return process.env.REPORT_EMAIL_DESTINATARIO || DESTINATARIO_NOTIFICHE_DEFAULT;
+}
+
 export async function inviaEmail({
   a,
   oggetto,

@@ -2,6 +2,20 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { oggi } from '@/lib/date';
 
+// Vero se una richiesta a una route di cron (specs/52 -
+// report-email-automatico.md; specs/07 - allarmi.md) porta il secret
+// giusto in Authorization: Bearer $CRON_SECRET (inviato in automatico da
+// Vercel Cron quando la variabile d'ambiente CRON_SECRET è configurata
+// sul progetto) — senza quella variabile, chiunque può chiamare la
+// route (comportamento pre-esistente, utile in locale). Condivisa tra
+// le route di cron per non duplicare lo stesso controllo in ciascuna
+// (CLAUDE.md, jscpd).
+export function autorizzaCron(request: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true;
+  return request.headers.get('authorization') === `Bearer ${secret}`;
+}
+
 export type Profilo = {
   nome: string;
   cognome: string;

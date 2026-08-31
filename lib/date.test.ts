@@ -18,6 +18,7 @@ import {
   meseSuccessivo,
   oggi,
   primoGiornoMese,
+  settimanaPrecedente,
   sommaGiorni,
   ultimoGiornoMese,
 } from './date';
@@ -136,6 +137,22 @@ describe('lunediSettimana / domenicaSettimana', () => {
   it('gestisce una settimana a cavallo tra due mesi', () => {
     expect(lunediSettimana('2026-09-01')).toBe('2026-08-31');
     expect(domenicaSettimana('2026-08-31')).toBe('2026-09-06');
+  });
+});
+
+describe('settimanaPrecedente', () => {
+  it('restituisce lunedì-domenica della settimana immediatamente precedente', () => {
+    // 2026-08-20 è un giovedì della settimana 17-23 agosto; la
+    // precedente è 10-16 agosto.
+    expect(settimanaPrecedente('2026-08-20')).toEqual({ inizio: '2026-08-10', fine: '2026-08-16' });
+  });
+
+  it('funziona anche partendo da un lunedì', () => {
+    expect(settimanaPrecedente('2026-08-17')).toEqual({ inizio: '2026-08-10', fine: '2026-08-16' });
+  });
+
+  it('gestisce un cambio di mese', () => {
+    expect(settimanaPrecedente('2026-09-02')).toEqual({ inizio: '2026-08-24', fine: '2026-08-30' });
   });
 });
 
