@@ -37,10 +37,15 @@ export function RigaOreLavoro({
   etichettaGiorno,
   dataBreve,
   valori,
+  messaggioChiuso = null,
 }: {
   etichettaGiorno: string;
   dataBreve: string;
   valori: ValoriGiornoOreLavoro;
+  // Solo informativo (specs/18, specs/53): il giorno resta pienamente
+  // modificabile anche quando l'asilo è chiuso, il personale può
+  // comunque lavorare — null quando il giorno non è chiuso.
+  messaggioChiuso?: string | null;
 }) {
   const [stato, setStato] = useState<StatoGiornoOreLavoro>(valori.stato);
   const nomeCampo = (suffisso: string) => `${suffisso}_${valori.data}`;
@@ -65,6 +70,8 @@ export function RigaOreLavoro({
           ))}
         </select>
       </div>
+
+      {messaggioChiuso && <p className="mt-1 text-xs text-stone-500">{messaggioChiuso}</p>}
 
       {stato === 'lavorativo' && (
         <div className="mt-2 flex flex-wrap gap-2">

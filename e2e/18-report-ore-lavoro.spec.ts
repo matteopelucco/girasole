@@ -35,7 +35,7 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
-    test('form settimanale: precaricamento dal profilo orario, validazioni, salvataggio, conferma (senza premere Sì)', async ({
+    test('form settimanale: precaricamento dal profilo orario, validazioni, giorni chiusi lavorabili, conferma (senza premere Sì)', async ({
       page,
     }) => {
       const nomeProfilo = `E2E ore lavoro ${Date.now()}`;
@@ -62,15 +62,13 @@ test.describe('18 — Report ore di lavoro', () => {
           return;
         }
 
-        // Solo i giorni feriali sono mostrati (specs/18, specs/53).
-        await expect(page.getByText('Sabato', { exact: false })).toHaveCount(0);
-        await expect(page.getByText('Domenica', { exact: false })).toHaveCount(0);
-
-        const chiusi = await page.getByText('chiusura scolastica', { exact: false }).count();
-        test.skip(
-          chiusi > 0,
-          'questa settimana contiene un giorno di chiusura scolastica: i valori attesi dal test non sono validi'
-        );
+        // Tutti i 7 giorni sono mostrati ed editabili, sabato/domenica
+        // inclusi: il personale può lavorare anche nei giorni in cui
+        // l'asilo è chiuso (specs/18, specs/53 — nessun blocco, a
+        // differenza di presenze/pasti).
+        await expect(page.getByLabel('Stato Sabato')).toBeVisible();
+        await expect(page.getByLabel('Stato Domenica')).toBeVisible();
+        await expect(page.getByLabel('Ore ordinarie Sabato')).toBeEditable();
 
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
@@ -139,6 +137,15 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByLabel('Stato Mercoledì')).toHaveValue('assenza');
         await expect(page.getByLabel('Nota assenza Mercoledì')).toHaveValue('Visita E2E');
 
+        // Il personale può lavorare anche in un giorno di chiusura
+        // (qui sabato, chiusura implicita): l'inserimento è accettato,
+        // non bloccato (specs/18, specs/53).
+        await page.getByLabel('Ore ordinarie Sabato').fill('3');
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await page.waitForTimeout(1000);
+        await page.reload();
+        await expect(page.getByLabel('Ore ordinarie Sabato')).toHaveValue('3');
+
         // "Conferma settimana" chiede conferma esplicita: verifico solo
         // che il dialogo compaia e che "Annulla" non confermi nulla (non
         // premo mai "Sì", vedi nota in testa al file).
@@ -149,9 +156,10 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByRole('button', { name: 'Annulla' }).click();
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
       } finally {
-        // Ripristino: martedì/mercoledì tornano lavorativo, l'account
-        // torna disabilitato e senza profilo, il profilo di test viene
-        // eliminato (svuota anche l'eventuale assegnazione, specs/54).
+        // Ripristino: martedì/mercoledì tornano lavorativo, sabato torna
+        // a 0 ore, l'account torna disabilitato e senza profilo, il
+        // profilo di test viene eliminato (svuota anche l'eventuale
+        // assegnazione, specs/54).
         const confermata = await page.getByText('Settimana confermata il', { exact: false }).count();
         if (!confermata) {
           await page.goto('/dashboard/ore-lavoro');
@@ -160,6 +168,9 @@ test.describe('18 — Report ore di lavoro', () => {
           }
           if ((await page.getByLabel('Stato Mercoledì').count()) > 0) {
             await page.getByLabel('Stato Mercoledì').selectOption('lavorativo');
+          }
+          if ((await page.getByLabel('Ore ordinarie Sabato').count()) > 0) {
+            await page.getByLabel('Ore ordinarie Sabato').fill('0');
           }
           const salva = page.getByRole('button', { name: 'Salva modifiche' });
           if ((await salva.count()) > 0) {

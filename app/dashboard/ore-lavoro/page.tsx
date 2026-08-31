@@ -4,10 +4,10 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { RigaOreLavoro, ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/components/RigaOreLavoro';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
-import { oggi, giorniLavorativiSettimana, giornoSettimanaIso, formattaIntervalloItaliano, formattaDataBreve, formattaDataOraItaliana } from '@/lib/date';
-import { oreOrdinariePreviste, totaliSettimanaOreLavoro } from '@/lib/oreLavoro';
+import { oggi, giorniSettimana, giornoSettimanaIso, formattaIntervalloItaliano, formattaDataBreve, formattaDataOraItaliana } from '@/lib/date';
+import { oreOrdinariePreviste, totaliSettimanaOreLavoro, notaGiornoChiusoOreLavoro } from '@/lib/oreLavoro';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
-import { isGiornoChiuso, messaggioChiusura, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
+import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { salvaSettimanaOreLavoro, confermaSettimanaOreLavoro } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -18,19 +18,22 @@ const NOMI_GIORNI: Record<number, string> = {
   3: 'Mercoledì',
   4: 'Giovedì',
   5: 'Venerdì',
+  6: 'Sabato',
+  7: 'Domenica',
 };
 
 // Sezione "Ore di lavoro" (specs/18 - report-ore-lavoro.md): il
 // personale abilitato (specs/17) registra ore/malattia/assenza per la
-// settimana corrente e la conferma. Una volta confermata, la pagina
-// mostra i dati in sola lettura (nessun campo modificabile).
+// settimana corrente (tutti i 7 giorni: il personale può lavorare anche
+// nei giorni in cui l'asilo è chiuso, specs/53) e la conferma. Una volta
+// confermata, la pagina mostra i dati in sola lettura.
 export default async function OreLavoroPage() {
   const { supabase, user, profilo, ruolo } = await requireStaff({});
   assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
 
   const nomeVisualizzato = profilo?.nome || user.email || '';
-  const giorni = giorniLavorativiSettimana(oggi());
-  const [lunedi, , , , venerdi] = giorni;
+  const giorni = giorniSettimana(oggi());
+  const [lunedi, , , , , , domenica] = giorni;
 
   const [profiloOrario, { data: righeGiorni }, { data: settimana }, chiusure] = await Promise.all([
     recuperaProfiloOrario(supabase, profilo?.profilo_orario_id),
@@ -45,7 +48,7 @@ export default async function OreLavoroPage() {
       .eq('utente_id', user.id)
       .eq('settimana_inizio', lunedi)
       .maybeSingle(),
-    chiusurePerPeriodo(supabase, lunedi, venerdi),
+    chiusurePerPeriodo(supabase, lunedi, domenica),
   ]);
 
   const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
@@ -57,8 +60,12 @@ export default async function OreLavoroPage() {
       data,
       etichetta: NOMI_GIORNI[giornoSettimanaIso(data)],
       dataBreve: formattaDataBreve(data),
+      // Solo informativo: il registro ore di lavoro non blocca la
+      // scrittura nei giorni di chiusura scolastica (specs/18, specs/53
+      // — a differenza di presenze/pasti, il personale può lavorare
+      // anche quando l'asilo non è operativo).
       chiuso: isGiornoChiuso(data, chiusure),
-      messaggioChiuso: messaggioChiusura(data, chiusure),
+      messaggioChiuso: notaGiornoChiusoOreLavoro(data, chiusure),
       stato: (salvata?.stato ?? 'lavorativo') as StatoGiornoOreLavoro,
       oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
       oreStraordinarie: salvata?.ore_straordinarie ?? 0,
@@ -68,7 +75,7 @@ export default async function OreLavoroPage() {
     };
   });
 
-  const totali = totaliSettimanaOreLavoro(righe.filter((r) => !r.chiuso));
+  const totali = totaliSettimanaOreLavoro(righe);
 
   return (
     <>
@@ -79,7 +86,7 @@ export default async function OreLavoroPage() {
             ← Torna alla dashboard
           </a>
           <h1 className="mt-2 text-lg font-medium">Ore di lavoro</h1>
-          <p className="mt-1 text-sm text-stone-600">Settimana {formattaIntervalloItaliano(lunedi, venerdi)}</p>
+          <p className="mt-1 text-sm text-stone-600">Settimana {formattaIntervalloItaliano(lunedi, domenica)}</p>
         </div>
 
         {confermata && (
@@ -96,57 +103,42 @@ export default async function OreLavoroPage() {
                   <span className="font-medium">
                     {r.etichetta} <span className="font-normal text-stone-600">{r.dataBreve}</span>
                   </span>
-                  {!r.chiuso && (
-                    <span className="text-sm text-stone-600">{ETICHETTE_STATO_ORE_LAVORO[r.stato]}</span>
-                  )}
+                  <span className="text-sm text-stone-600">{ETICHETTE_STATO_ORE_LAVORO[r.stato]}</span>
                 </div>
-                {r.chiuso && <p className="mt-1 text-sm text-stone-600">{r.messaggioChiuso}</p>}
-                {!r.chiuso && r.stato === 'lavorativo' && (
+                {r.chiuso && <p className="mt-1 text-xs text-stone-500">{r.messaggioChiuso}</p>}
+                {r.stato === 'lavorativo' && (
                   <p className="mt-1 text-sm text-stone-600">
                     Ordinarie: {r.oreOrdinarie}h · Straordinarie: {r.oreStraordinarie}h
                     {r.motivoStraordinario ? ` (${r.motivoStraordinario})` : ''}
                   </p>
                 )}
-                {!r.chiuso && r.stato === 'malattia' && (
+                {r.stato === 'malattia' && (
                   <p className="mt-1 text-sm text-stone-600">Codice malattia: {r.codiceMalattia}</p>
                 )}
-                {!r.chiuso && r.stato === 'assenza' && (
-                  <p className="mt-1 text-sm text-stone-600">Nota: {r.notaAssenza}</p>
-                )}
+                {r.stato === 'assenza' && <p className="mt-1 text-sm text-stone-600">Nota: {r.notaAssenza}</p>}
               </div>
             ))}
           </div>
         ) : (
           <FormConEsito action={salvaSettimanaOreLavoro} className="space-y-2">
             <input type="hidden" name="settimana_inizio" value={lunedi} />
-            {righe.map((r) =>
-              r.chiuso ? (
-                <div
-                  key={r.data}
-                  className="rounded-xl border border-dashed border-stone-300 bg-white p-3 text-sm text-stone-600"
-                >
-                  <span className="font-medium text-stone-800">
-                    {r.etichetta} {r.dataBreve}
-                  </span>{' '}
-                  — {r.messaggioChiuso}
-                </div>
-              ) : (
-                <RigaOreLavoro
-                  key={r.data}
-                  etichettaGiorno={r.etichetta}
-                  dataBreve={r.dataBreve}
-                  valori={{
-                    data: r.data,
-                    stato: r.stato,
-                    oreOrdinarie: r.oreOrdinarie,
-                    oreStraordinarie: r.oreStraordinarie,
-                    motivoStraordinario: r.motivoStraordinario,
-                    codiceMalattia: r.codiceMalattia,
-                    notaAssenza: r.notaAssenza,
-                  }}
-                />
-              )
-            )}
+            {righe.map((r) => (
+              <RigaOreLavoro
+                key={r.data}
+                etichettaGiorno={r.etichetta}
+                dataBreve={r.dataBreve}
+                messaggioChiuso={r.chiuso ? r.messaggioChiuso : null}
+                valori={{
+                  data: r.data,
+                  stato: r.stato,
+                  oreOrdinarie: r.oreOrdinarie,
+                  oreStraordinarie: r.oreStraordinarie,
+                  motivoStraordinario: r.motivoStraordinario,
+                  codiceMalattia: r.codiceMalattia,
+                  notaAssenza: r.notaAssenza,
+                }}
+              />
+            ))}
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Salva modifiche
             </PulsanteInvio>

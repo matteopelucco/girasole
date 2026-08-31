@@ -153,12 +153,12 @@ export function giorniInRange(inizio: string, fine: string): string[] {
   return giorni;
 }
 
-// I 5 giorni feriali (lunedì-venerdì) della settimana che contiene
-// `data` — usati dal report ore di lavoro (specs/18 -
-// report-ore-lavoro.md), che mostra/registra solo questi giorni: sabato
-// e domenica sono chiusura implicita (specs/53), coerente con i profili
-// orari (specs/54) che non prevedono ore in quei due giorni.
-export function giorniLavorativiSettimana(data: string): string[] {
+// I 7 giorni (lunedì-domenica) della settimana che contiene `data` —
+// usati dal report ore di lavoro (specs/18 - report-ore-lavoro.md), che
+// mostra/registra tutti i giorni: a differenza di presenze/pasti
+// (specs/53), il personale può lavorare anche nei giorni in cui l'asilo
+// è chiuso (weekend incluso).
+export function giorniSettimana(data: string): string[] {
   const lunedi = lunediSettimana(data);
-  return giorniInRange(lunedi, sommaGiorni(lunedi, 4));
+  return giorniInRange(lunedi, sommaGiorni(lunedi, 6));
 }
