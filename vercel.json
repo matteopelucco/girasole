@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/report-presenze",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/allarmi",
+      "schedule": "30 11 * * *"
     }
   ]
 }

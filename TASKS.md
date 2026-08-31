@@ -1320,6 +1320,78 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       (179 test, +6 nuovi in `lib/navigazione.test.ts`) e `npx jscpd`
       (3 clone preesistenti, sotto soglia, nessuno nuovo) puliti.
 
+## Allarmi: presenze/pasti entro mezzogiorno, settimana ore non confermata (v0.17.0)
+- [x] Richiesta dell'utente: due allarmi, ciascuno su due canali (banner
+      in dashboard + email). 1) Se entro le 12:00 (Europe/Rome) di un
+      giorno attivo non sono state segnate tutte le presenze o non sono
+      stati confermati i pasti (comunicazione a Rojac, specs/16),
+      banner per **tutto** lo staff ed email a
+      `info@asilosartorio.it`. 2) Per ogni utente abilitato al report
+      ore (specs/17) la cui settimana scorsa non risulta confermata
+      (specs/18), banner **personale** ed email allo stesso indirizzo
+      (il secondo indirizzo scritto nel messaggio dell'utente,
+      "asilosaetoeio.it", era un refuso — uso lo stesso
+      `info@asilosartorio.it`/`REPORT_EMAIL_DESTINATARIO` già in uso
+      per i report notturni).
+- [x] Nuovo `specs/07 - allarmi.md` (in indice su `specs/00`, numerato
+      0x perché trasversale come specs/06).
+- [x] `supabase/migrations/0027_allarmi.sql`: nuova tabella
+      `allarmi_inviati` (`tipo`, `chiave`, `inviato_at` — esistenza
+      della riga = già inviato, stesso pattern di
+      `report_giornalieri_inviati`/`ore_lavoro_settimane`), un'unica
+      tabella con discriminatore invece di una per allarme. RLS
+      abilitata senza policy per `authenticated`: solo il cron
+      (service_role) la usa.
+- [x] `lib/allarmi.ts` (nuovo): funzioni pure `dopoMezzogiorno`,
+      `allarmeMezzogiornoAttivo`, `descrizioneStatoOperativo` (unit
+      test in `lib/allarmi.test.ts`, incluso il confine ora
+      solare/legale) e funzioni I/O `calcolaStatoOperativoGiorno`
+      (richiede la service_role key: serve vedere tutte le sezioni, non
+      solo quelle di chi guarda — stesso motivo di specs/52),
+      `settimanaPrecedenteConfermata` (RLS normale: un utente legge
+      solo la propria riga) e `utentiConSettimanaNonConfermata` (solo
+      cron). `lib/date.ts:settimanaPrecedente` (nuova, con unit test).
+- [x] Nuova route `app/api/cron/allarmi/route.ts` — un solo cron
+      (non due) per restare dentro il limite Vercel Hobby di 2 cron per
+      progetto (già a 1 con `report-presenze`), pianificato dopo
+      mezzogiorno Europe/Rome (`vercel.json`, `"30 11 * * *"` UTC, dopo
+      le 12:00 Rome sia in ora solare sia legale). Valuta entrambi gli
+      allarmi, invia le email (idempotenti per tipo+chiave),
+      protetto dallo stesso `CRON_SECRET` degli altri cron — nuovo
+      `lib/auth.ts:autorizzaCron`, condiviso con
+      `report-presenze/route.ts` per non duplicare quel controllo in
+      due file (CLAUDE.md, jscpd). `lib/email.ts:destinatarioNotifiche`
+      (nuovo) sostituisce la funzione locale `destinatarioReport` di
+      `report-presenze/route.ts`, stesso motivo.
+- [x] `app/dashboard/page.tsx`: due banner (`role="alert"`) in cima al
+      `<main>`, prima di tutto il resto — quello mezzogiorno (rosso,
+      calcolato con la service_role key) e quello settimana ore
+      (ambra, personale, calcolato con la sessione RLS normale
+      dell'utente). Il banner personale non promette di poter
+      confermare la settimana scorsa da qui (specs/18 non lo permette
+      ancora, solo la settimana corrente): invita a contattare l'admin.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (198 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Nuovo `e2e/07-allarmi.spec.ts` — non
+      eseguibile in questo ambiente sandbox (nessun dev server né
+      credenziali Supabase): diversi scenari dipendono dall'ora reale o
+      dallo stato reale dei dati e si saltano da soli quando non
+      verificabili al momento (stessa cautela di
+      53-calendario-scolastico.spec.ts), da eseguire più volte in
+      momenti diversi della giornata dal tuo ambiente locale per
+      coprirli tutti. Include anche i test della route cron
+      (401 senza secret, idempotenza) sul modello di
+      52-report-email-automatico.spec.ts.
+- [ ] **Da fare da parte tua**:
+      1) applica `supabase/migrations/0027_allarmi.sql` nel SQL Editor
+      di Supabase (test e produzione) prima che il cron/i banner
+      funzionino;
+      2) su Vercel, il nuovo cron in `vercel.json` (`/api/cron/allarmi`)
+      viene registrato automaticamente al prossimo deploy — verifica
+      però che il piano Vercel copra 2 cron job (Hobby ne consente 2,
+      ci arriviamo esattamente con questo); se in futuro serve un terzo
+      cron, servirà valutare un piano superiore o accorpare ulteriormente.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

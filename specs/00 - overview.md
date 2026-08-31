@@ -40,6 +40,9 @@ della maestra, `5x` amministrazione.
 - [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md) —
   warning quando presenza/pasto/pre-asilo/post-asilo di un bambino sono
   incoerenti fra loro, in Presenze, Pasti, Report e report email
+- [07 - allarmi.md](07%20-%20allarmi.md) — banner in dashboard ed email
+  automatiche per presenze/pasti non completati entro mezzogiorno e per
+  settimane di ore di lavoro non confermate
 - [11 - login.md](11%20-%20login.md) — login e schermata di login
 - [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
   maestra: lista bambini della sezione con stato presenza/pasto del
