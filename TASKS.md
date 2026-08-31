@@ -1178,10 +1178,83 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       — senza, la tabella `profili_orari` e la colonna
       `profili.profilo_orario_id` non esistono.
 
+## Report ore di lavoro: form settimanale, malattia/assenza, conferma (v0.15.0)
+- [x] Richiesta dell'utente: terzo passo verso le ore di lavoro del
+      personale. `/dashboard/ore-lavoro` (finora un placeholder,
+      v0.13.0) mostra ora la settimana corrente in forma tabellare (una
+      card per giorno feriale): ore ordinarie precaricate dal profilo
+      orario (v0.14.0) e modificabili, ore straordinarie libere (con
+      motivo obbligatorio), stato "Malattia" (codice obbligatorio) o
+      "Assenza" (nota obbligatoria) in alternativa alle ore. Il
+      personale salva le modifiche e conferma la settimana quando
+      soddisfatto; da quel momento non può più modificarla (solo
+      l'admin può, RLS pronta, interfaccia dedicata fuori scope).
+- [x] Nuovo `specs/18 - report-ore-lavoro.md` (in indice su
+      `specs/00`); `specs/17 - ore-di-lavoro.md` aggiornata a
+      rimandarci per il "come" (non più un placeholder).
+- [x] `supabase/migrations/0025_report_ore_lavoro.sql`: nuove tabelle
+      `ore_lavoro_giorni` (stato/ore/motivo/codice/nota, con check
+      constraint per ciascuna delle tre regole di obbligatorietà) e
+      `ore_lavoro_settimane` (l'esistenza della riga è la conferma,
+      stesso pattern di `report_giornalieri_inviati`, specs/52). RLS:
+      il personale scrive solo le proprie righe e solo se la settimana
+      non è confermata (funzione `settimana_ore_lavoro_confermata`),
+      l'admin sempre. Trigger `impedisci_ore_lavoro_giorno_chiuso`
+      riusa `public.giorno_chiuso` (0022): un giorno di chiusura
+      scolastica non è scrivibile da nessuno, come già per
+      presenze/pasti (specs/53, che rimandava esplicitamente a questa
+      futura funzionalità).
+- [x] `lib/date.ts`: nuove `giornoSettimanaIso` (refactor di `isWeekend`
+      per riusarla) e `giorniLavorativiSettimana` (i 5 giorni
+      lunedì-venerdì della settimana di una data). `lib/oreLavoro.ts`
+      (nuovo, puro): `oreOrdinariePreviste` (precaricamento dal profilo
+      orario), `validaGiornoOreLavoro` (le tre regole di
+      obbligatorietà, azzera ore su malattia/assenza),
+      `totaliSettimanaOreLavoro`. `lib/calendarioScolastico.ts`:
+      `chiusurePerPeriodo` (chiusure su un intervallo, non solo un
+      giorno). `lib/profiliOrari.ts`: `recuperaProfiloOrario`. Unit
+      test in `lib/date.test.ts`, `lib/oreLavoro.test.ts` (23 nuovi
+      test totali).
+- [x] `components/RigaOreLavoro.tsx` (nuovo, client): riga editabile di
+      un giorno, mostra solo i campi pertinenti allo stato scelto
+      (specs/01 - ux.md, "preferire azioni a un tap a form con molti
+      campi") — toggle solo visivo, la sottomissione resta un form
+      nativo lato server. `app/dashboard/ore-lavoro/page.tsx` riscritta
+      (non più un placeholder): card per giorno (editabile o sola
+      lettura se la settimana è confermata, chiusura scolastica se il
+      giorno è chiuso), totale settimanale, pulsante "Conferma
+      settimana" (`components/ConfermaAzione.tsx`, tono neutro). Nuove
+      `app/dashboard/ore-lavoro/actions.ts:salvaSettimanaOreLavoro`
+      (valida tutti i giorni prima di scrivere qualunque cosa, nessun
+      salvataggio parziale su un errore — specs/05) e
+      `confermaSettimanaOreLavoro` (completa i giorni non ancora
+      salvati con i valori precaricati, poi registra la conferma).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (169 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti. Suite e2e Playwright non eseguibile da
+      questo ambiente sandbox (nessun dev server né credenziali
+      Supabase): nuovo `e2e/18-report-ore-lavoro.spec.ts` da verificare
+      con `npx playwright test e2e/18-report-ore-lavoro.spec.ts` (e
+      rieseguire 17) dal tuo ambiente locale. **Nota importante**: quel
+      file non preme mai per davvero "Sì" su "Conferma settimana" —
+      confermare è irreversibile fino al lunedì successivo (nessuna
+      "riapertura" in questa fase) e bloccherebbe la scrittura
+      sull'account di test condiviso per il resto della settimana,
+      stessa cautela già presa per "Pasti comunicati a Rojac"
+      (specs/16). Lo scenario "settimana confermata" si verifica solo
+      se qualcuno l'ha già confermata manualmente questa settimana
+      (altrimenti `test.skip`).
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0025_report_ore_lavoro.sql` nel SQL Editor
+      di Supabase (test e produzione) prima di usare
+      `/dashboard/ore-lavoro` — senza, la pagina fallisce a leggere/
+      scrivere le tabelle `ore_lavoro_giorni`/`ore_lavoro_settimane`.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
-- [ ] Ore di lavoro: come il personale segna effettivamente ore
-      lavorate/assenze (form, calcolo, riepiloghi, export), e come i
-      profili orari (v0.14.0) entrano in quel calcolo — questa
-      abilitazione (v0.13.0) è solo il primo passo
+- [ ] Ore di lavoro: interfaccia admin per rivedere/correggere le
+      settimane (confermate o no) di un altro utente — i permessi RLS
+      sono già pronti (v0.15.0), manca solo la pagina
+- [ ] Ore di lavoro: calcolo effettivo di un monte ore/straordinari a
+      partire dai dati registrati (v0.15.0), riepiloghi, export

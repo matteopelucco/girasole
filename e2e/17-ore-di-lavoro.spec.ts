@@ -36,8 +36,10 @@ test.describe('17 — Ore di lavoro', () => {
 
       try {
         // Abilitazione: la spunta resta visibile riaprendo la pagina, la
-        // card compare in dashboard e apre la sezione dedicata, senza
-        // alcuna form (specs/17: solo l'abilitazione, non la funzione).
+        // card compare in dashboard e apre la sezione dedicata (il
+        // contenuto vero e proprio — tabella settimanale, conferma,
+        // malattia/assenza — è testato in dettaglio in
+        // 18-report-ore-lavoro.spec.ts, non qui).
         await checkbox.check();
         await rigaPropria.getByRole('button', { name: 'Aggiorna' }).click();
         await page.waitForTimeout(1000);
@@ -52,9 +54,6 @@ test.describe('17 — Ore di lavoro', () => {
         await link.click();
         await page.waitForURL('/dashboard/ore-lavoro');
         await expect(page.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
-        await expect(page.getByText(/fase successiva/)).toBeVisible();
-        await expect(page.locator('form')).toHaveCount(0);
-        await expect(page.locator('input')).toHaveCount(0);
 
         await nessunaViolazioneA11yGrave(page);
 

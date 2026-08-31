@@ -4,12 +4,12 @@
 Personale retribuito (maestra, assistente o admin) abilitato dall'admin.
 
 ## Obiettivo
-Introdurre, in modo progressivo, la possibilità per il personale
-retribuito di registrare le ore di lavoro effettuate o le assenze. In
-questa prima fase si abilita solo l'accesso alla sezione, utente per
-utente, deciso dall'admin: **come** le ore vengono effettivamente
-segnate (form, calcolo del totale, riepiloghi, export) è fuori scope,
-sarà definito in una fase successiva.
+Dare al personale retribuito la possibilità di registrare le ore di
+lavoro effettuate o le assenze, abilitando l'accesso alla sezione utente
+per utente, deciso dall'admin. Questo requisito copre solo CHI vede la
+sezione "Ore di lavoro" e la sua abilitazione; il contenuto della
+sezione (form settimanale, conferma, malattia/assenza) è descritto in
+[18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md).
 
 ## Scenario: l'admin abilita un utente al report ore in fase di creazione
 Dato che sono autenticato come admin
@@ -40,13 +40,6 @@ Allora non vedo il pulsante/scheda "Ore di lavoro"
 E se provo ad aprire direttamente `/dashboard/ore-lavoro`, vengo
 reindirizzata alla dashboard invece di vedere il contenuto della sezione
 
-## Scenario: contenuto della sezione in questa fase
-Dato che sono abilitata al report ore e apro `/dashboard/ore-lavoro`
-Allora vedo un messaggio che spiega che la registrazione vera e propria
-(ore lavorate o assenze) sarà disponibile in una fase successiva
-E non vedo alcuna form per inserire dati: questa fase abilita solo
-l'accesso alla sezione, non la sua funzione
-
 ## Regole
 - Nuovo campo `profili.abilitato_ore_lavoro` (booleano, default falso):
   decide da solo la visibilità della sezione e l'accesso alla pagina,
@@ -64,10 +57,10 @@ l'accesso alla sezione, non la sua funzione
   oggi per Presenze/Pasti), ma la disposizione è sempre quella — quando
   il numero di card visibili è dispari, l'ultima occupa l'intera
   larghezza invece di lasciare un buco vuoto in griglia.
-- Fuori scope in questa fase: come le ore vengono effettivamente
-  registrate (form di inserimento, calcolo ore/assenze, riepiloghi,
-  export, eventuali approvazioni) — qui si abilita solo l'accesso al
-  punto d'ingresso della sezione.
+- Come le ore vengono effettivamente registrate (form di inserimento,
+  conferma settimanale, malattia/assenza) è descritto in
+  [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md): questo
+  requisito resta quello che decide solo CHI vede la sezione.
 - L'admin può anche definire un "orario tipo" settimanale (ore previste
   per giorno) e assegnarlo a ciascuna persona, indipendentemente
   dall'abilitazione descritta qui — vedi

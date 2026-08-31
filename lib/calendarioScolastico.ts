@@ -55,6 +55,25 @@ export async function chiusuraPerData(supabase: SupabaseClient, data: string): P
   return { id: riga.id, dataInizio: riga.data_inizio, dataFine: riga.data_fine, nota: riga.nota };
 }
 
+// Giorni di chiusura registrati dall'admin che si sovrappongono al
+// periodo [inizio, fine] (fa I/O, resta coperta solo da e2e — vedi
+// CLAUDE.md, criterio unit test) — usata dal report ore di lavoro
+// (specs/18 - report-ore-lavoro.md), che deve conoscere le chiusure di
+// un'intera settimana in una sola query invece di una per giorno.
+export async function chiusurePerPeriodo(
+  supabase: SupabaseClient,
+  inizio: string,
+  fine: string
+): Promise<GiornoChiusura[]> {
+  const { data: righe } = await supabase
+    .from('giorni_chiusura')
+    .select('id, data_inizio, data_fine, nota')
+    .lte('data_inizio', fine)
+    .gte('data_fine', inizio);
+
+  return (righe ?? []).map((r) => ({ id: r.id, dataInizio: r.data_inizio, dataFine: r.data_fine, nota: r.nota }));
+}
+
 // Controllo esplicito lato server action, prima di scrivere su
 // presenze/pasti (specs/53 - calendario-scolastico.md): per un messaggio
 // d'errore chiaro, oltre al trigger DB che è la difesa reale (vedi
