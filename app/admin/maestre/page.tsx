@@ -24,13 +24,16 @@ export const dynamic = 'force-dynamic';
 export default async function MaestrePage() {
   const { supabase, user, profilo: profiloCorrente } = await requireAdmin();
 
-  const [{ data: profili }, { data: sezioni }, { data: assegnazioni }] = await Promise.all([
+  const [{ data: profili }, { data: sezioni }, { data: assegnazioni }, { data: profiliOrari }] = await Promise.all([
     supabase
       .from('profili')
-      .select('id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro')
+      .select(
+        'id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro, profilo_orario_id'
+      )
       .order('cognome'),
     supabase.from('sezioni').select('id, nome').order('nome'),
     supabase.from('maestre_sezioni').select('maestra_id, sezione_id'),
+    supabase.from('profili_orari').select('id, nome').order('nome'),
   ]);
 
   const staffAssegnabile = profili?.filter((p) => p.ruolo === 'maestra' || p.ruolo === 'assistente') ?? [];
@@ -115,6 +118,22 @@ export default async function MaestrePage() {
                 <input type="checkbox" name="abilitato_ore_lavoro" className="h-4 w-4" />
                 Abilita al report ore di lavoro
               </label>
+              <label className="flex flex-col text-sm text-stone-700 sm:col-span-2">
+                Profilo orario (opzionale)
+                <select
+                  name="profilo_orario_id"
+                  defaultValue=""
+                  aria-label="Profilo orario"
+                  className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                >
+                  <option value="">Nessun profilo orario</option>
+                  {profiliOrari?.map((po) => (
+                    <option key={po.id} value={po.id}>
+                      {po.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
@@ -178,6 +197,19 @@ export default async function MaestrePage() {
                     />
                     Ore di lavoro
                   </label>
+                  <select
+                    name="profilo_orario_id"
+                    defaultValue={p.profilo_orario_id ?? ''}
+                    aria-label="Profilo orario"
+                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                  >
+                    <option value="">Nessun profilo orario</option>
+                    {profiliOrari?.map((po) => (
+                      <option key={po.id} value={po.id}>
+                        {po.nome}
+                      </option>
+                    ))}
+                  </select>
                   <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
                     Aggiorna
                   </PulsanteInvio>

@@ -70,6 +70,10 @@ della maestra, `5x` amministrazione.
 - [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md) —
   giorni di chiusura scolastica (admin) e blocco di presenze/pasti nei
   giorni chiusi, weekend inclusi
+- [54 - profili-orari.md](54%20-%20profili-orari.md) — definizione
+  (admin) di profili orari settimanali e loro assegnazione al
+  personale, propedeutica alla futura registrazione delle ore di
+  lavoro
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
