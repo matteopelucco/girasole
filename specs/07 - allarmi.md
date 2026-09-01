@@ -55,7 +55,8 @@ E la settimana scorsa (lunedì-domenica) non risulta confermata (vedi
 [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md))
 Quando apro la dashboard
 Allora vedo un banner personale che mi avvisa della dimenticanza, con
-l'intervallo di date della settimana scorsa
+l'intervallo di date della settimana scorsa e un link che apre
+direttamente quella settimana in "Ore di lavoro" per confermarla
 E questo banner lo vedo solo io, non gli altri membri dello staff: è una
 mia dimenticanza, non un problema dell'intero asilo
 
@@ -104,8 +105,11 @@ un'altra settimana
 - "Settimana scorsa" è sempre la settimana (lunedì-domenica) immediatamente
   precedente a quella corrente, ricalcolata ogni giorno rispetto a oggi:
   il banner resta visibile per tutta la settimana corrente finché quella
-  passata non viene confermata (nessuna funzione per confermarla in
-  ritardo in questa fase, vedi Fuori scope).
+  passata non viene confermata. Il banner punta direttamente a quella
+  settimana in "Ore di lavoro" (`/dashboard/ore-lavoro?settimana=...`,
+  vedi [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md), che
+  permette di navigare e confermare settimane passate), non solo di
+  segnalare il problema.
 - Idempotenza delle email tracciata in un'unica tabella
   `allarmi_inviati` (`tipo`, `chiave`, `inviato_at`): `chiave` è la data
   per l'allarme presenze/pasti, `{utente_id}_{settimana_inizio}` per
@@ -133,10 +137,6 @@ un'altra settimana
   per non duplicare la stessa logica in due file).
 
 ## Fuori scope in questa fase
-- Una funzione per confermare in ritardo una settimana di ore passata
-  (il banner personale avvisa, ma non offre ancora un modo per
-  rimediare da qui: la sezione "Ore di lavoro" mostra solo la settimana
-  corrente, vedi specs/18, "Fuori scope").
 - Una vista per l'admin che riepiloghi chi, tra il personale, non ha
   ancora confermato le settimane passate (oggi visibile solo utente per
   utente, dal proprio banner personale, o dalle email che l'admin

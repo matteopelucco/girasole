@@ -1392,6 +1392,67 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       ci arriviamo esattamente con questo); se in futuro serve un terzo
       cron, servirà valutare un piano superiore o accorpare ulteriormente.
 
+## Navigazione tra settimane in "Ore di lavoro" (v0.18.0)
+- [x] Richiesta dell'utente: il personale può navigare nelle settimane
+      lavorative per verificare le ore inserite o per confermare
+      settimane non ancora confermate, mantenendo il vincolo assoluto
+      di non poter mai inserire/vedere ore per una settimana futura.
+- [x] `specs/18 - report-ore-lavoro.md`: 5 nuovi scenari (navigare a
+      una settimana passata, tornare verso quella corrente, impossibile
+      andare oltre, modificare/confermare una settimana passata non
+      confermata, una settimana passata già confermata resta di sola
+      lettura) e nuove Regole sul parametro `?settimana=` e sul vincolo
+      "mai futuro" applicato su più livelli. `specs/07 - allarmi.md`
+      aggiornato: il banner personale ora linka direttamente alla
+      settimana da confermare, invece di rimandare all'admin (Fuori
+      scope rimosso).
+- [x] `lib/oreLavoro.ts:settimanaOreLavoroRichiesta` (nuova, con unit
+      test in `lib/oreLavoro.test.ts`): risolve/clampa la settimana
+      richiesta (query string o campo form) a un lunedì valido non
+      futuro, altrimenti quella corrente — stessa idea di
+      `lib/report.ts:risolviPeriodoReport` per `?periodo=`. Unica fonte
+      di verità, riusata sia da `app/dashboard/ore-lavoro/page.tsx` (per
+      il parametro `?settimana=`) sia da
+      `app/dashboard/ore-lavoro/actions.ts` (per validare il campo
+      nascosto `settimana_inizio` inviato dal form), per non duplicare
+      lo stesso controllo in due punti (CLAUDE.md, jscpd).
+- [x] `app/dashboard/ore-lavoro/page.tsx`: box di navigazione ambra
+      (stesso stile del periodo in Report) con "←"/etichetta
+      intervallo/"→" — il pulsante "→" non è mai mostrato sulla
+      settimana corrente. Tutto il resto della pagina (sola lettura se
+      confermata, form editabile altrimenti, totali) resta
+      parametrizzato dal lunedì risolto, invariato nella logica.
+- [x] `app/dashboard/ore-lavoro/actions.ts`: `salvaSettimanaOreLavoro` e
+      `confermaSettimanaOreLavoro` accettano qualunque settimana passata
+      valida oltre a quella corrente, rifiutano esplicitamente una
+      settimana futura (messaggi "Non puoi modificare/confermare una
+      settimana futura.").
+- [x] `app/dashboard/page.tsx`: il banner "settimana ore non
+      confermata" (specs/07) ora linka direttamente a
+      `/dashboard/ore-lavoro?settimana=...` invece di invitare a
+      contattare l'admin.
+- [x] `supabase/migrations/0028_ore_lavoro_navigazione_settimane.sql`:
+      due trigger (`ore_lavoro_giorni`, `ore_lavoro_settimane`) che
+      rifiutano a livello database qualunque riga con data/settimana
+      futura, per qualunque ruolo — ultimo livello di difesa oltre a UI
+      e server action, coerente con le altre regole di integrità del
+      progetto.
+- [x] `e2e/18-report-ore-lavoro.spec.ts`: estesa la sequenza esistente
+      con i 5 nuovi scenari (← verso il passato, → verso il presente,
+      assenza di "→"/clamp di un `?settimana=` futuro via URL diretto,
+      modifica/conferma di una settimana passata non confermata —
+      ripristinata al valore trovato, mai confermata per davvero — e il
+      caso di sola lettura se già confermata, che si attiva da solo).
+      `e2e/07-allarmi.spec.ts`: verifica che il link del banner
+      personale punti a `/dashboard/ore-lavoro?settimana=...`.
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (205 test) e `npx jscpd` (3 clone preesistenti, sotto soglia,
+      nessuno nuovo) puliti.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0028_ore_lavoro_navigazione_settimane.sql`
+      nel SQL Editor di Supabase (test e produzione). Nessuna modifica
+      lato Vercel richiesta da questa feature.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

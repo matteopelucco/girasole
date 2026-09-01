@@ -117,6 +117,12 @@ test.describe('07 — Allarmi', () => {
           );
 
           await expect(banner).toBeVisible();
+          // Il banner porta direttamente alla settimana da confermare
+          // (specs/07, specs/18 — navigazione tra settimane).
+          await expect(page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' })).toHaveAttribute(
+            'href',
+            /\/dashboard\/ore-lavoro\?settimana=\d{4}-\d{2}-\d{2}/
+          );
           await nessunaViolazioneA11yGrave(page);
         } finally {
           await page.goto('/admin/maestre');

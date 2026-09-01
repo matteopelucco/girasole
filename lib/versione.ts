@@ -4,5 +4,5 @@
 // ora, minuti e secondi (fuso Europe/Rome, non UTC — coerente con
 // lib/date.ts), non solo la data: utile per distinguere più rilasci
 // fatti nello stesso giorno.
-export const VERSIONE_APP = '0.17.0';
-export const DATA_BUILD = '2026-08-31 23:21:54';
+export const VERSIONE_APP = '0.18.0';
+export const DATA_BUILD = '2026-09-01 23:01:27';

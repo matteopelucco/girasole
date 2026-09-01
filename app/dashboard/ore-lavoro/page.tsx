@@ -1,11 +1,26 @@
+import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { RigaOreLavoro, ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/components/RigaOreLavoro';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
-import { oggi, giorniSettimana, giornoSettimanaIso, formattaIntervalloItaliano, formattaDataBreve, formattaDataOraItaliana } from '@/lib/date';
-import { oreOrdinariePreviste, totaliSettimanaOreLavoro, notaGiornoChiusoOreLavoro } from '@/lib/oreLavoro';
+import {
+  oggi,
+  sommaGiorni,
+  giorniSettimana,
+  giornoSettimanaIso,
+  lunediSettimana,
+  formattaIntervalloItaliano,
+  formattaDataBreve,
+  formattaDataOraItaliana,
+} from '@/lib/date';
+import {
+  oreOrdinariePreviste,
+  totaliSettimanaOreLavoro,
+  notaGiornoChiusoOreLavoro,
+  settimanaOreLavoroRichiesta,
+} from '@/lib/oreLavoro';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { salvaSettimanaOreLavoro, confermaSettimanaOreLavoro } from './actions';
@@ -23,17 +38,25 @@ const NOMI_GIORNI: Record<number, string> = {
 };
 
 // Sezione "Ore di lavoro" (specs/18 - report-ore-lavoro.md): il
-// personale abilitato (specs/17) registra ore/malattia/assenza per la
-// settimana corrente (tutti i 7 giorni: il personale può lavorare anche
-// nei giorni in cui l'asilo è chiuso, specs/53) e la conferma. Una volta
-// confermata, la pagina mostra i dati in sola lettura.
-export default async function OreLavoroPage() {
+// personale abilitato (specs/17) registra ore/malattia/assenza per una
+// settimana (tutti i 7 giorni: il personale può lavorare anche nei
+// giorni in cui l'asilo è chiuso, specs/53) e la conferma. Può navigare
+// a qualunque settimana passata per rivederla o confermarla, mai a una
+// futura (?settimana=, un lunedì — risolto/clampato da
+// settimanaOreLavoroRichiesta). Una volta confermata, la settimana in
+// questione è mostrata in sola lettura.
+export default async function OreLavoroPage({ searchParams }: { searchParams: { settimana?: string } }) {
   const { supabase, user, profilo, ruolo } = await requireStaff({});
   assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
 
   const nomeVisualizzato = profilo?.nome || user.email || '';
-  const giorni = giorniSettimana(oggi());
-  const [lunedi, , , , , , domenica] = giorni;
+  const inizioSettimanaCorrente = lunediSettimana(oggi());
+  const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
+  const giorni = giorniSettimana(lunedi);
+  const domenica = giorni[giorni.length - 1];
+  const settimanaPrecedente = sommaGiorni(lunedi, -7);
+  const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
+  const settimanaSuccessiva = sommaGiorni(lunedi, 7);
 
   const [profiloOrario, { data: righeGiorni }, { data: settimana }, chiusure] = await Promise.all([
     recuperaProfiloOrario(supabase, profilo?.profilo_orario_id),
@@ -85,7 +108,26 @@ export default async function OreLavoroPage() {
             ← Torna alla dashboard
           </a>
           <h1 className="mt-2 text-lg font-medium">Ore di lavoro</h1>
-          <p className="mt-1 text-sm text-stone-600">Settimana {formattaIntervalloItaliano(lunedi, domenica)}</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <Link
+            href={`/dashboard/ore-lavoro?settimana=${settimanaPrecedente}`}
+            aria-label="Settimana precedente"
+            className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+          >
+            ←
+          </Link>
+          <span className="text-sm font-medium text-amber-900">{formattaIntervalloItaliano(lunedi, domenica)}</span>
+          {puoAndareAvanti && (
+            <Link
+              href={`/dashboard/ore-lavoro?settimana=${settimanaSuccessiva}`}
+              aria-label="Settimana successiva"
+              className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
+            >
+              →
+            </Link>
+          )}
         </div>
 
         {confermata && (

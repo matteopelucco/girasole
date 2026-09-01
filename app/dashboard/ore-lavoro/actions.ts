@@ -3,31 +3,33 @@
 import { revalidatePath } from 'next/cache';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oggi, giorniSettimana } from '@/lib/date';
-import { validaGiornoOreLavoro, oreOrdinariePreviste } from '@/lib/oreLavoro';
+import { validaGiornoOreLavoro, oreOrdinariePreviste, settimanaOreLavoroRichiesta } from '@/lib/oreLavoro';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
-// Nessuna navigazione tra settimane in questa fase (specs/18 -
-// report-ore-lavoro.md, "Fuori scope"): entrambe le azioni scrivono
-// solo sulla settimana corrente, ignorando qualunque valore diverso
-// arrivasse dal campo nascosto settimana_inizio.
-function settimanaCorrenteOSbagliata(formData: FormData): string | null {
-  const settimanaInizio = (formData.get('settimana_inizio') as string) || '';
-  const giorni = giorniSettimana(oggi());
-  return settimanaInizio === giorni[0] ? settimanaInizio : null;
+// Il personale può modificare/confermare qualunque settimana passata,
+// oltre a quella corrente (specs/18) — ma mai una settimana futura:
+// riusa la stessa risoluzione della pagina (settimanaOreLavoroRichiesta)
+// per validare il campo nascosto settimana_inizio inviato dal form,
+// invece di duplicare lo stesso controllo qui.
+function settimanaValidaPerScrittura(formData: FormData): string | null {
+  const richiesta = (formData.get('settimana_inizio') as string) || '';
+  const risolta = settimanaOreLavoroRichiesta(richiesta, oggi());
+  return risolta === richiesta ? richiesta : null;
 }
 
-// Salva le ore/lo stato di ogni giorno della settimana corrente
-// (specs/18): valida PRIMA tutti i giorni inviati (funzione pura,
-// nessun I/O) e scrive solo se sono tutti validi — nessun salvataggio
-// parziale su un errore (specs/05 - feedback.md).
+// Salva le ore/lo stato di ogni giorno della settimana indicata
+// (specs/18: quella corrente o una passata, mai una futura) — valida
+// PRIMA tutti i giorni inviati (funzione pura, nessun I/O) e scrive
+// solo se sono tutti validi: nessun salvataggio parziale su un errore
+// (specs/05 - feedback.md).
 export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase, user, profilo } = await requireStaff({});
   assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
 
-  const settimanaInizio = settimanaCorrenteOSbagliata(formData);
+  const settimanaInizio = settimanaValidaPerScrittura(formData);
   if (!settimanaInizio) {
-    return { ok: false, messaggio: 'Puoi modificare solo la settimana corrente.' };
+    return { ok: false, messaggio: 'Non puoi modificare una settimana futura.' };
   }
 
   const giorni = giorniSettimana(settimanaInizio);
@@ -75,19 +77,19 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
   return { ok: true };
 }
 
-// Conferma la settimana corrente (specs/18): prima completa con i
-// valori precaricati dal profilo orario ogni giorno non ancora salvato
-// esplicitamente (scenario "confermare la settimana"), poi registra la
-// conferma vera e propria — l'esistenza della riga in
-// ore_lavoro_settimane È la conferma (stesso pattern di
-// report_giornalieri_inviati, specs/52).
+// Conferma la settimana indicata (specs/18: quella corrente o una
+// passata, mai una futura): prima completa con i valori precaricati dal
+// profilo orario ogni giorno non ancora salvato esplicitamente
+// (scenario "confermare la settimana"), poi registra la conferma vera e
+// propria — l'esistenza della riga in ore_lavoro_settimane È la
+// conferma (stesso pattern di report_giornalieri_inviati, specs/52).
 export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase, user, profilo } = await requireStaff({});
   assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
 
-  const settimanaInizio = settimanaCorrenteOSbagliata(formData);
+  const settimanaInizio = settimanaValidaPerScrittura(formData);
   if (!settimanaInizio) {
-    return { ok: false, messaggio: 'Puoi confermare solo la settimana corrente.' };
+    return { ok: false, messaggio: 'Non puoi confermare una settimana futura.' };
   }
 
   const giorni = giorniSettimana(settimanaInizio);
