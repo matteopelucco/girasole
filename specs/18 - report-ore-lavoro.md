@@ -9,7 +9,11 @@ Dare al personale abilitato un modo per registrare, settimana per
 settimana, le ore di lavoro effettuate — ordinarie e straordinarie — o
 un giorno di malattia/assenza, e per confermare la settimana una volta
 verificata, così da renderla stabile (non più modificabile in autonomia).
-Questo requisito estende
+Il personale può anche navigare tra le settimane passate, per
+rivedere le ore già inserite o per confermare una settimana dimenticata
+(vedi [07 - allarmi.md](07%20-%20allarmi.md), che segnala proprio questo
+caso) — non è invece mai possibile inserire ore per una settimana
+futura. Questo requisito estende
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md), che finora abilitava
 solo l'accesso a una sezione placeholder: da qui in poi
 `/dashboard/ore-lavoro` mostra il contenuto vero e proprio.
@@ -96,6 +100,45 @@ malattia/assenza esattamente come per un giorno normale — il personale
 può lavorare (es. pulizie, attività amministrative, formazione) anche
 quando l'asilo non è operativo
 
+## Scenario: navigare a una settimana passata
+Dato che sono su "Ore di lavoro" (settimana corrente)
+Quando premo "←" (settimana precedente)
+Allora vedo la stessa tabella calcolata su quella settimana, con le ore
+già eventualmente salvate, oppure precaricate dal profilo orario se non
+ho ancora salvato nulla per quella settimana
+E posso continuare a premere "←" per risalire a settimane sempre più
+lontane, senza limiti
+
+## Scenario: tornare verso la settimana corrente
+Dato che sto guardando una settimana passata
+Quando premo "→" (settimana successiva)
+Allora vedo la settimana immediatamente successiva, fino a tornare alla
+settimana corrente
+
+## Scenario: non è possibile navigare oltre la settimana corrente
+Dato che sto guardando la settimana corrente
+Quando guardo i controlli di navigazione
+Allora non vedo alcun pulsante "→": non c'è modo di raggiungere una
+settimana futura dall'interfaccia
+E se apro comunque direttamente un indirizzo che punta a una settimana
+futura, vedo la settimana corrente al suo posto (nessun errore, nessuna
+settimana futura mostrata)
+
+## Scenario: modificare o confermare una settimana passata non ancora confermata
+Dato che sto guardando una settimana passata che non ho ancora
+confermato
+Quando modifico le ore di un giorno e premo "Salva modifiche", oppure
+premo "Conferma settimana"
+Allora il comportamento è identico a quello della settimana corrente:
+stesse validazioni, stesso salvataggio, stessa conferma con data/ora
+mostrate a schermo
+
+## Scenario: una settimana passata già confermata resta di sola lettura
+Dato che sto guardando una settimana passata già confermata
+Quando apro "Ore di lavoro" su quella settimana
+Allora vedo i dati in sola lettura, esattamente come per la settimana
+corrente quando è confermata
+
 ## Scenario: accesso negato senza abilitazione
 Dato che il mio profilo non è abilitato al report ore
 Quando provo ad aprire `/dashboard/ore-lavoro`
@@ -137,6 +180,26 @@ Allora vengo reindirizzata alla dashboard (vedi
   di quel submit, nemmeno quelli validi — il personale corregge il
   giorno segnalato e reinvia (stesso pattern "errore ⇒ dati preservati"
   di specs/05 - feedback.md, i campi già compilati restano tali).
+- Navigazione: un parametro in query string (`?settimana=`, un lunedì)
+  indica quale settimana mostrare, di default quella corrente. Ogni
+  settimana passata (confermata o no) si comporta esattamente come la
+  settimana corrente nello stesso stato — stessa UI, stesse regole di
+  salvataggio/conferma — semplicemente riferita a un'altra data.
+- **Vincolo assoluto: non è mai possibile inserire o vedere ore per una
+  settimana futura.** Se il parametro `settimana` non è un lunedì
+  valido, oppure è un lunedì futuro rispetto a oggi (fuso Europe/Rome),
+  la pagina mostra silenziosamente la settimana corrente al suo posto
+  (nessun errore: stesso principio di "parametro non valido ⇒ valore di
+  default" già usato per `?periodo=` nel Report, specs/51). Applicato su
+  più livelli, come per le altre regole di integrità del progetto: il
+  pulsante "→" non è disponibile oltre la settimana corrente, la pagina
+  clampa un parametro fuori range, le server action rifiutano un
+  `settimana_inizio` futuro passato via form, e un trigger sul database
+  (`supabase/migrations/0028_ore_lavoro_navigazione_settimane.sql`)
+  rifiuta comunque qualunque riga con data (o settimana confermata)
+  futura — vale per QUALUNQUE ruolo, admin incluso: non è un permesso di
+  scrittura ma un vincolo di coerenza dei dati (non si possono lavorare
+  ore che non sono ancora accadute).
 
 ## Fuori scope in questa fase
 - Un'interfaccia dedicata per l'admin per rivedere/correggere le
@@ -146,7 +209,5 @@ Allora vengo reindirizzata alla dashboard (vedi
   intervenire dal SQL Editor di Supabase se necessario.
 - Il calcolo effettivo di un monte ore/straordinari a partire dai dati
   registrati, ed eventuali riepiloghi o export.
-- Navigazione tra settimane passate o future: si vede sempre e solo la
-  settimana corrente.
 - "Riaprire" una settimana già confermata (renderla di nuovo
   modificabile dal personale): nessuna azione la offre in questa fase.

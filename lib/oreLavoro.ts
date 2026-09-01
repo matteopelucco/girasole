@@ -1,8 +1,25 @@
-import { formattaDataItaliana, giornoSettimanaIso } from '@/lib/date';
+import { formattaDataItaliana, giornoSettimanaIso, lunediSettimana } from '@/lib/date';
 import { isGiornoChiuso, trovaChiusura, type GiornoChiusura } from '@/lib/calendarioScolastico';
 import type { ProfiloOrario } from '@/lib/profiliOrari';
 
 export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza';
+
+// Lunedì della settimana da mostrare/modificare in "Ore di lavoro"
+// (specs/18): quello richiesto (query string `?settimana=`, o campo
+// nascosto `settimana_inizio` inviato dal form) se è un lunedì valido e
+// non è nel futuro rispetto a `oggiData`; altrimenti quello della
+// settimana corrente. Mai una settimana futura — vincolo assoluto di
+// specs/18, applicato qui una volta sola e riusato sia dalla pagina
+// (per risolvere il parametro in query string) sia dalle server action
+// (per validare quanto inviato dal form, invece di duplicare lo stesso
+// controllo in due punti — CLAUDE.md, jscpd). Funzione pura.
+export function settimanaOreLavoroRichiesta(richiesta: string | undefined, oggiData: string): string {
+  const inizioCorrente = lunediSettimana(oggiData);
+  if (!richiesta || !/^\d{4}-\d{2}-\d{2}$/.test(richiesta)) return inizioCorrente;
+  if (lunediSettimana(richiesta) !== richiesta) return inizioCorrente;
+  if (richiesta > inizioCorrente) return inizioCorrente;
+  return richiesta;
+}
 
 // Nota puramente informativa per un giorno di chiusura scolastica nel
 // report ore di lavoro (specs/18, specs/53): a differenza del messaggio

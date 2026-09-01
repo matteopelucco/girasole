@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   notaGiornoChiusoOreLavoro,
   oreOrdinariePreviste,
+  settimanaOreLavoroRichiesta,
   totaliSettimanaOreLavoro,
   validaGiornoOreLavoro,
   type InputGiornoOreLavoro,
@@ -192,5 +193,39 @@ describe('notaGiornoChiusoOreLavoro', () => {
     ];
     const nota = notaGiornoChiusoOreLavoro('2026-12-27', chiusure);
     expect(nota).toContain('Vacanze di Natale');
+  });
+});
+
+// 2026-08-31 è un lunedì (settimana corrente per questi test).
+describe('settimanaOreLavoroRichiesta', () => {
+  const OGGI = '2026-08-31';
+
+  it('senza richiesta restituisce la settimana corrente', () => {
+    expect(settimanaOreLavoroRichiesta(undefined, OGGI)).toBe('2026-08-31');
+  });
+
+  it('la settimana corrente richiesta esplicitamente resta invariata', () => {
+    expect(settimanaOreLavoroRichiesta('2026-08-31', OGGI)).toBe('2026-08-31');
+  });
+
+  it('una settimana passata valida viene accettata', () => {
+    expect(settimanaOreLavoroRichiesta('2026-08-24', OGGI)).toBe('2026-08-24');
+  });
+
+  it('una settimana molto passata viene accettata comunque (nessun limite)', () => {
+    expect(settimanaOreLavoroRichiesta('2025-01-06', OGGI)).toBe('2025-01-06');
+  });
+
+  it('una settimana futura viene riportata a quella corrente', () => {
+    expect(settimanaOreLavoroRichiesta('2026-09-07', OGGI)).toBe('2026-08-31');
+  });
+
+  it('una data che non è un lunedì viene riportata alla settimana corrente', () => {
+    expect(settimanaOreLavoroRichiesta('2026-08-25', OGGI)).toBe('2026-08-31'); // martedì
+  });
+
+  it('una stringa non valida viene riportata alla settimana corrente, senza errori', () => {
+    expect(settimanaOreLavoroRichiesta('non-una-data', OGGI)).toBe('2026-08-31');
+    expect(settimanaOreLavoroRichiesta('', OGGI)).toBe('2026-08-31');
   });
 });

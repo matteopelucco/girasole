@@ -101,8 +101,10 @@ export default async function DashboardPage({
           <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             <p className="font-semibold">⏰ Non hai confermato le ore della settimana scorsa</p>
             <p className="mt-1">
-              Settimana {formattaIntervalloItaliano(settimanaOreScorsa.inizio, settimanaOreScorsa.fine)}. Contatta
-              l&apos;amministratore per regolarizzarla.
+              Settimana {formattaIntervalloItaliano(settimanaOreScorsa.inizio, settimanaOreScorsa.fine)}.{' '}
+              <Link href={`/dashboard/ore-lavoro?settimana=${settimanaOreScorsa.inizio}`} className="underline">
+                Vai su Ore di lavoro per confermarla.
+              </Link>
             </p>
           </div>
         )}

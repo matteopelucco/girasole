@@ -146,6 +146,65 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.reload();
         await expect(page.getByLabel('Ore ordinarie Sabato')).toHaveValue('3');
 
+        // --- Navigazione tra settimane (specs/18) ---
+
+        // Sulla settimana corrente non c'è alcun modo di andare oltre
+        // (scenario "non è possibile navigare oltre la settimana corrente").
+        await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
+
+        // Un indirizzo diretto verso una settimana futura mostra comunque
+        // quella corrente, senza errori (stesso scenario, clamp lato pagina).
+        await page.goto('/dashboard/ore-lavoro?settimana=2099-01-05');
+        await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
+        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
+
+        // "←" porta alla settimana precedente, con gli stessi dati
+        // (precaricati dal profilo orario dove non ho ancora salvato
+        // nulla per quella settimana) — scenario "navigare a una
+        // settimana passata".
+        await page.goto('/dashboard/ore-lavoro');
+        await page.getByRole('link', { name: 'Settimana precedente' }).click();
+        await page.waitForURL(/settimana=\d{4}-\d{2}-\d{2}/);
+        await expect(page.getByRole('link', { name: 'Settimana successiva' })).toBeVisible();
+        await nessunaViolazioneA11yGrave(page);
+
+        const settimanaPassataConfermata = await page.getByText('Settimana confermata il', { exact: false }).count();
+        if (settimanaPassataConfermata > 0) {
+          // Scenario "una settimana passata già confermata resta di
+          // sola lettura": si attiva da solo se una settimana
+          // precedente risulta già confermata.
+          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
+          await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
+        } else {
+          // Scenario "modificare o confermare una settimana passata non
+          // ancora confermata": stesso comportamento della settimana
+          // corrente. Ripristino lo stesso valore trovato, per non
+          // lasciare lo stato diverso da come l'ho trovato.
+          await expect(page.getByLabel('Ore ordinarie Lunedì')).toBeEditable();
+          const valorePrecedente = await page.getByLabel('Ore ordinarie Lunedì').inputValue();
+          await page.getByLabel('Ore ordinarie Lunedì').fill('5');
+          await page.getByRole('button', { name: 'Salva modifiche' }).click();
+          await page.waitForTimeout(1000);
+          await page.reload();
+          await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('5');
+
+          await page.getByRole('button', { name: 'Conferma settimana' }).click();
+          await expect(
+            page.getByText('Da questo momento non potrai più modificarle', { exact: false })
+          ).toBeVisible();
+          await page.getByRole('button', { name: 'Annulla' }).click();
+
+          await page.getByLabel('Ore ordinarie Lunedì').fill(valorePrecedente);
+          await page.getByRole('button', { name: 'Salva modifiche' }).click();
+          await page.waitForTimeout(1000);
+        }
+
+        // "→" torna verso la settimana corrente (scenario "tornare
+        // verso la settimana corrente"): il pulsante "→" scompare di
+        // nuovo una volta tornati sulla settimana corrente.
+        await page.getByRole('link', { name: 'Settimana successiva' }).click();
+        await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
+
         // "Conferma settimana" chiede conferma esplicita: verifico solo
         // che il dialogo compaia e che "Annulla" non confermi nulla (non
         // premo mai "Sì", vedi nota in testa al file).
