@@ -164,6 +164,10 @@ export default async function DashboardPage({
             /{' '}
             <a href="/admin/maestre" className="underline">
               Utenti
+            </a>{' '}
+            /{' '}
+            <a href="/admin/ore-lavoro" className="underline">
+              Ore di lavoro del personale
             </a>
             .
           </div>

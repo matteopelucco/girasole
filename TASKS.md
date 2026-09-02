@@ -1533,11 +1533,42 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       progetto Supabase di test configurato in `.env.local`): da
       lanciare in locale/CI prima del merge.
 
+- [x] `specs/18 - report-ore-lavoro.md`: nuova sezione "Amministrazione"
+      — l'admin può rivedere e correggere le ore di **chiunque** sia
+      abilitato al report ore, anche una settimana già confermata,
+      indipendentemente dalla propria abilitazione personale. Le policy
+      RLS lo permettevano già dalla v0.15.0 (`ruolo_corrente() =
+      'admin'` non ha mai avuto la condizione "non confermata"),
+      mancava solo l'interfaccia — nessuna migration necessaria.
+- [x] `app/admin/ore-lavoro/page.tsx` (nuova): elenco del personale
+      abilitato al report ore (nome, cognome, email, se la settimana
+      corrente è confermata), un link per persona verso le sue ore.
+- [x] `app/dashboard/ore-lavoro/page.tsx` e `actions.ts`: estesi con un
+      parametro `?utente=<id>` (solo per l'admin, altrimenti ignorato —
+      chi non è admin scrive/legge sempre e solo i propri dati, sia lato
+      pagina sia lato server action) che sceglie di chi sono le ore
+      mostrate; per l'admin la settimana resta sempre modificabile anche
+      se già confermata (niente vista sola-lettura), e l'accesso non
+      richiede la propria abilitazione personale. Nuova funzione pura
+      condivisa `lib/oreLavoro.ts:utenteBersaglioOreLavoro` (con unit
+      test) per risolvere l'utente su cui scrivere in modo identico tra
+      `salvaSettimanaOreLavoro` e `confermaSettimanaOreLavoro`.
+- [x] Link "Ore di lavoro del personale" aggiunto ai rimandi admin in
+      `app/dashboard/page.tsx`.
+- [x] `e2e/18-report-ore-lavoro.spec.ts`: nuovi scenari (elenco,
+      apertura/navigazione delle ore di un dipendente, correzione di una
+      settimana già confermata, conferma per conto terzi senza premere
+      "Sì", parametro `utente` non valido o usato da un non-admin
+      ignorato) — stessa cautela della suite esistente (mai confermare
+      per davvero su un account condiviso).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (227 test) e `npx jscpd` (3 clone preesistenti, nessuno nuovo)
+      puliti. Suite e2e non eseguibile in questo ambiente (nessun
+      progetto Supabase di test configurato in `.env.local`): da
+      lanciare in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
-- [ ] Ore di lavoro: interfaccia admin per rivedere/correggere le
-      settimane (confermate o no) di un altro utente — i permessi RLS
-      sono già pronti (v0.15.0), manca solo la pagina
 - [ ] Ore di lavoro: calcolo effettivo di un monte ore/straordinari a
       partire dai dati registrati (v0.15.0), riepiloghi, export

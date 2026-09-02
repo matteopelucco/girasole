@@ -4,6 +4,7 @@ import {
   oreOrdinariePreviste,
   settimanaOreLavoroRichiesta,
   totaliSettimanaOreLavoro,
+  utenteBersaglioOreLavoro,
   validaGiornoOreLavoro,
   type InputGiornoOreLavoro,
 } from './oreLavoro';
@@ -33,6 +34,30 @@ describe('oreOrdinariePreviste', () => {
   it('funziona anche con valori stringa (numeric via PostgREST)', () => {
     const profiloStringa = { ...profilo, ore_lunedi: '7.50' };
     expect(oreOrdinariePreviste(profiloStringa, '2026-08-31')).toBe(7.5);
+  });
+});
+
+describe('utenteBersaglioOreLavoro', () => {
+  it('un admin che indica un altro utente scrive su quell\'utente', () => {
+    expect(utenteBersaglioOreLavoro('admin', 'admin-1', 'dipendente-1')).toBe('dipendente-1');
+  });
+
+  it('un admin senza campo utente_id scrive su se stesso', () => {
+    expect(utenteBersaglioOreLavoro('admin', 'admin-1', null)).toBe('admin-1');
+    expect(utenteBersaglioOreLavoro('admin', 'admin-1', undefined)).toBe('admin-1');
+    expect(utenteBersaglioOreLavoro('admin', 'admin-1', '')).toBe('admin-1');
+  });
+
+  it('una maestra scrive sempre su se stessa, anche forzando utente_id', () => {
+    expect(utenteBersaglioOreLavoro('maestra', 'maestra-1', 'dipendente-1')).toBe('maestra-1');
+  });
+
+  it('un assistente scrive sempre su se stesso, anche forzando utente_id', () => {
+    expect(utenteBersaglioOreLavoro('assistente', 'assistente-1', 'dipendente-1')).toBe('assistente-1');
+  });
+
+  it('nessun ruolo riconosciuto scrive sempre su se stesso', () => {
+    expect(utenteBersaglioOreLavoro(null, 'utente-1', 'dipendente-1')).toBe('utente-1');
   });
 });
 

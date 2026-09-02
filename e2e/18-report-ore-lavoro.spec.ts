@@ -277,4 +277,119 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
   });
+
+  // Amministrazione (specs/18, sezione "Amministrazione"): l'admin può
+  // rivedere/correggere le ore di chiunque sia abilitato, anche una
+  // settimana già confermata. Usa l'account maestra come "dipendente"
+  // di prova, abilitandolo temporaneamente e ripristinandolo in
+  // `finally` — stesso pattern del blocco "come admin" sopra. Non
+  // preme mai "Sì" su "Conferma settimana" (stessa cautela di sopra:
+  // irreversibile sull'account condiviso) né "Salva modifiche" su dati
+  // reali del dipendente — verifica solo che i controlli siano
+  // presenti/editabili, non li usa per davvero.
+  test.describe('amministrazione: rivedere/correggere le ore di un dipendente', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
+
+    test.beforeEach(async ({ page }) => {
+      test.skip(
+        !hasCredenziali('admin') || !hasCredenziali('maestra'),
+        'richiede E2E_ADMIN_EMAIL/PASSWORD e E2E_MAESTRA_EMAIL/PASSWORD'
+      );
+    });
+
+    test('elenco, apertura, navigazione e correzione delle ore di un dipendente abilitato', async ({ page }) => {
+      await page.goto('/admin/maestre');
+      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAbilita.getByLabel('Ore di lavoro').check();
+      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
+      await page.waitForTimeout(1000);
+
+      try {
+        // Scenario: l'admin apre l'elenco del personale abilitato.
+        await page.goto('/admin/ore-lavoro');
+        const rigaDipendente = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await expect(rigaDipendente).toBeVisible();
+        await expect(rigaDipendente).toContainText(/Settimana corrente (non )?confermata/);
+        await nessunaViolazioneA11yGrave(page);
+
+        // Scenario: l'admin apre le ore di un dipendente — vale anche
+        // se il profilo admin non è personalmente abilitato (nessun
+        // redirect alla dashboard).
+        await rigaDipendente.getByRole('link').click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\?utente=.+/);
+        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+        await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
+        await nessunaViolazioneA11yGrave(page);
+
+        const url = new URL(page.url());
+        const utenteId = url.searchParams.get('utente')!;
+
+        const giaConfermata = (await page.getByText('Settimana confermata il', { exact: false }).count()) > 0;
+        if (giaConfermata) {
+          // Scenario: l'admin modifica le ore di un dipendente, anche
+          // se la settimana è già confermata — a differenza della
+          // vista del diretto interessato (sola lettura), l'admin vede
+          // comunque i campi modificabili.
+          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+          await expect(page.getByLabel('Ore ordinarie Lunedì')).toBeEditable();
+          await expect(page.getByText('Puoi comunque correggerla qui sotto', { exact: false })).toBeVisible();
+        } else {
+          // Scenario: l'admin conferma per conto di un dipendente una
+          // settimana non ancora confermata — verifico solo che il
+          // dialogo compaia con il testo corretto, senza confermare
+          // per davvero.
+          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+          await page.getByRole('button', { name: 'Conferma settimana' }).click();
+          await expect(page.getByText('Confermi le ore di questa settimana per', { exact: false })).toBeVisible();
+          await page.getByRole('button', { name: 'Annulla' }).click();
+        }
+
+        // Scenario: l'admin naviga tra le settimane di un dipendente —
+        // resta sulle ore della stessa persona (il parametro `utente`
+        // resta nell'URL).
+        await page.getByRole('link', { name: 'Settimana precedente' }).click();
+        await page.waitForURL(new RegExp(`settimana=\\d{4}-\\d{2}-\\d{2}&utente=${utenteId}`));
+        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+
+        // Scenario: un parametro `utente` non valido viene ignorato —
+        // torno a vedere le mie proprie ore (che, essendo io admin non
+        // abilitato personalmente in questo test, mi reindirizzano alla
+        // dashboard esattamente come senza alcun parametro).
+        await page.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
+        await page.waitForURL('/dashboard', { timeout: 20_000 });
+      } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
+      }
+    });
+
+    test('un parametro utente usato da chi non è admin viene ignorato', async ({ page, browser }) => {
+      await page.goto('/admin/maestre');
+      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAbilita.getByLabel('Ore di lavoro').check();
+      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
+      await page.waitForTimeout(1000);
+
+      try {
+        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
+        const paginaMaestra = await contestoMaestra.newPage();
+        // Un id qualunque diverso dal proprio: una maestra non deve mai
+        // vedere le ore di qualcun altro, nemmeno forzando l'URL.
+        await paginaMaestra.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
+        await expect(paginaMaestra.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
+        await expect(paginaMaestra.getByRole('heading', { name: /Ore di lavoro/ })).not.toContainText('—');
+        await expect(paginaMaestra.getByRole('link', { name: 'Torna alla dashboard' })).toBeVisible();
+        await contestoMaestra.close();
+      } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
+      }
+    });
+  });
 });

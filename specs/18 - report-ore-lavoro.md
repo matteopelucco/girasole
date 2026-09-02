@@ -2,7 +2,10 @@
 
 ## Attori
 Personale retribuito (maestra, assistente o admin) abilitato al report
-ore (vedi [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)).
+ore (vedi [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)). In più,
+l'admin può rivedere e correggere le ore di **chiunque** sia abilitato,
+indipendentemente dalla propria abilitazione personale (vedi la sezione
+"Amministrazione" più sotto).
 
 ## Obiettivo
 Dare al personale abilitato un modo per registrare, settimana per
@@ -157,6 +160,65 @@ Quando provo ad aprire `/dashboard/ore-lavoro`
 Allora vengo reindirizzata alla dashboard (vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
 
+## Amministrazione: l'admin rivede e corregge le ore di chiunque
+
+## Scenario: l'admin apre l'elenco del personale abilitato al report ore
+Dato che sono autenticato come admin
+Quando apro `/admin/ore-lavoro`
+Allora vedo un elenco di tutto il personale abilitato al report ore
+(tranne me stesso), con nome, cognome e se la settimana corrente
+risulta già confermata o no
+E ciascuna riga porta alle ore di quella persona
+
+## Scenario: l'admin apre le ore di un dipendente
+Dato che sono autenticato come admin
+E su `/admin/ore-lavoro` tocco una persona abilitata
+Quando arrivo su "Ore di lavoro"
+Allora vedo la stessa identica schermata che vedrebbe quella persona
+per la settimana corrente (tabella dei 7 giorni, ore precaricate dal
+suo profilo orario, totale settimana), con in più un'intestazione che
+indica di chi sono le ore che sto guardando
+E questo vale anche se il mio profilo non è personalmente abilitato al
+report ore: l'accesso qui dipende dal mio ruolo admin, non dalla mia
+abilitazione personale
+
+## Scenario: l'admin modifica le ore di un dipendente, anche se la settimana è già confermata
+Dato che sono sulle ore di un dipendente (via `/admin/ore-lavoro`), per
+una settimana già confermata da quella persona
+Quando guardo la pagina
+Allora vedo comunque tutti i campi modificabili e il pulsante "Salva
+modifiche" (a differenza di quando la stessa settimana confermata è
+aperta dal diretto interessato, che la vede in sola lettura — vedi
+"una settimana confermata non è più modificabile dal personale")
+E posso modificare uno o più giorni e salvare, con le stesse
+validazioni (motivo/codice/nota) già in vigore per chiunque
+E il messaggio "Settimana confermata il ..." resta visibile, per
+sapere che si tratta di una correzione su dati già confermati
+
+## Scenario: l'admin conferma per conto di un dipendente una settimana non ancora confermata
+Dato che sono sulle ore di un dipendente, per una settimana non ancora
+confermata da quella persona
+Quando premo "Conferma settimana" e confermo l'azione
+Allora la settimana risulta confermata, con data/ora della conferma
+mostrate a schermo — esattamente come se l'avesse confermata la persona
+stessa
+
+## Scenario: l'admin naviga tra le settimane di un dipendente
+Dato che sono sulle ore di un dipendente
+Quando premo "←" o "→" per cambiare settimana
+Allora resto sulle ore della stessa persona, non torno alle mie
+E valgono le stesse regole di navigazione già in vigore per chiunque
+(mai una settimana futura, nessun limite verso il passato)
+
+## Scenario: un parametro `utente` non valido, o usato da chi non è admin, viene ignorato
+Quando apro `/dashboard/ore-lavoro?utente=...` con un id che non
+corrisponde a nessun profilo abilitato al report ore, oppure sono
+autenticata come maestra o assistente (non admin) e la URL contiene
+comunque quel parametro
+Allora vedo le mie proprie ore, non quelle di qualcun altro (stesso
+principio "parametro non valido ⇒ valore di default" già in uso per
+`?settimana=`)
+
 ## Regole
 - Tutti i 7 giorni della settimana corrente sono mostrati (lunedì-
   domenica), non solo i feriali: a differenza di presenze/pasti
@@ -185,8 +247,31 @@ Allora vengo reindirizzata alla dashboard (vedi
   l'esistenza della riga è la conferma, non un flag booleano separato
   da tenere sincronizzato). Una volta confermata, il personale non può
   più modificare i giorni di quella settimana (RLS in
-  `supabase/migrations/0025_report_ore_lavoro.sql`); l'admin sì, sempre
-  — anche se non c'è ancora un'interfaccia per farlo (vedi Fuori scope).
+  `supabase/migrations/0025_report_ore_lavoro.sql`); l'admin sì,
+  sempre, per la propria settimana e per quella di chiunque altro —
+  nessuna migration nuova necessaria per questo requisito, le policy
+  RLS lo permettevano già (`ruolo_corrente() = 'admin'` non ha mai
+  avuto la condizione "settimana non confermata"), mancava solo
+  l'interfaccia.
+- **Amministrazione** (`/admin/ore-lavoro` e
+  `/dashboard/ore-lavoro?utente=<id>`): riusa la stessa pagina/gli
+  stessi componenti della vista personale, non una pagina duplicata
+  (CLAUDE.md, jscpd) — cambia solo l'utente di riferimento (di default
+  quello autenticato, quello indicato da `?utente=` se chi guarda è
+  admin e quell'id corrisponde a un profilo abilitato) e il fatto che,
+  per l'admin, la settimana resta sempre modificabile anche se già
+  confermata (nessuna vista "sola lettura" per l'admin). Le server
+  action (`salvaSettimanaOreLavoro`, `confermaSettimanaOreLavoro`)
+  scrivono sull'utente indicato da un campo nascosto `utente_id` del
+  form SOLO se chi invia è admin; altrimenti scrivono sempre e solo
+  sul proprio utente, ignorando qualunque valore ricevuto dal client —
+  la RLS resta comunque la difesa reale anche se questo controllo lato
+  server action venisse bypassato.
+- L'accesso alla vista di un altro utente non richiede la propria
+  abilitazione personale al report ore (a differenza della propria
+  vista, vedi [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)):
+  dipende solo dal ruolo admin e dal fatto che l'utente indicato sia a
+  sua volta abilitato.
 - Nessuna scrittura silenziosa: un salvataggio che fallisce la
   validazione (motivo/codice/nota mancante) non salva nessuno dei giorni
   di quel submit, nemmeno quelli validi — il personale corregge il
@@ -224,11 +309,6 @@ Allora vengo reindirizzata alla dashboard (vedi
   `data` stessa con la data odierna.
 
 ## Fuori scope in questa fase
-- Un'interfaccia dedicata per l'admin per rivedere/correggere le
-  settimane (confermate o no) di un altro utente: i permessi RLS sono
-  già pronti (l'admin può leggere/scrivere qualunque riga), ma non c'è
-  ancora una pagina che lo consenta. Nel frattempo l'admin può
-  intervenire dal SQL Editor di Supabase se necessario.
 - Il calcolo effettivo di un monte ore/straordinari a partire dai dati
   registrati, ed eventuali riepiloghi o export.
 - "Riaprire" una settimana già confermata (renderla di nuovo

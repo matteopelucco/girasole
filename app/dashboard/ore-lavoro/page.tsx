@@ -44,10 +44,45 @@ const NOMI_GIORNI: Record<number, string> = {
 // a qualunque settimana passata per rivederla o confermarla, mai a una
 // futura (?settimana=, un lunedì — risolto/clampato da
 // settimanaOreLavoroRichiesta). Una volta confermata, la settimana in
-// questione è mostrata in sola lettura.
-export default async function OreLavoroPage({ searchParams }: { searchParams: { settimana?: string } }) {
+// questione è mostrata in sola lettura — TRANNE per l'admin, che può
+// sempre modificare/correggere le ore di chiunque sia abilitato, anche
+// una settimana già confermata (specs/18, sezione "Amministrazione"):
+// `?utente=<id>` (solo per l'admin, altrimenti ignorato) sceglie di chi
+// sono le ore mostrate, di default le proprie.
+export default async function OreLavoroPage({
+  searchParams,
+}: {
+  searchParams: { settimana?: string; utente?: string };
+}) {
   const { supabase, user, profilo, ruolo } = await requireStaff({});
-  assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+
+  let utenteTarget = {
+    id: user.id,
+    nome: profilo?.nome || user.email || '',
+    profiloOrarioId: profilo?.profilo_orario_id ?? null,
+  };
+  let modalitaAdmin = false;
+
+  if (ruolo === 'admin' && searchParams.utente && searchParams.utente !== user.id) {
+    const { data: profiloAltro } = await supabase
+      .from('profili')
+      .select('id, nome, cognome, profilo_orario_id')
+      .eq('id', searchParams.utente)
+      .eq('abilitato_ore_lavoro', true)
+      .maybeSingle();
+    if (profiloAltro) {
+      utenteTarget = {
+        id: profiloAltro.id,
+        nome: `${profiloAltro.nome} ${profiloAltro.cognome}`.trim(),
+        profiloOrarioId: profiloAltro.profilo_orario_id,
+      };
+      modalitaAdmin = true;
+    }
+  }
+
+  if (!modalitaAdmin) {
+    assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+  }
 
   const nomeVisualizzato = profilo?.nome || user.email || '';
   const inizioSettimanaCorrente = lunediSettimana(oggi());
@@ -57,18 +92,19 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
   const settimanaPrecedente = sommaGiorni(lunedi, -7);
   const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
   const settimanaSuccessiva = sommaGiorni(lunedi, 7);
+  const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
 
   const [profiloOrario, { data: righeGiorni }, { data: settimana }, chiusure] = await Promise.all([
-    recuperaProfiloOrario(supabase, profilo?.profilo_orario_id),
+    recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
     supabase
       .from('ore_lavoro_giorni')
       .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
-      .eq('utente_id', user.id)
+      .eq('utente_id', utenteTarget.id)
       .in('data', giorni),
     supabase
       .from('ore_lavoro_settimane')
       .select('confermata_at')
-      .eq('utente_id', user.id)
+      .eq('utente_id', utenteTarget.id)
       .eq('settimana_inizio', lunedi)
       .maybeSingle(),
     chiusurePerPeriodo(supabase, lunedi, domenica),
@@ -76,6 +112,10 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
 
   const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
   const confermata = !!settimana;
+  // L'admin vede sempre i campi modificabili, anche su una settimana
+  // già confermata (specs/18): solo il diretto interessato la vede in
+  // sola lettura una volta confermata.
+  const soloLettura = confermata && !modalitaAdmin;
 
   const righe = giorni.map((data) => {
     const salvata = righePerGiorno.get(data);
@@ -104,15 +144,20 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
         <div>
-          <a href="/dashboard" className="text-sm text-stone-600 hover:text-stone-900">
-            ← Torna alla dashboard
+          <a
+            href={modalitaAdmin ? '/admin/ore-lavoro' : '/dashboard'}
+            className="text-sm text-stone-600 hover:text-stone-900"
+          >
+            {modalitaAdmin ? '← Torna all\'elenco del personale' : '← Torna alla dashboard'}
           </a>
-          <h1 className="mt-2 text-lg font-medium">Ore di lavoro</h1>
+          <h1 className="mt-2 text-lg font-medium">
+            Ore di lavoro{modalitaAdmin && <span className="font-normal text-stone-600"> — {utenteTarget.nome}</span>}
+          </h1>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
           <Link
-            href={`/dashboard/ore-lavoro?settimana=${settimanaPrecedente}`}
+            href={`/dashboard/ore-lavoro?settimana=${settimanaPrecedente}${suffissoUtente}`}
             aria-label="Settimana precedente"
             className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
           >
@@ -121,7 +166,7 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
           <span className="text-sm font-medium text-amber-900">{formattaIntervalloItaliano(lunedi, domenica)}</span>
           {puoAndareAvanti && (
             <Link
-              href={`/dashboard/ore-lavoro?settimana=${settimanaSuccessiva}`}
+              href={`/dashboard/ore-lavoro?settimana=${settimanaSuccessiva}${suffissoUtente}`}
               aria-label="Settimana successiva"
               className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
             >
@@ -133,10 +178,11 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
         {confermata && (
           <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
             Settimana confermata il {formattaDataOraItaliana(settimana!.confermata_at).replace('_', ' alle ')}.
+            {modalitaAdmin && ' Puoi comunque correggerla qui sotto.'}
           </p>
         )}
 
-        {confermata ? (
+        {soloLettura ? (
           <div className="space-y-2">
             {righe.map((r) => (
               <div key={r.data} className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
@@ -163,6 +209,7 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
         ) : (
           <FormConEsito action={salvaSettimanaOreLavoro} className="space-y-2">
             <input type="hidden" name="settimana_inizio" value={lunedi} />
+            <input type="hidden" name="utente_id" value={utenteTarget.id} />
             {righe.map((r) => (
               <RigaOreLavoro
                 key={r.data}
@@ -194,9 +241,13 @@ export default async function OreLavoroPage({ searchParams }: { searchParams: { 
         {!confermata && (
           <ConfermaAzione
             azione={confermaSettimanaOreLavoro}
-            campiNascosti={{ settimana_inizio: lunedi }}
+            campiNascosti={{ settimana_inizio: lunedi, utente_id: utenteTarget.id }}
             etichetta="Conferma settimana"
-            messaggioConferma="Confermi le ore di questa settimana? Da questo momento non potrai più modificarle autonomamente."
+            messaggioConferma={
+              modalitaAdmin
+                ? `Confermi le ore di questa settimana per ${utenteTarget.nome}?`
+                : 'Confermi le ore di questa settimana? Da questo momento non potrai più modificarle autonomamente.'
+            }
             tono="neutro"
           />
         )}

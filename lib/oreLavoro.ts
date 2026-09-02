@@ -21,6 +21,24 @@ export function settimanaOreLavoroRichiesta(richiesta: string | undefined, oggiD
   return richiesta;
 }
 
+// Utente su cui una server action di "Ore di lavoro" deve scrivere
+// (specs/18, sezione "Amministrazione"): l'admin può correggere le ore
+// di chiunque sia abilitato indicando un campo nascosto `utente_id` nel
+// form, chiunque altro scrive sempre e solo su se stesso — il valore
+// ricevuto dal client viene ignorato per qualunque ruolo diverso da
+// admin, così un utente non-admin non può scrivere sui dati di
+// qualcun altro anche forzando il campo nascosto (la RLS resta
+// comunque la difesa reale, questo è solo un controllo applicativo in
+// più). Funzione pura, nessun I/O.
+export function utenteBersaglioOreLavoro(
+  ruolo: string | null | undefined,
+  propriUtenteId: string,
+  utenteIdForm: string | null | undefined
+): string {
+  if (ruolo === 'admin' && utenteIdForm) return utenteIdForm;
+  return propriUtenteId;
+}
+
 // Nota puramente informativa per un giorno di chiusura scolastica nel
 // report ore di lavoro (specs/18, specs/53): a differenza del messaggio
 // usato in Presenze/Pasti (lib/calendarioScolastico.ts:messaggioChiusura,

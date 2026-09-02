@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oggi, giorniSettimana } from '@/lib/date';
-import { validaGiornoOreLavoro, oreOrdinariePreviste, settimanaOreLavoroRichiesta } from '@/lib/oreLavoro';
+import {
+  validaGiornoOreLavoro,
+  oreOrdinariePreviste,
+  settimanaOreLavoroRichiesta,
+  utenteBersaglioOreLavoro,
+} from '@/lib/oreLavoro';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -18,14 +23,41 @@ function settimanaValidaPerScrittura(formData: FormData): string | null {
   return risolta === richiesta ? richiesta : null;
 }
 
+// Utente su cui scrivere (utenteBersaglioOreLavoro) più il controllo di
+// accesso che ne consegue: se si scrive su se stessi serve la propria
+// abilitazione (assicuraAccessoOreLavoro, nessun bypass); se si scrive
+// sull'utente indicato da un altro (solo un admin può farlo) l'accesso
+// dipende dal ruolo, non dall'abilitazione di chi scrive — vedi
+// utenteBersaglioOreLavoro. Condivisa da entrambe le server action
+// sotto per non ripetere lo stesso controllo due volte (CLAUDE.md,
+// jscpd).
+function risolviUtenteBersaglio(
+  ruolo: string | null | undefined,
+  userId: string,
+  abilitato: boolean | null | undefined,
+  formData: FormData
+): string {
+  const utenteId = utenteBersaglioOreLavoro(ruolo, userId, formData.get('utente_id') as string | null);
+  if (utenteId === userId) {
+    assicuraAccessoOreLavoro(abilitato);
+  }
+  return utenteId;
+}
+
 // Salva le ore/lo stato di ogni giorno della settimana indicata
 // (specs/18: quella corrente o una passata, mai una futura) — valida
 // PRIMA tutti i giorni inviati (funzione pura, nessun I/O) e scrive
 // solo se sono tutti validi: nessun salvataggio parziale su un errore
 // (specs/05 - feedback.md).
+//
+// Scrive sull'utente indicato dal campo nascosto `utente_id` SOLO se
+// chi invia è admin (specs/18, sezione "Amministrazione" — l'admin può
+// correggere le ore di chiunque sia abilitato, anche una settimana già
+// confermata); chiunque altro scrive sempre e solo su se stesso,
+// qualunque valore arrivi dal client (utenteBersaglioOreLavoro).
 export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase, user, profilo } = await requireStaff({});
-  assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+  const { supabase, user, profilo, ruolo } = await requireStaff({});
+  const utenteId = risolviUtenteBersaglio(ruolo, user.id, profilo?.abilitato_ore_lavoro, formData);
 
   const settimanaInizio = settimanaValidaPerScrittura(formData);
   if (!settimanaInizio) {
@@ -57,7 +89,7 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
 
   const { error } = await supabase.from('ore_lavoro_giorni').upsert(
     daScrivere.map((g) => ({
-      utente_id: user.id,
+      utente_id: utenteId,
       data: g.data,
       stato: g.stato,
       ore_ordinarie: g.oreOrdinarie,
@@ -83,9 +115,14 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
 // (scenario "confermare la settimana"), poi registra la conferma vera e
 // propria — l'esistenza della riga in ore_lavoro_settimane È la
 // conferma (stesso pattern di report_giornalieri_inviati, specs/52).
+//
+// Come salvaSettimanaOreLavoro sopra, conferma per conto di un altro
+// utente solo se chi invia è admin (specs/18, "Amministrazione") — in
+// quel caso usa il profilo orario DI QUELL'UTENTE (non quello di chi
+// sta confermando) per precaricare i giorni mancanti.
 export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase, user, profilo } = await requireStaff({});
-  assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+  const { supabase, user, profilo, ruolo } = await requireStaff({});
+  const utenteId = risolviUtenteBersaglio(ruolo, user.id, profilo?.abilitato_ore_lavoro, formData);
 
   const settimanaInizio = settimanaValidaPerScrittura(formData);
   if (!settimanaInizio) {
@@ -97,16 +134,25 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
   const { data: esistenti } = await supabase
     .from('ore_lavoro_giorni')
     .select('data')
-    .eq('utente_id', user.id)
+    .eq('utente_id', utenteId)
     .in('data', giorni);
   const dateEsistenti = new Set((esistenti ?? []).map((r) => r.data));
 
-  const profiloOrario = await recuperaProfiloOrario(supabase, profilo?.profilo_orario_id);
+  let profiloOrarioId = profilo?.profilo_orario_id ?? null;
+  if (utenteId !== user.id) {
+    const { data: profiloAltro } = await supabase
+      .from('profili')
+      .select('profilo_orario_id')
+      .eq('id', utenteId)
+      .maybeSingle();
+    profiloOrarioId = profiloAltro?.profilo_orario_id ?? null;
+  }
+  const profiloOrario = await recuperaProfiloOrario(supabase, profiloOrarioId);
 
   const daCompletare = giorni
     .filter((data) => !dateEsistenti.has(data))
     .map((data) => ({
-      utente_id: user.id,
+      utente_id: utenteId,
       data,
       stato: 'lavorativo',
       ore_ordinarie: oreOrdinariePreviste(profiloOrario, data),
@@ -126,7 +172,7 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
 
   const { error } = await supabase
     .from('ore_lavoro_settimane')
-    .insert({ utente_id: user.id, settimana_inizio: settimanaInizio });
+    .insert({ utente_id: utenteId, settimana_inizio: settimanaInizio });
   if (error) {
     if (error.code === '23505') {
       return { ok: false, messaggio: 'Questa settimana risulta già confermata.' };
