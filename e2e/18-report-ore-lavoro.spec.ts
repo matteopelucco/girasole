@@ -104,9 +104,18 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('alert')).toContainText('motivo');
 
         // Con il motivo: accettato, il totale della settimana si aggiorna.
+        // Il form invia sempre tutti e 7 i giorni in un solo
+        // salvataggio: se oggi non è domenica, questo submit include
+        // anche giorni non ancora accaduti della stessa settimana, e
+        // deve comunque andare a buon fine (scenario "salvare le ore
+        // anche a metà settimana" — bug: un trigger sul database
+        // rifiutava erroneamente qualunque giorno futuro anche dentro
+        // la settimana corrente, impedendo di salvare a metà settimana;
+        // vedi supabase/migrations/0029_fix_ore_lavoro_vincolo_futuro.sql).
         await page.getByLabel('Ore straordinarie Lunedì').fill('2');
         await page.getByLabel('Motivo straordinario Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await expect(page.getByRole('alert')).toHaveCount(0);
         await expect(page.getByText('2h straordinarie', { exact: false })).toBeVisible({ timeout: 20_000 });
 
         // Malattia senza codice: rifiutata.

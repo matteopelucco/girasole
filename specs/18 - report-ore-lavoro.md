@@ -44,6 +44,18 @@ Allora i valori inseriti sono salvati e restano tali riaprendo la pagina
 E vedo il totale delle ore della settimana (ordinarie + straordinarie)
 aggiornato di conseguenza
 
+## Scenario: salvare le ore anche a metà settimana
+Dato che sono sulla settimana corrente e oggi non è l'ultimo giorno
+della settimana (alcuni giorni successivi non sono ancora accaduti)
+Quando modifico le ore di un giorno già trascorso e premo "Salva
+modifiche"
+Allora il salvataggio va a buon fine — il form invia sempre tutti e 7 i
+giorni della settimana in un solo salvataggio, e i giorni non ancora
+accaduti (con i loro valori precaricati/di default) non fanno fallire
+il salvataggio: il vincolo di "mai una settimana futura" riguarda la
+settimana nel suo complesso, non i singoli giorni non ancora accaduti
+dentro una settimana comunque ammessa
+
 ## Scenario: le ore straordinarie richiedono un motivo
 Quando per un giorno inserisco delle ore straordinarie senza indicarne
 il motivo, e premo "Salva modifiche"
@@ -199,7 +211,17 @@ Allora vengo reindirizzata alla dashboard (vedi
   rifiuta comunque qualunque riga con data (o settimana confermata)
   futura — vale per QUALUNQUE ruolo, admin incluso: non è un permesso di
   scrittura ma un vincolo di coerenza dei dati (non si possono lavorare
-  ore che non sono ancora accadute).
+  ore che non sono ancora accadute). Il vincolo è sulla **settimana**,
+  non sul singolo giorno: dentro una settimana ammessa (corrente o
+  passata) restano scrivibili anche i giorni che non sono ancora
+  accaduti (es. venerdì, quando oggi è lunedì) — il form invia sempre
+  tutti e 7 i giorni in un solo salvataggio, e lo scenario "confermare
+  la settimana" già prevede di registrare con valori precaricati anche i
+  giorni non ancora salvati esplicitamente. Bloccare un giorno futuro
+  dentro una settimana ammessa impedirebbe di salvare qualunque cosa a
+  metà settimana: il trigger sul database confronta perciò la settimana
+  di `data` (il lunedì che la contiene) con la settimana corrente, non
+  `data` stessa con la data odierna.
 
 ## Fuori scope in questa fase
 - Un'interfaccia dedicata per l'admin per rivedere/correggere le
