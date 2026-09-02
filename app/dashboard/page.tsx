@@ -5,18 +5,17 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { SelettoreData } from '@/components/SelettoreData';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
-import { oggi, settimanaPrecedente, formattaIntervalloItaliano } from '@/lib/date';
+import { oggi, formattaIntervalloItaliano } from '@/lib/date';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { cardsDashboard } from '@/lib/dashboardSezioni';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import {
-  dopoMezzogiorno,
-  allarmeMezzogiornoAttivo,
-  calcolaStatoOperativoGiorno,
-  descrizioneStatoOperativo,
-  settimanaPrecedenteConfermata,
+  allarmePersonalePresenzePastiAttivo,
+  calcolaStatoPersonaleGiorno,
+  settimanaDiRiferimentoOre,
+  settimanaConfermata,
+  allarmiPerDipendenti,
 } from '@/lib/allarmi';
-import { createAdminClient } from '@/lib/supabase/admin';
 import { creaPromemoria } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -46,34 +45,37 @@ export default async function DashboardPage({
   }
 
   const data = searchParams.data || oggi();
+  const dataOggi = oggi();
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
   const cards = cardsDashboard({ data, haSezioni, ruolo, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
 
-  // Allarme 1 (specs/07 - allarmi.md): presenze/pasti non completati
-  // entro mezzogiorno, per TUTTO l'asilo — richiede la service_role key
-  // per vedere le sezioni al di là di quelle dell'utente corrente
-  // (stesso motivo del report notturno, specs/52).
+  // Allarme 1 (specs/07 - allarmi.md): presenze/pasti non ancora
+  // segnati dopo le 10:00, personale — solo le mie sezioni (tutte le
+  // sezioni attive se sono admin). Usa la sessione normale dell'utente,
+  // che ha già visibilità RLS sulle proprie sezioni: nessuna
+  // service_role key necessaria.
   const oraAttuale = new Date();
-  const chiusuraOggi = await chiusuraPerData(supabase, oggi());
-  const giornoAttivoOggi = !isGiornoChiuso(oggi(), chiusuraOggi ? [chiusuraOggi] : []);
-  let descrizioneAllarmeMezzogiorno: string | null = null;
-  if (giornoAttivoOggi && dopoMezzogiorno(oraAttuale)) {
-    const statoOperativo = await calcolaStatoOperativoGiorno(createAdminClient(), oggi());
-    if (allarmeMezzogiornoAttivo(oraAttuale, giornoAttivoOggi, statoOperativo)) {
-      descrizioneAllarmeMezzogiorno = descrizioneStatoOperativo(statoOperativo);
-    }
-  }
+  const chiusuraOggi = await chiusuraPerData(supabase, dataOggi);
+  const giornoAttivoOggi = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
+  const statoPersonale = await calcolaStatoPersonaleGiorno(supabase, ruolo, sezioni, dataOggi);
+  const mostraAllarmePersonale = allarmePersonalePresenzePastiAttivo(oraAttuale, giornoAttivoOggi, statoPersonale);
 
-  // Allarme 2 (specs/07): la mia settimana di ore di lavoro scorsa non
-  // confermata — solo per me (RLS sulla mia sessione, nessun bisogno
-  // della service_role key qui).
-  const settimanaOreScorsa = settimanaPrecedente(oggi());
+  // Allarme 2 (specs/07): la mia settimana di ore di lavoro di
+  // riferimento (quella precedente fino a venerdì 18:00, poi quella
+  // corrente) non confermata — solo per me.
+  const settimanaOreRiferimento = settimanaDiRiferimentoOre(oraAttuale, dataOggi);
   let mostraAllarmeSettimanaOre = false;
   if (profilo?.abilitato_ore_lavoro) {
-    const confermata = await settimanaPrecedenteConfermata(supabase, user.id, settimanaOreScorsa.inizio);
+    const confermata = await settimanaConfermata(supabase, user.id, settimanaOreRiferimento.inizio);
     mostraAllarmeSettimanaOre = !confermata;
   }
+
+  // Allarme 3 (specs/07): riepilogo read-only, solo per l'admin, degli
+  // allarmi (presenze/pasti, settimana ore) di tutto il personale —
+  // nessuna azione da qui, solo visibilità.
+  const allarmiStaff =
+    ruolo === 'admin' ? await allarmiPerDipendenti(supabase, dataOggi, giornoAttivoOggi, oraAttuale, user.id) : [];
 
   const bambini = await bambiniAttiviVisibili(
     supabase,
@@ -90,22 +92,66 @@ export default async function DashboardPage({
   return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
-        {descrizioneAllarmeMezzogiorno && (
+        {mostraAllarmePersonale && (
           <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
             <p className="font-semibold">⚠️ Presenze e/o pasti di oggi non risultano completati</p>
-            <p className="mt-1">Sono le 12:00 passate e {descrizioneAllarmeMezzogiorno}. Verifica appena possibile.</p>
+            <p className="mt-1">Sono le 10:00 passate. Ecco cosa manca:</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {statoPersonale.sezioniPresenzeIncomplete.map((sezione) => (
+                <li key={sezione.id}>
+                  <Link href={`/dashboard/presenze/${sezione.id}?data=${dataOggi}`} className="underline">
+                    Presenze — {sezione.nome}
+                  </Link>
+                </li>
+              ))}
+              {statoPersonale.pastiNonConfermati && (
+                <li>
+                  <Link href={`/dashboard/pasti?data=${dataOggi}`} className="underline">
+                    Comunicare i pasti a Rojac
+                  </Link>
+                </li>
+              )}
+            </ul>
           </div>
         )}
 
         {mostraAllarmeSettimanaOre && (
           <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-semibold">⏰ Non hai confermato le ore della settimana scorsa</p>
+            <p className="font-semibold">⏰ Non hai confermato le ore della settimana</p>
             <p className="mt-1">
-              Settimana {formattaIntervalloItaliano(settimanaOreScorsa.inizio, settimanaOreScorsa.fine)}.{' '}
-              <Link href={`/dashboard/ore-lavoro?settimana=${settimanaOreScorsa.inizio}`} className="underline">
+              Settimana {formattaIntervalloItaliano(settimanaOreRiferimento.inizio, settimanaOreRiferimento.fine)}.{' '}
+              <Link href={`/dashboard/ore-lavoro?settimana=${settimanaOreRiferimento.inizio}`} className="underline">
                 Vai su Ore di lavoro per confermarla.
               </Link>
             </p>
+          </div>
+        )}
+
+        {ruolo === 'admin' && allarmiStaff.length > 0 && (
+          <div className="rounded-xl border border-stone-300 bg-stone-50 p-4 text-sm text-stone-800">
+            <p className="font-semibold">Situazione del personale</p>
+            <ul className="mt-2 space-y-1">
+              {allarmiStaff.map((allarme) => (
+                <li key={allarme.utenteId}>
+                  <span className="font-medium">
+                    {allarme.nome} {allarme.cognome}
+                  </span>
+                  :{' '}
+                  {[
+                    ...allarme.sezioniPresenzeIncomplete.map((nome) => `presenze non segnate (${nome})`),
+                    ...(allarme.pastiNonConfermati ? ['pasti non comunicati'] : []),
+                    ...(allarme.settimanaOreNonConfermata
+                      ? [
+                          `settimana ore ${formattaIntervalloItaliano(
+                            allarme.settimanaOreNonConfermata.inizio,
+                            allarme.settimanaOreNonConfermata.fine
+                          )} non confermata`,
+                        ]
+                      : []),
+                  ].join(', ')}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

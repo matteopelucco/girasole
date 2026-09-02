@@ -2,21 +2,22 @@ import { NextResponse } from 'next/server';
 import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, destinatarioNotifiche } from '@/lib/email';
-import { oggi, formattaDataItaliana, formattaIntervalloItaliano, settimanaPrecedente } from '@/lib/date';
+import { oggi, formattaDataItaliana, formattaIntervalloItaliano } from '@/lib/date';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import {
-  dopoMezzogiorno,
-  allarmeMezzogiornoAttivo,
+  dopoOrarioAllarmePresenzePasti,
+  allarmeAsiloAttivo,
   calcolaStatoOperativoGiorno,
   descrizioneStatoOperativo,
+  settimanaDiRiferimentoOre,
   utentiConSettimanaNonConfermata,
 } from '@/lib/allarmi';
 
 export const dynamic = 'force-dynamic';
 
-// Vercel Cron chiama questa route una volta al giorno dopo mezzogiorno
+// Vercel Cron chiama questa route una volta al giorno dopo le 10:00
 // Europe/Rome (vedi vercel.json: "30 11 * * *" UTC, che cade sempre
-// dopo le 12:00 Rome sia in ora solare sia legale — specs/07 -
+// dopo le 10:00 Rome sia in ora solare sia legale — specs/07 -
 // allarmi.md). Protetta dallo stesso secret degli altri cron
 // (Authorization: Bearer $CRON_SECRET).
 export async function GET(request: Request) {
@@ -33,16 +34,16 @@ export async function GET(request: Request) {
     settimanaOre: [] as string[],
   };
 
-  // Allarme 1: presenze/pasti non completati entro mezzogiorno
-  // (specs/07). Il vincolo "giorno attivo" è lo stesso di presenze/pasti
-  // (specs/53); una volta appurato, lo stato operativo richiede la
-  // service_role key per vedere tutte le sezioni (non solo quelle di un
-  // singolo utente).
+  // Allarme 1: presenze/pasti non completati entro le 10:00 (specs/07),
+  // aggregato sull'intero asilo. Il vincolo "giorno attivo" è lo stesso
+  // di presenze/pasti (specs/53); una volta appurato, lo stato operativo
+  // richiede la service_role key per vedere tutte le sezioni (non solo
+  // quelle di un singolo utente).
   const chiusuraOggi = await chiusuraPerData(supabase, dataOggi);
   const giornoAttivo = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
-  if (giornoAttivo && dopoMezzogiorno(adesso)) {
+  if (giornoAttivo && dopoOrarioAllarmePresenzePasti(adesso)) {
     const stato = await calcolaStatoOperativoGiorno(supabase, dataOggi);
-    if (allarmeMezzogiornoAttivo(adesso, giornoAttivo, stato)) {
+    if (allarmeAsiloAttivo(adesso, giornoAttivo, stato)) {
       const { data: giaInviato } = await supabase
         .from('allarmi_inviati')
         .select('id')
@@ -66,8 +67,9 @@ export async function GET(request: Request) {
 
   // Allarme 2: settimana di ore di lavoro non confermata (specs/07),
   // un'email per ogni utente abilitato che non ha confermato la
-  // settimana appena conclusa.
-  const { inizio: settimanaInizio, fine: settimanaFine } = settimanaPrecedente(dataOggi);
+  // settimana di riferimento (quella precedente fino a venerdì 18:00,
+  // poi quella corrente).
+  const { inizio: settimanaInizio, fine: settimanaFine } = settimanaDiRiferimentoOre(adesso, dataOggi);
   const utenti = await utentiConSettimanaNonConfermata(supabase, settimanaInizio);
 
   for (const utente of utenti) {

@@ -1494,6 +1494,45 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       non ancora applicata, o al suo posto se 0028 è già a posto ma con
       questo bug. Nessuna modifica lato Vercel richiesta.
 
+- [x] `specs/07 - allarmi.md`: allarme presenze/pasti riprogettato da
+      banner aggregato asilo-wide (12:00, per tutto lo staff) a banner
+      **personale** (10:00, solo le proprie sezioni — tutte per
+      l'admin), con un link diretto a Presenze per ciascuna sezione
+      incompleta e a Pasti se non ancora comunicati; non richiede più la
+      service_role key (RLS della sessione normale già sufficiente).
+      Allarme "settimana ore non confermata" esteso con una soglia
+      anticipata: dal venerdì alle 18:00 la settimana "di riferimento"
+      diventa quella corrente (non ancora finita) invece della
+      precedente. Nuovo riepilogo **read-only** per l'admin ("vede gli
+      allarmi di ogni dipendente, senza poter agire al loro posto") con
+      lo stato di maestre/assistenti. Il ruolo "Segretaria" richiesto
+      non esiste ancora nel sistema: annotato in Fuori scope, per ora
+      solo l'admin vede il riepilogo.
+- [x] `lib/date.ts`: nuova `settimanaCorrente` (lunedì-domenica della
+      settimana che contiene una data), gemella di `settimanaPrecedente`
+      già esistente.
+- [x] `lib/allarmi.ts`: riscritto — `dopoOrarioAllarmePresenzePasti`
+      (soglia 10:00, rimpiazza `dopoMezzogiorno`),
+      `dopoSogliaVenerdiSera` e `settimanaDiRiferimentoOre` (nuove),
+      `calcolaStatoPersonaleGiorno`/`allarmePersonalePresenzePastiAttivo`
+      (nuovo banner personale, sessione utente normale),
+      `allarmiPerDipendenti` (nuovo riepilogo admin),
+      `allarmeAsiloAttivo`/`calcolaStatoOperativoGiorno` (rinominata da
+      `allarmeMezzogiornoAttivo`, invariata nella sostanza, usata solo
+      dal cron per l'email aggregata),
+      `settimanaConfermata` (rinominata da `settimanaPrecedenteConfermata`,
+      ora generica rispetto alla settimana). Nessuna migration
+      necessaria: tutte le query usano tabelle/RLS già esistenti.
+- [x] `app/dashboard/page.tsx`, `app/api/cron/allarmi/route.ts`
+      aggiornati al nuovo `lib/allarmi.ts`.
+- [x] `e2e/07-allarmi.spec.ts` riscritto per il nuovo comportamento
+      (banner personale con link, soglia venerdì sera, riepilogo admin).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (222 test) e `npx jscpd` (3 clone preesistenti, nessuno nuovo)
+      puliti. Suite e2e non eseguibile in questo ambiente (nessun
+      progetto Supabase di test configurato in `.env.local`): da
+      lanciare in locale/CI prima del merge.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
