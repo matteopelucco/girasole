@@ -1453,6 +1453,47 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       nel SQL Editor di Supabase (test e produzione). Nessuna modifica
       lato Vercel richiesta da questa feature.
 
+## Bug: impossibile salvare le ore a metà settimana (v0.18.1)
+- [x] Segnalazione dell'utente: dopo aver applicato la migration
+      0028, salvare le ore non andava più a buon fine a metà settimana
+      (es. registrare lunedì/martedì quando oggi è martedì), per il
+      vincolo "mai ore future".
+- [x] Causa: il trigger `impedisci_ore_lavoro_futura` (0028) confrontava
+      `data` del singolo giorno con la data odierna. Il form di
+      "Ore di lavoro" invia però sempre tutti e 7 i giorni della
+      settimana in un solo upsert, quindi qualunque salvataggio prima
+      di domenica includeva anche giorni successivi a oggi (ancora non
+      accaduti, ma dentro la settimana corrente, comunque ammessa) —
+      Postgres rifiutava l'intera istruzione per quelle righe, bloccando
+      di fatto ogni salvataggio che non avvenisse l'ultimo giorno della
+      settimana. Il vincolo di specs/18 è "mai una settimana futura", non
+      "mai un giorno futuro dentro una settimana ammessa".
+- [x] `specs/18 - report-ore-lavoro.md`: nuovo scenario "salvare le ore
+      anche a metà settimana"; chiarita la Regola del vincolo assoluto
+      per esplicitare che riguarda la settimana, non il singolo giorno.
+- [x] `supabase/migrations/0029_fix_ore_lavoro_vincolo_futuro.sql`
+      (nuova — 0028 era già applicata, quindi corretta in avanti anziché
+      modificata): `impedisci_ore_lavoro_futura` ora confronta la
+      settimana (lunedì) di `data` con la settimana corrente
+      (`date_trunc('week', ...)`), non `data` con la data odierna.
+      Nessuna modifica lato applicazione: la logica in `lib/oreLavoro.ts`,
+      nella pagina e nelle server action era già corretta (sempre a
+      livello di settimana).
+- [x] `e2e/18-report-ore-lavoro.spec.ts`: il primo "Salva modifiche" del
+      test principale ora verifica esplicitamente l'assenza di errori,
+      a copertura del nuovo scenario (il form invia comunque tutti i
+      giorni della settimana, inclusi quelli non ancora accaduti, ad
+      ogni salvataggio — prima della fix questo submit falliva se
+      eseguito prima dell'ultimo giorno della settimana).
+- [x] Verificato: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (205 test) e `npx jscpd` (3 clone preesistenti, nessuno nuovo)
+      puliti.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0029_fix_ore_lavoro_vincolo_futuro.sql` nel
+      SQL Editor di Supabase (test e produzione), subito dopo la 0028 se
+      non ancora applicata, o al suo posto se 0028 è già a posto ma con
+      questo bug. Nessuna modifica lato Vercel richiesta.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
