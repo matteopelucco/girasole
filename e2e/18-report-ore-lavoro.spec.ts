@@ -366,6 +366,71 @@ test.describe('18 — Report ore di lavoro', () => {
       }
     });
 
+    // Regressione (0030_profili_orari_self_select.sql): la policy RLS
+    // di profili_orari, scritta come "solo admin" quando la tabella non
+    // era ancora usata da nessuna pagina (specs/54), bloccava
+    // silenziosamente la lettura anche per il DIRETTO interessato una
+    // volta che 0025_report_ore_lavoro.sql l'ha resa necessaria per il
+    // precaricamento (specs/18) — nessun errore, solo "0 ore ordinarie"
+    // sempre, per chiunque non fosse admin. L'unico altro test che
+    // verifica il precaricamento ('form settimanale: precaricamento dal
+    // profilo orario...' sopra) gira con l'account admin, a cui la
+    // vecchia policy già permetteva la lettura, quindi non lo
+    // intercettava.
+    test('un profilo orario assegnato dall\'admin precarica le ore ordinarie anche per chi non è admin', async ({
+      page,
+      browser,
+    }) => {
+      const nomeProfilo = `E2E ore lavoro maestra ${Date.now()}`;
+
+      await page.goto('/admin/profili-orari');
+      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nomeProfilo);
+      await page.getByLabel('Lunedì').fill('6');
+      await page.getByLabel('Martedì').fill('6');
+      await page.getByLabel('Mercoledì').fill('6');
+      await page.getByLabel('Giovedì').fill('6');
+      await page.getByLabel('Venerdì').fill('3');
+      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
+      await expect(page.getByText(nomeProfilo, { exact: false })).toBeVisible({ timeout: 20_000 });
+
+      await page.goto('/admin/maestre');
+      const rigaAssegna = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAssegna.getByLabel('Ore di lavoro').check();
+      await rigaAssegna.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
+      await rigaAssegna.getByRole('button', { name: 'Aggiorna' }).click();
+      await page.waitForTimeout(1000);
+
+      try {
+        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
+        const paginaMaestra = await contestoMaestra.newPage();
+        await paginaMaestra.goto('/dashboard/ore-lavoro');
+        const giaConfermata =
+          (await paginaMaestra.getByText('Settimana confermata il', { exact: false }).count()) > 0;
+        if (!giaConfermata) {
+          await expect(paginaMaestra.getByLabel('Ore ordinarie Lunedì')).toHaveValue('6');
+          await expect(paginaMaestra.getByLabel('Ore ordinarie Venerdì')).toHaveValue('3');
+          await expect(paginaMaestra.getByLabel('Ore ordinarie Sabato')).toHaveValue('0');
+        }
+        await contestoMaestra.close();
+      } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
+
+        await page.goto('/admin/profili-orari');
+        const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
+        if ((await rigaProfilo.count()) > 0) {
+          await rigaProfilo.click();
+          await page.waitForURL(/\/admin\/profili-orari\/.+/);
+          await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
+          await page.getByRole('button', { name: 'Sì' }).click();
+        }
+      }
+    });
+
     test('un parametro utente usato da chi non è admin viene ignorato', async ({ page, browser }) => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });

@@ -94,7 +94,12 @@ export default async function OreLavoroPage({
   const settimanaSuccessiva = sommaGiorni(lunedi, 7);
   const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
 
-  const [profiloOrario, { data: righeGiorni }, { data: settimana }, chiusure] = await Promise.all([
+  const [
+    profiloOrario,
+    { data: righeGiorni, error: erroreGiorni },
+    { data: settimana, error: erroreSettimana },
+    chiusure,
+  ] = await Promise.all([
     recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
     supabase
       .from('ore_lavoro_giorni')
@@ -110,8 +115,20 @@ export default async function OreLavoroPage({
     chiusurePerPeriodo(supabase, lunedi, domenica),
   ]);
 
+  // Se una di queste due query fallisce (es. permission denied per GRANT
+  // mancanti, già capitato più volte — vedi lib/auth.ts:requireProfilo)
+  // righeGiorni/settimana restano semplicemente vuoti: la pagina degrada
+  // (mostra "0 ore"/"non confermata" invece di crashare), ma logghiamo
+  // l'errore reale per renderlo diagnosticabile dai log Vercel.
+  if (erroreGiorni) {
+    console.error(`ore-lavoro: impossibile leggere ore_lavoro_giorni per ${utenteTarget.id}`, erroreGiorni);
+  }
+  if (erroreSettimana) {
+    console.error(`ore-lavoro: impossibile leggere ore_lavoro_settimane per ${utenteTarget.id}`, erroreSettimana);
+  }
+
   const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
-  const confermata = !!settimana;
+  const confermata = !!settimana?.confermata_at;
   // L'admin vede sempre i campi modificabili, anche su una settimana
   // già confermata (specs/18): solo il diretto interessato la vede in
   // sola lettura una volta confermata.

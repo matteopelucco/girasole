@@ -1567,6 +1567,54 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       progetto Supabase di test configurato in `.env.local`): da
       lanciare in locale/CI.
 
+## Bug: "Conferma settimana" andava in errore (Server Components render)
+- [x] Segnalato dall'utente: cliccare "Conferma settimana" in
+      `/dashboard/ore-lavoro` mostrava la pagina di errore generica
+      ("Qualcosa è andato storto"), senza dettagli in produzione. Audit
+      completo di tutte le `grant`/policy RLS di `supabase/migrations/`
+      contro l'uso reale nel codice per escludere altre "grant mancanti"
+      dello stesso tipo già capitate più volte (0004/0008/0018/0021).
+- [x] Trovato un bug reale, anche se distinto dal crash: la policy RLS
+      di `profili_orari` (`0024_profili_orari.sql`) era "solo admin" in
+      lettura, scritta quando la tabella non era ancora usata da nessuna
+      pagina (specs/54). Da `0025_report_ore_lavoro.sql` in poi, però,
+      `lib/profiliOrari.ts:recuperaProfiloOrario` la interroga anche per
+      il DIRETTO interessato (precaricamento ore ordinarie, specs/18):
+      per chiunque non fosse admin la lettura falliva silenziosamente
+      (RLS filtra, nessun errore) e le ore ordinarie precaricate erano
+      sempre 0. Non intercettato dall'unico test e2e esistente perché
+      gira con l'account admin, a cui la vecchia policy permetteva
+      comunque la lettura. Fix:
+      `supabase/migrations/0030_profili_orari_self_select.sql` (nuova
+      policy select "il proprio profilo assegnato"), specs/54
+      aggiornata, nuovo scenario in `e2e/18-report-ore-lavoro.spec.ts`
+      che verifica il precaricamento con l'account maestra.
+- [x] Il crash vero e proprio (`app/dashboard/ore-lavoro/page.tsx`) era
+      quasi certamente `formattaDataOraItaliana(settimana!.confermata_at)`,
+      l'unica asserzione non-null di tutto il codice applicativo che
+      accede a un campo che può arrivare vuoto da una query il cui
+      errore viene ignorato (`const [..., { data: settimana }, ...] =
+      await Promise.all([...])`, nessun controllo di `error`). Corretto
+      calcolando `confermata` da `settimana?.confermata_at` (non più da
+      `!!settimana`) così un risultato "vuoto" per qualunque motivo (RLS,
+      grant mancante, riga inconsistente) non fa più entrare nel ramo che
+      formatta la data, e aggiunto un log dell'errore reale (stesso
+      pattern di `lib/auth.ts:requireProfilo`) per renderlo diagnosticabile
+      dai log Vercel se dovesse ripresentarsi.
+- [x] Verificato l'intero elenco `grant`/policy di `supabase/migrations/`
+      contro ogni tabella e ogni chiamata `.from(...)` nel codice: nessun'
+      altra tabella risulta priva del grant necessario al ruolo che la
+      usa (`authenticated`/`service_role`).
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0030_profili_orari_self_select.sql` nel SQL
+      Editor di Supabase (test e produzione) — senza, il precaricamento
+      delle ore ordinarie resta a 0 per chiunque non sia admin. Verifica
+      anche, mentre ci sei, che TUTTE le migration da `0024` a `0029`
+      siano state applicate sul progetto di produzione (non solo su
+      quello di test): il crash originale segnalato in produzione
+      potrebbe derivare da una di queste non ancora incollata nel SQL
+      Editor, dato che il progetto non le applica automaticamente.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

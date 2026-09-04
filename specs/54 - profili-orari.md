@@ -82,8 +82,15 @@ Allora vengo reindirizzato alla dashboard
   non bloccante in questa fase.
 - Solo un profilo con ruolo `admin` può creare, modificare, eliminare o
   assegnare profili orari (RLS in
-  `supabase/migrations/0024_profili_orari.sql`); nessun altro ruolo li
-  legge in questa fase (non ancora mostrati allo staff, vedi Obiettivo).
+  `supabase/migrations/0024_profili_orari.sql`). Un utente non admin può
+  leggere in sola lettura il SOLO profilo a lui assegnato (RLS in
+  `supabase/migrations/0030_profili_orari_self_select.sql`) — non
+  l'elenco completo: gli serve per il precaricamento delle ore ordinarie
+  nel report ore di lavoro (vedi
+  [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md), scenario
+  "aprire la sezione mostra la settimana corrente con le ore
+  precaricate"), non è ancora mostrato in un pannello dedicato allo
+  staff (vedi Obiettivo).
 - Eliminare un profilo orario assegnato a uno o più utenti non è
   bloccato: l'assegnazione di quegli utenti torna semplicemente vuota
   (`on delete set null`), stesso pattern già usato per
