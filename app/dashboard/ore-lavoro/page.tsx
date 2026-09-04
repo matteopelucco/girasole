@@ -49,55 +49,61 @@ const NOMI_GIORNI: Record<number, string> = {
 // una settimana già confermata (specs/18, sezione "Amministrazione"):
 // `?utente=<id>` (solo per l'admin, altrimenti ignorato) sceglie di chi
 // sono le ore mostrate, di default le proprie.
+// Vero se `err` è l'eccezione speciale che Next.js usa per implementare
+// redirect()/notFound() (identificata dal prefisso del suo `digest`):
+// DEVE risalire intatta e non essere trattata come un errore applicativo,
+// altrimenti — vedi DEBUG TEMPORANEO sotto — un try/catch troppo largo
+// la intercetterebbe e romperebbe la navigazione invece di eseguirla.
+function eRedirectONotFound(err: unknown): boolean {
+  const digest = (err as { digest?: unknown } | null)?.digest;
+  return typeof digest === 'string' && (digest.startsWith('NEXT_REDIRECT') || digest === 'NEXT_NOT_FOUND');
+}
+
 export default async function OreLavoroPage({
   searchParams,
 }: {
   searchParams: { settimana?: string; utente?: string };
 }) {
-  const { supabase, user, profilo, ruolo } = await requireStaff({});
-
-  let utenteTarget = {
-    id: user.id,
-    nome: profilo?.nome || user.email || '',
-    profiloOrarioId: profilo?.profilo_orario_id ?? null,
-  };
-  let modalitaAdmin = false;
-
-  if (ruolo === 'admin' && searchParams.utente && searchParams.utente !== user.id) {
-    const { data: profiloAltro } = await supabase
-      .from('profili')
-      .select('id, nome, cognome, profilo_orario_id')
-      .eq('id', searchParams.utente)
-      .eq('abilitato_ore_lavoro', true)
-      .maybeSingle();
-    if (profiloAltro) {
-      utenteTarget = {
-        id: profiloAltro.id,
-        nome: `${profiloAltro.nome} ${profiloAltro.cognome}`.trim(),
-        profiloOrarioId: profiloAltro.profilo_orario_id,
-      };
-      modalitaAdmin = true;
-    }
-  }
-
-  if (!modalitaAdmin) {
-    assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
-  }
-
   // DEBUG TEMPORANEO (da rimuovere una volta diagnosticato il crash
-  // "Qualcosa è andato storto" su questa pagina): TUTTO il resto della
-  // pagina — comprese le funzioni pure sulle date, che sono la prima
-  // sospetta visto che il crash si presenta ora anche sulla semplice
-  // apertura della pagina (non solo dopo "Conferma") — è avvolto in un
-  // try/catch che logga TUTTO (messaggio, stack, contesto) e mostra
-  // l'errore reale direttamente in pagina invece di lasciarlo arrivare
-  // al generico error.tsx, che in produzione sostituisce il messaggio
-  // di un errore non gestito in un Server Component con un testo fisso
-  // ("The specific message is omitted..."). Nessun redirect() sopra
-  // questa riga finisce dentro il try: redirect() lancia un errore
-  // speciale di Next.js che il catch qui sotto NON deve intercettare,
-  // altrimenti romperebbe la navigazione.
+  // "Qualcosa è andato storto" su questa pagina): il tentativo precedente
+  // avvolgeva in un try/catch solo la parte successiva a requireStaff(),
+  // ma il crash si è ripresentato identico — quindi l'eccezione arriva
+  // da PRIMA (requireStaff stesso, o il blocco admin `?utente=`). Ora è
+  // avvolto tutto, requireStaff incluso: l'unica eccezione da NON
+  // trattare come errore applicativo è quella di redirect() (usata sia
+  // da requireStaff sia da assicuraAccessoOreLavoro), riconosciuta e
+  // rilanciata subito da eRedirectONotFound sopra.
   try {
+    const { supabase, user, profilo, ruolo } = await requireStaff({});
+
+    let utenteTarget = {
+      id: user.id,
+      nome: profilo?.nome || user.email || '',
+      profiloOrarioId: profilo?.profilo_orario_id ?? null,
+    };
+    let modalitaAdmin = false;
+
+    if (ruolo === 'admin' && searchParams.utente && searchParams.utente !== user.id) {
+      const { data: profiloAltro } = await supabase
+        .from('profili')
+        .select('id, nome, cognome, profilo_orario_id')
+        .eq('id', searchParams.utente)
+        .eq('abilitato_ore_lavoro', true)
+        .maybeSingle();
+      if (profiloAltro) {
+        utenteTarget = {
+          id: profiloAltro.id,
+          nome: `${profiloAltro.nome} ${profiloAltro.cognome}`.trim(),
+          profiloOrarioId: profiloAltro.profilo_orario_id,
+        };
+        modalitaAdmin = true;
+      }
+    }
+
+    if (!modalitaAdmin) {
+      assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+    }
+
     const nomeVisualizzato = profilo?.nome || user.email || '';
     const inizioSettimanaCorrente = lunediSettimana(oggi());
     const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
@@ -303,31 +309,29 @@ export default async function OreLavoroPage({
     </NavHeader>
   );
   } catch (err) {
+    if (eRedirectONotFound(err)) throw err;
+
     const messaggio = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error('ore-lavoro DEBUG: errore catturato nel render della pagina', {
-      utenteTarget: utenteTarget.id,
-      modalitaAdmin,
-      searchParamsSettimana: searchParams.settimana,
+      searchParams,
       messaggio,
       stack,
     });
     return (
-      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo}>
-        <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-            <h1 className="text-lg font-medium text-red-800">Debug: errore in Ore di lavoro</h1>
-            <p className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-xs text-red-700">
-              {messaggio}
-            </p>
-            {stack && (
-              <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-[10px] text-red-600">
-                {stack}
-              </pre>
-            )}
-          </div>
-        </main>
-      </NavHeader>
+      <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <h1 className="text-lg font-medium text-red-800">Debug: errore in Ore di lavoro</h1>
+          <p className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-xs text-red-700">
+            {messaggio}
+          </p>
+          {stack && (
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-[10px] text-red-600">
+              {stack}
+            </pre>
+          )}
+        </div>
+      </main>
     );
   }
 }
