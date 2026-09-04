@@ -84,29 +84,30 @@ export default async function OreLavoroPage({
     assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
   }
 
-  const nomeVisualizzato = profilo?.nome || user.email || '';
-  const inizioSettimanaCorrente = lunediSettimana(oggi());
-  const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
-  const giorni = giorniSettimana(lunedi);
-  const domenica = giorni[giorni.length - 1];
-  const settimanaPrecedente = sommaGiorni(lunedi, -7);
-  const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
-  const settimanaSuccessiva = sommaGiorni(lunedi, 7);
-  const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
-
   // DEBUG TEMPORANEO (da rimuovere una volta diagnosticato il crash
-  // "Qualcosa è andato storto" su questa pagina): l'intera parte che fa
-  // I/O e costruisce la vista è avvolta in un try/catch che logga TUTTO
-  // (messaggio, stack, contesto) e mostra l'errore reale direttamente in
-  // pagina invece di lasciarlo arrivare al generico error.tsx — in
-  // produzione Next.js sostituisce il messaggio di un errore non gestito
-  // in un Server Component con un testo fisso ("The specific message is
-  // omitted..."), quindi anche loggare non basta se poi l'utente non ha
-  // modo di leggere i log Vercel da un telefono. Nessun redirect() sopra
+  // "Qualcosa è andato storto" su questa pagina): TUTTO il resto della
+  // pagina — comprese le funzioni pure sulle date, che sono la prima
+  // sospetta visto che il crash si presenta ora anche sulla semplice
+  // apertura della pagina (non solo dopo "Conferma") — è avvolto in un
+  // try/catch che logga TUTTO (messaggio, stack, contesto) e mostra
+  // l'errore reale direttamente in pagina invece di lasciarlo arrivare
+  // al generico error.tsx, che in produzione sostituisce il messaggio
+  // di un errore non gestito in un Server Component con un testo fisso
+  // ("The specific message is omitted..."). Nessun redirect() sopra
   // questa riga finisce dentro il try: redirect() lancia un errore
   // speciale di Next.js che il catch qui sotto NON deve intercettare,
   // altrimenti romperebbe la navigazione.
   try {
+    const nomeVisualizzato = profilo?.nome || user.email || '';
+    const inizioSettimanaCorrente = lunediSettimana(oggi());
+    const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
+    const giorni = giorniSettimana(lunedi);
+    const domenica = giorni[giorni.length - 1];
+    const settimanaPrecedente = sommaGiorni(lunedi, -7);
+    const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
+    const settimanaSuccessiva = sommaGiorni(lunedi, 7);
+    const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
+
     console.log('ore-lavoro DEBUG: inizio query', {
       utenteTarget: utenteTarget.id,
       modalitaAdmin,
@@ -307,12 +308,12 @@ export default async function OreLavoroPage({
     console.error('ore-lavoro DEBUG: errore catturato nel render della pagina', {
       utenteTarget: utenteTarget.id,
       modalitaAdmin,
-      lunedi,
+      searchParamsSettimana: searchParams.settimana,
       messaggio,
       stack,
     });
     return (
-      <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
+      <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo}>
         <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
           <div className="rounded-xl border border-red-200 bg-red-50 p-4">
             <h1 className="text-lg font-medium text-red-800">Debug: errore in Ore di lavoro</h1>
