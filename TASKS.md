@@ -1589,31 +1589,58 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       policy select "il proprio profilo assegnato"), specs/54
       aggiornata, nuovo scenario in `e2e/18-report-ore-lavoro.spec.ts`
       che verifica il precaricamento con l'account maestra.
-- [x] Il crash vero e proprio (`app/dashboard/ore-lavoro/page.tsx`) era
-      quasi certamente `formattaDataOraItaliana(settimana!.confermata_at)`,
-      l'unica asserzione non-null di tutto il codice applicativo che
-      accede a un campo che può arrivare vuoto da una query il cui
-      errore viene ignorato (`const [..., { data: settimana }, ...] =
-      await Promise.all([...])`, nessun controllo di `error`). Corretto
-      calcolando `confermata` da `settimana?.confermata_at` (non più da
-      `!!settimana`) così un risultato "vuoto" per qualunque motivo (RLS,
-      grant mancante, riga inconsistente) non fa più entrare nel ramo che
-      formatta la data, e aggiunto un log dell'errore reale (stesso
-      pattern di `lib/auth.ts:requireProfilo`) per renderlo diagnosticabile
-      dai log Vercel se dovesse ripresentarsi.
+- [x] Il crash vero (diagnosticato leggendo i Function Logs di Vercel,
+      non indovinabile da un `try/catch` nella pagina — vedi sotto) NON
+      era un problema di grant/RLS né di dati mancanti, ma un limite del
+      bundler React Server Components: `components/RigaOreLavoro.tsx`
+      (`'use client'`) esportava sia il componente sia una costante dati
+      pura, `ETICHETTE_STATO_ORE_LAVORO` (le etichette italiane dello
+      stato), e `app/dashboard/ore-lavoro/page.tsx` (Server Component)
+      la importava e usava direttamente nel ramo di sola lettura di una
+      settimana confermata. Un valore non-componente importato da un
+      modulo client e usato in un Server Component non è risolvibile dal
+      Client Reference Manifest in build di produzione ("Could not find
+      the module .../RigaOreLavoro.tsx#ETICHETTE_STATO_ORE_LAVORO#lavorativo
+      in the React Client Manifest") — funzionava in sviluppo, motivo per
+      cui non si era mai visto prima. Per questo scattava solo entrando
+      nel ramo "settimana confermata" (dopo il primo click su "Conferma",
+      la cui insert nel frattempo era comunque andata a buon fine) e
+      restava identico ad ogni tentativo di `try/catch` nella pagina: è
+      un errore di serializzazione dell'albero React che avviene DOPO che
+      la funzione della pagina è già tornata, non un'eccezione nel suo
+      corpo. Fix: spostata la costante (e il tipo `StatoGiornoOreLavoro`,
+      già duplicato) in `lib/oreLavoro.ts` (nessun `'use client'`),
+      importata da entrambi i file.
+- [x] Trovata anche una seconda causa (distinta, RLS reale) durante
+      l'audit prima di arrivare al log Vercel: la policy select di
+      `profili_orari` (`0024_profili_orari.sql`) era "solo admin",
+      scritta quando la tabella non era ancora usata da nessuna pagina
+      (specs/54). Da `0025_report_ore_lavoro.sql` in poi,
+      `lib/profiliOrari.ts:recuperaProfiloOrario` la interroga anche per
+      il DIRETTO interessato (precaricamento ore ordinarie, specs/18):
+      per chiunque non fosse admin la lettura falliva silenziosamente
+      (RLS filtra, nessun errore) e le ore ordinarie precaricate erano
+      sempre 0. Non intercettato dall'unico test e2e esistente perché
+      gira con l'account admin. Fix:
+      `supabase/migrations/0030_profili_orari_self_select.sql` (nuova
+      policy select "il proprio profilo assegnato"), specs/54
+      aggiornata, nuovo scenario in `e2e/18-report-ore-lavoro.spec.ts`
+      che verifica il precaricamento con l'account maestra.
 - [x] Verificato l'intero elenco `grant`/policy di `supabase/migrations/`
       contro ogni tabella e ogni chiamata `.from(...)` nel codice: nessun'
       altra tabella risulta priva del grant necessario al ruolo che la
       usa (`authenticated`/`service_role`).
+- [x] Rimosso il debug temporaneo aggiunto durante la diagnosi (log,
+      pannello d'errore in pagina, `try/catch` allargato) da
+      `app/dashboard/ore-lavoro/page.tsx` una volta trovata la causa
+      reale; resta permanente solo il fix (`confermata` da
+      `settimana?.confermata_at`, log dell'errore se le query falliscono)
+      e la visualizzazione di `error.digest` in
+      `components/ErroreAzione.tsx` (utile per ogni futuro crash simile).
 - [ ] **Da fare da parte tua**: applica
       `supabase/migrations/0030_profili_orari_self_select.sql` nel SQL
       Editor di Supabase (test e produzione) — senza, il precaricamento
-      delle ore ordinarie resta a 0 per chiunque non sia admin. Verifica
-      anche, mentre ci sei, che TUTTE le migration da `0024` a `0029`
-      siano state applicate sul progetto di produzione (non solo su
-      quello di test): il crash originale segnalato in produzione
-      potrebbe derivare da una di queste non ancora incollata nel SQL
-      Editor, dato che il progetto non le applica automaticamente.
+      delle ore ordinarie resta a 0 per chiunque non sia admin.
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento

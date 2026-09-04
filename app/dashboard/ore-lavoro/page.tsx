@@ -3,7 +3,7 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
-import { RigaOreLavoro, ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/components/RigaOreLavoro';
+import { RigaOreLavoro } from '@/components/RigaOreLavoro';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import {
   oggi,
@@ -20,6 +20,8 @@ import {
   totaliSettimanaOreLavoro,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
+  ETICHETTE_STATO_ORE_LAVORO,
+  type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
@@ -49,152 +51,115 @@ const NOMI_GIORNI: Record<number, string> = {
 // una settimana già confermata (specs/18, sezione "Amministrazione"):
 // `?utente=<id>` (solo per l'admin, altrimenti ignorato) sceglie di chi
 // sono le ore mostrate, di default le proprie.
-// Vero se `err` è l'eccezione speciale che Next.js usa per implementare
-// redirect()/notFound() (identificata dal prefisso del suo `digest`):
-// DEVE risalire intatta e non essere trattata come un errore applicativo,
-// altrimenti — vedi DEBUG TEMPORANEO sotto — un try/catch troppo largo
-// la intercetterebbe e romperebbe la navigazione invece di eseguirla.
-function eRedirectONotFound(err: unknown): boolean {
-  const digest = (err as { digest?: unknown } | null)?.digest;
-  return typeof digest === 'string' && (digest.startsWith('NEXT_REDIRECT') || digest === 'NEXT_NOT_FOUND');
-}
-
 export default async function OreLavoroPage({
   searchParams,
 }: {
   searchParams: { settimana?: string; utente?: string };
 }) {
-  // DEBUG TEMPORANEO (da rimuovere una volta diagnosticato il crash
-  // "Qualcosa è andato storto" su questa pagina): il tentativo precedente
-  // avvolgeva in un try/catch solo la parte successiva a requireStaff(),
-  // ma il crash si è ripresentato identico — quindi l'eccezione arriva
-  // da PRIMA (requireStaff stesso, o il blocco admin `?utente=`). Ora è
-  // avvolto tutto, requireStaff incluso: l'unica eccezione da NON
-  // trattare come errore applicativo è quella di redirect() (usata sia
-  // da requireStaff sia da assicuraAccessoOreLavoro), riconosciuta e
-  // rilanciata subito da eRedirectONotFound sopra.
-  try {
-    const { supabase, user, profilo, ruolo } = await requireStaff({});
+  const { supabase, user, profilo, ruolo } = await requireStaff({});
 
-    let utenteTarget = {
-      id: user.id,
-      nome: profilo?.nome || user.email || '',
-      profiloOrarioId: profilo?.profilo_orario_id ?? null,
-    };
-    let modalitaAdmin = false;
+  let utenteTarget = {
+    id: user.id,
+    nome: profilo?.nome || user.email || '',
+    profiloOrarioId: profilo?.profilo_orario_id ?? null,
+  };
+  let modalitaAdmin = false;
 
-    if (ruolo === 'admin' && searchParams.utente && searchParams.utente !== user.id) {
-      const { data: profiloAltro } = await supabase
-        .from('profili')
-        .select('id, nome, cognome, profilo_orario_id')
-        .eq('id', searchParams.utente)
-        .eq('abilitato_ore_lavoro', true)
-        .maybeSingle();
-      if (profiloAltro) {
-        utenteTarget = {
-          id: profiloAltro.id,
-          nome: `${profiloAltro.nome} ${profiloAltro.cognome}`.trim(),
-          profiloOrarioId: profiloAltro.profilo_orario_id,
-        };
-        modalitaAdmin = true;
-      }
-    }
-
-    if (!modalitaAdmin) {
-      assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
-    }
-
-    const nomeVisualizzato = profilo?.nome || user.email || '';
-    const inizioSettimanaCorrente = lunediSettimana(oggi());
-    const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
-    const giorni = giorniSettimana(lunedi);
-    const domenica = giorni[giorni.length - 1];
-    const settimanaPrecedente = sommaGiorni(lunedi, -7);
-    const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
-    const settimanaSuccessiva = sommaGiorni(lunedi, 7);
-    const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
-
-    console.log('ore-lavoro DEBUG: inizio query', {
-      utenteTarget: utenteTarget.id,
-      modalitaAdmin,
-      lunedi,
-      giorni,
-    });
-
-    const [
-      profiloOrario,
-      { data: righeGiorni, error: erroreGiorni },
-      { data: settimana, error: erroreSettimana },
-      chiusure,
-    ] = await Promise.all([
-      recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
-      supabase
-        .from('ore_lavoro_giorni')
-        .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
-        .eq('utente_id', utenteTarget.id)
-        .in('data', giorni),
-      supabase
-        .from('ore_lavoro_settimane')
-        .select('confermata_at')
-        .eq('utente_id', utenteTarget.id)
-        .eq('settimana_inizio', lunedi)
-        .maybeSingle(),
-      chiusurePerPeriodo(supabase, lunedi, domenica),
-    ]);
-
-    console.log('ore-lavoro DEBUG: risultato query', {
-      profiloOrario,
-      righeGiorni,
-      erroreGiorni,
-      settimana,
-      erroreSettimana,
-      chiusure,
-    });
-
-    // Se una di queste due query fallisce (es. permission denied per
-    // GRANT mancanti, già capitato più volte — vedi
-    // lib/auth.ts:requireProfilo) righeGiorni/settimana restano
-    // semplicemente vuoti: la pagina degrada (mostra "0 ore"/"non
-    // confermata" invece di crashare), ma logghiamo l'errore reale per
-    // renderlo diagnosticabile dai log Vercel.
-    if (erroreGiorni) {
-      console.error(`ore-lavoro: impossibile leggere ore_lavoro_giorni per ${utenteTarget.id}`, erroreGiorni);
-    }
-    if (erroreSettimana) {
-      console.error(`ore-lavoro: impossibile leggere ore_lavoro_settimane per ${utenteTarget.id}`, erroreSettimana);
-    }
-
-    const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
-    const confermata = !!settimana?.confermata_at;
-    // L'admin vede sempre i campi modificabili, anche su una settimana
-    // già confermata (specs/18): solo il diretto interessato la vede in
-    // sola lettura una volta confermata.
-    const soloLettura = confermata && !modalitaAdmin;
-
-    const righe = giorni.map((data) => {
-      const salvata = righePerGiorno.get(data);
-      return {
-        data,
-        etichetta: NOMI_GIORNI[giornoSettimanaIso(data)],
-        dataBreve: formattaDataBreve(data),
-        // Solo informativo: il registro ore di lavoro non blocca la
-        // scrittura nei giorni di chiusura scolastica (specs/18, specs/53
-        // — a differenza di presenze/pasti, il personale può lavorare
-        // anche quando l'asilo non è operativo).
-        chiuso: isGiornoChiuso(data, chiusure),
-        messaggioChiuso: notaGiornoChiusoOreLavoro(data, chiusure),
-        stato: (salvata?.stato ?? 'lavorativo') as StatoGiornoOreLavoro,
-        oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
-        oreStraordinarie: salvata?.ore_straordinarie ?? 0,
-        motivoStraordinario: salvata?.motivo_straordinario ?? '',
-        codiceMalattia: salvata?.codice_malattia ?? '',
-        notaAssenza: salvata?.nota_assenza ?? '',
+  if (ruolo === 'admin' && searchParams.utente && searchParams.utente !== user.id) {
+    const { data: profiloAltro } = await supabase
+      .from('profili')
+      .select('id, nome, cognome, profilo_orario_id')
+      .eq('id', searchParams.utente)
+      .eq('abilitato_ore_lavoro', true)
+      .maybeSingle();
+    if (profiloAltro) {
+      utenteTarget = {
+        id: profiloAltro.id,
+        nome: `${profiloAltro.nome} ${profiloAltro.cognome}`.trim(),
+        profiloOrarioId: profiloAltro.profilo_orario_id,
       };
-    });
+      modalitaAdmin = true;
+    }
+  }
 
-    const totali = totaliSettimanaOreLavoro(righe);
+  if (!modalitaAdmin) {
+    assicuraAccessoOreLavoro(profilo?.abilitato_ore_lavoro);
+  }
 
-    return (
+  const nomeVisualizzato = profilo?.nome || user.email || '';
+  const inizioSettimanaCorrente = lunediSettimana(oggi());
+  const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
+  const giorni = giorniSettimana(lunedi);
+  const domenica = giorni[giorni.length - 1];
+  const settimanaPrecedente = sommaGiorni(lunedi, -7);
+  const puoAndareAvanti = lunedi < inizioSettimanaCorrente;
+  const settimanaSuccessiva = sommaGiorni(lunedi, 7);
+  const suffissoUtente = modalitaAdmin ? `&utente=${utenteTarget.id}` : '';
+
+  const [
+    profiloOrario,
+    { data: righeGiorni, error: erroreGiorni },
+    { data: settimana, error: erroreSettimana },
+    chiusure,
+  ] = await Promise.all([
+    recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
+    supabase
+      .from('ore_lavoro_giorni')
+      .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
+      .eq('utente_id', utenteTarget.id)
+      .in('data', giorni),
+    supabase
+      .from('ore_lavoro_settimane')
+      .select('confermata_at')
+      .eq('utente_id', utenteTarget.id)
+      .eq('settimana_inizio', lunedi)
+      .maybeSingle(),
+    chiusurePerPeriodo(supabase, lunedi, domenica),
+  ]);
+
+  // Se una di queste due query fallisce (es. permission denied per GRANT
+  // mancanti, già capitato più volte — vedi lib/auth.ts:requireProfilo)
+  // righeGiorni/settimana restano semplicemente vuoti: la pagina degrada
+  // (mostra "0 ore"/"non confermata" invece di crashare), ma logghiamo
+  // l'errore reale per renderlo diagnosticabile dai log Vercel.
+  if (erroreGiorni) {
+    console.error(`ore-lavoro: impossibile leggere ore_lavoro_giorni per ${utenteTarget.id}`, erroreGiorni);
+  }
+  if (erroreSettimana) {
+    console.error(`ore-lavoro: impossibile leggere ore_lavoro_settimane per ${utenteTarget.id}`, erroreSettimana);
+  }
+
+  const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
+  const confermata = !!settimana?.confermata_at;
+  // L'admin vede sempre i campi modificabili, anche su una settimana
+  // già confermata (specs/18): solo il diretto interessato la vede in
+  // sola lettura una volta confermata.
+  const soloLettura = confermata && !modalitaAdmin;
+
+  const righe = giorni.map((data) => {
+    const salvata = righePerGiorno.get(data);
+    return {
+      data,
+      etichetta: NOMI_GIORNI[giornoSettimanaIso(data)],
+      dataBreve: formattaDataBreve(data),
+      // Solo informativo: il registro ore di lavoro non blocca la
+      // scrittura nei giorni di chiusura scolastica (specs/18, specs/53
+      // — a differenza di presenze/pasti, il personale può lavorare
+      // anche quando l'asilo non è operativo).
+      chiuso: isGiornoChiuso(data, chiusure),
+      messaggioChiuso: notaGiornoChiusoOreLavoro(data, chiusure),
+      stato: (salvata?.stato ?? 'lavorativo') as StatoGiornoOreLavoro,
+      oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
+      oreStraordinarie: salvata?.ore_straordinarie ?? 0,
+      motivoStraordinario: salvata?.motivo_straordinario ?? '',
+      codiceMalattia: salvata?.codice_malattia ?? '',
+      notaAssenza: salvata?.nota_assenza ?? '',
+    };
+  });
+
+  const totali = totaliSettimanaOreLavoro(righe);
+
+  return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
         <div>
@@ -308,30 +273,4 @@ export default async function OreLavoroPage({
       </main>
     </NavHeader>
   );
-  } catch (err) {
-    if (eRedirectONotFound(err)) throw err;
-
-    const messaggio = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : undefined;
-    console.error('ore-lavoro DEBUG: errore catturato nel render della pagina', {
-      searchParams,
-      messaggio,
-      stack,
-    });
-    return (
-      <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-          <h1 className="text-lg font-medium text-red-800">Debug: errore in Ore di lavoro</h1>
-          <p className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-xs text-red-700">
-            {messaggio}
-          </p>
-          {stack && (
-            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-[10px] text-red-600">
-              {stack}
-            </pre>
-          )}
-        </div>
-      </main>
-    );
-  }
 }

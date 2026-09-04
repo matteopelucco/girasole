@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza';
-
-export const ETICHETTE_STATO_ORE_LAVORO: Record<StatoGiornoOreLavoro, string> = {
-  lavorativo: 'Lavorativo',
-  malattia: 'Malattia',
-  assenza: 'Assenza',
-};
+import { ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/lib/oreLavoro';
 
 export type ValoriGiornoOreLavoro = {
   data: string;

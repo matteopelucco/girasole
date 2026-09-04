@@ -4,6 +4,20 @@ import type { ProfiloOrario } from '@/lib/profiliOrari';
 
 export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza';
 
+// Etichette in italiano dello stato di un giorno (specs/18): definite
+// qui, non nel componente client RigaOreLavoro, perché la vista di sola
+// lettura di una settimana confermata (app/dashboard/ore-lavoro/page.tsx,
+// un Server Component) le usa direttamente — un valore non-componente
+// importato da un modulo 'use client' non è risolvibile dal bundler RSC
+// in produzione ("Could not find the module ... in the React Client
+// Manifest"), anche se in sviluppo sembra funzionare. Riesportata da
+// RigaOreLavoro.tsx per compatibilità di chi la importava da lì.
+export const ETICHETTE_STATO_ORE_LAVORO: Record<StatoGiornoOreLavoro, string> = {
+  lavorativo: 'Lavorativo',
+  malattia: 'Malattia',
+  assenza: 'Assenza',
+};
+
 // Lunedì della settimana da mostrare/modificare in "Ore di lavoro"
 // (specs/18): quello richiesto (query string `?settimana=`, o campo
 // nascosto `settimana_inizio` inviato dal form) se è un lunedì valido e
