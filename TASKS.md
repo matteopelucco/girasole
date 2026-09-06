@@ -1,5 +1,17 @@
 # TASKS.md
 
+## ⚠️ Database di sviluppo in pausa (2026-09-06)
+Il progetto Supabase di sviluppo/test è stato messo in pausa
+temporaneamente dall'utente. Migration ferme al momento della pausa:
+`0030_profili_orari_self_select.sql` e `0031_monte_ore.sql` (vedi le
+rispettive voci "Da fare da parte tua" più sotto) — non è confermato che
+siano già state applicate. **Alla riattivazione**: non applicare solo
+l'ultima migration a memoria, ma confrontare lo stato reale dello schema
+con l'intera cartella `supabase/migrations/` (in ordine numerico) e
+applicare in un colpo solo tutte quelle mancanti ("in delta"), non solo
+le ultime due — un progetto pausato/riattivato può aver perso lo stato
+di quali fossero già state incollate prima della pausa.
+
 ## Fatto (scaffold iniziale)
 - [x] Setup Next.js 14 + Tailwind + TypeScript
 - [x] Client Supabase (browser + server) e middleware di sessione
