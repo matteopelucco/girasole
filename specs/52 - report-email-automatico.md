@@ -10,7 +10,12 @@ Ogni notte, subito dopo la mezzanotte (fuso Europe/Rome), inviare via
 email allo staff dell'asilo i report di presenze/pasti — giornaliero,
 settimanale e mensile — relativi al giorno appena concluso, come
 allegati PDF pronti per la stampa, così che l'asilo abbia sempre una
-copia cartacea/archiviabile senza dover aprire l'app.
+copia cartacea/archiviabile senza dover aprire l'app. La stessa mail
+riporta anche, nel corpo, un riepilogo delle ore di lavoro del personale
+della settimana in corso, e allega periodicamente un PDF con il
+dettaglio mensile delle ore di ciascuna persona abilitata (vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md) e
+[18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md)).
 
 Questo requisito estende e sostituisce lo scenario "riepilogo giornaliero
 via email a mezzanotte" descritto in precedenza in
@@ -74,6 +79,44 @@ indica esplicitamente "nessuna classe attiva" o "nessun dato per questo
 periodo" (nessun invio silenzioso saltato: l'assenza di dati è
 un'informazione utile quanto la presenza)
 
+## Scenario: riepilogo delle ore di lavoro del personale nel corpo dell'email
+Dato che il job pianificato gira, e viene inviato il report giornaliero
+Quando genero il corpo dell'email
+Allora, oltre alla tabella di presenze/pasti, il corpo mostra una
+sezione "Ore di lavoro" con una tabella — una riga per ciascuna persona
+abilitata al report ore (vedi
+[17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)) — con nome, ore
+ordinarie e straordinarie registrate nella settimana che contiene il
+giorno appena concluso (fino a quel giorno incluso, "a tutt'oggi"), il
+totale, e il saldo di monte ore attuale (vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md))
+E se nessuna persona è abilitata al report ore, la sezione mostra
+esplicitamente che non c'è personale abilitato, invece di essere omessa
+
+## Scenario: PDF mensile delle ore del personale in allegato
+Dato che quella notte viene inviato anche il report mensile di
+presenze/pasti (vedi "modalità solo a fine periodo" sopra: sempre in
+modalità "sempre", solo l'ultima notte del mese in modalità
+"fine_periodo")
+Quando l'email viene inviata
+Allora, oltre agli allegati già previsti, è allegato anche un PDF con le
+ore di lavoro del personale del mese "a tutt'oggi" (calcolato allo
+stesso modo del report mensile di presenze/pasti — vedi Regole)
+E il PDF contiene una pagina per ciascuna persona abilitata al report
+ore, con: il suo nome, il mese solare a cui si riferisce, il profilo
+orario di riferimento assegnato (nome e ore per giorno), e una tabella
+con un giorno per riga (data, giorno della settimana, stato, ore
+ordinarie, ore straordinarie, ed eventuale dettaglio — motivo
+straordinario, codice malattia o nota assenza) limitatamente alle
+settimane di quel mese già confermate (vedi [18](18%20-%20report-ore-lavoro.md))
+E se una o più settimane del mese non sono ancora state confermate, il
+PDF lo segnala esplicitamente per quella persona (intervallo di date
+escluso, non semplicemente omesso in silenzio)
+E in fondo alla pagina di ciascuna persona compare il riepilogo del
+mese: variazione di monte ore nel mese (somma dei movimenti
+`settimanale` la cui settimana inizia in quel mese) e saldo di monte
+ore a fine mese
+
 ## Regole
 - Destinatario configurabile, non hardcoded: variabile d'ambiente
   `REPORT_EMAIL_DESTINATARIO`, con `info@asilosartorio.it` come valore
@@ -107,6 +150,12 @@ un'informazione utile quanto la presenza)
 - Un errore nell'invio (es. servizio email non raggiungibile) non deve
   marcare il periodo come "inviato": un tentativo successivo deve poter
   ritentare lo stesso periodo (vedi scenario idempotenza).
+- Il PDF mensile delle ore di lavoro non ha una propria idempotenza
+  separata: è generato e allegato insieme al report mensile di
+  presenze/pasti, quindi segue esattamente la stessa condizione di invio
+  e lo stesso tracciamento (`report_periodici_inviati`, tipo
+  `mensile`) — se il mensile risulta già inviato per quella data, non si
+  rigenera nulla, PDF ore lavoro incluso.
 
 ## Note di implementazione
 - Il job esiste già per il solo report giornaliero HTML (senza PDF):
@@ -128,3 +177,12 @@ un'informazione utile quanto la presenza)
   evitare di duplicare il calcolo di presenze/pasti/pre-asilo/
   post-asilo in più posti (vedi `CLAUDE.md`, sezione Analisi statica —
   `jscpd`).
+- Il riepilogo ore nel corpo email e il PDF mensile ore lavoro riusano
+  allo stesso modo la logica già scritta per
+  [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md) e
+  [19 - monte-ore.md](19%20-%20monte-ore.md) (`lib/oreLavoro.ts`,
+  `lib/monteOre.ts`), tramite un nuovo modulo di aggregazione
+  `lib/reportOreLavoro.ts` (pattern identico a `lib/reportPresenze.ts`)
+  e un generatore PDF `lib/pdfOreLavoro.ts` che riusa i primitivi di
+  disegno già presenti in `lib/pdfReport.ts` (gestione pagina/
+  interruzione, disegno riga) invece di duplicarli.

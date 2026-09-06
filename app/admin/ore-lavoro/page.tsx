@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { requireAdmin } from '@/lib/auth';
 import { oggi, lunediSettimana } from '@/lib/date';
+import { saldiPerUtente } from '@/lib/monteOre';
 
 const ETICHETTE_RUOLO: Record<string, string> = {
   admin: 'Admin',
@@ -40,6 +41,14 @@ export default async function OreLavoroAdminPage() {
     : { data: [] as { utente_id: string }[] };
   const idConfermati = new Set((confermate ?? []).map((c) => c.utente_id));
 
+  // Monte ore (specs/19 - monte-ore.md): saldo attuale di ciascuna
+  // persona in elenco, una sola query per tutti invece di una per
+  // persona (saldiPerUtente).
+  const { data: movimenti } = idPersonale.length
+    ? await supabase.from('monte_ore_movimenti').select('utente_id, variazione').in('utente_id', idPersonale)
+    : { data: [] as { utente_id: string; variazione: number }[] };
+  const saldi = saldiPerUtente(movimenti ?? []);
+
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-8">
@@ -66,8 +75,11 @@ export default async function OreLavoroAdminPage() {
                     ({ETICHETTE_RUOLO[p.ruolo] ?? p.ruolo}) · {p.email}
                   </span>
                 </span>
-                <span className={`text-xs ${idConfermati.has(p.id) ? 'text-emerald-700' : 'text-amber-700'}`}>
-                  {idConfermati.has(p.id) ? 'Settimana corrente confermata' : 'Settimana corrente non confermata'}
+                <span className="flex flex-col items-end gap-0.5">
+                  <span className={`text-xs ${idConfermati.has(p.id) ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {idConfermati.has(p.id) ? 'Settimana corrente confermata' : 'Settimana corrente non confermata'}
+                  </span>
+                  <span className="text-xs text-purple-800">Monte ore: {saldi.get(p.id) ?? 0}h</span>
                 </span>
               </Link>
             </li>

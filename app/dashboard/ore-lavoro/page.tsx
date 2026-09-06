@@ -9,7 +9,7 @@ import {
   oggi,
   sommaGiorni,
   giorniSettimana,
-  giornoSettimanaIso,
+  formattaGiornoSettimana,
   lunediSettimana,
   formattaIntervalloItaliano,
   formattaDataBreve,
@@ -23,21 +23,13 @@ import {
   ETICHETTE_STATO_ORE_LAVORO,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
+import { saldoMonteOre } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
-import { salvaSettimanaOreLavoro, confermaSettimanaOreLavoro } from './actions';
+import { MonteOre } from '@/components/MonteOre';
+import { salvaSettimanaOreLavoro, confermaSettimanaOreLavoro, aggiungiMovimentoMonteOre } from './actions';
 
 export const dynamic = 'force-dynamic';
-
-const NOMI_GIORNI: Record<number, string> = {
-  1: 'Lunedì',
-  2: 'Martedì',
-  3: 'Mercoledì',
-  4: 'Giovedì',
-  5: 'Venerdì',
-  6: 'Sabato',
-  7: 'Domenica',
-};
 
 // Sezione "Ore di lavoro" (specs/18 - report-ore-lavoro.md): il
 // personale abilitato (specs/17) registra ore/malattia/assenza per una
@@ -101,6 +93,7 @@ export default async function OreLavoroPage({
     { data: righeGiorni, error: erroreGiorni },
     { data: settimana, error: erroreSettimana },
     chiusure,
+    { data: movimentiMonteOre },
   ] = await Promise.all([
     recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
     supabase
@@ -115,6 +108,16 @@ export default async function OreLavoroPage({
       .eq('settimana_inizio', lunedi)
       .maybeSingle(),
     chiusurePerPeriodo(supabase, lunedi, domenica),
+    // Monte ore (specs/19 - monte-ore.md): tutti i movimenti, per
+    // calcolare il saldo esatto (somma di tutte le variazioni, non solo
+    // le più recenti) — il componente MonteOre mostra solo gli ultimi
+    // allo storico (solo per l'admin, che può anche aggiungerne uno
+    // manuale).
+    supabase
+      .from('monte_ore_movimenti')
+      .select('id, tipo, settimana_inizio, variazione, nota, created_at')
+      .eq('utente_id', utenteTarget.id)
+      .order('created_at', { ascending: false }),
   ]);
 
   // Se una di queste due query fallisce (es. permission denied per GRANT
@@ -140,7 +143,7 @@ export default async function OreLavoroPage({
     const salvata = righePerGiorno.get(data);
     return {
       data,
-      etichetta: NOMI_GIORNI[giornoSettimanaIso(data)],
+      etichetta: formattaGiornoSettimana(data),
       dataBreve: formattaDataBreve(data),
       // Solo informativo: il registro ore di lavoro non blocca la
       // scrittura nei giorni di chiusura scolastica (specs/18, specs/53
@@ -256,6 +259,14 @@ export default async function OreLavoroPage({
           Totale settimana: {totali.ordinarie}h ordinarie + {totali.straordinarie}h straordinarie ={' '}
           <strong>{totali.totale}h</strong>
         </p>
+
+        <MonteOre
+          saldo={saldoMonteOre(movimentiMonteOre ?? [])}
+          movimenti={movimentiMonteOre ?? []}
+          modalitaAdmin={modalitaAdmin}
+          utenteId={utenteTarget.id}
+          aggiungiMovimento={aggiungiMovimentoMonteOre}
+        />
 
         {!confermata && (
           <ConfermaAzione

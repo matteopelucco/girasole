@@ -21,9 +21,11 @@ export function righeOSollevaErrore<T>(
 
 export type SezioneConRighe = { nome: string; righe: RigaReportBambino[] };
 
-const STILE_TABELLA = 'border-collapse:collapse;width:100%';
-const STILE_CELLA = 'border:1px solid #ccc;padding:4px 8px;text-align:left';
-const STILE_CELLA_NUMERO = 'border:1px solid #ccc;padding:4px 8px;text-align:right';
+// Esportati per riuso da lib/reportOreLavoro.ts (stesso stile di
+// tabella HTML per il riepilogo ore nel corpo dell'email, CLAUDE.md/jscpd).
+export const STILE_TABELLA = 'border-collapse:collapse;width:100%';
+export const STILE_CELLA = 'border:1px solid #ccc;padding:4px 8px;text-align:left';
+export const STILE_CELLA_NUMERO = 'border:1px solid #ccc;padding:4px 8px;text-align:right';
 
 // Riga di una tabella HTML per un bambino, con lo stesso avviso ⚠️
 // mostrato accanto al nome nella tabella a schermo

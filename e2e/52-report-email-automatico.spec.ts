@@ -5,6 +5,19 @@
 // nelle tabelle report_giornalieri_inviati/report_periodici_inviati sul
 // progetto Supabase puntato da NEXT_PUBLIC_SUPABASE_URL — mai contro un
 // progetto di produzione.
+//
+// I due scenari "riepilogo delle ore di lavoro del personale nel corpo
+// dell'email" e "PDF mensile delle ore del personale in allegato" non
+// hanno un'asserzione e2e dedicata sul CONTENUTO: la route non espone
+// in nessun modo il corpo HTML o gli allegati generati (l'email esce
+// via Resend, nessun endpoint di debug la restituisce), quindi non c'è
+// nulla da ispezionare da Playwright oltre al JSON di risposta già
+// verificato sotto. Sono comunque coperti indirettamente: se
+// lib/reportOreLavoro.ts o lib/pdfOreLavoro.ts sollevassero un errore,
+// la chiamata alla route fallirebbe (risposta non `ok`, o
+// `risultati.mensile` mai a "inviato"), facendo fallire i test
+// sottostanti. Il calcolo delle ore/monte ore in sé è coperto da unit
+// test puri (lib/monteOre.test.ts, lib/oreLavoro.test.ts).
 import { test, expect } from '@playwright/test';
 
 test.describe('52 — Report email automatico', () => {

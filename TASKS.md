@@ -1642,8 +1642,40 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       Editor di Supabase (test e produzione) — senza, il precaricamento
       delle ore ordinarie resta a 0 per chiunque non sia admin.
 
+## Feature: Monte ore + riepilogo ore/PDF mensile nella mail giornaliera
+- [x] Nuovo requisito `specs/19 - monte-ore.md`: contatore di ore per
+      persona, aggiornato automaticamente alla conferma di ogni
+      settimana (esubero di straordinario lo scala, carenza rispetto al
+      profilo orario lo aumenta — attenzione alla direzione, confermata
+      esplicitamente con l'utente: NON è una banca ore classica),
+      precaricabile/correggibile manualmente dall'admin con nota
+      obbligatoria. `specs/18`, `specs/54`, `specs/52` e l'indice
+      `specs/00` aggiornati di conseguenza.
+- [x] `supabase/migrations/0031_monte_ore.sql`: tabella
+      `monte_ore_movimenti` (ledger insert-only, saldo = somma di
+      `variazione`), RLS che permette al proprietario di inserire solo
+      un movimento `settimanale` legato a una conferma reale della
+      stessa settimana (mai un `precarico`, mai per conto di altri).
+- [x] `lib/monteOre.ts` (funzioni pure, unit test in
+      `lib/monteOre.test.ts`): calcolo esubero/carenza settimanale e
+      saldo aggregato.
+- [x] `confermaSettimanaOreLavoro` registra il movimento `settimanale`
+      subito dopo la conferma; nuova azione admin
+      `aggiungiMovimentoMonteOre` per il precarico manuale.
+- [x] UI: saldo monte ore in sola lettura per il diretto interessato e
+      colonna monte ore nell'elenco admin (`/admin/ore-lavoro`); form +
+      storico movimenti nella vista admin di un dipendente.
+- [x] `lib/reportOreLavoro.ts` + `lib/pdfOreLavoro.ts` (riusa i
+      primitivi di disegno di `lib/pdfReport.ts`): riepilogo ore nel
+      corpo della mail giornaliera e PDF mensile (una pagina per
+      persona, solo settimane confermate) allegato insieme al report
+      mensile di presenze/pasti — stessa idempotenza, nessuna tabella
+      nuova.
+- [ ] **Da fare da parte tua**: applica
+      `supabase/migrations/0031_monte_ore.sql` nel SQL Editor di
+      Supabase (test e produzione) — senza, conferma settimana e
+      precarico monte ore falliscono.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
-- [ ] Ore di lavoro: calcolo effettivo di un monte ore/straordinari a
-      partire dai dati registrati (v0.15.0), riepiloghi, export

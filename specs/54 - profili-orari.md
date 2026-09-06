@@ -10,10 +10,11 @@ degli "orari tipo" (es. "35 ore settimanali", "32 ore settimanali",
 e assegnarne uno a ciascuna persona — così da avere, per ogni membro del
 personale abilitato al report ore (vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)), un riferimento di
-quante ore dovrebbe lavorare ogni giorno. **Come** questo riferimento
-verrà poi usato (confronto con le ore segnate, calcolo di
-straordinari/assenze, riepiloghi) è fuori scope, sarà definito in una
-fase successiva.
+quante ore dovrebbe lavorare ogni giorno. Questo riferimento precarica
+le ore ordinarie nel report ore di lavoro (vedi
+[18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md)) ed è il
+confronto usato per calcolare il monte ore (vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md)).
 
 ## Scenario: creare un profilo orario
 Dato che sono autenticato come admin
@@ -96,7 +97,6 @@ Allora vengo reindirizzato alla dashboard
   (`on delete set null`), stesso pattern già usato per
   `sezioni.anno_scolastico_id` (vedi
   [04 - data-types.md](04%20-%20data-types.md)).
-- Fuori scope in questa fase: come i profili orari verranno
-  effettivamente usati (form di inserimento ore/assenze, confronto con
-  le ore segnate, calcolo di straordinari o assenze, riepiloghi,
-  export) — qui si definiscono e si assegnano solo i profili.
+- Fuori scope in questa fase: un pannello dedicato allo staff che mostri
+  il proprio profilo orario assegnato al di fuori del precaricamento
+  nel report ore di lavoro (vedi [18](18%20-%20report-ore-lavoro.md)).

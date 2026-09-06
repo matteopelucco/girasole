@@ -42,3 +42,25 @@ export async function recuperaProfiloOrario(
 
   return data;
 }
+
+export type ProfiloOrarioConNome = ProfiloOrario & { nome: string };
+
+// Come recuperaProfiloOrario, ma include anche il nome del profilo
+// (specs/52 - report-email-automatico.md, PDF mensile ore di lavoro:
+// "il profilo orario di riferimento" va identificato per nome, non solo
+// per ore) — funzione distinta perché il resto dell'app non ha mai
+// bisogno del nome, solo delle ore per il precaricamento (specs/18).
+export async function recuperaProfiloOrarioConNome(
+  supabase: SupabaseClient,
+  profiloOrarioId: string | null | undefined
+): Promise<ProfiloOrarioConNome | null> {
+  if (!profiloOrarioId) return null;
+
+  const { data } = await supabase
+    .from('profili_orari')
+    .select('nome, ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi')
+    .eq('id', profiloOrarioId)
+    .maybeSingle();
+
+  return data;
+}

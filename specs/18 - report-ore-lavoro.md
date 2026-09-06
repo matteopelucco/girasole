@@ -237,10 +237,10 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   assegnato all'utente (campo del giorno della settimana corrispondente,
   specs/54), ma restano modificabili prima della conferma: il personale
   "verifica" il precaricato, non lo subisce.
-- Le ore straordinarie concorrono al calcolo del monte ore del
-  personale: qui si registra solo il dato (ore + motivo), il calcolo e
-  la presentazione di un monte ore aggregato sono fuori scope (vedi
-  sotto).
+- Le ore straordinarie (insieme alla carenza rispetto al profilo
+  orario) concorrono al calcolo del monte ore del personale, aggiornato
+  automaticamente alla conferma di ogni settimana — vedi
+  [19 - monte-ore.md](19%20-%20monte-ore.md).
 - La settimana è "confermata" quando esiste una riga corrispondente
   nella tabella `ore_lavoro_settimane` (stesso pattern di
   `report_giornalieri_inviati`/`report_periodici_inviati`, specs/52:
@@ -309,7 +309,5 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   `data` stessa con la data odierna.
 
 ## Fuori scope in questa fase
-- Il calcolo effettivo di un monte ore/straordinari a partire dai dati
-  registrati, ed eventuali riepiloghi o export.
 - "Riaprire" una settimana già confermata (renderla di nuovo
   modificabile dal personale): nessuna azione la offre in questa fase.

@@ -11,6 +11,8 @@ import {
 import { generaPdfTabellare, type SezionePdf, type ComunicazionePastiPdf } from '@/lib/pdfReport';
 import { rigaComunicazione, totalePasti, type ComunicazionePasto } from '@/lib/comunicazionePasti';
 import type { RigaReportBambino } from '@/lib/report';
+import { generaRiepilogoOreLavoroSettimanaHtml, personePdfOreLavoroMensile } from '@/lib/reportOreLavoro';
+import { generaPdfOreLavoroMensile } from '@/lib/pdfOreLavoro';
 import {
   oggi,
   sommaGiorni,
@@ -100,6 +102,16 @@ async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
   return { filename: `report-giornaliero-${data}.pdf`, content: pdf };
 }
 
+// PDF mensile delle ore di lavoro del personale (specs/52, scenario
+// "PDF mensile delle ore del personale in allegato"; specs/19 -
+// monte-ore.md): allegato insieme al report mensile di presenze/pasti,
+// stessa idempotenza (nessun tracciamento separato — vedi Regole).
+async function allegatoOreLavoroMensile(mese: string): Promise<AllegatoEmail> {
+  const persone = await personePdfOreLavoroMensile(mese);
+  const pdf = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone);
+  return { filename: `ore-lavoro-${mese}.pdf`, content: pdf };
+}
+
 // Vercel Cron chiama questa route una volta al giorno poco dopo la
 // mezzanotte Europe/Rome (vedi vercel.json: "0 23 * * *" UTC, che cade
 // sempre a/dopo mezzanotte Rome sia in ora solare che legale — specs/52
@@ -122,7 +134,11 @@ export async function GET(request: Request) {
     mensile: 'saltato',
   };
 
-  const daPreparare: { tipo: TipoReportNotturno; genera: () => Promise<AllegatoEmail> }[] = [];
+  // Ogni voce genera uno o più allegati per lo stesso tipo di report:
+  // il mensile ne genera due (presenze/pasti + ore di lavoro, specs/52),
+  // gli altri uno solo — un array uniforme evita un caso speciale nel
+  // punto di invio sotto.
+  const daPreparare: { tipo: TipoReportNotturno; genera: () => Promise<AllegatoEmail[]> }[] = [];
 
   const { data: giornalieroInviato } = await supabase
     .from('report_giornalieri_inviati')
@@ -132,7 +148,7 @@ export async function GET(request: Request) {
   if (giornalieroInviato) {
     risultati.giornaliero = 'gia_inviato';
   } else {
-    daPreparare.push({ tipo: 'giornaliero', genera: () => allegatoGiornaliero(dataReport) });
+    daPreparare.push({ tipo: 'giornaliero', genera: async () => [await allegatoGiornaliero(dataReport)] });
   }
 
   const modalita = modalitaPeriodici();
@@ -150,14 +166,15 @@ export async function GET(request: Request) {
       const inizio = lunediSettimana(dataReport);
       daPreparare.push({
         tipo: 'settimanale',
-        genera: () =>
-          allegatoPeriodico(
+        genera: async () => [
+          await allegatoPeriodico(
             'settimanale',
             inizio,
             dataReport,
             'Report settimanale',
             formattaIntervalloItaliano(inizio, dataReport)
           ),
+        ],
       });
     }
   }
@@ -172,19 +189,26 @@ export async function GET(request: Request) {
     if (mensileInviato) {
       risultati.mensile = 'gia_inviato';
     } else {
-      const inizio = primoGiornoMese(meseDaData(dataReport));
+      const mese = meseDaData(dataReport);
+      const inizio = primoGiornoMese(mese);
       daPreparare.push({
         tipo: 'mensile',
-        genera: () =>
-          allegatoPeriodico('mensile', inizio, dataReport, 'Report mensile', formattaMeseItaliano(meseDaData(dataReport))),
+        genera: async () => [
+          await allegatoPeriodico('mensile', inizio, dataReport, 'Report mensile', formattaMeseItaliano(mese)),
+          await allegatoOreLavoroMensile(mese),
+        ],
       });
     }
   }
 
   if (daPreparare.length) {
-    const allegati = await Promise.all(daPreparare.map((d) => d.genera()));
+    const allegati = (await Promise.all(daPreparare.map((d) => d.genera()))).flat();
+    // Il riepilogo ore di lavoro (specs/52, specs/19) è parte del corpo
+    // "dettagliato" giornaliero, non un allegato a parte: compare solo
+    // quando quel corpo viene davvero (ri)generato, stessa condizione
+    // della tabella di presenze/pasti sopra.
     const htmlGiornaliero = daPreparare.some((d) => d.tipo === 'giornaliero')
-      ? await generaTabellaGiornalieraHtml(dataReport)
+      ? (await generaTabellaGiornalieraHtml(dataReport)) + (await generaRiepilogoOreLavoroSettimanaHtml(dataReport))
       : `<p>In allegato: ${daPreparare.map((d) => d.tipo).join(', ')}.</p>`;
 
     await inviaEmail({

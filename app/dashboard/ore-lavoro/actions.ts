@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
+import { requireStaff, requireAdmin, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oggi, giorniSettimana } from '@/lib/date';
 import {
   validaGiornoOreLavoro,
@@ -9,6 +9,7 @@ import {
   settimanaOreLavoroRichiesta,
   utenteBersaglioOreLavoro,
 } from '@/lib/oreLavoro';
+import { calcolaEsuberoCarenza, variazioneMonteOre, notaMovimentoSettimanale } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -170,6 +171,26 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     }
   }
 
+  // A questo punto tutti e 7 i giorni esistono di sicuro (appena
+  // completati sopra, o già salvati esplicitamente prima): li
+  // rileggiamo per intero per calcolare il movimento di monte ore
+  // della settimana (specs/19 - monte-ore.md), che serve gli stessi
+  // dati appena confermati e lo stesso profilo orario già risolto sopra.
+  const { data: giorniCompleti } = await supabase
+    .from('ore_lavoro_giorni')
+    .select('data, stato, ore_ordinarie, ore_straordinarie')
+    .eq('utente_id', utenteId)
+    .in('data', giorni);
+  const { esubero, carenza } = calcolaEsuberoCarenza(
+    (giorniCompleti ?? []).map((g) => ({
+      data: g.data,
+      stato: g.stato,
+      oreOrdinarie: g.ore_ordinarie,
+      oreStraordinarie: g.ore_straordinarie,
+    })),
+    profiloOrario
+  );
+
   const { error } = await supabase
     .from('ore_lavoro_settimane')
     .insert({ utente_id: utenteId, settimana_inizio: settimanaInizio });
@@ -178,6 +199,66 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
       return { ok: false, messaggio: 'Questa settimana risulta già confermata.' };
     }
     return { ok: false, messaggio: 'Impossibile confermare la settimana.', dettaglio: error.message };
+  }
+
+  // Movimento di monte ore della settimana appena confermata (specs/19):
+  // la conferma resta valida anche se questo insert fallisse (è già
+  // stata registrata sopra), ma segnaliamo esplicitamente l'anomalia
+  // invece di lasciare un saldo silenziosamente incompleto — serve una
+  // correzione manuale dell'admin (movimento "precarico").
+  const { error: erroreMovimento } = await supabase.from('monte_ore_movimenti').insert({
+    utente_id: utenteId,
+    tipo: 'settimanale',
+    settimana_inizio: settimanaInizio,
+    variazione: variazioneMonteOre(esubero, carenza),
+    nota: notaMovimentoSettimanale(esubero, carenza),
+  });
+  if (erroreMovimento) {
+    return {
+      ok: false,
+      messaggio:
+        'La settimana è stata confermata, ma non è stato possibile registrare il movimento di monte ore. Contatta l\'admin per una correzione manuale.',
+      dettaglio: erroreMovimento.message,
+    };
+  }
+
+  revalidatePath('/dashboard/ore-lavoro');
+  return { ok: true };
+}
+
+// Movimento manuale di monte ore (specs/19 - monte-ore.md): solo
+// l'admin può registrarlo, per qualunque utente abilitato, sempre con
+// una nota obbligatoria (non è un dato calcolato, va motivato). `segno`
+// è 'aumenta' o 'riduce': la UI chiede sempre un numero di ore
+// positivo, è questa funzione a tradurlo nella `variazione` con segno
+// corretto (positiva = il monte ore aumenta, negativa = scala — stessa
+// convenzione dei movimenti automatici).
+export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const utenteId = (formData.get('utente_id') as string) || '';
+  const segno = (formData.get('segno') as string) === 'riduce' ? -1 : 1;
+  const ore = Number(formData.get('ore'));
+  const nota = ((formData.get('nota') as string) || '').trim();
+
+  if (!utenteId) {
+    return { ok: false, messaggio: 'Utente non valido.' };
+  }
+  if (!Number.isFinite(ore) || ore <= 0) {
+    return { ok: false, messaggio: 'Indica un numero di ore maggiore di zero.' };
+  }
+  if (!nota) {
+    return { ok: false, messaggio: 'Indica una nota che motivi il movimento di monte ore.' };
+  }
+
+  const { error } = await supabase.from('monte_ore_movimenti').insert({
+    utente_id: utenteId,
+    tipo: 'precarico',
+    variazione: segno * ore,
+    nota,
+  });
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile registrare il movimento di monte ore.', dettaglio: error.message };
   }
 
   revalidatePath('/dashboard/ore-lavoro');

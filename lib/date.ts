@@ -152,6 +152,23 @@ export function giornoSettimanaIso(data: string): number {
   return giornoSettimana === 0 ? 7 : giornoSettimana;
 }
 
+const NOMI_GIORNI: Record<number, string> = {
+  1: 'Lunedì',
+  2: 'Martedì',
+  3: 'Mercoledì',
+  4: 'Giovedì',
+  5: 'Venerdì',
+  6: 'Sabato',
+  7: 'Domenica',
+};
+
+// Nome italiano del giorno della settimana di `data` (specs/18, specs/52):
+// unica fonte di verità invece di ripetere la stessa tabella in ogni
+// vista che elenca i 7 giorni di una settimana (CLAUDE.md, jscpd).
+export function formattaGiornoSettimana(data: string): string {
+  return NOMI_GIORNI[giornoSettimanaIso(data)];
+}
+
 // Vero se `data` è un sabato o una domenica (specs/53 - calendario-
 // scolastico.md: l'asilo è sempre chiuso in questi giorni, senza bisogno
 // di un giorno di chiusura registrato dall'admin).

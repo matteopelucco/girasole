@@ -64,6 +64,10 @@ della maestra, `5x` amministrazione.
 - [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md) — il
   personale abilitato registra ore ordinarie/straordinarie o
   malattia/assenza per la settimana corrente, e la conferma
+- [19 - monte-ore.md](19%20-%20monte-ore.md) — contatore di ore per
+  persona, aggiornato automaticamente alla conferma di ogni settimana
+  (esubero di straordinario lo scala, carenza rispetto al profilo
+  orario lo aumenta), precaricabile/correggibile dall'admin
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
 - [51 - report.md](51%20-%20report.md) — report tabellari di
