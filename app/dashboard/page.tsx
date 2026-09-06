@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
-import { SelettoreData } from '@/components/SelettoreData';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
@@ -23,7 +22,7 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { data?: string; promemoria?: string };
+  searchParams: { promemoria?: string };
 }) {
   const { supabase, user, profilo } = await requireProfilo();
 
@@ -44,11 +43,10 @@ export default async function DashboardPage({
     );
   }
 
-  const data = searchParams.data || oggi();
   const dataOggi = oggi();
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
-  const cards = cardsDashboard({ data, haSezioni, ruolo, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
+  const cards = cardsDashboard({ data: dataOggi, haSezioni, ruolo, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
 
   // Allarme 1 (specs/07 - allarmi.md): presenze/pasti non ancora
   // segnati dopo le 10:00, personale — solo le mie sezioni (tutte le
@@ -155,27 +153,7 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {ruolo === 'admin' && (
-          <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-600">
-            Per creare sezioni e bambini o gestire gli utenti vai su{' '}
-            <a href="/admin" className="underline">
-              Sezioni e bambini
-            </a>{' '}
-            /{' '}
-            <a href="/admin/maestre" className="underline">
-              Utenti
-            </a>{' '}
-            /{' '}
-            <a href="/admin/ore-lavoro" className="underline">
-              Ore di lavoro del personale
-            </a>
-            .
-          </div>
-        )}
-
         <section className="space-y-4">
-          <SelettoreData basePath="/dashboard" data={data} />
-
           {!haSezioni && (
             <p className="text-sm text-stone-600">
               Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.

@@ -17,6 +17,7 @@ describe('vociMenu', () => {
       '/admin/maestre',
       '/admin/calendario',
       '/admin/profili-orari',
+      '/admin/ore-lavoro',
     ]);
   });
 });

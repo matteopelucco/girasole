@@ -6,11 +6,11 @@ test.describe('12 — Dashboard maestra/admin', () => {
   test.describe('come maestra', () => {
     test.use({ storageState: statoAutenticazione('maestra') });
 
-    test('aprire la dashboard mostra il calendario e le due attività', async ({ page }) => {
+    test('aprire la dashboard mostra le attività del giorno, senza selettore di data', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      await expect(page.getByLabel('Data')).toBeVisible();
+      await expect(page.getByLabel('Data')).toHaveCount(0);
 
       const linkPresenze = page.getByRole('link', { name: 'Presenze' });
       const linkPasti = page.getByRole('link', { name: 'Pasti' });
@@ -139,12 +139,15 @@ test.describe('12 — Dashboard maestra/admin', () => {
   test.describe('come admin', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test("l'admin apre la dashboard: calendario, Presenze/Pasti e rimando alle pagine di amministrazione", async ({
+    test("l'admin apre la dashboard: Presenze/Pasti, niente calendario né rimando testuale all'amministrazione", async ({
       page,
     }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
+      await expect(page.getByLabel('Data')).toHaveCount(0);
+      await expect(page.getByText('Per creare sezioni e bambini')).toHaveCount(0);
+      // Le pagine di amministrazione restano raggiungibili dal menu laterale.
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();

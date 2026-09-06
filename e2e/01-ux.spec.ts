@@ -135,7 +135,14 @@ test.describe('01 — UX/UI', () => {
 
       // Da schermo lg in su niente hamburger: la sidebar è sempre in vista.
       await expect(page.getByRole('button', { name: 'Apri il menu' })).toBeHidden();
-      for (const voce of ['Dashboard', 'Sezioni e bambini', 'Utenti', 'Calendario scolastico', 'Profili orari']) {
+      for (const voce of [
+        'Dashboard',
+        'Sezioni e bambini',
+        'Utenti',
+        'Calendario scolastico',
+        'Profili orari',
+        'Ore di lavoro del personale',
+      ]) {
         await expect(page.getByRole('link', { name: voce })).toBeVisible();
       }
 

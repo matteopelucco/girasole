@@ -4,35 +4,41 @@
 Maestra, assistente, admin. (Genitore: fuori scope in questa fase.)
 
 ## Obiettivo
-Un punto d'ingresso unico da cui maestra e admin scelgono una data e
-raggiungono le due attività quotidiane — Presenze e Pasti — e da cui
-pubblicano avvisi.
+Un punto d'ingresso unico da cui maestra e admin raggiungono le due
+attività quotidiane — Presenze e Pasti, sempre riferite alla data
+odierna — e da cui pubblicano avvisi.
 
-## Scenario: aprire la dashboard mostra il calendario e le due attività
+## Scenario: aprire la dashboard mostra le attività del giorno
 Dato che sono autenticata come maestra (con almeno una sezione assegnata)
 o come admin
 Quando apro la dashboard
-Allora vedo un selettore di data con selezionata la data odierna
-E vedo due pulsanti/schede "Presenze" e "Pasti", ciascuno con un'icona
-(☑️ per Presenze, 🍝 per Pasti) oltre al testo
+Allora vedo due pulsanti/schede "Presenze" e "Pasti", ciascuno con
+un'icona (☑️ per Presenze, 🍝 per Pasti) oltre al testo, riferiti alla
+data odierna
 E vedo anche il pulsante/scheda "Report" con la sua icona (📊)
 E se il mio profilo è abilitato al report ore, vedo anche il
 pulsante/scheda "Ore di lavoro" con la sua icona (🕒) — vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)
+E NON vedo un selettore di data: la dashboard mostra sempre la data
+odierna, la scelta di un'altra data avviene dentro Presenze/Pasti (vedi
+[13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: da Presenze si arriva alle classi e poi ai bambini
-Dato che sono sulla dashboard con una data selezionata
+Dato che sono sulla dashboard
 Quando tappo su "Presenze"
 Allora vedo l'elenco delle classi attive a cui sono assegnata (tutte le
-classi attive se sono admin), per la data selezionata
+classi attive se sono admin), per la data odierna, con un selettore di
+data per consultare/segnare un'altra data
 E selezionando una classe vedo l'elenco dei bambini di quella classe, per
 consultare/segnare la presenza di ciascuno (dettagli in
 [13 - segna-presenza.md](13%20-%20segna-presenza.md))
 
 ## Scenario: da Pasti si arriva alle classi e poi ai bambini
-Dato che sono sulla dashboard con una data selezionata
+Dato che sono sulla dashboard
 Quando tappo su "Pasti"
-Allora vedo lo stesso elenco di classi, per la data selezionata
+Allora vedo lo stesso elenco di classi, per la data odierna, con un
+selettore di data per consultare/segnare un'altra data
 E selezionando una classe vedo l'elenco dei bambini di quella classe, per
 consultare/segnare il pasto di ciascuno (dettagli in
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
@@ -80,10 +86,11 @@ per l'assistente)
 ## Scenario: l'admin apre la dashboard
 Dato che sono autenticato come admin
 Quando apro la dashboard
-Allora vedo, oltre al calendario e a Presenze/Pasti, anche un rimando alle
-pagine di amministrazione (`/admin` e `/admin/maestre`)
+Allora vedo Presenze/Pasti come una maestra
 E vedo comunque la sezione avvisi, con la possibilità di crearne uno
 per qualsiasi sezione o bambino
+E per le pagine di amministrazione (`/admin`, `/admin/maestre`, ecc.) uso
+il menu laterale, che le elenca già: la dashboard non le ripete
 
 ## Scenario: un genitore apre la dashboard
 Dato che il mio profilo ha ruolo `genitore` (o nessun ruolo riconosciuto)
@@ -96,9 +103,10 @@ successiva, e nessun dato di altri bambini
   [11 - login.md](11%20-%20login.md)).
 - Il contenuto mostrato dipende dal ruolo del profilo (`admin`, `maestra`,
   `assistente`, altro), non dal solo fatto di essere autenticati.
-- Il selettore di data permette di consultare presenze/pasti di qualunque
-  data passata o futura; se e quando quei dati sono modificabili dipende
-  dal ruolo e dalla data (vedi le Regole in
+- Il selettore di data, dentro Presenze/Pasti (non più in dashboard),
+  permette di consultare presenze/pasti di qualunque data passata o
+  futura; se e quando quei dati sono modificabili dipende dal ruolo e
+  dalla data (vedi le Regole in
   [13 - segna-presenza.md](13%20-%20segna-presenza.md) e
   [14 - segna-pasto.md](14%20-%20segna-pasto.md)).
 - Priorità a interfaccia rapida, pochi tap, testo leggibile: le maestre
