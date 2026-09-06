@@ -1,16 +1,13 @@
 # TASKS.md
 
-## ⚠️ Database di sviluppo in pausa (2026-09-06)
-Il progetto Supabase di sviluppo/test è stato messo in pausa
-temporaneamente dall'utente. Migration ferme al momento della pausa:
-`0030_profili_orari_self_select.sql` e `0031_monte_ore.sql` (vedi le
-rispettive voci "Da fare da parte tua" più sotto) — non è confermato che
-siano già state applicate. **Alla riattivazione**: non applicare solo
-l'ultima migration a memoria, ma confrontare lo stato reale dello schema
-con l'intera cartella `supabase/migrations/` (in ordine numerico) e
-applicare in un colpo solo tutte quelle mancanti ("in delta"), non solo
-le ultime due — un progetto pausato/riattivato può aver perso lo stato
-di quali fossero già state incollate prima della pausa.
+## Database di sviluppo: riattivato, 0031 applicata (2026-09-06)
+Il progetto Supabase di sviluppo/test era stato messo in pausa
+temporaneamente dall'utente; riattivato lo stesso giorno.
+`0031_monte_ore.sql` è stata applicata (confermato dall'utente). Resta
+da verificare `0030_profili_orari_self_select.sql` (vedi la voce
+corrispondente in TASKS.md più sotto, ancora segnata come da fare) — se
+il progetto di produzione è distinto da quello di test, controllare che
+entrambe siano applicate anche lì.
 
 ## Fatto (scaffold iniziale)
 - [x] Setup Next.js 14 + Tailwind + TypeScript
@@ -1683,10 +1680,12 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       persona, solo settimane confermate) allegato insieme al report
       mensile di presenze/pasti — stessa idempotenza, nessuna tabella
       nuova.
-- [ ] **Da fare da parte tua**: applica
+- [x] **Da fare da parte tua**: applica
       `supabase/migrations/0031_monte_ore.sql` nel SQL Editor di
       Supabase (test e produzione) — senza, conferma settimana e
-      precarico monte ore falliscono.
+      precarico monte ore falliscono. Applicata (confermato
+      dall'utente il 2026-09-06); se il progetto di produzione è
+      distinto da quello di test, verificare che sia applicata anche lì.
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
