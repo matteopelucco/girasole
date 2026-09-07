@@ -1777,10 +1777,8 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
 - [x] `e2e/16-comunicazione-pasti-rojac.spec.ts`: nuovo test per il
       messaggio di blocco (si salta se oggi non ci sono presenze
       mancanti o i pasti sono già stati comunicati).
-- [ ] `supabase/migrations/0033_pasti_comunicati_richiede_presenze.sql`
-      da applicare manualmente nel SQL Editor Supabase (test e
-      produzione): senza, la UI blocca comunque il pulsante ma manca la
-      difesa reale a livello di database.
+- [x] `supabase/migrations/0033_pasti_comunicati_richiede_presenze.sql`
+      applicata (confermato dall'utente il 2026-09-07).
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
