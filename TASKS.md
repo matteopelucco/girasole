@@ -1755,6 +1755,33 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       nuove colonne non esistono) e la decisione dell'admin sullo
       straordinario residuo non è disponibile.
 
+## Blocco comunicazione pasti se mancano presenze
+- [x] `specs/16 - comunicazione-pasti-rojac.md`: nuovo requisito — la
+      comunicazione pasti a Rojac è bloccata (pulsante "Conferma pasti"
+      sostituito da un messaggio) finché anche un solo bambino attivo
+      dell'asilo non ha ancora una presenza segnata per oggi (qualunque
+      stato: presente/assente/malattia, non necessariamente "presente").
+      Nuovo scenario "la comunicazione è bloccata se manca la presenza
+      di qualche bambino" e nuova regola.
+- [x] `lib/pastiRojac.ts`: nuova `contaBambiniSenzaPresenzaOggiTuttoAsilo(data)`
+      (stesso pattern di `contaPastiSiOggiTuttoAsilo`: service_role key,
+      nessun I/O testabile in unità).
+- [x] `components/PaginaClassi.tsx`: quando ci sono bambini senza
+      presenza, mostra il messaggio di blocco al posto di
+      `ConfermaAzione`. `app/dashboard/pasti/actions.ts:comunicaPastiRojac`
+      ripete lo stesso controllo lato server prima dell'insert (difesa
+      in profondità, oltre al trigger DB).
+- [x] `supabase/migrations/0033_pasti_comunicati_richiede_presenze.sql`
+      (nuovo): trigger `pasti_comunicati_blocca_se_presenze_mancanti` —
+      la difesa reale, non solo la UI.
+- [x] `e2e/16-comunicazione-pasti-rojac.spec.ts`: nuovo test per il
+      messaggio di blocco (si salta se oggi non ci sono presenze
+      mancanti o i pasti sono già stati comunicati).
+- [ ] `supabase/migrations/0033_pasti_comunicati_richiede_presenze.sql`
+      da applicare manualmente nel SQL Editor Supabase (test e
+      produzione): senza, la UI blocca comunque il pulsante ma manca la
+      difesa reale a livello di database.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

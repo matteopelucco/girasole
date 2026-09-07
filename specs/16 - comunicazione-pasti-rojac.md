@@ -27,7 +27,9 @@ in blocco — un'unica comunicazione al giorno copre tutte le classi.
 ## Scenario: comunicare i pasti del giorno
 Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
 la data odierna (l'elenco delle classi, non ancora entrata in una
-classe specifica) e i pasti di oggi non sono ancora stati comunicati
+classe specifica), i pasti di oggi non sono ancora stati comunicati e
+tutti i bambini attivi dell'asilo hanno una presenza già segnata per
+oggi
 Quando premo "Conferma pasti"
 Allora si apre un riquadro di conferma con un messaggio breve — il
 numero totale di pasti segnati "sì" oggi in tutte le classi dell'asilo
@@ -35,6 +37,20 @@ numero totale di pasti segnati "sì" oggi in tutte le classi dell'asilo
 telefono di Rojac (0331 955630); la data non è ripetuta nel riquadro
 perché è già quella selezionata in cima alla pagina
 E vedo due pulsanti, "Conferma" e "Annulla"
+
+## Scenario: la comunicazione è bloccata se manca la presenza di qualche bambino
+Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
+la data odierna (elenco classi), i pasti di oggi non sono ancora stati
+comunicati e almeno un bambino attivo, di una qualunque classe
+dell'asilo, non ha ancora una presenza segnata per oggi
+Allora al posto del pulsante "Conferma pasti" vedo un messaggio che mi
+avvisa che non è ancora possibile comunicare i pasti, con il numero di
+bambini a cui manca la presenza
+E non è possibile aprire il riquadro di conferma: nessun pulsante
+"Conferma pasti" è presente nella pagina
+E quando tutte le presenze mancanti vengono segnate (in una qualunque
+classe, anche non tra quelle assegnate a me) e ricarico la pagina, il
+messaggio sparisce e ricompare il pulsante "Conferma pasti"
 
 ## Scenario: confermare la comunicazione
 Dato che sto guardando il riquadro di conferma comunicazione pasti
@@ -110,6 +126,21 @@ requisito: resta il riepilogo rapido di presenze già esistente, la
 sezione "Comunicazione pasti" riguarda solo gli allegati PDF
 
 ## Regole
+- La comunicazione richiede che **ogni** bambino attivo dell'asilo (non
+  solo quelli delle classi assegnate a chi comunica) abbia già una
+  presenza segnata per quella data — qualunque stato (`presente`,
+  `assente` o `malattia`), non necessariamente "presente": un bambino
+  senza alcuna presenza segnata è un dato mancante, non un'assenza
+  implicita, e comunicare pasti senza sapere ancora chi c'è rischia di
+  disallinearsi dal conteggio reale non appena quella presenza verrà
+  segnata. Se ne manca anche solo una, il pulsante "Conferma pasti" non
+  compare affatto (sostituito da un messaggio con il numero di bambini
+  a cui manca la presenza): non è un errore mostrato dopo aver aperto
+  il riquadro di conferma, il pulsante stesso non è disponibile finché
+  la condizione non è soddisfatta. Applicato anche a livello di
+  database (trigger su `pasti_comunicati`, stesso principio dei
+  trigger già in uso per le altre regole pasti — vedi sotto), non solo
+  in UI.
 - Una sola comunicazione per data, per l'intero asilo: applicato anche
   a livello di database (vincolo di unicità su `data`, non più su
   classe+data).
@@ -146,10 +177,11 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   *comunicazione* stessa: si può comunicare solo una data che si
   potrebbe altrimenti modificare — in pratica, per la maestra, solo
   "oggi".
-- Sia il blocco sui pasti sia l'inserimento della comunicazione sono
-  applicati anche a livello di database (trigger su `pasti`, vincolo di
-  unicità su `pasti_comunicati`), non solo in UI — stesso principio già
-  in uso per le altre regole pasti (vedi
+- Sia il blocco sui pasti sia l'inserimento della comunicazione (incluso
+  il controllo sulle presenze mancanti) sono applicati anche a livello
+  di database (trigger su `pasti`, vincolo di unicità e trigger su
+  `pasti_comunicati`), non solo in UI — stesso principio già in uso per
+  le altre regole pasti (vedi
   `supabase/migrations/0012_pasto_senza_parziale.sql`,
   `0017_pasto_blocca_anche_malattia.sql`).
 - L'email di notifica (a info@asilosartorio.it) è un effetto collaterale

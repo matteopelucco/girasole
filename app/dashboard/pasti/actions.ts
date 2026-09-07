@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { contaPastiSiOggiTuttoAsilo } from '@/lib/pastiRojac';
+import { contaPastiSiOggiTuttoAsilo, contaBambiniSenzaPresenzaOggiTuttoAsilo } from '@/lib/pastiRojac';
 import { inviaEmail } from '@/lib/email';
 import { formattaDataItaliana } from '@/lib/date';
 import type { EsitoAzione } from '@/components/FormConEsito';
@@ -114,6 +114,14 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
 
   if (!puoScrivereData(profilo?.ruolo, data)) {
     return { ok: false, messaggio: 'Le maestre possono comunicare solo i pasti della giornata odierna.' };
+  }
+
+  const numeroSenzaPresenza = await contaBambiniSenzaPresenzaOggiTuttoAsilo(data);
+  if (numeroSenzaPresenza > 0) {
+    return {
+      ok: false,
+      messaggio: `Impossibile comunicare i pasti: ${numeroSenzaPresenza} ${numeroSenzaPresenza === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza segnata per oggi.`,
+    };
   }
 
   const numeroPasti = await contaPastiSiOggiTuttoAsilo(data);

@@ -11,7 +11,9 @@
 // 14-segna-pasto.spec.ts). I test qui verificano quindi solo: che il
 // pulsante e il riquadro di conferma mostrino le informazioni corrette
 // (numero pasti, telefono Rojac, data) e che "Annulla" non registri
-// nulla; gli scenari che presuppongono una comunicazione già avvenuta
+// nulla; più il blocco quando manca la presenza di qualche bambino (non
+// registra nulla, si limita a verificare l'assenza del pulsante). Gli
+// scenari che presuppongono una comunicazione già avvenuta
 // (blocco per la maestra, override admin, sezione nel report) si
 // attivano solo se qualcuno l'ha già confermata manualmente in
 // precedenza nello stesso giorno (test.skip altrimenti) — copertura
@@ -31,13 +33,28 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
     });
 
+    test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio', async ({
+      page,
+    }) => {
+      const messaggioBloccato = page.getByText('Non puoi ancora comunicare i pasti', { exact: false });
+      test.skip(
+        (await messaggioBloccato.count()) === 0,
+        'tutte le presenze di oggi sono già segnate (o i pasti sono già stati comunicati): nessun blocco da verificare'
+      );
+
+      await expect(messaggioBloccato).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Conferma pasti' })).toHaveCount(0);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
     test('il riquadro di conferma mostra numero pasti, telefono Rojac e data; "Annulla" non registra nulla', async ({
       page,
     }) => {
       const bottoneConferma = page.getByRole('button', { name: 'Conferma pasti' });
       test.skip(
         (await bottoneConferma.count()) === 0,
-        'pasti già comunicati oggi (da un run precedente) oppure nessuna sezione/bambino per questo account'
+        'pasti già comunicati oggi (da un run precedente), presenze non ancora tutte segnate, oppure nessuna sezione/bambino per questo account'
       );
 
       await bottoneConferma.click();

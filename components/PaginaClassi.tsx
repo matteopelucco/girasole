@@ -7,7 +7,7 @@ import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { requireStaff, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { formattaDataOraItaliana } from '@/lib/date';
-import { contaPastiSiOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
+import { contaPastiSiOggiTuttoAsilo, contaBambiniSenzaPresenzaOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
 // Import "a ritroso" (components/ → app/), deliberato: comunicaPastiRojac
 // (specs/16 - comunicazione-pasti-rojac.md) va mostrato solo qui, ma
 // richiede lo stesso ruolo/data/supabase già risolti da requireStaff()
@@ -104,24 +104,37 @@ export async function PaginaClassi({
         </CardRiepilogo>
       );
     } else if (puoScrivereData(ruolo, data)) {
-      const numeroPastiOggi = await contaPastiSiOggiTuttoAsilo(data);
-      riepilogoRojac = (
-        <CardRiepilogo titolo="Comunicazione pasti a Rojac">
-          <ConfermaAzione
-            azione={comunicaPastiRojac}
-            campiNascosti={{ data }}
-            etichetta="Conferma pasti"
-            messaggioConferma={
-              <>
-                Conferma <strong className="text-2xl font-extrabold">{numeroPastiOggi}</strong> pasti a Rojac (
-                {TELEFONO_ROJAC})
-              </>
-            }
-            etichettaConferma="Conferma"
-            tono="neutro"
-          />
-        </CardRiepilogo>
-      );
+      const numeroSenzaPresenza = await contaBambiniSenzaPresenzaOggiTuttoAsilo(data);
+      if (numeroSenzaPresenza > 0) {
+        riepilogoRojac = (
+          <CardRiepilogo titolo="Comunicazione pasti a Rojac">
+            <p className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
+              Non puoi ancora comunicare i pasti: {numeroSenzaPresenza}{' '}
+              {numeroSenzaPresenza === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza segnata per
+              oggi.
+            </p>
+          </CardRiepilogo>
+        );
+      } else {
+        const numeroPastiOggi = await contaPastiSiOggiTuttoAsilo(data);
+        riepilogoRojac = (
+          <CardRiepilogo titolo="Comunicazione pasti a Rojac">
+            <ConfermaAzione
+              azione={comunicaPastiRojac}
+              campiNascosti={{ data }}
+              etichetta="Conferma pasti"
+              messaggioConferma={
+                <>
+                  Conferma <strong className="text-2xl font-extrabold">{numeroPastiOggi}</strong> pasti a Rojac (
+                  {TELEFONO_ROJAC})
+                </>
+              }
+              etichettaConferma="Conferma"
+              tono="neutro"
+            />
+          </CardRiepilogo>
+        );
+      }
     }
   }
 
