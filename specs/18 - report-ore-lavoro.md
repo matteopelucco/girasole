@@ -41,11 +41,48 @@ Quando apro "Ore di lavoro"
 Allora il campo "Ore ordinarie" di ogni giorno parte da 0, comunque
 modificabile a mano
 
+## Scenario: il profilo orario resta sempre visibile come riferimento statico
+Dato che sono autenticata come personale abilitato al report ore, con un
+profilo orario assegnato
+Quando apro "Ore di lavoro", per qualunque giorno lavorativo della
+settimana (corrente o passata, modificabile o in sola lettura)
+Allora vedo, accanto al campo/valore "Ore ordinarie", un testo statico
+"Previsto: Xh" con le ore previste dal profilo orario per quel giorno
+della settimana — non è mai dentro un campo di input, resta un
+riferimento anche dopo che ho modificato il valore effettivo
+E se non ho un profilo orario assegnato vedo invece "Nessun profilo
+orario assegnato"
+
+## Scenario: copiare le ore previste dal profilo orario con un tap
+Dato che sto compilando il campo "Ore ordinarie" di un giorno con un
+profilo orario assegnato, e quel giorno prevede più di 0 ore
+Quando tocco il pulsante "Copia" accanto al campo
+Allora il campo "Ore ordinarie" di quel giorno viene impostato al valore
+previsto dal profilo orario per quel giorno, sovrascrivendo quanto
+avevo digitato — senza inviare il form (il salvataggio resta un'azione
+separata, "Salva modifiche")
+E se non ho un profilo orario assegnato, o il giorno prevede 0 ore, il
+pulsante "Copia" non è mostrato (non c'è nulla da copiare)
+
 ## Scenario: salvare le ore della settimana
 Quando modifico le ore di uno o più giorni e premo "Salva modifiche"
 Allora i valori inseriti sono salvati e restano tali riaprendo la pagina
 E vedo il totale delle ore della settimana (ordinarie + straordinarie)
 aggiornato di conseguenza
+
+## Scenario: la scheda della settimana mostra ore dovute, ordinarie e straordinarie erogate
+Quando sono su "Ore di lavoro", per qualunque settimana (modificabile o
+in sola lettura)
+Allora vedo, in un riquadro riassuntivo separato dai singoli giorni, tre
+valori distinti: "Ore dovute" (il totale delle ore previste dal profilo
+orario per i soli giorni in stato lavorativo di quella settimana, 0 se
+non ho un profilo assegnato o se nessun giorno è lavorativo), "Ore
+ordinarie erogate" (somma di quanto ho effettivamente registrato) e "Ore
+straordinarie erogate" (somma degli straordinari registrati)
+E queste ore possono liberamente differire dalle ore dovute, in più o in
+meno: il personale registra le ore realmente lavorate, il profilo orario
+resta solo un riferimento (vedi [19 - monte-ore.md](19%20-%20monte-ore.md)
+per come lo scostamento viene gestito alla conferma)
 
 ## Scenario: salvare le ore anche a metà settimana
 Dato che sono sulla settimana corrente e oggi non è l'ultimo giorno
@@ -236,7 +273,10 @@ principio "parametro non valido ⇒ valore di default" già in uso per
 - Le ore ordinarie di un giorno sono precaricate dal profilo orario
   assegnato all'utente (campo del giorno della settimana corrispondente,
   specs/54), ma restano modificabili prima della conferma: il personale
-  "verifica" il precaricato, non lo subisce.
+  "verifica" il precaricato, non lo subisce. Il valore previsto dal
+  profilo resta comunque visibile come testo statico accanto al campo
+  (mai dentro un campo di input) per tutta la durata della modifica, con
+  un pulsante "Copia" per reimpostarlo con un tap in qualunque momento.
 - Le ore straordinarie (insieme alla carenza rispetto al profilo
   orario) concorrono al calcolo del monte ore del personale, aggiornato
   automaticamente alla conferma di ogni settimana — vedi

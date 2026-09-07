@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calcolaEsuberoCarenza,
+  controlloSettimanaOreLavoro,
   notaMovimentoSettimanale,
+  notaMovimentoStraordinarioResiduo,
   saldiPerUtente,
   saldoMonteOre,
-  variazioneMonteOre,
 } from './monteOre';
 
 // Tutte funzioni pure (nessun I/O): specs/19 - monte-ore.md.
@@ -17,72 +17,141 @@ const profilo = {
   ore_venerdi: 4,
 };
 
-describe('calcolaEsuberoCarenza', () => {
-  it('somma le ore straordinarie dei giorni lavorativi come esubero', () => {
+describe('controlloSettimanaOreLavoro', () => {
+  it('senza carenza, tutto lo straordinario erogato è residuo', () => {
     const giorni = [
-      { data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 7, oreStraordinarie: 2 }, // lunedì
-      { data: '2026-09-01', stato: 'lavorativo', oreOrdinarie: 7, oreStraordinarie: 1 }, // martedì
+      { data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 7, oreStraordinarie: 2 }, // lunedì, previsto 7
+      { data: '2026-09-01', stato: 'lavorativo', oreOrdinarie: 7, oreStraordinarie: 1 }, // martedì, previsto 7
     ];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 3, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 14,
+      oreOrdinarieErogate: 14,
+      oreStraordinarieErogate: 3,
+      carenza: 0,
+      carenzaResidua: 0,
+      straordinarioResiduo: 3,
+    });
   });
 
-  it('somma la differenza fra ore previste ed erogate come carenza', () => {
+  it('carenza senza straordinario: aumenta interamente il monte ore, nessuno straordinario residuo', () => {
     const giorni = [
       { data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 5, oreStraordinarie: 0 }, // lunedì, previsto 7
       { data: '2026-09-04', stato: 'lavorativo', oreOrdinarie: 2, oreStraordinarie: 0 }, // venerdì, previsto 4
     ];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 0, carenza: 4 });
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 11,
+      oreOrdinarieErogate: 7,
+      oreStraordinarieErogate: 0,
+      carenza: 4,
+      carenzaResidua: 4,
+      straordinarioResiduo: 0,
+    });
+  });
+
+  it('lo straordinario copre parzialmente la carenza: resta carenza residua, nessuno straordinario residuo', () => {
+    const giorni = [{ data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 5, oreStraordinarie: 1 }]; // previsto 7
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 7,
+      oreOrdinarieErogate: 5,
+      oreStraordinarieErogate: 1,
+      carenza: 2,
+      carenzaResidua: 1,
+      straordinarioResiduo: 0,
+    });
+  });
+
+  it('lo straordinario copre interamente la carenza: resta uno straordinario residuo', () => {
+    const giorni = [{ data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 5, oreStraordinarie: 5 }]; // previsto 7
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 7,
+      oreOrdinarieErogate: 5,
+      oreStraordinarieErogate: 5,
+      carenza: 2,
+      carenzaResidua: 0,
+      straordinarioResiduo: 3,
+    });
   });
 
   it('un giorno con più ore ordinarie del previsto non produce carenza negativa', () => {
     const giorni = [{ data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 9, oreStraordinarie: 0 }];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 0, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toMatchObject({ carenza: 0, carenzaResidua: 0, straordinarioResiduo: 0 });
   });
 
   it('esclude i giorni di malattia dal calcolo', () => {
     const giorni = [{ data: '2026-08-31', stato: 'malattia', oreOrdinarie: 0, oreStraordinarie: 0 }];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 0, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 0,
+      oreOrdinarieErogate: 0,
+      oreStraordinarieErogate: 0,
+      carenza: 0,
+      carenzaResidua: 0,
+      straordinarioResiduo: 0,
+    });
   });
 
   it('esclude i giorni di assenza dal calcolo', () => {
     const giorni = [{ data: '2026-08-31', stato: 'assenza', oreOrdinarie: 0, oreStraordinarie: 0 }];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 0, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toMatchObject({ oreDovute: 0, straordinarioResiduo: 0 });
   });
 
-  it('un weekend (previsto 0) può produrre esubero ma mai carenza', () => {
+  it('un weekend (previsto 0) produce solo straordinario residuo, mai carenza', () => {
     const sabato = [{ data: '2026-09-05', stato: 'lavorativo', oreOrdinarie: 3, oreStraordinarie: 3 }];
-    expect(calcolaEsuberoCarenza(sabato, profilo)).toEqual({ esubero: 3, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(sabato, profilo)).toEqual({
+      oreDovute: 0,
+      oreOrdinarieErogate: 3,
+      oreStraordinarieErogate: 3,
+      carenza: 0,
+      carenzaResidua: 0,
+      straordinarioResiduo: 3,
+    });
   });
 
-  it('senza profilo orario assegnato la carenza è sempre zero', () => {
+  it('senza profilo orario assegnato le ore dovute e la carenza sono sempre zero', () => {
     const giorni = [{ data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: 0, oreStraordinarie: 2 }];
-    expect(calcolaEsuberoCarenza(giorni, null)).toEqual({ esubero: 2, carenza: 0 });
+    expect(controlloSettimanaOreLavoro(giorni, null)).toEqual({
+      oreDovute: 0,
+      oreOrdinarieErogate: 0,
+      oreStraordinarieErogate: 2,
+      carenza: 0,
+      carenzaResidua: 0,
+      straordinarioResiduo: 2,
+    });
   });
 
   it('funziona anche con valori stringa (numeric via PostgREST)', () => {
     const giorni = [{ data: '2026-08-31', stato: 'lavorativo', oreOrdinarie: '5.5', oreStraordinarie: '1.5' }];
-    expect(calcolaEsuberoCarenza(giorni, profilo)).toEqual({ esubero: 1.5, carenza: 1.5 });
-  });
-});
-
-describe('variazioneMonteOre', () => {
-  it('esubero maggiore della carenza: variazione negativa (il monte ore scala)', () => {
-    expect(variazioneMonteOre(5, 2)).toBe(-3);
-  });
-
-  it('carenza maggiore dell\'esubero: variazione positiva (il monte ore aumenta)', () => {
-    expect(variazioneMonteOre(1, 4)).toBe(3);
-  });
-
-  it('esubero e carenza uguali: nessuna variazione', () => {
-    expect(variazioneMonteOre(2, 2)).toBe(0);
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 7,
+      oreOrdinarieErogate: 5.5,
+      oreStraordinarieErogate: 1.5,
+      carenza: 1.5,
+      carenzaResidua: 0,
+      straordinarioResiduo: 0,
+    });
   });
 });
 
 describe('notaMovimentoSettimanale', () => {
-  it('descrive esubero e carenza in italiano', () => {
-    expect(notaMovimentoSettimanale(3, 1)).toBe(
-      'Calcolo automatico: 3h di straordinario, 1h di carenza rispetto al profilo orario.'
+  it('descrive dovute/erogate/carenza residua in italiano', () => {
+    expect(
+      notaMovimentoSettimanale({
+        oreDovute: 7,
+        oreOrdinarieErogate: 5,
+        oreStraordinarieErogate: 1,
+        carenza: 2,
+        carenzaResidua: 1,
+        straordinarioResiduo: 0,
+      })
+    ).toBe(
+      "Calcolo automatico: 7h dovute, 5h ordinarie erogate, 1h di carenza residua dopo la copertura dallo straordinario."
+    );
+  });
+});
+
+describe('notaMovimentoStraordinarioResiduo', () => {
+  it('descrive lo scalo dello straordinario residuo in italiano', () => {
+    expect(notaMovimentoStraordinarioResiduo(3)).toBe(
+      "Straordinario residuo scalato dal monte ore su decisione dell'admin: 3h."
     );
   });
 });

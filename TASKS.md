@@ -1687,6 +1687,74 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       dall'utente il 2026-09-06); se il progetto di produzione è
       distinto da quello di test, verificare che sia applicata anche lì.
 
+## Feature: profilo orario come riferimento statico + straordinario residuo (v0.22.0)
+- [x] Richiesta dell'utente: il profilo orario deve restare una guida
+      visibile in modo statico (mai dentro un campo di input), con un
+      pulsante "Copia" per riportarne il valore nel campo "Ore
+      ordinarie" con un tap; la scheda della settimana deve mostrare
+      chiaramente ore dovute/ordinarie erogate/straordinarie erogate; e
+      alla conferma di una settimana, un'eventuale carenza va coperta
+      prima dallo straordinario della stessa settimana (solo il resto
+      aumenta il monte ore) — lo straordinario che avanza dopo questa
+      copertura ("straordinario residuo") non scala più il monte ore in
+      automatico, ma resta in attesa che l'admin scelga se metterlo a
+      pagamento mensile o scalarlo dal monte ore.
+- [x] `specs/18 - report-ore-lavoro.md`: nuovi scenari "il profilo
+      orario resta sempre visibile come riferimento statico", "copiare
+      le ore previste dal profilo orario con un tap" e "la scheda della
+      settimana mostra ore dovute, ordinarie e straordinarie erogate".
+- [x] `specs/19 - monte-ore.md`: riscritto lo scenario del calcolo
+      automatico (carenza coperta prima dallo straordinario della
+      stessa settimana, solo la carenza residua aumenta il monte ore) e
+      aggiunti gli scenari sulla decisione dell'admin sullo
+      straordinario residuo (pagamento mensile / scalo dal monte ore),
+      col caso "nessuna decisione richiesta" quando è zero. `specs/00`
+      e `specs/52` aggiornate di conseguenza (quest'ultima: la
+      variazione mensile di monte ore ora somma anche i movimenti
+      `straordinario_residuo`, non solo `settimanale`).
+- [x] `supabase/migrations/0032_straordinario_residuo.sql`: nuove
+      colonne di snapshot su `ore_lavoro_settimane` (ore dovute/
+      ordinarie/straordinarie erogate, straordinario residuo, decisione
+      e chi/quando l'ha presa) con la sua prima policy di update (solo
+      admin); nuovo tipo di movimento `straordinario_residuo` su
+      `monte_ore_movimenti` (sempre <= 0, al più uno per settimana per
+      persona) e vincolo che un movimento `settimanale` sia sempre >= 0
+      (non più una compensazione automatica dell'esubero).
+- [x] `lib/monteOre.ts`: `calcolaEsuberoCarenza`/`variazioneMonteOre`
+      sostituite da `controlloSettimanaOreLavoro` (ore dovute/erogate,
+      carenza residua, straordinario residuo — funzione pura, unit test
+      aggiornati in `lib/monteOre.test.ts` con tutti i casi limite:
+      carenza coperta parzialmente/interamente, senza profilo,
+      weekend, malattia/assenza esclusi).
+- [x] `app/dashboard/ore-lavoro/actions.ts`: `confermaSettimanaOreLavoro`
+      registra ora lo snapshot del controllo e un movimento automatico
+      pari alla sola carenza residua; nuova azione admin
+      `decidiStraordinarioResiduo` (pagamento mensile, senza toccare il
+      monte ore; oppure scalo, con un secondo movimento negativo).
+- [x] UI: `components/RigaOreLavoro.tsx` mostra il previsto dal profilo
+      come testo statico accanto al campo "Ore ordinarie" con un
+      pulsante "Copia" (client-side, nessun invio del form);
+      `app/dashboard/ore-lavoro/page.tsx` mostra il riquadro ore
+      dovute/ordinarie/straordinarie erogate (dal vivo se la settimana
+      non è confermata, dallo snapshot se lo è) e, quando c'è
+      straordinario residuo, il nuovo `components/StraordinarioResiduo.tsx`
+      (avviso per il diretto interessato, pulsanti di decisione per
+      l'admin).
+- [x] `e2e/18-report-ore-lavoro.spec.ts` esteso con gli scenari del
+      riferimento statico/pulsante "Copia" e del riquadro ore dovute/
+      erogate. Gli scenari di `specs/19` sulla decisione dell'admin
+      restano coperti solo da unit test (nota aggiornata in
+      `e2e/19-monte-ore.spec.ts`): richiedono una settimana già
+      confermata, cosa che questa suite non fa mai per davvero
+      sull'account di test condiviso (stessa cautela già in vigore per
+      "Conferma settimana").
+- [x] **Da fare da parte tua**: applica
+      `supabase/migrations/0032_straordinario_residuo.sql` nel SQL
+      Editor di Supabase (test e produzione, nell'ordine) — senza,
+      confermare una settimana fallisce (le nuove colonne non
+      esistono) e la decisione dell'admin sullo straordinario residuo
+      non è disponibile.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

@@ -66,8 +66,10 @@ della maestra, `5x` amministrazione.
   malattia/assenza per la settimana corrente, e la conferma
 - [19 - monte-ore.md](19%20-%20monte-ore.md) — contatore di ore per
   persona, aggiornato automaticamente alla conferma di ogni settimana
-  (esubero di straordinario lo scala, carenza rispetto al profilo
-  orario lo aumenta), precaricabile/correggibile dall'admin
+  (la carenza rispetto al profilo orario, non coperta dallo
+  straordinario della stessa settimana, lo aumenta); lo straordinario
+  residuo resta in attesa di una decisione dell'admin (pagamento
+  mensile o scalo dal monte ore); precaricabile/correggibile dall'admin
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
 - [51 - report.md](51%20-%20report.md) — report tabellari di

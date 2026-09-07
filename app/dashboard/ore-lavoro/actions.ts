@@ -9,7 +9,7 @@ import {
   settimanaOreLavoroRichiesta,
   utenteBersaglioOreLavoro,
 } from '@/lib/oreLavoro';
-import { calcolaEsuberoCarenza, variazioneMonteOre, notaMovimentoSettimanale } from '@/lib/monteOre';
+import { controlloSettimanaOreLavoro, notaMovimentoSettimanale, notaMovimentoStraordinarioResiduo } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -173,15 +173,15 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
 
   // A questo punto tutti e 7 i giorni esistono di sicuro (appena
   // completati sopra, o già salvati esplicitamente prima): li
-  // rileggiamo per intero per calcolare il movimento di monte ore
-  // della settimana (specs/19 - monte-ore.md), che serve gli stessi
-  // dati appena confermati e lo stesso profilo orario già risolto sopra.
+  // rileggiamo per intero per calcolare il controllo della settimana
+  // (specs/19 - monte-ore.md), che serve gli stessi dati appena
+  // confermati e lo stesso profilo orario già risolto sopra.
   const { data: giorniCompleti } = await supabase
     .from('ore_lavoro_giorni')
     .select('data, stato, ore_ordinarie, ore_straordinarie')
     .eq('utente_id', utenteId)
     .in('data', giorni);
-  const { esubero, carenza } = calcolaEsuberoCarenza(
+  const controllo = controlloSettimanaOreLavoro(
     (giorniCompleti ?? []).map((g) => ({
       data: g.data,
       stato: g.stato,
@@ -191,9 +191,14 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     profiloOrario
   );
 
-  const { error } = await supabase
-    .from('ore_lavoro_settimane')
-    .insert({ utente_id: utenteId, settimana_inizio: settimanaInizio });
+  const { error } = await supabase.from('ore_lavoro_settimane').insert({
+    utente_id: utenteId,
+    settimana_inizio: settimanaInizio,
+    ore_dovute: controllo.oreDovute,
+    ore_ordinarie_erogate: controllo.oreOrdinarieErogate,
+    ore_straordinarie_erogate: controllo.oreStraordinarieErogate,
+    straordinario_residuo: controllo.straordinarioResiduo,
+  });
   if (error) {
     if (error.code === '23505') {
       return { ok: false, messaggio: 'Questa settimana risulta già confermata.' };
@@ -201,8 +206,12 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     return { ok: false, messaggio: 'Impossibile confermare la settimana.', dettaglio: error.message };
   }
 
-  // Movimento di monte ore della settimana appena confermata (specs/19):
-  // la conferma resta valida anche se questo insert fallisse (è già
+  // Movimento automatico di monte ore della settimana appena confermata
+  // (specs/19): solo la carenza residua (non coperta dallo straordinario
+  // della stessa settimana) lo fa aumentare — mai una compensazione
+  // automatica dell'eventuale straordinario residuo, che resta in
+  // attesa della decisione dell'admin (decidiStraordinarioResiduo sotto).
+  // La conferma resta valida anche se questo insert fallisse (è già
   // stata registrata sopra), ma segnaliamo esplicitamente l'anomalia
   // invece di lasciare un saldo silenziosamente incompleto — serve una
   // correzione manuale dell'admin (movimento "precarico").
@@ -210,8 +219,8 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     utente_id: utenteId,
     tipo: 'settimanale',
     settimana_inizio: settimanaInizio,
-    variazione: variazioneMonteOre(esubero, carenza),
-    nota: notaMovimentoSettimanale(esubero, carenza),
+    variazione: controllo.carenzaResidua,
+    nota: notaMovimentoSettimanale(controllo),
   });
   if (erroreMovimento) {
     return {
@@ -220,6 +229,73 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
         'La settimana è stata confermata, ma non è stato possibile registrare il movimento di monte ore. Contatta l\'admin per una correzione manuale.',
       dettaglio: erroreMovimento.message,
     };
+  }
+
+  revalidatePath('/dashboard/ore-lavoro');
+  return { ok: true };
+}
+
+// Decisione dell'admin sullo straordinario residuo di una settimana già
+// confermata (specs/19 - monte-ore.md): "pagamento_mensile" non tocca il
+// monte ore (pagato fuori da quest'app), "monte_ore" registra un
+// secondo movimento negativo (il monte ore scala). Solo l'admin può
+// decidere, solo una volta per settimana (decisione immutabile una
+// volta presa — stesso principio dei movimenti, mai un update
+// successivo su questo campo se non tramite questa azione).
+export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase, user } = await requireAdmin();
+
+  const utenteId = (formData.get('utente_id') as string) || '';
+  const settimanaInizio = (formData.get('settimana_inizio') as string) || '';
+  const decisione = formData.get('decisione') as string;
+
+  if (decisione !== 'pagamento_mensile' && decisione !== 'monte_ore') {
+    return { ok: false, messaggio: 'Decisione non valida.' };
+  }
+
+  const { data: settimana } = await supabase
+    .from('ore_lavoro_settimane')
+    .select('straordinario_residuo, decisione_straordinari')
+    .eq('utente_id', utenteId)
+    .eq('settimana_inizio', settimanaInizio)
+    .maybeSingle();
+
+  if (!settimana || !settimana.straordinario_residuo) {
+    return { ok: false, messaggio: 'Nessuno straordinario residuo da decidere per questa settimana.' };
+  }
+  if (settimana.decisione_straordinari) {
+    return { ok: false, messaggio: 'La decisione per questa settimana è già stata presa.' };
+  }
+
+  const { error } = await supabase
+    .from('ore_lavoro_settimane')
+    .update({
+      decisione_straordinari: decisione,
+      decisione_straordinari_at: new Date().toISOString(),
+      decisione_straordinari_admin_id: user.id,
+    })
+    .eq('utente_id', utenteId)
+    .eq('settimana_inizio', settimanaInizio);
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile registrare la decisione.', dettaglio: error.message };
+  }
+
+  if (decisione === 'monte_ore') {
+    const { error: erroreMovimento } = await supabase.from('monte_ore_movimenti').insert({
+      utente_id: utenteId,
+      tipo: 'straordinario_residuo',
+      settimana_inizio: settimanaInizio,
+      variazione: -settimana.straordinario_residuo,
+      nota: notaMovimentoStraordinarioResiduo(settimana.straordinario_residuo),
+    });
+    if (erroreMovimento) {
+      return {
+        ok: false,
+        messaggio:
+          'La decisione è stata registrata, ma non è stato possibile aggiornare il monte ore. Contatta l\'admin per una correzione manuale.',
+        dettaglio: erroreMovimento.message,
+      };
+    }
   }
 
   revalidatePath('/dashboard/ore-lavoro');

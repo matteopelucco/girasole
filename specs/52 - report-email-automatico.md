@@ -114,8 +114,9 @@ PDF lo segnala esplicitamente per quella persona (intervallo di date
 escluso, non semplicemente omesso in silenzio)
 E in fondo alla pagina di ciascuna persona compare il riepilogo del
 mese: variazione di monte ore nel mese (somma dei movimenti
-`settimanale` la cui settimana inizia in quel mese) e saldo di monte
-ore a fine mese
+`settimanale` e `straordinario_residuo` — vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md) — la cui settimana inizia in
+quel mese) e saldo di monte ore a fine mese
 
 ## Regole
 - Destinatario configurabile, non hardcoded: variabile d'ambiente

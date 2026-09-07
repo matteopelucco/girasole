@@ -17,17 +17,22 @@ import {
 } from '@/lib/date';
 import {
   oreOrdinariePreviste,
-  totaliSettimanaOreLavoro,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
   ETICHETTE_STATO_ORE_LAVORO,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
-import { saldoMonteOre } from '@/lib/monteOre';
+import { saldoMonteOre, controlloSettimanaOreLavoro } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { MonteOre } from '@/components/MonteOre';
-import { salvaSettimanaOreLavoro, confermaSettimanaOreLavoro, aggiungiMovimentoMonteOre } from './actions';
+import { StraordinarioResiduo } from '@/components/StraordinarioResiduo';
+import {
+  salvaSettimanaOreLavoro,
+  confermaSettimanaOreLavoro,
+  aggiungiMovimentoMonteOre,
+  decidiStraordinarioResiduo,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,7 +108,9 @@ export default async function OreLavoroPage({
       .in('data', giorni),
     supabase
       .from('ore_lavoro_settimane')
-      .select('confermata_at')
+      .select(
+        'confermata_at, ore_dovute, ore_ordinarie_erogate, ore_straordinarie_erogate, straordinario_residuo, decisione_straordinari, decisione_straordinari_at'
+      )
       .eq('utente_id', utenteTarget.id)
       .eq('settimana_inizio', lunedi)
       .maybeSingle(),
@@ -160,7 +167,24 @@ export default async function OreLavoroPage({
     };
   });
 
-  const totali = totaliSettimanaOreLavoro(righe);
+  // Ore dovute/ordinarie/straordinarie erogate della scheda settimanale
+  // (specs/18, specs/19): finché la settimana non è confermata, il
+  // riepilogo è calcolato "a vivo" sugli stessi dati mostrati nel form
+  // (righe, che includono i precaricati non ancora salvati); una volta
+  // confermata, mostra invece lo snapshot immutabile registrato alla
+  // conferma (un cambio di profilo orario o una correzione successiva
+  // non lo ricalcola, specs/19).
+  const controllo = confermata
+    ? {
+        oreDovute: Number(settimana!.ore_dovute),
+        oreOrdinarieErogate: Number(settimana!.ore_ordinarie_erogate),
+        oreStraordinarieErogate: Number(settimana!.ore_straordinarie_erogate),
+      }
+    : controlloSettimanaOreLavoro(
+        righe.map((r) => ({ data: r.data, stato: r.stato, oreOrdinarie: r.oreOrdinarie, oreStraordinarie: r.oreStraordinarie })),
+        profiloOrario
+      );
+  const straordinarioResiduo = confermata ? Number(settimana!.straordinario_residuo) : 0;
 
   return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
@@ -219,6 +243,13 @@ export default async function OreLavoroPage({
                   <p className="mt-1 text-sm text-stone-600">
                     Ordinarie: {r.oreOrdinarie}h · Straordinarie: {r.oreStraordinarie}h
                     {r.motivoStraordinario ? ` (${r.motivoStraordinario})` : ''}
+                    <span className="ml-1 text-stone-500">
+                      (
+                      {profiloOrario === null
+                        ? 'Nessun profilo orario assegnato'
+                        : `Previsto: ${oreOrdinariePreviste(profiloOrario, r.data)}h`}
+                      )
+                    </span>
                   </p>
                 )}
                 {r.stato === 'malattia' && (
@@ -238,6 +269,7 @@ export default async function OreLavoroPage({
                 etichettaGiorno={r.etichetta}
                 dataBreve={r.dataBreve}
                 messaggioChiuso={r.chiuso ? r.messaggioChiuso : null}
+                orePreviste={profiloOrario === null ? null : oreOrdinariePreviste(profiloOrario, r.data)}
                 valori={{
                   data: r.data,
                   stato: r.stato,
@@ -255,10 +287,29 @@ export default async function OreLavoroPage({
           </FormConEsito>
         )}
 
-        <p className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-sm">
-          Totale settimana: {totali.ordinarie}h ordinarie + {totali.straordinarie}h straordinarie ={' '}
-          <strong>{totali.totale}h</strong>
-        </p>
+        <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-sm">
+          <p>
+            Ore dovute: <strong>{controllo.oreDovute}h</strong>
+          </p>
+          <p>
+            Ore ordinarie erogate: <strong>{controllo.oreOrdinarieErogate}h</strong>
+          </p>
+          <p>
+            Ore straordinarie erogate: <strong>{controllo.oreStraordinarieErogate}h</strong>
+          </p>
+        </div>
+
+        {confermata && (
+          <StraordinarioResiduo
+            straordinarioResiduo={straordinarioResiduo}
+            decisione={settimana!.decisione_straordinari}
+            decisioneAt={settimana!.decisione_straordinari_at}
+            modalitaAdmin={modalitaAdmin}
+            utenteId={utenteTarget.id}
+            settimanaInizio={lunedi}
+            decidi={decidiStraordinarioResiduo}
+          />
+        )}
 
         <MonteOre
           saldo={saldoMonteOre(movimentiMonteOre ?? [])}

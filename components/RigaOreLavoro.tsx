@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/lib/oreLavoro';
 
 export type ValoriGiornoOreLavoro = {
@@ -31,6 +31,7 @@ export function RigaOreLavoro({
   dataBreve,
   valori,
   messaggioChiuso = null,
+  orePreviste = null,
 }: {
   etichettaGiorno: string;
   dataBreve: string;
@@ -39,9 +40,16 @@ export function RigaOreLavoro({
   // modificabile anche quando l'asilo è chiuso, il personale può
   // comunque lavorare — null quando il giorno non è chiuso.
   messaggioChiuso?: string | null;
+  // Ore previste dal profilo orario per questo giorno (specs/18, specs/54):
+  // mostrate come riferimento statico accanto al campo "Ore ordinarie",
+  // mai dentro il campo stesso — null se non c'è un profilo assegnato.
+  // Il pulsante "Copia" imposta il campo a questo valore con un tap,
+  // senza inviare il form.
+  orePreviste?: number | null;
 }) {
   const [stato, setStato] = useState<StatoGiornoOreLavoro>(valori.stato);
   const nomeCampo = (suffisso: string) => `${suffisso}_${valori.data}`;
+  const campoOreOrdinarie = useRef<HTMLInputElement>(null);
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
@@ -71,6 +79,7 @@ export function RigaOreLavoro({
           <label className={CLASSE_LABEL}>
             Ore ordinarie
             <input
+              ref={campoOreOrdinarie}
               type="number"
               min={0}
               step={0.5}
@@ -79,6 +88,23 @@ export function RigaOreLavoro({
               aria-label={`Ore ordinarie ${etichettaGiorno}`}
               className={`${CLASSE_INPUT} w-20`}
             />
+            {/* Riferimento statico del profilo orario (specs/18, specs/54):
+                mai dentro il campo, resta visibile qualunque cosa digiti. */}
+            <span className="mt-1 text-xs text-stone-500">
+              {orePreviste === null ? 'Nessun profilo orario assegnato' : `Previsto: ${orePreviste}h`}
+            </span>
+            {orePreviste !== null && orePreviste > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (campoOreOrdinarie.current) campoOreOrdinarie.current.value = String(orePreviste);
+                }}
+                aria-label={`Copia dal profilo orario ${etichettaGiorno}`}
+                className="mt-1 self-start rounded-lg border border-stone-300 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700 hover:bg-stone-100"
+              >
+                Copia
+              </button>
+            )}
           </label>
           <label className={CLASSE_LABEL}>
             Ore straordinarie

@@ -1,15 +1,23 @@
 // Requisito: specs/19 - monte-ore.md
 //
-// Il calcolo automatico del movimento settimanale (esubero/carenza alla
-// conferma di una settimana) è coperto da unit test puri
-// (lib/monteOre.test.ts — CLAUDE.md, criterio "funzioni senza I/O"): la
-// suite e2e qui sotto NON preme mai per davvero "Conferma settimana"
-// (irreversibile sull'account condiviso, stessa cautela di
+// Il calcolo automatico del controllo settimanale (ore dovute/erogate,
+// carenza residua, straordinario residuo — vedi
+// lib/monteOre.ts:controlloSettimanaOreLavoro) è coperto da unit test
+// puri (lib/monteOre.test.ts — CLAUDE.md, criterio "funzioni senza
+// I/O"): la suite e2e qui sotto NON preme mai per davvero "Conferma
+// settimana" (irreversibile sull'account condiviso, stessa cautela di
 // 18-report-ore-lavoro.spec.ts), quindi non può verificare quel calcolo
 // end-to-end senza bloccare la scrittura sull'account di test per il
-// resto della settimana. Copre invece ciò che i unit test non possono:
-// visibilità del saldo per ruolo, validazione del form di movimento
-// manuale, e che il saldo si aggiorna davvero dopo un salvataggio reale.
+// resto della settimana. Per lo stesso motivo restano coperti solo da
+// unit test gli scenari "lo straordinario residuo richiede una
+// decisione dell'admin", "l'admin mette lo straordinario residuo a
+// pagamento mensile", "l'admin scala lo straordinario residuo dal monte
+// ore" e "senza straordinario residuo nessuna decisione è richiesta":
+// tutti presuppongono una settimana già confermata, cosa che questa
+// suite non produce mai per davvero. Copre invece ciò che i unit test
+// non possono: visibilità del saldo per ruolo, validazione del form di
+// movimento manuale, e che il saldo si aggiorna davvero dopo un
+// salvataggio reale.
 //
 // Il movimento manuale di test (+1.5h) viene sempre compensato con un
 // movimento uguale e opposto in `finally` (nota "Correzione E2E"): i

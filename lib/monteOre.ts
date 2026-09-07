@@ -14,53 +14,76 @@ export type GiornoPerMonteOre = {
   oreStraordinarie: number | string;
 };
 
-export type EsuberoCarenza = { esubero: number; carenza: number };
+export type ControlloSettimanaOreLavoro = {
+  oreDovute: number;
+  oreOrdinarieErogate: number;
+  oreStraordinarieErogate: number;
+  carenza: number;
+  carenzaResidua: number;
+  straordinarioResiduo: number;
+};
 
-// Esubero (ore straordinarie) e carenza (ore mancanti rispetto al
-// profilo orario) di una settimana (specs/19 - monte-ore.md): solo i
-// giorni in stato "lavorativo" contribuiscono — malattia/assenza sono
-// esclusi dal calcolo esplicitamente (hanno comunque sempre ore a 0 per
-// costruzione, vedi lib/oreLavoro.ts:validaGiornoOreLavoro, ma qui
-// l'esclusione è esplicita per chiarezza del requisito, non solo un
-// effetto collaterale dei dati). Riusa oreOrdinariePreviste (stessa
-// fonte di verità del precaricamento in specs/18, CLAUDE.md/jscpd).
+// Controllo di una settimana di ore di lavoro alla conferma (specs/19 -
+// monte-ore.md): solo i giorni in stato "lavorativo" contribuiscono —
+// malattia/assenza sono esclusi dal calcolo esplicitamente (hanno
+// comunque sempre ore a 0 per costruzione, vedi
+// lib/oreLavoro.ts:validaGiornoOreLavoro, ma qui l'esclusione è
+// esplicita per chiarezza del requisito, non solo un effetto
+// collaterale dei dati). Riusa oreOrdinariePreviste (stessa fonte di
+// verità del precaricamento in specs/18, CLAUDE.md/jscpd).
+//
+// La carenza (ore dovute non coperte dall'ordinario erogato) viene
+// prima coperta dallo straordinario erogato della stessa settimana:
+// solo quanto resta scoperto ("carenza residua") fa aumentare il monte
+// ore. Lo straordinario che resta dopo questa copertura
+// ("straordinario residuo") NON scala automaticamente il monte ore:
+// richiede una decisione dell'admin (vedi
+// app/dashboard/ore-lavoro/actions.ts:decidiStraordinarioResiduo).
 // Funzione pura, nessun I/O.
-export function calcolaEsuberoCarenza(
+export function controlloSettimanaOreLavoro(
   giorni: GiornoPerMonteOre[],
   profiloOrario: ProfiloOrario | null | undefined
-): EsuberoCarenza {
-  let esubero = 0;
-  let carenza = 0;
+): ControlloSettimanaOreLavoro {
+  let oreDovute = 0;
+  let oreOrdinarieErogate = 0;
+  let oreStraordinarieErogate = 0;
 
   for (const giorno of giorni) {
     if (giorno.stato !== 'lavorativo') continue;
 
-    esubero += Number(giorno.oreStraordinarie);
-
-    const previsto = oreOrdinariePreviste(profiloOrario, giorno.data);
-    const ordinarie = Number(giorno.oreOrdinarie);
-    if (previsto > ordinarie) {
-      carenza += previsto - ordinarie;
-    }
+    oreDovute += oreOrdinariePreviste(profiloOrario, giorno.data);
+    oreOrdinarieErogate += Number(giorno.oreOrdinarie);
+    oreStraordinarieErogate += Number(giorno.oreStraordinarie);
   }
 
-  return { esubero: arrotonda(esubero), carenza: arrotonda(carenza) };
-}
+  oreDovute = arrotonda(oreDovute);
+  oreOrdinarieErogate = arrotonda(oreOrdinarieErogate);
+  oreStraordinarieErogate = arrotonda(oreStraordinarieErogate);
 
-// Variazione di monte ore di una settimana (specs/19): positiva = il
-// monte ore aumenta (carenza in eccesso sull'esubero, cresce il debito
-// verso la struttura); negativa = il monte ore scala (esubero in
-// eccesso sulla carenza, si riduce il debito). Funzione pura.
-export function variazioneMonteOre(esubero: number, carenza: number): number {
-  return arrotonda(carenza - esubero);
+  const carenza = arrotonda(Math.max(0, oreDovute - oreOrdinarieErogate));
+  const carenzaCoperta = Math.min(carenza, oreStraordinarieErogate);
+  const carenzaResidua = arrotonda(carenza - carenzaCoperta);
+  const straordinarioResiduo = arrotonda(Math.max(0, oreStraordinarieErogate - carenzaCoperta));
+
+  return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate, carenza, carenzaResidua, straordinarioResiduo };
 }
 
 // Nota descrittiva del movimento automatico settimanale, mostrata nello
 // storico (specs/19): la data della settimana è già nella colonna
 // settimana_inizio del movimento, qui solo il dettaglio del calcolo.
 // Funzione pura.
-export function notaMovimentoSettimanale(esubero: number, carenza: number): string {
-  return `Calcolo automatico: ${esubero}h di straordinario, ${carenza}h di carenza rispetto al profilo orario.`;
+export function notaMovimentoSettimanale(controllo: ControlloSettimanaOreLavoro): string {
+  return (
+    `Calcolo automatico: ${controllo.oreDovute}h dovute, ${controllo.oreOrdinarieErogate}h ordinarie erogate, ` +
+    `${controllo.carenzaResidua}h di carenza residua dopo la copertura dallo straordinario.`
+  );
+}
+
+// Nota descrittiva del movimento di scalo dal monte ore dello
+// straordinario residuo, registrato solo quando l'admin sceglie
+// "Scala dal monte ore" (specs/19). Funzione pura.
+export function notaMovimentoStraordinarioResiduo(straordinarioResiduo: number): string {
+  return `Straordinario residuo scalato dal monte ore su decisione dell'admin: ${straordinarioResiduo}h.`;
 }
 
 export type MovimentoMonteOre = { variazione: number | string };

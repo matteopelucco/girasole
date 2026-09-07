@@ -74,8 +74,12 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
-        // Senza profilo orario: ore ordinarie a 0.
+        // Senza profilo orario: ore ordinarie a 0, riferimento statico
+        // esplicito e nessun pulsante "Copia" (scenario "il profilo
+        // orario resta sempre visibile come riferimento statico").
         await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('0');
+        await expect(page.getByText('Nessun profilo orario assegnato', { exact: false }).first()).toBeVisible();
+        await expect(page.getByRole('button', { name: /Copia dal profilo orario/ })).toHaveCount(0);
 
         // Assegno un profilo orario e ricarico: ore ordinarie precaricate.
         await page.goto('/admin/profili-orari');
@@ -98,6 +102,24 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
         await expect(page.getByLabel('Ore ordinarie Venerdì')).toHaveValue('4');
 
+        // Il valore previsto resta visibile come testo statico accanto
+        // al campo, mai dentro il campo stesso — e "Copia" lo reimposta
+        // con un tap, senza inviare il form (scenario "copiare le ore
+        // previste dal profilo orario con un tap").
+        await expect(page.getByText('Previsto: 7h', { exact: false }).first()).toBeVisible();
+        await page.getByLabel('Ore ordinarie Lunedì').fill('2');
+        await page.getByRole('button', { name: 'Copia dal profilo orario Lunedì' }).click();
+        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
+
+        // La scheda mostra ore dovute/ordinarie/straordinarie erogate,
+        // in un riquadro separato dai singoli giorni (scenario "la
+        // scheda della settimana mostra ore dovute, ore ordinarie e
+        // straordinarie erogate") — valori letti, non fissati: dipendono
+        // dallo storico della settimana sull'account di test condiviso.
+        await expect(page.getByText('Ore dovute:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
+        await expect(page.getByText('Ore ordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
+        await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
+
         // Straordinario senza motivo: rifiutato, nessuna scrittura.
         await page.getByLabel('Ore straordinarie Lunedì').fill('2');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
@@ -116,7 +138,9 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Motivo straordinario Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(page.getByRole('alert')).toHaveCount(0);
-        await expect(page.getByText('2h straordinarie', { exact: false })).toBeVisible({ timeout: 20_000 });
+        await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText('2h', {
+          timeout: 20_000,
+        });
 
         // Malattia senza codice: rifiutata.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
@@ -320,6 +344,10 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
         await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
+
+        // Il riquadro ore dovute/erogate è visibile anche da qui
+        // (specs/18: "per ogni vista"), non solo dalla vista personale.
+        await expect(page.getByText('Ore dovute:', { exact: false })).toBeVisible();
 
         const url = new URL(page.url());
         const utenteId = url.searchParams.get('utente')!;
