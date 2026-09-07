@@ -1748,12 +1748,12 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       confermata, cosa che questa suite non fa mai per davvero
       sull'account di test condiviso (stessa cautela già in vigore per
       "Conferma settimana").
-- [x] **Da fare da parte tua**: applica
-      `supabase/migrations/0032_straordinario_residuo.sql` nel SQL
-      Editor di Supabase (test e produzione, nell'ordine) — senza,
-      confermare una settimana fallisce (le nuove colonne non
-      esistono) e la decisione dell'admin sullo straordinario residuo
-      non è disponibile.
+- [x] `supabase/migrations/0032_straordinario_residuo.sql` applicata
+      (confermato dall'utente il 2026-09-07); se il progetto di
+      produzione è distinto da quello di test, verificare che sia
+      applicata anche lì — senza, confermare una settimana fallisce (le
+      nuove colonne non esistono) e la decisione dell'admin sullo
+      straordinario residuo non è disponibile.
 
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
