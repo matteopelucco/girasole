@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   domenicaSettimana,
   formattaDataBreve,
+  formattaDataCorta,
   formattaDataItaliana,
   formattaDataOraItaliana,
   formattaIntervalloItaliano,
@@ -181,6 +182,17 @@ describe('formattaIntervalloItaliano', () => {
 describe('formattaDataBreve', () => {
   it('formatta una data breve con anno', () => {
     expect(formattaDataBreve('2026-08-23')).toBe('23 ago 2026');
+  });
+});
+
+describe('formattaDataCorta', () => {
+  it('formatta con giorno della settimana abbreviato, giorno/mese senza zero iniziale e anno a due cifre', () => {
+    expect(formattaDataCorta('2026-08-23')).toBe('dom 23/8/26'); // domenica
+    expect(formattaDataCorta('2026-09-01')).toBe('mar 1/9/26'); // martedì
+  });
+
+  it('un anno che termina per zero mantiene due cifre (es. 2000 → "00")', () => {
+    expect(formattaDataCorta('2000-01-03')).toBe('lun 3/1/00');
   });
 });
 

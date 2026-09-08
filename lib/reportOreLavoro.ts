@@ -3,13 +3,19 @@ import {
   lunediSettimana,
   sommaGiorni,
   giorniSettimana,
-  formattaDataItaliana,
-  formattaGiornoSettimana,
+  formattaDataCorta,
   formattaIntervalloItaliano,
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
-import { totaliSettimanaOreLavoro, ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/lib/oreLavoro';
+import {
+  totaliSettimanaOreLavoro,
+  oreOrdinariePreviste,
+  deltaGiornoOreLavoro,
+  formattaOreConSegno,
+  ETICHETTE_STATO_ORE_LAVORO,
+  type StatoGiornoOreLavoro,
+} from '@/lib/oreLavoro';
 import { saldoMonteOre, saldiPerUtente } from '@/lib/monteOre';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
 import { righeOSollevaErrore, STILE_TABELLA, STILE_CELLA, STILE_CELLA_NUMERO } from '@/lib/reportPresenze';
@@ -131,6 +137,8 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
     const settimaneConfermate = settimane.filter((s) => confermateSet.has(`${persona.id}|${s}`));
     const settimaneNonConfermate = settimane.filter((s) => !confermateSet.has(`${persona.id}|${s}`));
 
+    const profiloOrario = await recuperaProfiloOrarioConNome(supabase, persona.profilo_orario_id);
+
     let giorniPersona: GiornoPdfOreLavoro[] = [];
     if (settimaneConfermate.length) {
       const dateSettimane = settimaneConfermate.flatMap((s) => giorniSettimana(s));
@@ -143,17 +151,22 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
 
       giorniPersona = (righeGiorni ?? [])
         .filter((r) => r.data >= inizioMese && r.data <= fineMese)
-        .map((r) => ({
-          data: formattaDataItaliana(r.data),
-          giornoSettimana: formattaGiornoSettimana(r.data),
-          stato: ETICHETTE_STATO_ORE_LAVORO[r.stato as StatoGiornoOreLavoro] ?? r.stato,
-          oreOrdinarie: String(r.ore_ordinarie),
-          oreStraordinarie: String(r.ore_straordinarie),
-          dettaglio: r.motivo_straordinario || r.codice_malattia || r.nota_assenza || '',
-        }));
+        .map((r) => {
+          const oreDovute = oreOrdinariePreviste(profiloOrario, r.data);
+          const oreOrdinarie = Number(r.ore_ordinarie);
+          const oreStraordinarie = Number(r.ore_straordinarie);
+          return {
+            data: formattaDataCorta(r.data),
+            stato: ETICHETTE_STATO_ORE_LAVORO[r.stato as StatoGiornoOreLavoro] ?? r.stato,
+            oreDovute: String(oreDovute),
+            oreOrdinarie: String(oreOrdinarie),
+            oreStraordinarie: String(oreStraordinarie),
+            delta: formattaOreConSegno(deltaGiornoOreLavoro(oreDovute, oreOrdinarie, oreStraordinarie)),
+            dettaglio: r.motivo_straordinario || r.codice_malattia || r.nota_assenza || '',
+          };
+        });
     }
 
-    const profiloOrario = await recuperaProfiloOrarioConNome(supabase, persona.profilo_orario_id);
     const variazioneMese = saldoMonteOre(
       movimenti.filter(
         (m) => m.utente_id === persona.id && m.tipo === 'settimanale' && settimane.includes(m.settimana_inizio as string)

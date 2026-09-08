@@ -7,6 +7,7 @@ import {
   disegnaRiga,
   creaGestorePagine,
 } from '@/lib/pdfReport';
+import { formattaOreConSegno } from '@/lib/oreLavoro';
 
 // PDF mensile delle ore di lavoro del personale (specs/52 -
 // report-email-automatico.md, specs/19 - monte-ore.md): una pagina per
@@ -18,10 +19,11 @@ import {
 
 export type GiornoPdfOreLavoro = {
   data: string;
-  giornoSettimana: string;
   stato: string;
+  oreDovute: string;
   oreOrdinarie: string;
   oreStraordinarie: string;
+  delta: string;
   dettaglio: string;
 };
 
@@ -35,8 +37,13 @@ export type PersonaPdfOreLavoro = {
   saldoAttuale: number;
 };
 
-const INTESTAZIONI = ['Data', 'Giorno', 'Stato', 'Ore ord.', 'Ore straord.', 'Dettaglio'];
-const PESI_COLONNE = [1.3, 1.1, 1.1, 0.9, 0.9, 2.7];
+// Colonna "Data" già in formato corto con giorno della settimana
+// incluso (es. "lun 23/9/26", vedi lib/date.ts:formattaDataCorta): non
+// serve più una colonna "Giorno" separata, che spaginava la tabella
+// (la data per esteso "martedì 1 settembre 2026" non entrava nella sua
+// colonna e sconfinava nella successiva).
+const INTESTAZIONI = ['Data', 'Stato', 'Ore dovute', 'Ore ord.', 'Ore straord.', 'Delta', 'Dettaglio'];
+const PESI_COLONNE = [1.2, 1.1, 1.2, 1.0, 1.3, 0.9, 3.5];
 
 export async function generaPdfOreLavoroMensile(
   titoloMese: string,
@@ -83,7 +90,7 @@ export async function generaPdfOreLavoroMensile(
           g.pagina,
           font,
           fontGrassetto,
-          [giorno.data, giorno.giornoSettimana, giorno.stato, giorno.oreOrdinarie, giorno.oreStraordinarie, giorno.dettaglio],
+          [giorno.data, giorno.stato, giorno.oreDovute, giorno.oreOrdinarie, giorno.oreStraordinarie, giorno.delta, giorno.dettaglio],
           larghezze,
           g.y,
           false
@@ -105,9 +112,8 @@ export async function generaPdfOreLavoroMensile(
     g.nuovaPaginaSeServe(2);
     g.pagina.drawText('Monte ore', { x: MARGINE, y: g.y, size: 12, font: fontGrassetto });
     g.y -= ALTEZZA_RIGA;
-    const segno = persona.variazioneMese > 0 ? '+' : '';
     g.pagina.drawText(
-      `Variazione del mese: ${segno}${persona.variazioneMese}h — Saldo attuale: ${persona.saldoAttuale}h`,
+      `Variazione del mese: ${formattaOreConSegno(persona.variazioneMese)}h — Saldo attuale: ${persona.saldoAttuale}h`,
       { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font }
     );
   });

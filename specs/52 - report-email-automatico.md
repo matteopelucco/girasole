@@ -105,10 +105,13 @@ stesso modo del report mensile di presenze/pasti — vedi Regole)
 E il PDF contiene una pagina per ciascuna persona abilitata al report
 ore, con: il suo nome, il mese solare a cui si riferisce, il profilo
 orario di riferimento assegnato (nome e ore per giorno), e una tabella
-con un giorno per riga (data, giorno della settimana, stato, ore
-ordinarie, ore straordinarie, ed eventuale dettaglio — motivo
-straordinario, codice malattia o nota assenza) limitatamente alle
-settimane di quel mese già confermate (vedi [18](18%20-%20report-ore-lavoro.md))
+con un giorno per riga (data in formato corto con il giorno della
+settimana abbreviato, es. "lun 23/9/26", stato, ore dovute secondo il
+profilo orario per quel giorno, ore ordinarie effettuate, ore
+straordinarie, il delta — ore ordinarie effettuate meno ore dovute più
+le ore straordinarie — ed eventuale dettaglio: motivo straordinario,
+codice malattia o nota assenza) limitatamente alle settimane di quel
+mese già confermate (vedi [18](18%20-%20report-ore-lavoro.md))
 E se una o più settimane del mese non sono ancora state confermate, il
 PDF lo segnala esplicitamente per quella persona (intervallo di date
 escluso, non semplicemente omesso in silenzio)

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  deltaGiornoOreLavoro,
+  formattaOreConSegno,
   notaGiornoChiusoOreLavoro,
   oreOrdinariePreviste,
   settimanaOreLavoroRichiesta,
@@ -34,6 +36,47 @@ describe('oreOrdinariePreviste', () => {
   it('funziona anche con valori stringa (numeric via PostgREST)', () => {
     const profiloStringa = { ...profilo, ore_lunedi: '7.50' };
     expect(oreOrdinariePreviste(profiloStringa, '2026-08-31')).toBe(7.5);
+  });
+});
+
+describe('deltaGiornoOreLavoro', () => {
+  it('zero se le ore effettuate coincidono con quelle dovute e non c\'è straordinario', () => {
+    expect(deltaGiornoOreLavoro(7, 7, 0)).toBe(0);
+  });
+
+  it('positivo se sono state effettuate più ore ordinarie del dovuto', () => {
+    expect(deltaGiornoOreLavoro(7, 8, 0)).toBe(1);
+  });
+
+  it('negativo se sono state effettuate meno ore ordinarie del dovuto (es. malattia/assenza, 0 ore)', () => {
+    expect(deltaGiornoOreLavoro(7, 0, 0)).toBe(-7);
+  });
+
+  it('lo straordinario si somma al delta', () => {
+    expect(deltaGiornoOreLavoro(7, 7, 2)).toBe(2);
+    expect(deltaGiornoOreLavoro(7, 5, 1)).toBe(-1);
+  });
+
+  it('senza profilo orario (dovute a zero) il delta è quanto effettuato', () => {
+    expect(deltaGiornoOreLavoro(0, 3, 0)).toBe(3);
+  });
+});
+
+describe('formattaOreConSegno', () => {
+  it('un valore positivo ha il segno "+"', () => {
+    expect(formattaOreConSegno(1.5)).toBe('+1.5');
+  });
+
+  it('un valore negativo mantiene il proprio segno "-"', () => {
+    expect(formattaOreConSegno(-2)).toBe('-2');
+  });
+
+  it('zero non ha segno', () => {
+    expect(formattaOreConSegno(0)).toBe('0');
+  });
+
+  it('arrotonda a due decimali i residui dell\'aritmetica in virgola mobile', () => {
+    expect(formattaOreConSegno(3.5 - 3.3)).toBe('+0.2');
   });
 });
 

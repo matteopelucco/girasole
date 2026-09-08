@@ -1793,6 +1793,42 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       produzione) — senza, il cron notturno continua a fallire sul
       riepilogo ore.
 
+## Fix: impaginazione PDF ore di lavoro + ore dovute/delta per giorno
+- [x] Segnalazione dell'utente (screenshot): il PDF mensile delle ore di
+      lavoro spaginava — la data per esteso (`formattaDataItaliana`,
+      es. "martedì 1 settembre 2026") sconfinava nella colonna
+      "Giorno" accanto, sovrapponendo il testo e rendendolo illeggibile.
+- [x] `lib/date.ts`: nuova `formattaDataCorta` — formato "cortissimo"
+      con giorno della settimana abbreviato (es. "lun 23/9/26"), che
+      sostituisce le due colonne separate Data + Giorno con una sola,
+      abbastanza stretta da non spaginare.
+- [x] `lib/oreLavoro.ts`: nuove funzioni pure `deltaGiornoOreLavoro`
+      (ore ordinarie effettuate meno ore dovute più straordinario) e
+      `formattaOreConSegno` (segno esplicito sui positivi, arrotondato a
+      due decimali) — quest'ultima riusata anche per la variazione
+      mensile di monte ore nel PDF, al posto della stessa logica del
+      segno ripetuta inline.
+- [x] `lib/pdfOreLavoro.ts`: tabella del PDF con le nuove colonne Data
+      (corta), Stato, Ore dovute, Ore ord., Ore straord., Delta,
+      Dettaglio — pesi di colonna ricalcolati per stare nella larghezza
+      A4 anche con un dettaglio lungo.
+- [x] `lib/reportOreLavoro.ts`: `personePdfOreLavoroMensile` calcola ore
+      dovute (dal profilo orario del giorno, `oreOrdinariePreviste`) e
+      delta per ciascun giorno prima di passarli al generatore PDF.
+- [x] `specs/52 - report-email-automatico.md`: scenario "PDF mensile
+      delle ore del personale in allegato" aggiornato con le nuove
+      colonne e il formato data corto.
+- [x] `lib/date.test.ts`, `lib/oreLavoro.test.ts`: nuovi unit test per
+      `formattaDataCorta`, `deltaGiornoOreLavoro` e
+      `formattaOreConSegno` (nessun I/O, criterio di CLAUDE.md). Nessuna
+      modifica e2e: il contenuto del PDF non è ispezionabile da
+      Playwright (vedi nota già in `e2e/52-report-email-automatico.spec.ts`),
+      resta coperto solo indirettamente (la route fallirebbe se
+      `lib/pdfOreLavoro.ts` sollevasse un errore) più dagli unit test.
+- [x] Verificato manualmente generando un PDF di prova con dati simili
+      allo screenshot segnalato: tabella allineata, nessuna
+      sovrapposizione, anche con un dettaglio lungo su una riga.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)

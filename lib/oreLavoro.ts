@@ -183,6 +183,28 @@ export function validaGiornoOreLavoro(input: InputGiornoOreLavoro): EsitoValidaz
   };
 }
 
+// Scostamento di un giorno rispetto all'orario dovuto (specs/18,
+// specs/52 - PDF mensile ore di lavoro): ore ordinarie effettuate meno
+// ore dovute (dal profilo orario, `oreOrdinariePreviste`), più le ore
+// straordinarie — positivo se la persona ha lavorato più del previsto,
+// negativo se meno (es. malattia/assenza, dove le ore effettuate sono
+// sempre 0). Funzione pura.
+export function deltaGiornoOreLavoro(oreDovute: number, oreOrdinarie: number, oreStraordinarie: number): number {
+  return oreOrdinarie - oreDovute + oreStraordinarie;
+}
+
+// Formatta un numero di ore con il segno esplicito se positivo (es.
+// "+1.5", "-2", "0"), arrotondato a due decimali per evitare i residui
+// dell'aritmetica in virgola mobile (es. 3.5 - 3.3 = 0.19999999999999996)
+// — usata sia per il delta giornaliero sia per la variazione mensile di
+// monte ore nel PDF (lib/pdfOreLavoro.ts), invece di ripetere la stessa
+// logica del segno in più punti (CLAUDE.md, jscpd).
+export function formattaOreConSegno(valore: number): string {
+  const arrotondato = Math.round(valore * 100) / 100;
+  const segno = arrotondato > 0 ? '+' : '';
+  return `${segno}${arrotondato}`;
+}
+
 // Totali della settimana (specs/18): somma delle ore ordinarie e
 // straordinarie di tutti i giorni passati (tipicamente i giorni
 // lavorativi/malattia/assenza già registrati — malattia/assenza hanno

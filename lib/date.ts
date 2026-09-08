@@ -108,6 +108,18 @@ export function formattaDataBreve(data: string): string {
   );
 }
 
+// Data in formato "cortissimo" con giorno della settimana abbreviato
+// (es. "lun 23/9/26"), usata dove lo spazio orizzontale è limitato — il
+// PDF mensile delle ore di lavoro (lib/pdfOreLavoro.ts, specs/52), che
+// prima usava formattaDataItaliana per esteso più una colonna separata
+// col nome del giorno, spaginando la tabella su larghezza A4.
+export function formattaDataCorta(data: string): string {
+  const [anno, mese, giorno] = data.split('-').map(Number);
+  const d = new Date(Date.UTC(anno, mese - 1, giorno, 12));
+  const giornoSettimana = new Intl.DateTimeFormat('it-IT', { weekday: 'short' }).format(d);
+  return `${giornoSettimana} ${giorno}/${mese}/${String(anno).slice(-2)}`;
+}
+
 // L'invio automatico dei report periodici (specs/52 - report-email-automatico.md)
 // in modalità "fine_periodo" scatta solo l'ultima notte della settimana/
 // del mese: queste due funzioni rispondono "è oggi l'ultimo giorno?".
