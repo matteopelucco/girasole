@@ -1780,6 +1780,19 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
 - [x] `supabase/migrations/0033_pasti_comunicati_richiede_presenze.sql`
       applicata (confermato dall'utente il 2026-09-07).
 
+## Fix: cron notturno in errore su "Ore di lavoro" (permission denied per profili)
+- [x] Diagnosi: log di produzione `Error: lettura personale abilitato al
+      report ore: permission denied for table profili` — stesso bug già
+      capitato più volte (0018/0025/0031): `service_role` bypassa la RLS
+      ma non ha mai ricevuto il GRANT di tabella su `public.profili`,
+      che `lib/reportOreLavoro.ts` (introdotto con il riepilogo ore nella
+      mail, 2ee85bf) è il primo a leggere con quel ruolo.
+- [x] `supabase/migrations/0034_grant_service_role_profili.sql` (nuovo):
+      `grant select on public.profili to service_role`.
+- [ ] Da applicare nel SQL Editor di Supabase (progetto di test E di
+      produzione) — senza, il cron notturno continua a fallire sul
+      riepilogo ore.
+
 ## Backlog — Fase 2/3
 - [ ] Rette mensili e stato pagamento
 - [ ] Portale genitori (UI dedicata)
