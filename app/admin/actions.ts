@@ -49,16 +49,24 @@ export async function toggleAttivaSezione(
   return { ok: true };
 }
 
+// L'anno di inizio (specs/56 - rette.md) è facoltativo alla creazione:
+// senza, l'anno scolastico resta valido per sezioni/bambini ma non può
+// essere impostato come corrente (vedi impostaAnnoScolasticoCorrente).
 export async function creaAnnoScolastico(
   _stato: EsitoAzione,
   formData: FormData
 ): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const nome = (formData.get('nome') as string)?.trim();
+  const annoInizioGrezzo = formData.get('anno_inizio') as string;
+  const annoInizio = annoInizioGrezzo ? Number(annoInizioGrezzo) : null;
 
   if (!nome) return { ok: false, messaggio: "Inserisci un nome per l'anno scolastico." };
+  if (annoInizioGrezzo && !Number.isInteger(annoInizio)) {
+    return { ok: false, messaggio: "L'anno di inizio deve essere un numero intero (es. 2025)." };
+  }
 
-  const { error } = await supabase.from('anni_scolastici').insert({ nome });
+  const { error } = await supabase.from('anni_scolastici').insert({ nome, anno_inizio: annoInizio });
   if (error) {
     return {
       ok: false,
@@ -68,6 +76,51 @@ export async function creaAnnoScolastico(
   }
 
   revalidatePath('/admin');
+  return { ok: true };
+}
+
+// specs/56 - rette.md, scenario "impostare l'anno scolastico
+// corrente": un solo anno scolastico alla volta può essere corrente
+// (vincolo di unicità in supabase/migrations/0036_rette_pagamenti.sql),
+// quindi tolgo prima il flag dall'eventuale precedente. Richiede
+// l'anno di inizio: senza, la tabella rette non saprebbe calcolare le
+// date reali dei mesi Settembre-Giugno.
+export async function impostaAnnoScolasticoCorrente(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+  const annoScolasticoId = formData.get('anno_scolastico_id') as string;
+  if (!annoScolasticoId) return { ok: false, messaggio: 'Anno scolastico non valido.' };
+
+  const { data: annoScolastico } = await supabase
+    .from('anni_scolastici')
+    .select('anno_inizio')
+    .eq('id', annoScolasticoId)
+    .maybeSingle();
+
+  if (!annoScolastico?.anno_inizio) {
+    return {
+      ok: false,
+      messaggio: "Imposta prima l'anno di inizio di questo anno scolastico per poterlo rendere corrente.",
+    };
+  }
+
+  await supabase.from('anni_scolastici').update({ corrente: false }).eq('corrente', true);
+  const { error } = await supabase
+    .from('anni_scolastici')
+    .update({ corrente: true })
+    .eq('id', annoScolasticoId);
+  if (error) {
+    return {
+      ok: false,
+      messaggio: "Impossibile impostare l'anno scolastico corrente.",
+      dettaglio: error.message,
+    };
+  }
+
+  revalidatePath('/admin');
+  revalidatePath('/admin/rette');
   return { ok: true };
 }
 

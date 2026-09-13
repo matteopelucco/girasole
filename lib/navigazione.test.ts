@@ -18,6 +18,7 @@ describe('vociMenu', () => {
       '/admin/calendario',
       '/admin/profili-orari',
       '/admin/ore-lavoro',
+      '/admin/rette',
     ]);
   });
 });

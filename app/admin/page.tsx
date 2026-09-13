@@ -7,6 +7,7 @@ import {
   creaSezione,
   toggleAttivaSezione,
   creaAnnoScolastico,
+  impostaAnnoScolasticoCorrente,
   creaBambino,
   assegnaSezioneBambino,
 } from './actions';
@@ -17,7 +18,7 @@ export default async function AdminPage() {
   const { supabase, user, profilo } = await requireAdmin();
 
   const [{ data: anniScolastici }, { data: sezioni }, { data: bambini }] = await Promise.all([
-    supabase.from('anni_scolastici').select('id, nome').order('nome'),
+    supabase.from('anni_scolastici').select('id, nome, anno_inizio, corrente').order('nome'),
     supabase.from('sezioni').select('id, nome, attiva, anno_scolastico_id').order('nome'),
     supabase
       .from('bambini')
@@ -42,12 +43,19 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         <section>
           <h1 className="text-lg font-medium">Anni scolastici</h1>
-          <FormConEsito action={creaAnnoScolastico} className="mt-3 flex gap-2">
+          <FormConEsito action={creaAnnoScolastico} resetSuOk className="mt-3 flex flex-wrap gap-2">
             <input
               name="nome"
               required
               placeholder="Nome anno scolastico (es. 2026/2027)"
               className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            />
+            <input
+              name="anno_inizio"
+              type="number"
+              placeholder="Anno di inizio (es. 2026)"
+              aria-label="Anno di inizio"
+              className="w-48 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
             />
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Crea
@@ -56,8 +64,26 @@ export default async function AdminPage() {
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
-              <li key={anno.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
-                {anno.nome}
+              <li
+                key={anno.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
+              >
+                <span>
+                  {anno.nome}
+                  {anno.corrente && (
+                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      Corrente
+                    </span>
+                  )}
+                </span>
+                {!anno.corrente && (
+                  <FormConEsito action={impostaAnnoScolasticoCorrente}>
+                    <input type="hidden" name="anno_scolastico_id" value={anno.id} />
+                    <PulsanteInvio className="text-xs text-stone-600 underline hover:text-stone-900">
+                      Imposta come corrente
+                    </PulsanteInvio>
+                  </FormConEsito>
+                )}
               </li>
             ))}
             {!anniScolastici?.length && (

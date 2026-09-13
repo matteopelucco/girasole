@@ -29,6 +29,11 @@ sono visualizzabili nel sistema da parte dei genitori.
 
 ## Anno Scolastico
 Dati obbligatori: Nome.
+Dati facoltativi: Anno di inizio (`anno_inizio`, l'anno solare in cui
+inizia — es. 2025 per l'anno scolastico "2025/2026"; necessario solo
+per poter impostare l'anno scolastico come "corrente", vedi
+[56 - rette.md](56%20-%20rette.md)), Corrente (flag, uno solo alla
+volta — vedi [56 - rette.md](56%20-%20rette.md)).
 
 ## Alunno
 Rappresenta l'alunno frequentante l'asilo (`bambini` a DB, stesso nome

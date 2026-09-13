@@ -1860,8 +1860,47 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       in locale** (dopo aver applicato la migration 0035) per la
       conferma finale.
 
+## Voce di menu "Rette" — secondo passo di Fase 2 (specs/56)
+- [x] `specs/56 - rette.md`: nuovo requisito — tabella riepilogativa dei
+      pagamenti retta mese per mese (Settembre-Giugno) per l'anno
+      scolastico corrente, e scheda di dettaglio per singolo bambino
+      con lo stesso prospetto. Preparare/inviare la comunicazione e
+      registrare un nuovo pagamento restano fuori scope (deliberato:
+      niente pulsanti che non fanno ancora nulla). Indice aggiornato in
+      `specs/00 - overview.md`, entità Anno Scolastico aggiornata in
+      `specs/04 - data-types.md` (nuovi campi anno_inizio/corrente).
+- [x] `supabase/migrations/0036_rette_pagamenti.sql`: `anni_scolastici`
+      guadagna `anno_inizio` (int) e `corrente` (bool, indice unico
+      parziale per garantirne al più uno vero); nuova tabella
+      `pagamenti_retta` (un importo per bambino e mese di competenza),
+      RLS solo admin — **da applicare nel SQL Editor di Supabase**
+      (dev/test e produzione), insieme alla 0035 se non ancora fatto.
+- [x] `lib/pagamentiRetta.ts` + test: `mesiAnnoScolastico` (i 10 mesi
+      fissi Settembre-Giugno, con il cambio di anno solare a dicembre/
+      gennaio), `totaleImporti`, `importiPerMese` — tutte pure, nessun
+      I/O (criterio di CLAUDE.md).
+- [x] `lib/navigazione.ts` + test: nuova voce di menu "Rette"
+      (`/admin/rette`) per l'admin.
+- [x] `app/admin/actions.ts`: `creaAnnoScolastico` accetta ora
+      `anno_inizio`; nuova `impostaAnnoScolasticoCorrente` (toglie il
+      flag dal precedente, rifiuta se l'anno di inizio non è
+      impostato). `app/admin/page.tsx`: campo "Anno di inizio" e
+      pulsante "Imposta come corrente" per ogni anno scolastico.
+- [x] `app/admin/rette/page.tsx` (tabella) e
+      `app/admin/rette/[id]/page.tsx` (dettaglio bambino), con
+      `components/CelleImportiRetta.tsx` condiviso tra le due per non
+      duplicare il markup delle celle mese + totale.
+- [x] `e2e/56-rette.spec.ts`: un test per ciascun `## Scenario:` di
+      specs/56, più il controllo di accessibilità. Stesso limite di
+      `e2e/55-parametri-retta.spec.ts` sopra: non eseguibile in questo
+      ambiente sandbox (login admin fallisce già nel setup condiviso,
+      non causato da questo cambiamento) — **da eseguire con
+      `npx playwright test e2e/56-rette.spec.ts` in locale** (dopo
+      aver applicato la migration 0036) per la conferma finale.
+
 ## Backlog — Fase 2/3
+- [ ] Registrare un nuovo pagamento/bonifico di retta (con note)
+- [ ] Preparare e inviare la comunicazione mensile della retta da pagare
 - [ ] Calcolo automatico dell'importo di retta dovuto in un mese
-- [ ] Invio automatico del promemoria mensile via email
 - [ ] Stato di pagamento/saldo
 - [ ] Portale genitori (UI dedicata)

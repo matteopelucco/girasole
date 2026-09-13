@@ -18,11 +18,13 @@ avvisi/comunicazioni per le famiglie.
   UI di questa fase, ma schema dati e RLS sono già pronti.
 
 ## Fuori scope per questa fase
-- Rette e pagamenti genitori (Fase 2) — è iniziata solo la
-  configurazione dei parametri di base per bambino (vedi
-  [55 - parametri-retta.md](55%20-%20parametri-retta.md)): calcolo
-  dell'importo dovuto in un mese, invio del promemoria e stato
-  pagamento restano fuori scope.
+- Rette e pagamenti genitori (Fase 2) — iniziata con la configurazione
+  dei parametri per bambino (vedi
+  [55 - parametri-retta.md](55%20-%20parametri-retta.md)) e la tabella/
+  dettaglio di riepilogo pagamenti per l'anno scolastico corrente (vedi
+  [56 - rette.md](56%20-%20rette.md)): registrare un nuovo pagamento,
+  preparare/inviare la comunicazione mensile e lo stato pagamento
+  restano fuori scope.
 - Portale genitori con interfaccia dedicata (Fase 3).
 
 ## Indice degli scenari
@@ -93,6 +95,10 @@ della maestra, `5x` amministrazione.
   (admin), per ciascun bambino, del prezzo della retta mensile, del
   prezzo del buono pasto e dell'email per il promemoria mensile —
   primo passo di Fase 2 (rette e pagamenti)
+- [56 - rette.md](56%20-%20rette.md) — voce di menu "Rette": tabella
+  riepilogativa dei pagamenti retta mese per mese (Settembre-Giugno)
+  per l'anno scolastico corrente, e dettaglio per singolo bambino —
+  secondo passo di Fase 2
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
