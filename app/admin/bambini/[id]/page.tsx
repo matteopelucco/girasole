@@ -3,20 +3,25 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
-import { aggiornaBambino, toggleAttivaBambino } from '../../actions';
+import { aggiornaBambino, aggiornaRettaBambino, toggleAttivaBambino } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BambinoDettaglioPage({ params }: { params: { id: string } }) {
   const { supabase, user, profilo } = await requireAdmin();
 
-  const [{ data: bambino }, { data: sezioni }] = await Promise.all([
+  const [{ data: bambino }, { data: sezioni }, { data: retta }] = await Promise.all([
     supabase
       .from('bambini')
       .select('id, nome, cognome, data_nascita, sesso, sezione_id, note_allergie, altre_note, attiva')
       .eq('id', params.id)
       .maybeSingle(),
     supabase.from('sezioni').select('id, nome').order('nome'),
+    supabase
+      .from('rette_bambini')
+      .select('prezzo_mensile, prezzo_buono_pasto, email_promemoria')
+      .eq('bambino_id', params.id)
+      .maybeSingle(),
   ]);
 
   if (!bambino) redirect('/admin');
@@ -120,6 +125,56 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
             {bambino.attiva ? 'Disattiva bambino' : 'Riattiva bambino'}
           </PulsanteInvio>
         </FormConEsito>
+
+        <div className="space-y-2">
+          <h2 className="text-base font-medium">Retta</h2>
+          <FormConEsito
+            action={aggiornaRettaBambino}
+            className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+          >
+            <input type="hidden" name="bambino_id" value={bambino.id} />
+            <div className="flex gap-2">
+              <label className="flex-1 text-xs text-stone-600">
+                Prezzo retta mensile (€)
+                <input
+                  name="prezzo_mensile"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={retta?.prezzo_mensile ?? 0}
+                  aria-label="Prezzo retta mensile (€)"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                />
+              </label>
+              <label className="flex-1 text-xs text-stone-600">
+                Prezzo buono pasto (€)
+                <input
+                  name="prezzo_buono_pasto"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={retta?.prezzo_buono_pasto ?? 0}
+                  aria-label="Prezzo buono pasto (€)"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                />
+              </label>
+            </div>
+            <label className="block text-xs text-stone-600">
+              Email promemoria retta
+              <input
+                name="email_promemoria"
+                type="email"
+                defaultValue={retta?.email_promemoria ?? ''}
+                placeholder="genitore@esempio.it (opzionale)"
+                aria-label="Email promemoria retta"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+            </label>
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+              Salva retta
+            </PulsanteInvio>
+          </FormConEsito>
+        </div>
       </main>
     </NavHeader>
   );

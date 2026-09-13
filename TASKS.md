@@ -1829,6 +1829,39 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       allo screenshot segnalato: tabella allineata, nessuna
       sovrapposizione, anche con un dettaglio lungo su una riga.
 
+## Parametri di retta per bambino — primo passo di Fase 2 (specs/55)
+- [x] `specs/55 - parametri-retta.md`: nuovo requisito — prezzo retta
+      mensile, prezzo buono pasto ed email di promemoria, per bambino.
+      Indice aggiornato in `specs/00 - overview.md` (nota "Fuori scope"
+      corretta: solo la configurazione dei parametri è iniziata).
+- [x] `supabase/migrations/0035_rette_bambini.sql`: nuova tabella
+      `rette_bambini` (chiave primaria `bambino_id`, `on delete
+      cascade`), RLS solo admin (stesso pattern di `profili_orari`) —
+      **da applicare nel SQL Editor di Supabase** (dev/test e
+      produzione) prima che il pannello funzioni.
+- [x] `lib/retta.ts` + `lib/retta.test.ts`: `emailValida`, unit test
+      sulle combinazioni di formato (nessun I/O, criterio di
+      CLAUDE.md).
+- [x] `app/admin/actions.ts`: nuova `aggiornaRettaBambino` (upsert su
+      `bambino_id`, importi negativi/non numerici normalizzati a 0
+      stesso pattern delle ore in `profili-orari/actions.ts`, email
+      non valida rifiutata senza scrivere nulla).
+- [x] `app/admin/bambini/[id]/page.tsx`: nuova sezione "Retta" sulla
+      scheda di dettaglio del bambino, con i tre campi pre-caricati.
+- [x] `e2e/55-parametri-retta.spec.ts`: un test per ciascun
+      `## Scenario:` di specs/55, più il controllo di accessibilità.
+      Non eseguibile in questo ambiente sandbox: il login dell'account
+      admin di test fallisce già nel setup condiviso
+      (`e2e/auth.setup.ts`, "errore=credenziali") indipendentemente da
+      questa feature — stesso limite ricorrente di sessioni precedenti
+      (vedi le tante note "ambiente sandbox senza credenziali Supabase"
+      più sopra in questo file), non causato da questo cambiamento —
+      **da eseguire con `npx playwright test e2e/55-parametri-retta.spec.ts`
+      in locale** (dopo aver applicato la migration 0035) per la
+      conferma finale.
+
 ## Backlog — Fase 2/3
-- [ ] Rette mensili e stato pagamento
+- [ ] Calcolo automatico dell'importo di retta dovuto in un mese
+- [ ] Invio automatico del promemoria mensile via email
+- [ ] Stato di pagamento/saldo
 - [ ] Portale genitori (UI dedicata)

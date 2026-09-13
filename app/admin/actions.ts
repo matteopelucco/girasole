@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
+import { emailValida } from '@/lib/retta';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 export async function creaSezione(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
@@ -203,5 +204,53 @@ export async function assegnaSezioneBambino(
   }
 
   revalidatePath('/admin');
+  return { ok: true };
+}
+
+// Un importo in euro (prezzo retta mensile o buono pasto, specs/55):
+// un valore vuoto, non numerico o negativo diventa 0 — coerente con
+// "nessun importo previsto", stesso pattern già usato per le ore in
+// app/admin/profili-orari/actions.ts.
+function importoEuro(valore: FormDataEntryValue | null): number {
+  const numero = Number(valore);
+  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) / 100 : 0;
+}
+
+// specs/55 - parametri-retta.md: prezzo mensile, prezzo buono pasto ed
+// email di promemoria per un bambino. Upsert su bambino_id: la prima
+// conferma crea la riga, le successive la aggiornano.
+export async function aggiornaRettaBambino(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+  const bambinoId = formData.get('bambino_id') as string;
+  const prezzoMensile = importoEuro(formData.get('prezzo_mensile'));
+  const prezzoBuonoPasto = importoEuro(formData.get('prezzo_buono_pasto'));
+  const emailPromemoria = ((formData.get('email_promemoria') as string) || '').trim();
+
+  if (!bambinoId) return { ok: false, messaggio: 'Bambino non valido.' };
+  if (emailPromemoria && !emailValida(emailPromemoria)) {
+    return {
+      ok: false,
+      messaggio: "Inserisci un indirizzo email valido per il promemoria, oppure lascia il campo vuoto.",
+    };
+  }
+
+  const { error } = await supabase.from('rette_bambini').upsert({
+    bambino_id: bambinoId,
+    prezzo_mensile: prezzoMensile,
+    prezzo_buono_pasto: prezzoBuonoPasto,
+    email_promemoria: emailPromemoria || null,
+  });
+  if (error) {
+    return {
+      ok: false,
+      messaggio: 'Impossibile salvare i parametri di retta.',
+      dettaglio: error.message,
+    };
+  }
+
+  revalidatePath(`/admin/bambini/${bambinoId}`);
   return { ok: true };
 }
