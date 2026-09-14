@@ -97,6 +97,10 @@ della maestra, `5x` amministrazione.
   voce di menu "Rette": tabella di revisione mensile con gli importi
   calcolati, invio delle email di promemoria ai genitori e template
   configurabile
+- [57 - reset-giornata.md](57%20-%20reset-giornata.md) — voce di menu
+  "Reset giornata": l'admin elimina tutte le presenze e i pasti di una
+  data (anche passata), con doppia conferma e disclaimer sulle
+  comunicazioni già inviate
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

@@ -19,6 +19,7 @@ describe('vociMenu', () => {
       '/admin/profili-orari',
       '/admin/ore-lavoro',
       '/admin/rette',
+      '/admin/reset-giornata',
     ]);
   });
 });

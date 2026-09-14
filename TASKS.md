@@ -2170,6 +2170,45 @@ desktop) dove restava tanto spazio inutilizzato ai lati.
       sandbox (stesso problema di login ricorrente, indipendente da
       questo cambiamento) — da eseguire in locale/CI.
 
+## Reset presenze e pasti di una giornata (specs/57, nuovo)
+Richiesta dell'utente: ad agosto 2026 delle prove fatte in produzione
+hanno "sporcato" presenze/pasti; serve uno strumento admin per
+resettare una giornata (anche passata), con doppia conferma e
+disclaimer sulle comunicazioni già inviate che potrebbero non
+corrispondere più ai dati.
+- [x] Nuovo `specs/57 - reset-giornata.md` (aggiunto all'indice in
+      `specs/00 - overview.md`): elimina tutte le presenze e i pasti di
+      una data, tutte le classi insieme (non per singola sezione/
+      bambino — strumento semplice per il caso d'uso reale). Non tocca
+      `pasti_comunicati`/`comunicazioni_retta` (log immutabili): è
+      proprio il motivo del disclaimer.
+- [x] `supabase/migrations/0040_reset_giornata.sql`: nuove policy di
+      delete su `presenze`/`pasti`, solo admin — **prima non esisteva
+      nessuna policy di delete su queste due tabelle** (il grant da
+      solo, 0004_fix_grant_tabelle.sql, non bastava). **Da applicare
+      nel SQL Editor di Supabase (dev/test e produzione), dopo la
+      0039.**
+- [x] `app/admin/reset-giornata/page.tsx` + `actions.ts` (nuovi):
+      riusa `components/SelettoreData.tsx` (stesso ←/→/calendario di
+      Presenze/Pasti) per scegliere la data, mostra quante presenze/
+      pasti ci sono e un avviso se quella data è già stata comunicata a
+      Rojac (`pasti_comunicati`). Riusa `components/ConfermaAzione.tsx`
+      (tono "distruttivo") per la doppia conferma col disclaimer;
+      pulsante disabilitato se non c'è nulla da resettare.
+- [x] `lib/navigazione.ts` + test: nuova voce "Reset giornata" nel menu
+      admin, ultima della lista.
+- [x] `e2e/57-reset-giornata.spec.ts`: scenari (pagina raggiungibile +
+      a11y, data vuota con pulsante disabilitato, registrare
+      presenza/pasto su una data fissa lontana e resettarli — annulla
+      non elimina, conferma sì —, accesso negato ai non-admin).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      e `npx jscpd` puliti, oltre a un avvio del dev server per
+      confermare che `/admin/reset-giornata` compila senza errori
+      runtime. Suite e2e non eseguibile in questo ambiente sandbox
+      (stesso problema di login ricorrente, indipendente da questo
+      cambiamento) — da eseguire in locale/CI dopo aver applicato la
+      migration 0040.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino
