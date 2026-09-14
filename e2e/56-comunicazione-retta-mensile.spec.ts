@@ -71,6 +71,36 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await nessunaViolazioneA11yGrave(page);
   });
 
+  test('non si può navigare a un mese futuro', async ({ page }) => {
+    await page.goto('/admin/rette');
+    await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
+  });
+
+  test('navigare a un mese passato mostra una revisione di sola lettura', async ({ page }) => {
+    await page.goto('/admin/rette');
+    const titoloMeseCorrente = await page.getByRole('heading', { name: /Rette —/ }).textContent();
+
+    await page.getByRole('link', { name: 'Mese precedente' }).click();
+    await expect(page.getByRole('heading', { name: /Rette —/ })).not.toHaveText(titoloMeseCorrente ?? '');
+
+    // Vista di sola lettura: niente pulsante di invio né campi da compilare.
+    await expect(page.getByRole('button', { name: 'Invia comunicazioni' })).toHaveCount(0);
+    await expect(page.locator('input[type="number"]')).toHaveCount(0);
+    await nessunaViolazioneA11yGrave(page);
+
+    // Tornando avanti (freccia "→") si torna al mese corrente interattivo.
+    await page.getByRole('link', { name: 'Mese successivo' }).click();
+    await expect(page.getByRole('heading', { name: /Rette —/ })).toHaveText(titoloMeseCorrente ?? '');
+    await expect(page.getByRole('button', { name: 'Invia comunicazioni' })).toBeVisible();
+  });
+
+  test('un mese passato senza nessuna comunicazione inviata mostra un messaggio', async ({ page }) => {
+    // Un mese lontano nel passato, prima che il sistema esistesse: nessuna
+    // comunicazione può esserci mai stata.
+    await page.goto('/admin/rette?mese=2020-01');
+    await expect(page.getByText('Nessuna comunicazione inviata in questo mese.')).toBeVisible();
+  });
+
   test('un bambino senza costi o email configurati mostra un avviso invece dei campi', async ({ page }) => {
     const cognome = `E2eComRettaMancante${Date.now()}`;
     await page.goto('/admin');

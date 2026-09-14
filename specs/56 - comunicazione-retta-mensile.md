@@ -72,6 +72,32 @@ eliminata, la riga torna a mostrare i campi da compilare (come un
 bambino non ancora comunicato) e un nuovo click su "Invia comunicazioni"
 può inviargliela di nuovo
 
+## Scenario: navigare a un mese passato per rivedere le comunicazioni inviate
+Dato che sono sulla tabella "Rette" del mese corrente
+Quando premo la freccia "←"
+Allora vedo il mese precedente in intestazione, con l'elenco dei soli
+bambini che hanno una comunicazione registrata per quel mese (gli
+importi e la data/ora effettivamente comunicati)
+E non vedo né il pulsante "Invia comunicazioni" né "Annulla invio" (la
+comunicazione resta possibile solo per il mese corrente)
+
+## Scenario: non si può navigare a un mese futuro
+Dato che sono sul mese corrente in "Rette"
+Quando guardo i controlli di navigazione
+Allora non trovo la freccia "→" (non posso andare oltre il mese
+corrente)
+
+## Scenario: tornare al mese corrente dalla revisione di un mese passato
+Dato che sto rivedendo un mese passato
+Quando premo "→" abbastanza volte da tornare al mese corrente
+Allora ritrovo la tabella interattiva con i campi da compilare e i
+pulsanti "Invia comunicazioni"/"Annulla invio"
+
+## Scenario: un mese passato senza nessuna comunicazione inviata
+Dato che navigo a un mese passato in cui non è stata inviata nessuna
+comunicazione
+Allora vedo un messaggio che lo indica, invece di una tabella vuota
+
 ## Scenario: configurare il template della mail
 Dato che sono su "Modello email" (raggiungibile da "Rette")
 Quando modifico oggetto e/o corpo, usando i placeholder disponibili
@@ -88,8 +114,18 @@ Allora vengo reindirizzato alla dashboard
   pagina (fuso Europe/Rome, coerente con `lib/date.ts`): non dipende da
   nessuna configurazione separata (non esiste un "anno scolastico
   corrente" da impostare per questo requisito).
-- I bambini mostrati sono tutti i bambini attivi (`bambini.attiva`),
-  indipendentemente dalla sezione.
+- Navigazione tra mesi con `?mese=YYYY-MM` (frecce "←"/"→", risolto/
+  clampato da `lib/comunicazioneRetta.ts:meseRettaRichiesto`, stesso
+  pattern di `?settimana=` in "Ore di lavoro" — specs/18,
+  `lib/oreLavoro.ts:settimanaOreLavoroRichiesta`): mai un mese futuro.
+  Solo il mese corrente mostra la tabella interattiva (campi da
+  compilare, "Invia comunicazioni", "Annulla invio"); un mese passato è
+  una vista di sola revisione, coerente con "comunicare un mese diverso
+  da quello corrente" fuori scope più sotto — mostra solo i bambini con
+  una comunicazione già registrata per quel mese, nessun bambino "da
+  inviare".
+- Nella vista del mese corrente, i bambini mostrati sono tutti i
+  bambini attivi (`bambini.attiva`), indipendentemente dalla sezione.
 - I giorni di apertura del mese corrente sono calcolati come i giorni
   del mese che non sono weekend e non ricadono in un giorno di chiusura
   registrato (`lib/comunicazioneRetta.ts`, `giorniAperturaMese` — stessa
@@ -153,10 +189,13 @@ Allora vengo reindirizzato alla dashboard
   pattern di [55 - costi-bambino.md](55%20-%20costi-bambino.md)).
 - Fuori scope in questa fase: modificare gli importi di una
   comunicazione già inviata mantenendola (l'unico modo per correggerla
-  è annullarla e reinviarla, vedi sopra), comunicare un mese diverso da
-  quello corrente, allegati (es. PDF) alla comunicazione, un archivio
-  consultabile delle comunicazioni passate o annullate (si vede solo se
-  il bambino è comunicato questo mese, e un annullamento non lascia
-  traccia di chi/quando l'ha annullato), più email/genitori diversi per
-  lo stesso bambino, registrazione dei bonifici ricevuti (resta in
-  [00 - overview.md](00%20-%20overview.md), backlog Fase 2).
+  è annullarla e reinviarla, vedi sopra), inviare o annullare una
+  comunicazione per un mese diverso da quello corrente (navigare a un
+  mese passato per *rivederlo* è invece in scope, vedi sopra), allegati
+  (es. PDF) alla comunicazione, una vista d'archivio con filtri/ricerca
+  sulle comunicazioni passate (solo la navigazione mese per mese), una
+  traccia di chi/quando ha annullato una comunicazione (un mese passato
+  mostra solo le comunicazioni tuttora presenti, non quelle annullate),
+  più email/genitori diversi per lo stesso bambino, registrazione dei
+  bonifici ricevuti (resta in [00 - overview.md](00%20-%20overview.md),
+  backlog Fase 2).

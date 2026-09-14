@@ -3,8 +3,32 @@ import {
   calcolaRiepilogoRetta,
   formattaImporto,
   giorniAperturaMese,
+  meseRettaRichiesto,
   sostituisciPlaceholder,
 } from './comunicazioneRetta';
+
+describe('meseRettaRichiesto', () => {
+  it('senza richiesta usa il mese corrente', () => {
+    expect(meseRettaRichiesto(undefined, '2026-09')).toBe('2026-09');
+  });
+
+  it('un formato non valido usa il mese corrente', () => {
+    expect(meseRettaRichiesto('non-un-mese', '2026-09')).toBe('2026-09');
+    expect(meseRettaRichiesto('2026-09-01', '2026-09')).toBe('2026-09');
+  });
+
+  it('un mese passato valido viene accettato', () => {
+    expect(meseRettaRichiesto('2026-07', '2026-09')).toBe('2026-07');
+  });
+
+  it('il mese corrente richiesto esplicitamente viene accettato', () => {
+    expect(meseRettaRichiesto('2026-09', '2026-09')).toBe('2026-09');
+  });
+
+  it('un mese futuro viene clampato al mese corrente', () => {
+    expect(meseRettaRichiesto('2026-12', '2026-09')).toBe('2026-09');
+  });
+});
 
 // giorniAperturaMese è pura (nessun I/O): copre weekend, giorni di
 // chiusura registrati e mesi senza nessuna chiusura di specs/56 -

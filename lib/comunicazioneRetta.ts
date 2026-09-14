@@ -1,6 +1,22 @@
 import { giorniInRange, primoGiornoMese, ultimoGiornoMese } from './date';
 import { isGiornoChiuso, type GiornoChiusura } from './calendarioScolastico';
 
+// Mese da mostrare/rivedere in "Rette" (specs/56, scenario "navigare a
+// un mese passato per rivedere le comunicazioni inviate"): quello
+// richiesto (query string `?mese=`) se è un formato "YYYY-MM" valido e
+// non è nel futuro rispetto al mese corrente; altrimenti il mese
+// corrente. Mai un mese futuro — stesso vincolo assoluto già applicato
+// alle settimane di "Ore di lavoro" (specs/18,
+// `lib/oreLavoro.ts:settimanaOreLavoroRichiesta`), stesso motivo:
+// l'invio/annullamento di una comunicazione resta possibile solo per il
+// mese corrente (specs/56, "Fuori scope"), quindi non ha senso poter
+// nemmeno navigare oltre. Funzione pura, nessun I/O.
+export function meseRettaRichiesto(richiesta: string | undefined, meseCorrente: string): string {
+  if (!richiesta || !/^\d{4}-\d{2}$/.test(richiesta)) return meseCorrente;
+  if (richiesta > meseCorrente) return meseCorrente;
+  return richiesta;
+}
+
 // Giorni di apertura di un mese (specs/56 - comunicazione-retta-mensile.md):
 // i giorni che non sono weekend e non ricadono in un giorno di chiusura
 // registrato (stessa regola di lib/calendarioScolastico.ts,

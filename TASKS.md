@@ -1964,6 +1964,38 @@ importi comunicati).
       indipendente da questo cambiamento) — da eseguire in locale/CI
       dopo aver applicato la migration 0038.
 
+## Navigazione tra mesi in "Rette" per rivedere le comunicazioni passate (specs/56)
+Richiesta dell'utente: poter rivedere le comunicazioni inviate un mese
+precedente, con una semplice navigazione a frecce (come già in "Ore di
+lavoro", specs/18).
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovi scenari
+      (navigare a un mese passato, non oltre il mese corrente, tornare
+      al mese corrente, un mese passato senza comunicazioni); "Fuori
+      scope" riformulato — la *revisione* di un mese passato è in
+      scope, inviare/annullare resta possibile solo per il mese
+      corrente.
+- [x] `lib/comunicazioneRetta.ts` + test: `meseRettaRichiesto` (stesso
+      pattern di `lib/oreLavoro.ts:settimanaOreLavoroRichiesta` —
+      risolve/clampa `?mese=`, mai un mese futuro).
+- [x] `app/admin/rette/page.tsx`: riscritta con due viste. Mese
+      corrente: tabella interattiva invariata (nessuna migration
+      necessaria). Mese passato: sola lettura, solo i bambini con una
+      comunicazione registrata quel mese (non filtrati per `attiva`:
+      un bambino comunicato e poi disattivato resta visibile nella
+      revisione storica), niente form/pulsanti di invio o
+      annullamento. Frecce "←"/"→" (la "→" sparisce sul mese corrente).
+      Estratto `RigaComunicazione` (componente locale) per non
+      duplicare le celle tra le due viste che mostrano un bambino già
+      comunicato (CLAUDE.md, jscpd).
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: nuovi scenari
+      (niente freccia "→" sul mese corrente, navigazione a un mese
+      passato + verifica sola lettura + a11y, ritorno al mese corrente,
+      mese lontano nel passato senza comunicazioni). Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run` e
+      `npx jscpd` puliti. Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino
