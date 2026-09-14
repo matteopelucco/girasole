@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
+import { emailValida } from '@/lib/costiBambino';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 export async function creaSezione(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
@@ -175,6 +176,60 @@ export async function toggleAttivaBambino(
 
   revalidatePath(`/admin/bambini/${bambinoId}`);
   revalidatePath('/admin');
+  return { ok: true };
+}
+
+// Un importo in euro (prezzi in "Costi", specs/55): un valore vuoto,
+// non numerico o negativo diventa 0 — coerente con "nessun importo
+// previsto", stesso pattern già usato per le ore in
+// app/admin/profili-orari/actions.ts.
+function importoEuro(valore: FormDataEntryValue | null): number {
+  const numero = Number(valore);
+  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) / 100 : 0;
+}
+
+// specs/55 - costi-bambino.md: prezzo retta, prezzo buono pasto,
+// abbonamento pre-asilo/post-asilo ed email di promemoria per un
+// bambino. Upsert su bambino_id: la prima conferma crea la riga, le
+// successive la aggiornano.
+export async function aggiornaCostiBambino(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+  const bambinoId = formData.get('bambino_id') as string;
+  const prezzoMensile = importoEuro(formData.get('prezzo_mensile'));
+  const prezzoBuonoPasto = importoEuro(formData.get('prezzo_buono_pasto'));
+  const preAsiloRichiesto = formData.get('pre_asilo_richiesto') === 'on';
+  const prezzoPreAsilo = importoEuro(formData.get('prezzo_pre_asilo'));
+  const postAsiloRichiesto = formData.get('post_asilo_richiesto') === 'on';
+  const prezzoPostAsilo = importoEuro(formData.get('prezzo_post_asilo'));
+  const emailPromemoria = ((formData.get('email_promemoria') as string) || '').trim();
+
+  if (!bambinoId) return { ok: false, messaggio: 'Bambino non valido.' };
+  if (emailPromemoria && !emailValida(emailPromemoria)) {
+    return {
+      ok: false,
+      messaggio: "Inserisci un indirizzo email valido per il promemoria, oppure lascia il campo vuoto.",
+    };
+  }
+
+  const { error } = await supabase.from('costi_bambini').upsert({
+    bambino_id: bambinoId,
+    prezzo_mensile: prezzoMensile,
+    prezzo_buono_pasto: prezzoBuonoPasto,
+    pre_asilo_richiesto: preAsiloRichiesto,
+    prezzo_pre_asilo: prezzoPreAsilo,
+    post_asilo_richiesto: postAsiloRichiesto,
+    prezzo_post_asilo: prezzoPostAsilo,
+    email_promemoria: emailPromemoria || null,
+  });
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile salvare i costi.', dettaglio: error.message };
+  }
+
+  revalidatePath(`/admin/bambini/${bambinoId}`);
+  revalidatePath('/admin/rette');
   return { ok: true };
 }
 

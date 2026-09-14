@@ -1829,6 +1829,68 @@ Due bug segnalati dopo l'uso reale di `/admin/maestre`.
       allo screenshot segnalato: tabella allineata, nessuna
       sovrapposizione, anche con un dettaglio lungo su una riga.
 
+## Comunicazione retta mensile — Fase 2 (specs/55, specs/56)
+Requisito ridisegnato da capo (revert dei due commit precedenti,
+parametri di retta "generici" + tabella per anno scolastico) su
+richiesta esplicita, con lo scenario reale completo: ogni mese l'admin
+controlla una tabella con gli importi calcolati per ciascun bambino e
+invia con un click il promemoria via email ai genitori.
+- [x] `specs/55 - costi-bambino.md`: sezione "Costi" sulla scheda
+      bambino — prezzo retta mensile, prezzo buono pasto, abbonamento
+      pre-asilo/post-asilo (flag + prezzo fisso mensile ciascuno),
+      email di promemoria. Indice e nota "Fuori scope" aggiornati in
+      `specs/00 - overview.md`.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: voce di menu
+      "Rette" — tabella di revisione del mese corrente (retta, costo
+      pasti proiettato sui giorni di apertura, conguaglio pasti sulle
+      assenze del mese precedente, pre/post-asilo, costi extra inseriti
+      al momento dall'admin con nota), invio con un click via Resend,
+      log immutabile delle comunicazioni (una per bambino/mese, evita
+      doppi invii), template configurabile con placeholder.
+- [x] `supabase/migrations/0035_costi_bambini.sql`: tabella
+      `costi_bambini`, RLS solo admin — **da applicare nel SQL Editor
+      di Supabase** (dev/test e produzione).
+- [x] `supabase/migrations/0036_comunicazione_retta.sql`: tabelle
+      `comunicazioni_retta` (log insert-only) e
+      `impostazioni_email_retta` (riga singola, seed con un modello di
+      base) — **da applicare insieme alla 0035**.
+- [x] `lib/costiBambino.ts` + test: `emailValida` (nessun I/O).
+- [x] `lib/comunicazioneRetta.ts` + test: `giorniAperturaMese` (riusa
+      `lib/calendarioScolastico.ts`/`lib/date.ts`, niente logica di
+      calendario duplicata), `calcolaRiepilogoRetta` (motore di calcolo
+      puro, coperto a fondo — conguaglio negativo, totale che può
+      risultare negativo, pre/post-asilo non richiesto che non conta),
+      `sostituisciPlaceholder`, `formattaImporto`. Tutte pure, nessun
+      I/O (criterio di CLAUDE.md).
+- [x] `lib/navigazione.ts` + test: nuova voce di menu "Rette".
+- [x] `app/admin/actions.ts`: nuova `aggiornaCostiBambino`.
+      `app/admin/bambini/[id]/page.tsx`: nuova sezione "Costi".
+- [x] `app/admin/rette/page.tsx` + `actions.ts`: tabella di revisione,
+      `inviaComunicazioniRetta` ricalcola tutto lato server (non si
+      fida di valori arrivati dal client, tranne costi extra/nota) e
+      determina da sé chi è idoneo — bambino attivo, costi+email
+      configurati, non già comunicato questo mese.
+- [x] `app/admin/rette/template/page.tsx` + `actions.ts`: editor
+      oggetto/corpo del modello email, con i placeholder documentati in
+      pagina.
+- [x] `e2e/55-costi-bambino.spec.ts`, `e2e/56-comunicazione-retta-mensile.spec.ts`:
+      un test per ciascun `## Scenario:` dei due requisiti, più
+      accessibilità. Il file 56 usa `test.describe.configure({ mode:
+      'serial' })` perché "Invia comunicazioni" agisce su tutti i
+      bambini idonei del mese corrente, non solo su quello del singolo
+      test — con l'esecuzione parallela di default rischierebbe di
+      intercettare un bambino "in attesa" creato da un altro test
+      ancora in corso (stesso pattern di
+      `06-controllo-consistenza.spec.ts`). Non eseguibile in questo
+      ambiente sandbox: il login admin fallisce già nel setup condiviso
+      (non causato da questo cambiamento, vedi le note ricorrenti più
+      sopra in questo file) — **da eseguire con
+      `npx playwright test e2e/55-costi-bambino.spec.ts e2e/56-comunicazione-retta-mensile.spec.ts`
+      in locale** (dopo aver applicato le migration 0035 e 0036, e con
+      RESEND_API_KEY configurata per coprire anche l'invio reale) per
+      la conferma finale.
+
 ## Backlog — Fase 2/3
-- [ ] Rette mensili e stato pagamento
+- [ ] Registrare i bonifici ricevuti, con le opportune note
+- [ ] Stato di pagamento/saldo per bambino
 - [ ] Portale genitori (UI dedicata)

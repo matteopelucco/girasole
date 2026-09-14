@@ -1,0 +1,85 @@
+import { giorniInRange, primoGiornoMese, ultimoGiornoMese } from './date';
+import { isGiornoChiuso, type GiornoChiusura } from './calendarioScolastico';
+
+// Giorni di apertura di un mese (specs/56 - comunicazione-retta-mensile.md):
+// i giorni che non sono weekend e non ricadono in un giorno di chiusura
+// registrato (stessa regola di lib/calendarioScolastico.ts,
+// isGiornoChiuso) — usato per proiettare il costo pasti del mese
+// corrente, che non è ancora trascorso. `mese` in formato "YYYY-MM"
+// (stessa convenzione di lib/date.ts). Funzione pura, nessun I/O.
+export function giorniAperturaMese(mese: string, chiusure: GiornoChiusura[]): number {
+  const giorni = giorniInRange(primoGiornoMese(mese), ultimoGiornoMese(mese));
+  return giorni.filter((data) => !isGiornoChiuso(data, chiusure)).length;
+}
+
+export type ParametriRiepilogoRetta = {
+  prezzoMensile: number;
+  prezzoBuonoPasto: number;
+  giorniAperturaMeseCorrente: number;
+  giorniAssenzaMesePrecedente: number;
+  preAsiloRichiesto: boolean;
+  prezzoPreAsilo: number;
+  postAsiloRichiesto: boolean;
+  prezzoPostAsilo: number;
+  costiExtra: number;
+};
+
+export type RiepilogoRetta = {
+  rettaMensile: number;
+  costoPasti: number;
+  conguaglioPasti: number;
+  costoPreAsilo: number;
+  costoPostAsilo: number;
+  costiExtra: number;
+  totale: number;
+};
+
+// Il `+ 0` finale normalizza un eventuale -0 (es. 0 giorni di assenza
+// per un conguaglio pasti) a 0: stesso valore numerico, ma -0 !== 0 per
+// Object.is/toEqual e comparirebbe come "-0,00" se mai renderizzato.
+function arrotonda(valore: number): number {
+  return Math.round(valore * 100) / 100 + 0;
+}
+
+// Il riepilogo economico di un bambino per la comunicazione del mese
+// corrente (specs/56): costo pasti proiettato sui giorni di apertura
+// (il mese non è ancora trascorso), conguaglio pasti negativo sui
+// giorni di assenza/malattia del mese precedente (già trascorso, dati
+// reali), pre-asilo/post-asilo al prezzo pieno solo se richiesti.
+// Funzione pura, nessun I/O.
+export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): RiepilogoRetta {
+  const costoPasti = arrotonda(parametri.giorniAperturaMeseCorrente * parametri.prezzoBuonoPasto);
+  const conguaglioPasti = arrotonda(-parametri.giorniAssenzaMesePrecedente * parametri.prezzoBuonoPasto);
+  const costoPreAsilo = parametri.preAsiloRichiesto ? parametri.prezzoPreAsilo : 0;
+  const costoPostAsilo = parametri.postAsiloRichiesto ? parametri.prezzoPostAsilo : 0;
+  const totale = arrotonda(
+    parametri.prezzoMensile + costoPasti + conguaglioPasti + costoPreAsilo + costoPostAsilo + parametri.costiExtra
+  );
+
+  return {
+    rettaMensile: parametri.prezzoMensile,
+    costoPasti,
+    conguaglioPasti,
+    costoPreAsilo,
+    costoPostAsilo,
+    costiExtra: parametri.costiExtra,
+    totale,
+  };
+}
+
+// Sostituisce i placeholder "{{chiave}}" nel template della mail
+// (specs/56) con i valori corrispondenti; un placeholder sconosciuto o
+// scritto in modo errato resta invariato (nessun errore bloccante).
+// Funzione pura, nessun I/O.
+export function sostituisciPlaceholder(testo: string, valori: Record<string, string>): string {
+  return testo.replace(/\{\{(\w+)\}\}/g, (corrispondenza, chiave: string) =>
+    Object.prototype.hasOwnProperty.call(valori, chiave) ? valori[chiave] : corrispondenza
+  );
+}
+
+// Formattazione euro condivisa tra la tabella di revisione (UI) e i
+// placeholder della mail (specs/56), per non avere due formati diversi
+// per lo stesso numero.
+export function formattaImporto(valore: number): string {
+  return arrotonda(valore).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}

@@ -3,20 +3,27 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
-import { aggiornaBambino, toggleAttivaBambino } from '../../actions';
+import { aggiornaBambino, aggiornaCostiBambino, toggleAttivaBambino } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function BambinoDettaglioPage({ params }: { params: { id: string } }) {
   const { supabase, user, profilo } = await requireAdmin();
 
-  const [{ data: bambino }, { data: sezioni }] = await Promise.all([
+  const [{ data: bambino }, { data: sezioni }, { data: costi }] = await Promise.all([
     supabase
       .from('bambini')
       .select('id, nome, cognome, data_nascita, sesso, sezione_id, note_allergie, altre_note, attiva')
       .eq('id', params.id)
       .maybeSingle(),
     supabase.from('sezioni').select('id, nome').order('nome'),
+    supabase
+      .from('costi_bambini')
+      .select(
+        'prezzo_mensile, prezzo_buono_pasto, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria'
+      )
+      .eq('bambino_id', params.id)
+      .maybeSingle(),
   ]);
 
   if (!bambino) redirect('/admin');
@@ -120,6 +127,107 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
             {bambino.attiva ? 'Disattiva bambino' : 'Riattiva bambino'}
           </PulsanteInvio>
         </FormConEsito>
+
+        <div className="space-y-2">
+          <h2 className="text-base font-medium">Costi</h2>
+          <FormConEsito
+            action={aggiornaCostiBambino}
+            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+          >
+            <input type="hidden" name="bambino_id" value={bambino.id} />
+            <div className="flex gap-2">
+              <label className="flex-1 text-xs text-stone-600">
+                Prezzo retta mensile (€)
+                <input
+                  name="prezzo_mensile"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={costi?.prezzo_mensile ?? 0}
+                  aria-label="Prezzo retta mensile (€)"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                />
+              </label>
+              <label className="flex-1 text-xs text-stone-600">
+                Prezzo buono pasto (€)
+                <input
+                  name="prezzo_buono_pasto"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={costi?.prezzo_buono_pasto ?? 0}
+                  aria-label="Prezzo buono pasto (€)"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-end gap-2">
+                <label className="flex items-center gap-2 text-sm text-stone-700">
+                  <input
+                    type="checkbox"
+                    name="pre_asilo_richiesto"
+                    defaultChecked={costi?.pre_asilo_richiesto ?? false}
+                    className="h-4 w-4"
+                  />
+                  Pre-asilo richiesto
+                </label>
+                <label className="text-xs text-stone-600">
+                  Prezzo (€)
+                  <input
+                    name="prezzo_pre_asilo"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    defaultValue={costi?.prezzo_pre_asilo ?? 0}
+                    aria-label="Prezzo pre-asilo (€)"
+                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  />
+                </label>
+              </div>
+              <div className="flex items-end gap-2">
+                <label className="flex items-center gap-2 text-sm text-stone-700">
+                  <input
+                    type="checkbox"
+                    name="post_asilo_richiesto"
+                    defaultChecked={costi?.post_asilo_richiesto ?? false}
+                    className="h-4 w-4"
+                  />
+                  Post-asilo richiesto
+                </label>
+                <label className="text-xs text-stone-600">
+                  Prezzo (€)
+                  <input
+                    name="prezzo_post_asilo"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    defaultValue={costi?.prezzo_post_asilo ?? 0}
+                    aria-label="Prezzo post-asilo (€)"
+                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <label className="block text-xs text-stone-600">
+              Email promemoria retta
+              <input
+                name="email_promemoria"
+                type="email"
+                defaultValue={costi?.email_promemoria ?? ''}
+                placeholder="genitore@esempio.it (opzionale)"
+                aria-label="Email promemoria retta"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              />
+            </label>
+
+            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+              Salva costi
+            </PulsanteInvio>
+          </FormConEsito>
+        </div>
       </main>
     </NavHeader>
   );

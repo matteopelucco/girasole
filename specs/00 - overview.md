@@ -18,7 +18,11 @@ avvisi/comunicazioni per le famiglie.
   UI di questa fase, ma schema dati e RLS sono già pronti.
 
 ## Fuori scope per questa fase
-- Rette e pagamenti genitori (Fase 2).
+- Rette e pagamenti genitori (Fase 2) — iniziata con i costi per
+  bambino (vedi [55 - costi-bambino.md](55%20-%20costi-bambino.md)) e
+  la comunicazione mensile della retta via email (vedi
+  [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)):
+  la registrazione dei bonifici ricevuti resta fuori scope.
 - Portale genitori con interfaccia dedicata (Fase 3).
 
 ## Indice degli scenari
@@ -85,6 +89,14 @@ della maestra, `5x` amministrazione.
   (admin) di profili orari settimanali e loro assegnazione al
   personale, propedeutica alla futura registrazione delle ore di
   lavoro
+- [55 - costi-bambino.md](55%20-%20costi-bambino.md) — sezione "Costi"
+  sulla scheda bambino: prezzo retta, prezzo buono pasto, abbonamento
+  pre-asilo/post-asilo, email di promemoria — primo passo di Fase 2
+  (rette e pagamenti)
+- [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md) —
+  voce di menu "Rette": tabella di revisione mensile con gli importi
+  calcolati, invio delle email di promemoria ai genitori e template
+  configurabile
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
