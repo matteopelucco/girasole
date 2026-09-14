@@ -126,6 +126,35 @@ export async function aggiornaUtente(
   return { ok: true };
 }
 
+export async function impostaPassword(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  await requireAdmin();
+  const profiloId = formData.get('profilo_id') as string;
+  const password = (formData.get('nuova_password') as string) || '';
+  const confermaPassword = (formData.get('conferma_nuova_password') as string) || '';
+
+  if (!profiloId) {
+    return { ok: false, messaggio: 'Utente non valido.' };
+  }
+  if (password !== confermaPassword) {
+    return { ok: false, messaggio: 'Le due password inserite non coincidono.' };
+  }
+  if (!passwordAbbastanzaComplessa(password)) {
+    return { ok: false, messaggio: REGOLA_PASSWORD };
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(profiloId, { password });
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile impostare la password.', dettaglio: error.message };
+  }
+
+  revalidatePath('/admin/maestre');
+  return { ok: true };
+}
+
 export async function eliminaUtente(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { user } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;

@@ -204,6 +204,97 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByPlaceholder('Telefono').first()).toHaveValue('3331234567');
   });
 
+  test('admin imposta una nuova password per un utente esistente', async ({ page }) => {
+    const email = `e2e-nuova-password-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Password');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+
+    await riga.getByLabel('Nuova password', { exact: true }).fill('PasswordNuova!2');
+    await riga.getByLabel('Conferma nuova password').fill('PasswordNuova!2');
+    await riga.getByRole('button', { name: 'Imposta password' }).click();
+    await expect(riga.getByLabel('Nuova password', { exact: true })).toHaveValue('', { timeout: 20_000 });
+
+    // La nuova password funziona per il login, la vecchia no.
+    await page.context().clearCookies();
+    await page.goto('/login');
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill('PasswordNuova!2');
+    await page.getByRole('button', { name: 'Accedi' }).click();
+    await page.waitForURL('/dashboard', { timeout: 20_000 });
+
+    // Torno come admin per pulire l'utente creato dal test.
+    await page.context().clearCookies();
+    await page.goto('/admin/maestre');
+    const rigaFinale = page.getByText(email, { exact: false }).locator('..');
+    await rigaFinale.getByRole('button', { name: 'Elimina utente' }).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  test('impostazione password con conferma non coincidente non cambia la password', async ({ page }) => {
+    const email = `e2e-password-diff-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Diff');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+
+    await riga.getByLabel('Nuova password', { exact: true }).fill('PasswordE2E!1');
+    await riga.getByLabel('Conferma nuova password').fill('PasswordDiversa!1');
+    await riga.getByRole('button', { name: 'Imposta password' }).click();
+    await expect(riga.getByText('Le due password inserite non coincidono.')).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  test('impostazione di una password debole mostra un errore e non la cambia', async ({ page }) => {
+    const email = `e2e-password-debole-${Date.now()}@example.com`;
+
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Debole');
+    await page.getByPlaceholder('Cognome').first().fill('Password');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+
+    await riga.getByLabel('Nuova password', { exact: true }).fill('debole');
+    await riga.getByLabel('Conferma nuova password').fill('debole');
+    await riga.getByRole('button', { name: 'Imposta password' }).click();
+    await expect(riga.getByText(/lettera minuscola|maiuscola|carattere speciale/i)).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
   test('creazione con email già in uso mostra un errore e non crea un secondo utente', async ({
     page,
   }) => {

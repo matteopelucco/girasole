@@ -88,8 +88,9 @@ bambini di quella sezione
   tabella non è stato cambiato per non introdurre una rinomina ad ampio
   raggio, vedi [04 - data-types.md](04%20-%20data-types.md)).
 - L'admin crea/modifica/elimina utenti direttamente da `/admin/maestre`
-  (email, password, nome, cognome, telefono, ruolo) — non serve più il
-  dashboard di Supabase Auth. Vedi
+  (email, password, nome, cognome, telefono, ruolo) e può anche
+  impostare una nuova password per un utente già esistente — non serve
+  più il dashboard di Supabase Auth. Vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md) per i dettagli e
   gli scenari.
 - Il primissimo admin va promosso a mano via SQL Editor (vedi

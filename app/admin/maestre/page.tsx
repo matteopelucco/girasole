@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/auth';
 import {
   creaUtente,
   aggiornaUtente,
+  impostaPassword,
   eliminaUtente,
   assegnaSezione,
   rimuoviSezione,
@@ -211,6 +212,22 @@ export default async function MaestrePage() {
                   </select>
                   <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
                     Aggiorna
+                  </PulsanteInvio>
+                </FormConEsito>
+                <FormConEsito
+                  action={impostaPassword}
+                  resetSuOk
+                  className="mt-2 flex flex-wrap items-center gap-2"
+                >
+                  <input type="hidden" name="profilo_id" value={p.id} />
+                  <CampiPasswordConferma
+                    nomePassword="nuova_password"
+                    nomeConferma="conferma_nuova_password"
+                    etichettaPassword="Nuova password"
+                    etichettaConferma="Conferma nuova password"
+                  />
+                  <PulsanteInvio className="rounded-lg bg-stone-700 px-3 py-1 text-xs font-medium text-white hover:bg-stone-800">
+                    Imposta password
                   </PulsanteInvio>
                 </FormConEsito>
                 <FormConEsito action={eliminaUtente} className="mt-1">

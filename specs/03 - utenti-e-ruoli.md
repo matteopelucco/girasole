@@ -23,6 +23,11 @@ utenti da `/admin/maestre`.
   conferma (bug corretto: il riscontro, comparendo, allungava la cella
   del campo password nel layout a griglia, e l'occhio — assoluto rispetto
   al proprio contenitore, non al campo — seguiva quell'allungamento).
+  L'admin può anche impostare una nuova password per un utente già
+  esistente (stessa regola di complessità, stessa doppia digitazione con
+  riscontro in tempo reale), ad esempio quando un utente l'ha dimenticata
+  e non può o non vuole usare il recupero password via email (vedi
+  [02 - password-recovery.md](02%20-%20password-recovery.md)).
 - **nome**
 - **cognome**
 - **numero di telefono**
@@ -123,6 +128,28 @@ Dato che un utente esiste già
 Quando su `/admin/maestre` modifico nome, cognome, telefono e/o ruolo di
 quell'utente e confermo
 Allora i nuovi dati sono salvati e visibili nell'elenco
+
+## Scenario: admin imposta una nuova password per un utente esistente
+Dato che un utente esiste già
+Quando su `/admin/maestre` trovo la sua riga, compilo i campi "Nuova
+password" e "Conferma nuova password" e premo "Imposta password"
+Allora la password dell'utente viene aggiornata
+E l'utente può accedere subito a `/login` con la nuova password (la
+vecchia password non funziona più)
+E gli altri dati dell'utente (email, nome, cognome, telefono, ruolo,
+...) restano invariati
+
+## Scenario: impostazione password con conferma non coincidente
+Quando su `/admin/maestre` invio "Imposta password" con "Nuova password"
+e "Conferma nuova password" diversi tra loro
+Allora vedo un messaggio d'errore e la password dell'utente non viene
+cambiata
+
+## Scenario: impostazione di una password troppo debole
+Quando su `/admin/maestre` invio "Imposta password" con una password che
+non rispetta i requisiti di complessità
+Allora vedo un messaggio d'errore che spiega la regola e la password
+dell'utente non viene cambiata
 
 ## Scenario: admin elimina un utente
 Quando su `/admin/maestre` premo "Elimina utente" su un account
