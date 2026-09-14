@@ -60,15 +60,19 @@ test.describe('56 — Comunicazione retta mensile', () => {
   test('tabella di revisione della comunicazione del mese corrente + accessibilità', async ({ page }) => {
     await page.goto('/admin/rette');
     await expect(page.getByRole('heading', { name: /Rette —/ })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Retta' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Costo pasti' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Marca da bollo' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Pre-asilo' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Post-asilo' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Costi extra' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Totale' })).toBeVisible();
+    // Ogni sezione ha la sua tabella con le stesse colonne (specs/56,
+    // "i bambini sono raggruppati per sezione"): più di un'intestazione
+    // può ripetere lo stesso nome colonna, .first() basta a verificare
+    // che la colonna esista.
+    await expect(page.getByRole('columnheader', { name: 'Email' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Retta' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Costo pasti' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Marca da bollo' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Pre-asilo' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Post-asilo' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Costi extra' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Totale' }).first()).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
   });
 
@@ -116,6 +120,50 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
     await expect(riga.getByText('Costi o email non configurati', { exact: false })).toBeVisible();
+  });
+
+  test('un bambino senza sezione compare nella tabella "Senza sezione"', async ({ page }) => {
+    const cognome = `E2eComRettaSenzaSezione${Date.now()}`;
+    await page.goto('/admin');
+    await page.getByPlaceholder('Nome', { exact: true }).fill('SenzaSezione');
+    await page.getByPlaceholder('Cognome').fill(cognome);
+    await page.getByLabel('Data di nascita').fill('2021-08-08');
+    await page.getByLabel('Sesso').selectOption('F');
+    // Il form di creazione bambino lascia "Nessuna sezione" di default.
+    await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
+    await expect(page.getByText(cognome, { exact: false })).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/admin/rette');
+    const titolo = page.getByRole('heading', { name: 'Senza sezione' });
+    await expect(titolo).toBeVisible();
+    // La riga del bambino sta nella tabella subito sotto quel titolo
+    // (fratello successivo nel markup — components/../page.tsx,
+    // TabellaSezione), non in una tabella di un'altra sezione.
+    const tabellaSezione = titolo.locator('xpath=following-sibling::div[1]');
+    await expect(tabellaSezione.locator('tr', { hasText: cognome })).toBeVisible();
+  });
+
+  test('un bambino con una sezione assegnata compare sotto il titolo della sua sezione', async ({ page }) => {
+    await page.goto('/admin');
+    const selectSezione = page.getByLabel('Sezione', { exact: true });
+    const opzioni = selectSezione.locator('option');
+    test.skip((await opzioni.count()) < 2, 'nessuna sezione configurata sul progetto di test');
+    const nomeSezione = await opzioni.nth(1).textContent();
+
+    const cognome = `E2eComRettaConSezione${Date.now()}`;
+    await page.getByPlaceholder('Nome', { exact: true }).fill('ConSezione');
+    await page.getByPlaceholder('Cognome').fill(cognome);
+    await page.getByLabel('Data di nascita').fill('2021-09-09');
+    await page.getByLabel('Sesso').selectOption('F');
+    await selectSezione.selectOption({ index: 1 });
+    await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
+    await expect(page.getByText(cognome, { exact: false })).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/admin/rette');
+    const titolo = page.getByRole('heading', { name: nomeSezione ?? '', exact: true });
+    await expect(titolo).toBeVisible();
+    const tabellaSezione = titolo.locator('xpath=following-sibling::div[1]');
+    await expect(tabellaSezione.locator('tr', { hasText: cognome })).toBeVisible();
   });
 
   test('il costo pasti mostrato è proporzionale ai giorni di apertura del mese', async ({ page }) => {

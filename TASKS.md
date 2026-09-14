@@ -2133,6 +2133,43 @@ Chiesta anche una tabella più compatta, uso solo da desktop.
       in questo ambiente sandbox (stesso problema di login ricorrente,
       indipendente da questo cambiamento) — da eseguire in locale/CI.
 
+## Rette: tabelle raggruppate per sezione, larghezza pagina aumentata
+Richiesta dell'utente: solo look&feel, nessun cambio a calcolo costi o
+invio email. Raggruppare la tabella di "Rette" per classe (nome classe
+come titolo), e allargare la pagina su schermi larghi (uso solo
+desktop) dove restava tanto spazio inutilizzato ai lati.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovo scenario "i
+      bambini sono raggruppati per sezione" (una tabella per sezione,
+      "Senza sezione" a parte, niente tabelle vuote) e nuove Regole —
+      puro raggruppamento visivo, non cambia chi è ammesso all'invio né
+      come vengono calcolati/registrati gli importi; per un mese
+      passato il raggruppamento usa la sezione ATTUALE del bambino, non
+      quella al momento dell'invio (mai registrata). Nuova regola sulla
+      larghezza pagina (`max-w-[1800px]` invece di `max-w-6xl`).
+- [x] `app/admin/rette/page.tsx`: nuova `raggruppaPerSezione` (pura,
+      generica) e nuovo componente locale `TabellaSezione` (titolo +
+      tabella, intestazione colonne condivisa via `INTESTAZIONE_COLONNE`
+      per non duplicarla tra i gruppi). Sia la vista del mese corrente
+      sia quella di revisione di un mese passato ora rendono un gruppo
+      di tabelle invece di una sola; il messaggio "Nessun bambino
+      attivo"/"Nessuna comunicazione..." resta ma solo quando non c'è
+      nessun gruppo (non più una riga con colSpan dentro una tabella
+      vuota). Aggiunto `sezione_id` alle query `bambini` di entrambe le
+      viste (mancava). Nessuna modifica al calcolo dei costi né alle
+      server action di invio/annullamento (`actions.ts` invariato).
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: i controlli sulle
+      intestazioni colonna ora usano `.first()` (più tabelle ripetono le
+      stesse colonne); due nuovi scenari (bambino senza sezione nella
+      tabella "Senza sezione", bambino con sezione sotto il titolo della
+      sua sezione — quest'ultimo si salta da sé se il progetto di test
+      non ha ancora nessuna sezione). Verificato `npx tsc --noEmit`,
+      `npx next lint`, `npx vitest run` e `npx jscpd` puliti, oltre a un
+      avvio del dev server per confermare che `/admin/rette` compila
+      senza errori runtime (redirect atteso a `/login` da anonimo,
+      niente crash). Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

@@ -20,6 +20,44 @@ import { annullaComunicazioneRetta, inviaComunicazioneRettaSingola, inviaComunic
 
 export const dynamic = 'force-dynamic';
 
+// Raggruppa un elenco per sezione (specs/56, "raggruppare per classe,
+// con il nome della classe come titolo della tabella"): un gruppo per
+// ciascuna sezione che ha almeno un elemento (ordine alfabetico, stesso
+// di `sezioni`), più "Senza sezione" in coda se non vuoto — mai un
+// gruppo vuoto in mezzo, non aggiunge valore in una pagina già densa.
+// Funzione pura, generica sul tipo di elemento (bambini "da inviare" e
+// coppie {bambino, comunicazione} già inviate hanno forme diverse ma lo
+// stesso bisogno di raggruppamento — CLAUDE.md, jscpd).
+function raggruppaPerSezione<T>(
+  elementi: T[],
+  sezioneIdDi: (elemento: T) => string | null,
+  sezioni: { id: string; nome: string }[]
+): { titolo: string; elementi: T[] }[] {
+  const perSezione = new Map<string, T[]>();
+  const senzaSezione: T[] = [];
+
+  for (const elemento of elementi) {
+    const sezioneId = sezioneIdDi(elemento);
+    if (!sezioneId) {
+      senzaSezione.push(elemento);
+      continue;
+    }
+    const lista = perSezione.get(sezioneId) ?? [];
+    lista.push(elemento);
+    perSezione.set(sezioneId, lista);
+  }
+
+  const gruppi = sezioni
+    .map((sezione) => ({ titolo: sezione.nome, elementi: perSezione.get(sezione.id) ?? [] }))
+    .filter((gruppo) => gruppo.elementi.length > 0);
+
+  if (senzaSezione.length) {
+    gruppi.push({ titolo: 'Senza sezione', elementi: senzaSezione });
+  }
+
+  return gruppi;
+}
+
 type ComunicazioneRettaRiga = {
   email_destinatario: string;
   retta_mensile: number | string;
@@ -91,6 +129,67 @@ function RigaComunicazione({
   );
 }
 
+const INTESTAZIONE_COLONNE = (
+  <thead>
+    <tr>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Bambino
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Email
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Retta
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Costo pasti
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Conguaglio pasti
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Marca da bollo
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Pre-asilo
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Post-asilo
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Costi extra
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Nota
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Totale
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Stato
+      </th>
+    </tr>
+  </thead>
+);
+
+// Una tabella per sezione, col nome della sezione come titolo
+// (specs/56): stessa intestazione di colonne per tutte, solo le righe
+// cambiano. Nessuna tabella per una sezione senza elementi
+// (raggruppaPerSezione le filtra già).
+function TabellaSezione({ titolo, righe }: { titolo: string; righe: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-semibold text-stone-800">{titolo}</h2>
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+        <table className="min-w-full divide-y divide-stone-200 text-sm">
+          {INTESTAZIONE_COLONNE}
+          <tbody className="divide-y divide-stone-100">{righe}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default async function RettePage({ searchParams }: { searchParams: { mese?: string } }) {
   const { supabase, user, profilo } = await requireAdmin();
 
@@ -98,50 +197,9 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
   const meseVisualizzato = meseRettaRichiesto(searchParams.mese, meseReale);
   const eMeseCorrente = meseVisualizzato === meseReale;
 
-  const intestazioneColonne = (
-    <thead>
-      <tr>
-        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-          Bambino
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-          Email
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Retta
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Costo pasti
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Conguaglio pasti
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Marca da bollo
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Pre-asilo
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Post-asilo
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Costi extra
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-          Nota
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-          Totale
-        </th>
-        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-          Stato
-        </th>
-      </tr>
-    </thead>
-  );
+  const { data: sezioni } = await supabase.from('sezioni').select('id, nome').order('nome');
 
-  let corpoTabella: React.ReactNode;
+  let contenutoTabelle: React.ReactNode;
   let piePagina: React.ReactNode = null;
   let sottotitolo: React.ReactNode;
 
@@ -150,7 +208,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
     const { data: bambini } = await supabase
       .from('bambini')
-      .select('id, nome, cognome')
+      .select('id, nome, cognome, sezione_id')
       .eq('attiva', true)
       .order('cognome');
     const bambinoIds = (bambini ?? []).map((b) => b.id);
@@ -195,161 +253,164 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       </p>
     );
 
-    corpoTabella = (
-      <tbody className="divide-y divide-stone-100">
-        {(bambini ?? []).map((bambino) => {
-          const comunicazione = comunicazionePerBambino.get(bambino.id);
-          const costiBambino = costiPerBambino.get(bambino.id);
+    function rigaBambino(bambino: { id: string; nome: string; cognome: string }) {
+      const comunicazione = comunicazionePerBambino.get(bambino.id);
+      const costiBambino = costiPerBambino.get(bambino.id);
 
-          if (comunicazione) {
-            return (
-              <RigaComunicazione
-                key={bambino.id}
-                bambino={bambino}
-                comunicazione={comunicazione}
-                mostraAnnullaInvio
-                mese={meseVisualizzato}
-              />
-            );
-          }
+      if (comunicazione) {
+        return (
+          <RigaComunicazione
+            key={bambino.id}
+            bambino={bambino}
+            comunicazione={comunicazione}
+            mostraAnnullaInvio
+            mese={meseVisualizzato}
+          />
+        );
+      }
 
-          if (!costiBambino?.email_promemoria) {
-            return (
-              <tr key={bambino.id}>
-                <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
-                  <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
-                    {bambino.nome} {bambino.cognome}
-                  </Link>
-                </th>
-                <td colSpan={10} className="px-2 py-1.5 text-left text-xs text-amber-700">
-                  Costi o email non configurati —{' '}
-                  <Link href={`/admin/bambini/${bambino.id}`} className="underline">
-                    completa la scheda
-                  </Link>
-                </td>
-              </tr>
-            );
-          }
-
-          const riepilogo = calcolaRiepilogoRetta({
-            prezzoMensile: Number(costiBambino.prezzo_mensile),
-            prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
-            giorniAperturaMeseCorrente: giorniApertura,
-            giorniAssenzaMesePrecedente: assenzePerBambino.get(bambino.id) ?? 0,
-            marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
-            preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
-            prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),
-            postAsiloRichiesto: costiBambino.post_asilo_richiesto,
-            prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
-            costiExtra: 0,
-          });
-
-          const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
-          const classeCampoImporto =
-            'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500';
-
-          return (
-            <tr key={bambino.id}>
-              <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
-                <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
-                  {bambino.nome} {bambino.cognome}
-                </Link>
-              </th>
-              <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{costiBambino.email_promemoria}</td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={riepilogo.costoPasti}
-                  name={`costo_pasti_${bambino.id}`}
-                  aria-label={`Costo pasti per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                <input
-                  type="number"
-                  step={0.01}
-                  defaultValue={riepilogo.conguaglioPasti}
-                  name={`conguaglio_pasti_${bambino.id}`}
-                  aria-label={`Conguaglio pasti per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={riepilogo.costoPreAsilo}
-                  name={`pre_asilo_${bambino.id}`}
-                  aria-label={`Pre-asilo per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={riepilogo.costoPostAsilo}
-                  name={`post_asilo_${bambino.id}`}
-                  aria-label={`Post-asilo per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={0}
-                  name={`costi_extra_${bambino.id}`}
-                  aria-label={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
-                  className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500"
-                />
-              </td>
-              <td className="px-2 py-1.5 text-left">
-                <input
-                  type="text"
-                  name={`note_extra_${bambino.id}`}
-                  placeholder="Nota (opzionale)"
-                  aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
-                  className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
-                />
-              </td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
-              <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-stone-500">Da inviare</span>
-                  <InvioSingoloRetta
-                    bambinoId={bambino.id}
-                    nome={bambino.nome}
-                    cognome={bambino.cognome}
-                    email={costiBambino.email_promemoria}
-                    mese={meseVisualizzato}
-                    rettaMensile={riepilogo.rettaMensile}
-                    marcaDaBollo={riepilogo.marcaDaBollo}
-                    oggettoTemplate={oggettoTemplate}
-                    corpoTemplate={corpoTemplate}
-                    formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}
-                  />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-        {!bambini?.length && (
-          <tr>
-            <td colSpan={12} className="px-3 py-4 text-center text-stone-600">
-              Nessun bambino attivo.
+      if (!costiBambino?.email_promemoria) {
+        return (
+          <tr key={bambino.id}>
+            <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
+              <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
+                {bambino.nome} {bambino.cognome}
+              </Link>
+            </th>
+            <td colSpan={10} className="px-2 py-1.5 text-left text-xs text-amber-700">
+              Costi o email non configurati —{' '}
+              <Link href={`/admin/bambini/${bambino.id}`} className="underline">
+                completa la scheda
+              </Link>
             </td>
           </tr>
-        )}
-      </tbody>
+        );
+      }
+
+      const riepilogo = calcolaRiepilogoRetta({
+        prezzoMensile: Number(costiBambino.prezzo_mensile),
+        prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
+        giorniAperturaMeseCorrente: giorniApertura,
+        giorniAssenzaMesePrecedente: assenzePerBambino.get(bambino.id) ?? 0,
+        marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
+        preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
+        prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),
+        postAsiloRichiesto: costiBambino.post_asilo_richiesto,
+        prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
+        costiExtra: 0,
+      });
+
+      const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
+      const classeCampoImporto =
+        'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500';
+
+      return (
+        <tr key={bambino.id}>
+          <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
+            <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
+              {bambino.nome} {bambino.cognome}
+            </Link>
+          </th>
+          <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{costiBambino.email_promemoria}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              defaultValue={riepilogo.costoPasti}
+              name={`costo_pasti_${bambino.id}`}
+              aria-label={`Costo pasti per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              step={0.01}
+              defaultValue={riepilogo.conguaglioPasti}
+              name={`conguaglio_pasti_${bambino.id}`}
+              aria-label={`Conguaglio pasti per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              defaultValue={riepilogo.costoPreAsilo}
+              name={`pre_asilo_${bambino.id}`}
+              aria-label={`Pre-asilo per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              defaultValue={riepilogo.costoPostAsilo}
+              name={`post_asilo_${bambino.id}`}
+              aria-label={`Post-asilo per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              defaultValue={0}
+              name={`costi_extra_${bambino.id}`}
+              aria-label={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
+              className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500"
+            />
+          </td>
+          <td className="px-2 py-1.5 text-left">
+            <input
+              type="text"
+              name={`note_extra_${bambino.id}`}
+              placeholder="Nota (opzionale)"
+              aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
+              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-stone-500">Da inviare</span>
+              <InvioSingoloRetta
+                bambinoId={bambino.id}
+                nome={bambino.nome}
+                cognome={bambino.cognome}
+                email={costiBambino.email_promemoria}
+                mese={meseVisualizzato}
+                rettaMensile={riepilogo.rettaMensile}
+                marcaDaBollo={riepilogo.marcaDaBollo}
+                oggettoTemplate={oggettoTemplate}
+                corpoTemplate={corpoTemplate}
+                formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}
+              />
+            </div>
+          </td>
+        </tr>
+      );
+    }
+
+    const gruppi = raggruppaPerSezione(bambini ?? [], (b) => b.sezione_id, sezioni ?? []);
+
+    contenutoTabelle = gruppi.length ? (
+      <div className="space-y-6">
+        {gruppi.map((gruppo) => (
+          <TabellaSezione key={gruppo.titolo} titolo={gruppo.titolo} righe={gruppo.elementi.map(rigaBambino)} />
+        ))}
+      </div>
+    ) : (
+      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-sm">
+        Nessun bambino attivo.
+      </p>
     );
 
     piePagina = (
@@ -374,7 +435,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       .eq('mese', meseVisualizzato);
     const idBambiniComunicati = (comunicazioniPassate ?? []).map((c) => c.bambino_id);
     const { data: bambiniComunicati } = idBambiniComunicati.length
-      ? await supabase.from('bambini').select('id, nome, cognome').in('id', idBambiniComunicati)
+      ? await supabase.from('bambini').select('id, nome, cognome, sezione_id').in('id', idBambiniComunicati)
       : { data: [] };
     const bambinoPerId = new Map((bambiniComunicati ?? []).map((b) => [b.id, b]));
 
@@ -390,40 +451,41 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       </p>
     );
 
-    corpoTabella = (
-      <tbody className="divide-y divide-stone-100">
-        {righe.map(({ bambino, comunicazione }) => (
-          <RigaComunicazione
-            key={bambino.id}
-            bambino={bambino}
-            comunicazione={comunicazione}
-            mostraAnnullaInvio={false}
-            mese={meseVisualizzato}
+    const gruppi = raggruppaPerSezione(righe, (r) => r.bambino.sezione_id, sezioni ?? []);
+
+    contenutoTabelle = gruppi.length ? (
+      <div className="space-y-6">
+        {gruppi.map((gruppo) => (
+          <TabellaSezione
+            key={gruppo.titolo}
+            titolo={gruppo.titolo}
+            righe={gruppo.elementi.map(({ bambino, comunicazione }) => (
+              <RigaComunicazione
+                key={bambino.id}
+                bambino={bambino}
+                comunicazione={comunicazione}
+                mostraAnnullaInvio={false}
+                mese={meseVisualizzato}
+              />
+            ))}
           />
         ))}
-        {!righe.length && (
-          <tr>
-            <td colSpan={12} className="px-3 py-4 text-center text-stone-600">
-              Nessuna comunicazione inviata in questo mese.
-            </td>
-          </tr>
-        )}
-      </tbody>
+      </div>
+    ) : (
+      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-sm">
+        Nessuna comunicazione inviata in questo mese.
+      </p>
     );
   }
 
-  const tabella = (
-    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
-      <table className="min-w-full divide-y divide-stone-200 text-sm">
-        {intestazioneColonne}
-        {corpoTabella}
-      </table>
-    </div>
-  );
-
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+      {/* Niente max-w (a differenza delle altre pagine admin): la
+          tabella di Rette ha molte colonne strette, su schermi larghi
+          il limite classico la stringeva in uno scroll orizzontale
+          interno mentre restava tanto spazio libero ai lati (uso solo
+          da desktop, per scelta esplicita). */}
+      <main className="mx-auto max-w-[1800px] space-y-6 px-4 py-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -454,11 +516,11 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
         {eMeseCorrente ? (
           <FormConEsito action={inviaComunicazioniRetta}>
-            {tabella}
+            {contenutoTabelle}
             {piePagina}
           </FormConEsito>
         ) : (
-          tabella
+          contenutoTabelle
         )}
       </main>
     </NavHeader>

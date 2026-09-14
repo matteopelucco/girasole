@@ -24,6 +24,18 @@ pre-asilo e costo post-asilo (questi ultimi tre modificabili), un
 campo "Costi extra" (con una nota facoltativa) da compilare, e il
 totale calcolato
 
+## Scenario: i bambini sono raggruppati per sezione
+Dato che sono sulla tabella di revisione (mese corrente o un mese
+passato)
+Quando guardo la pagina
+Allora vedo una tabella separata per ciascuna sezione che ha almeno un
+bambino da mostrare in quel momento, con il nome della sezione come
+titolo sopra la sua tabella (stesse colonne per tutte)
+E i bambini senza sezione assegnata sono in una tabella a parte,
+intitolata "Senza sezione"
+E una sezione senza nessun bambino da mostrare in quel momento non ha
+una tabella (niente titoli con sotto una tabella vuota)
+
 ## Scenario: vedere l'email a cui verrà inviata la comunicazione
 Dato che sono sulla tabella di revisione del mese corrente
 Quando guardo la colonna "Email" di un bambino con l'email di
@@ -176,7 +188,21 @@ Allora vengo reindirizzato alla dashboard
   una comunicazione già registrata per quel mese, nessun bambino "da
   inviare".
 - Nella vista del mese corrente, i bambini mostrati sono tutti i
-  bambini attivi (`bambini.attiva`), indipendentemente dalla sezione.
+  bambini attivi (`bambini.attiva`), indipendentemente dalla sezione —
+  ma raggruppati per sezione nella presentazione (vedi sopra): una
+  tabella per sezione (ordine alfabetico, come l'elenco sezioni), una
+  in più per "Senza sezione" se serve. Puro raggruppamento visivo — non
+  cambia chi è ammesso all'invio, né come vengono calcolati o
+  registrati gli importi (specs/55, "senza sezione" non è collegato ai
+  costi). Nella vista di un mese passato lo stesso raggruppamento vale
+  sulle sole comunicazioni già inviate quel mese, in base alla sezione
+  ATTUALE del bambino (non quella che aveva al momento dell'invio, che
+  non viene registrata).
+- La pagina "Rette" non ha il limite di larghezza massima delle altre
+  pagine admin (`max-w-[1800px]` invece di `max-w-6xl` su
+  `app/admin/rette/page.tsx`): la tabella ha molte colonne strette, uno
+  spazio più ampio evita lo scroll orizzontale interno su schermi
+  larghi (l'admin la usa solo da desktop).
 - I giorni di apertura del mese corrente sono calcolati come i giorni
   del mese che non sono weekend e non ricadono in un giorno di chiusura
   registrato (`lib/comunicazioneRetta.ts`, `giorniAperturaMese` — stessa
