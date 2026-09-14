@@ -20,7 +20,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
     supabase
       .from('costi_bambini')
       .select(
-        'prezzo_mensile, prezzo_buono_pasto, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria'
+        'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria'
       )
       .eq('bambino_id', params.id)
       .maybeSingle(),
@@ -135,7 +135,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
             className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <label className="flex-1 text-xs text-stone-600">
                 Prezzo retta mensile (€)
                 <input
@@ -157,6 +157,21 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
                   step={0.01}
                   defaultValue={costi?.prezzo_buono_pasto ?? 0}
                   aria-label="Prezzo buono pasto (€)"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                />
+              </label>
+              <label className="flex-1 text-xs text-stone-600">
+                Prezzo marca da bollo (€)
+                <input
+                  name="prezzo_marca_da_bollo"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  // A differenza degli altri prezzi (default 0), la marca da
+                  // bollo precompila 2€: è il suo valore corrente reale,
+                  // non "nessun importo previsto" (specs/55).
+                  defaultValue={costi?.prezzo_marca_da_bollo ?? 2}
+                  aria-label="Prezzo marca da bollo (€)"
                   className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
                 />
               </label>

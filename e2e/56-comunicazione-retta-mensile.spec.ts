@@ -63,6 +63,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(page.getByRole('columnheader', { name: 'Retta' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costo pasti' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Marca da bollo' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Pre-asilo' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Post-asilo' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costi extra' })).toBeVisible();
@@ -163,7 +164,8 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
     await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
-    await expect(rigaInviata).toContainText('210,00'); // 200 retta + 10 extra, 0 pasti
+    // 200 retta + 10 extra + 2 marca da bollo (valore predefinito, non toccato dal test), 0 pasti.
+    await expect(rigaInviata).toContainText('212,00');
     await expect(rigaInviata).toContainText('Materiale didattico');
   });
 

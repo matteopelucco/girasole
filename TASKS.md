@@ -1890,6 +1890,45 @@ invia con un click il promemoria via email ai genitori.
       RESEND_API_KEY configurata per coprire anche l'invio reale) per
       la conferma finale.
 
+## Marca da bollo: nuova voce di costo fissa (specs/55, specs/56)
+Richiesta dell'utente: aggiungere ai costi di un bambino la marca da
+bollo, di default 2€ (il valore amministrativo corrente).
+- [x] `specs/55 - costi-bambino.md`: nuovo campo "prezzo marca da
+      bollo" (voce di costo fissa come retta/buono pasto, non un
+      servizio opzionale come pre/post-asilo), con un valore predefinito
+      di 2€ invece di 0 — nuovo scenario dedicato a questo default.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: colonna "Marca da
+      bollo" nella tabella di revisione, inclusa nel totale, nuovo
+      placeholder `{{marca_da_bollo}}` per il template email.
+- [x] `supabase/migrations/0037_marca_da_bollo.sql`: nuova colonna
+      `costi_bambini.prezzo_marca_da_bollo` (default 2, backfilla anche
+      i bambini con costi già salvati) e `comunicazioni_retta.marca_da_bollo`
+      (default 0, solo per le righe storiche — i nuovi invii scrivono
+      sempre il valore calcolato esplicitamente) — **da applicare nel
+      SQL Editor di Supabase (dev/test e produzione), dopo la 0036**.
+- [x] `lib/comunicazioneRetta.ts` + test: `calcolaRiepilogoRetta` e
+      `RiepilogoRetta` includono `marcaDaBollo` nel totale.
+- [x] `app/admin/actions.ts` (`aggiornaCostiBambino`) e
+      `app/admin/bambini/[id]/page.tsx`: nuovo campo "Prezzo marca da
+      bollo (€)" nella sezione "Costi", precompilato a 2 per un bambino
+      senza costi ancora salvati.
+- [x] `app/admin/rette/page.tsx` + `actions.ts`: nuova colonna "Marca da
+      bollo" in tabella, inclusa nel totale calcolato e in quello
+      registrato all'invio.
+- [x] `app/admin/rette/template/page.tsx`: nuovo placeholder
+      `{{marca_da_bollo}}` nell'elenco di quelli disponibili (un
+      modello già salvato resta valido così com'è, il placeholder va
+      aggiunto a mano se lo si vuole nel testo).
+- [x] `e2e/55-costi-bambino.spec.ts`, `e2e/56-comunicazione-retta-mensile.spec.ts`:
+      nuovi scenari (valore predefinito 2€, modifica e persistenza,
+      colonna in tabella) e aggiornato l'importo totale atteso nel test
+      di invio reale (200 retta + 10 extra + 2 marca da bollo = 212,00,
+      non più 210,00). Verificato `npx tsc --noEmit`, `npx next lint`,
+      `npx vitest run` e `npx jscpd` puliti. Suite e2e non eseguibile in
+      questo ambiente sandbox (login admin che fallisce già nel setup
+      condiviso, non causato da questo cambiamento) — da eseguire in
+      locale/CI dopo aver applicato la migration 0037.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

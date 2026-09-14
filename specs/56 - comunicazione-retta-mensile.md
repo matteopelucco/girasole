@@ -18,9 +18,9 @@ Dato che sono autenticato come admin
 Quando apro "Rette" dal menu
 Allora vedo il nome del mese corrente in intestazione, e una riga per
 ciascun bambino attivo con: retta mensile, costo pasti proiettato,
-eventuale conguaglio pasti del mese precedente, costo pre-asilo, costo
-post-asilo, un campo "Costi extra" (con una nota facoltativa) da
-compilare, e il totale calcolato
+eventuale conguaglio pasti del mese precedente, marca da bollo, costo
+pre-asilo, costo post-asilo, un campo "Costi extra" (con una nota
+facoltativa) da compilare, e il totale calcolato
 
 ## Scenario: il costo pasti del mese corrente è proiettato sui giorni di apertura
 Dato che il mese corrente ha un certo numero di giorni feriali di
@@ -91,10 +91,10 @@ Allora vengo reindirizzato alla dashboard
   (specs/55), 0 se non richiesti: non dipendono dai giorni di apertura
   né dalle presenze effettive.
 - Il totale di una riga è: retta mensile + costo pasti (proiettato) +
-  conguaglio pasti (negativo o zero) + costo pre-asilo + costo
-  post-asilo + costi extra. Può risultare negativo (credito verso la
-  famiglia) se il conguaglio supera gli altri importi: non viene
-  forzato a zero.
+  conguaglio pasti (negativo o zero) + marca da bollo + costo pre-asilo
+  + costo post-asilo + costi extra. Può risultare negativo (credito
+  verso la famiglia) se il conguaglio supera gli altri importi: non
+  viene forzato a zero.
 - Un bambino senza una riga in `costi_bambini`, o con `email_promemoria`
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
@@ -121,9 +121,13 @@ Allora vengo reindirizzato alla dashboard
   diventano interruzioni di riga nell'email inviata (che è HTML).
 - Placeholder disponibili: `{{nome}}`, `{{cognome}}`, `{{mese}}` (es.
   "settembre 2026"), `{{retta_mensile}}`, `{{costo_pasti}}`,
-  `{{conguaglio_pasti}}`, `{{costo_pre_asilo}}`, `{{costo_post_asilo}}`,
-  `{{costi_extra}}`, `{{totale}}` — tutti gli importi già formattati in
-  euro con la virgola (es. "250,00").
+  `{{conguaglio_pasti}}`, `{{marca_da_bollo}}`, `{{costo_pre_asilo}}`,
+  `{{costo_post_asilo}}`, `{{costi_extra}}`, `{{totale}}` — tutti gli
+  importi già formattati in euro con la virgola (es. "250,00"). Un
+  modello salvato prima dell'introduzione di `{{marca_da_bollo}}` resta
+  valido così com'è: il nuovo placeholder va aggiunto a mano dall'admin
+  in "Modello email" se lo si vuole vedere nel testo dell'email (il
+  totale lo include comunque, a prescindere dal template).
 - Solo un profilo con ruolo `admin` può accedere a `/admin/rette`, alla
   pagina "Modello email" e inviare comunicazioni (`requireAdmin`, stesso
   pattern di [55 - costi-bambino.md](55%20-%20costi-bambino.md)).

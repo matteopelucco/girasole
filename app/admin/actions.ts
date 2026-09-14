@@ -200,6 +200,7 @@ export async function aggiornaCostiBambino(
   const bambinoId = formData.get('bambino_id') as string;
   const prezzoMensile = importoEuro(formData.get('prezzo_mensile'));
   const prezzoBuonoPasto = importoEuro(formData.get('prezzo_buono_pasto'));
+  const prezzoMarcaDaBollo = importoEuro(formData.get('prezzo_marca_da_bollo'));
   const preAsiloRichiesto = formData.get('pre_asilo_richiesto') === 'on';
   const prezzoPreAsilo = importoEuro(formData.get('prezzo_pre_asilo'));
   const postAsiloRichiesto = formData.get('post_asilo_richiesto') === 'on';
@@ -218,6 +219,7 @@ export async function aggiornaCostiBambino(
     bambino_id: bambinoId,
     prezzo_mensile: prezzoMensile,
     prezzo_buono_pasto: prezzoBuonoPasto,
+    prezzo_marca_da_bollo: prezzoMarcaDaBollo,
     pre_asilo_richiesto: preAsiloRichiesto,
     prezzo_pre_asilo: prezzoPreAsilo,
     post_asilo_richiesto: postAsiloRichiesto,

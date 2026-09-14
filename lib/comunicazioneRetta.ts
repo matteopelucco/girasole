@@ -17,6 +17,7 @@ export type ParametriRiepilogoRetta = {
   prezzoBuonoPasto: number;
   giorniAperturaMeseCorrente: number;
   giorniAssenzaMesePrecedente: number;
+  marcaDaBollo: number;
   preAsiloRichiesto: boolean;
   prezzoPreAsilo: number;
   postAsiloRichiesto: boolean;
@@ -28,6 +29,7 @@ export type RiepilogoRetta = {
   rettaMensile: number;
   costoPasti: number;
   conguaglioPasti: number;
+  marcaDaBollo: number;
   costoPreAsilo: number;
   costoPostAsilo: number;
   costiExtra: number;
@@ -53,13 +55,20 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
   const costoPreAsilo = parametri.preAsiloRichiesto ? parametri.prezzoPreAsilo : 0;
   const costoPostAsilo = parametri.postAsiloRichiesto ? parametri.prezzoPostAsilo : 0;
   const totale = arrotonda(
-    parametri.prezzoMensile + costoPasti + conguaglioPasti + costoPreAsilo + costoPostAsilo + parametri.costiExtra
+    parametri.prezzoMensile +
+      costoPasti +
+      conguaglioPasti +
+      parametri.marcaDaBollo +
+      costoPreAsilo +
+      costoPostAsilo +
+      parametri.costiExtra
   );
 
   return {
     rettaMensile: parametri.prezzoMensile,
     costoPasti,
     conguaglioPasti,
+    marcaDaBollo: parametri.marcaDaBollo,
     costoPreAsilo,
     costoPostAsilo,
     costiExtra: parametri.costiExtra,

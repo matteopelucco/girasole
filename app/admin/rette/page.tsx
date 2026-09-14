@@ -92,6 +92,9 @@ export default async function RettePage() {
                     Conguaglio pasti
                   </th>
                   <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+                    Marca da bollo
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
                     Pre-asilo
                   </th>
                   <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
@@ -134,6 +137,9 @@ export default async function RettePage() {
                           {formattaImporto(Number(comunicazione.conguaglio_pasti))}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-right">
+                          {formattaImporto(Number(comunicazione.marca_da_bollo))}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right">
                           {formattaImporto(Number(comunicazione.costo_pre_asilo))}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -161,7 +167,7 @@ export default async function RettePage() {
                             {bambino.nome} {bambino.cognome}
                           </Link>
                         </th>
-                        <td colSpan={8} className="px-3 py-2 text-left text-xs text-amber-700">
+                        <td colSpan={9} className="px-3 py-2 text-left text-xs text-amber-700">
                           Costi o email non configurati —{' '}
                           <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                             completa la scheda
@@ -176,6 +182,7 @@ export default async function RettePage() {
                     prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
                     giorniAperturaMeseCorrente: giorniApertura,
                     giorniAssenzaMesePrecedente: assenzePerBambino.get(bambino.id) ?? 0,
+                    marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
                     preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
                     prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),
                     postAsiloRichiesto: costiBambino.post_asilo_richiesto,
@@ -196,6 +203,9 @@ export default async function RettePage() {
                       <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.costoPasti)}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-right">
                         {formattaImporto(riepilogo.conguaglioPasti)}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-right">
+                        {formattaImporto(riepilogo.marcaDaBollo)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-right">
                         {formattaImporto(riepilogo.costoPreAsilo)}
@@ -231,7 +241,7 @@ export default async function RettePage() {
                 })}
                 {!bambini?.length && (
                   <tr>
-                    <td colSpan={10} className="px-3 py-4 text-center text-stone-600">
+                    <td colSpan={11} className="px-3 py-4 text-center text-stone-600">
                       Nessun bambino attivo.
                     </td>
                   </tr>

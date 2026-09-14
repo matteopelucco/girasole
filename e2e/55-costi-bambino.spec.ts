@@ -43,6 +43,11 @@ test.describe('55 — Costi bambino', () => {
     await nessunaViolazioneA11yGrave(page);
   });
 
+  test('il prezzo della marca da bollo ha un valore predefinito di 2€', async ({ page }) => {
+    await creaBambinoDiProva(page);
+    await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('2');
+  });
+
   test('impostare per la prima volta i costi li salva e restano dopo un ricaricamento', async ({ page }) => {
     await creaBambinoDiProva(page);
 
@@ -67,11 +72,13 @@ test.describe('55 — Costi bambino', () => {
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('200', { timeout: 20_000 });
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('220');
+    await page.getByLabel('Prezzo marca da bollo (€)').fill('3');
     await page.getByRole('button', { name: 'Salva costi' }).click();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('220', { timeout: 20_000 });
 
     await page.reload();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('220');
+    await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('3');
   });
 
   test('richiedere il servizio pre-asilo e post-asilo salva flag e prezzo', async ({ page }) => {
@@ -114,9 +121,11 @@ test.describe('55 — Costi bambino', () => {
 
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
 
-    // Nulla è stato salvato: dopo un ricaricamento i campi tornano vuoti.
+    // Nulla è stato salvato: dopo un ricaricamento i campi tornano vuoti
+    // (marca da bollo torna al suo valore predefinito, non a 0).
     await page.reload();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');
+    await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('2');
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue('');
   });
 });

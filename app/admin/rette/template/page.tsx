@@ -14,6 +14,7 @@ const PLACEHOLDER_DISPONIBILI = [
   '{{retta_mensile}}',
   '{{costo_pasti}}',
   '{{conguaglio_pasti}}',
+  '{{marca_da_bollo}}',
   '{{costo_pre_asilo}}',
   '{{costo_post_asilo}}',
   '{{costi_extra}}',

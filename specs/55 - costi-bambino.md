@@ -7,18 +7,27 @@ Admin.
 Dare all'admin, nella scheda di dettaglio di ogni bambino, una sezione
 "Costi" con i parametri economici usati per calcolare e comunicare la
 retta mensile alla famiglia: il prezzo della retta, il prezzo del buono
-pasto, l'eventuale abbonamento a pre-asilo/post-asilo con il relativo
-prezzo mensile, e l'indirizzo email a cui inviare il promemoria. È la
-base dati usata dalla comunicazione mensile (vedi
+pasto, il prezzo della marca da bollo, l'eventuale abbonamento a
+pre-asilo/post-asilo con il relativo prezzo mensile, e l'indirizzo email
+a cui inviare il promemoria. È la base dati usata dalla comunicazione
+mensile (vedi
 [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)).
 
 ## Scenario: impostare per la prima volta i costi di un bambino
 Dato che sono autenticato come admin e apro la scheda di dettaglio di un
 bambino che non ha ancora costi impostati
-Quando nella sezione "Costi" trovo i campi vuoti (prezzo retta mensile,
-prezzo buono pasto, pre-asilo/post-asilo non richiesti, email
-promemoria), li compilo e confermo
+Quando nella sezione "Costi" trovo i campi (prezzo retta mensile e
+prezzo buono pasto vuoti/a zero, prezzo marca da bollo precompilato a
+2€, pre-asilo/post-asilo non richiesti, email promemoria vuota), li
+compilo e confermo
 Allora i costi sono salvati e restano visibili riaprendo la scheda
+
+## Scenario: il prezzo della marca da bollo ha un valore predefinito
+Dato che apro la scheda di un bambino che non ha ancora costi impostati
+Quando guardo il campo "Prezzo marca da bollo (€)" nella sezione "Costi"
+Allora lo trovo già precompilato a 2€ (il valore corrente della marca da
+bollo amministrativa), modificabile come qualunque altro prezzo se in
+futuro dovesse cambiare
 
 ## Scenario: modificare i costi già impostati
 Dato che un bambino ha già dei costi salvati
@@ -61,12 +70,18 @@ salvato
   pagina che ospita il pannello (`/admin/bambini/[id]`) è già protetta
   da `requireAdmin` (vedi
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
-- Prezzo retta mensile, prezzo buono pasto, prezzo pre-asilo e prezzo
-  post-asilo sono numeri non negativi, fino a due decimali (euro); un
-  valore vuoto, non numerico o negativo viene trattato come 0 —
-  coerente con "nessun importo previsto", non un errore da segnalare
-  (stesso pattern già usato per le ore in
+- Prezzo retta mensile, prezzo buono pasto, prezzo marca da bollo,
+  prezzo pre-asilo e prezzo post-asilo sono numeri non negativi, fino a
+  due decimali (euro); un valore vuoto, non numerico o negativo viene
+  trattato come 0 — coerente con "nessun importo previsto", non un
+  errore da segnalare (stesso pattern già usato per le ore in
   [54 - profili-orari.md](54%20-%20profili-orari.md)).
+- Il prezzo della marca da bollo è una voce di costo fissa mensile come
+  la retta e il buono pasto (non un servizio opzionale come pre/post-
+  asilo, sempre inclusa nel totale): a differenza degli altri prezzi,
+  di default vale 2€ invece di 0, sia per un bambino appena creato sia
+  per uno che ha già dei costi salvati da prima dell'introduzione di
+  questo campo (`supabase/migrations/0037_marca_da_bollo.sql`).
 - Pre-asilo e post-asilo sono due coppie indipendenti flag+prezzo
   (`pre_asilo_richiesto`/`prezzo_pre_asilo`,
   `post_asilo_richiesto`/`prezzo_post_asilo`): se il flag non è

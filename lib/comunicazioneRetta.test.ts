@@ -39,6 +39,7 @@ describe('calcolaRiepilogoRetta', () => {
     prezzoBuonoPasto: 5,
     giorniAperturaMeseCorrente: 20,
     giorniAssenzaMesePrecedente: 0,
+    marcaDaBollo: 0,
     preAsiloRichiesto: false,
     prezzoPreAsilo: 0,
     postAsiloRichiesto: false,
@@ -52,11 +53,18 @@ describe('calcolaRiepilogoRetta', () => {
       rettaMensile: 250,
       costoPasti: 100,
       conguaglioPasti: 0,
+      marcaDaBollo: 0,
       costoPreAsilo: 0,
       costoPostAsilo: 0,
       costiExtra: 0,
       totale: 350,
     });
+  });
+
+  it('la marca da bollo si somma al totale', () => {
+    const riepilogo = calcolaRiepilogoRetta({ ...base, marcaDaBollo: 2 });
+    expect(riepilogo.marcaDaBollo).toBe(2);
+    expect(riepilogo.totale).toBe(352);
   });
 
   it('il conguaglio pasti è negativo, proporzionale ai giorni di assenza', () => {
@@ -96,6 +104,7 @@ describe('calcolaRiepilogoRetta', () => {
       prezzoBuonoPasto: 5,
       giorniAperturaMeseCorrente: 0,
       giorniAssenzaMesePrecedente: 10,
+      marcaDaBollo: 0,
       preAsiloRichiesto: false,
       prezzoPreAsilo: 0,
       postAsiloRichiesto: false,
