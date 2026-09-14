@@ -19,8 +19,7 @@ export function vociMenu(ruolo: string | null | undefined): VoceMenu[] {
       { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥' },
       { href: '/admin/calendario', etichetta: 'Calendario scolastico', icona: '📅' },
       { href: '/admin/profili-orari', etichetta: 'Profili orari', icona: '🕒' },
-      { href: '/admin/ore-lavoro', etichetta: 'Ore di lavoro del personale', icona: '⏱️' },
-      { href: '/admin/rette', etichetta: 'Rette', icona: '💶' }
+      { href: '/admin/ore-lavoro', etichetta: 'Ore di lavoro del personale', icona: '⏱️' }
     );
   }
 
