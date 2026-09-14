@@ -2209,6 +2209,31 @@ corrispondere più ai dati.
       cambiamento) — da eseguire in locale/CI dopo aver applicato la
       migration 0040.
 
+## Rette: email sotto il nome del bambino, marca da bollo dopo retta
+Richiesta dell'utente, solo look&feel: risparmiare una colonna
+mostrando l'email tra parentesi sotto nome/cognome (carattere più
+piccolo) invece che in una colonna a parte; spostare "Marca da bollo"
+subito dopo "Retta" (erano entrambe non modificabili, ora vicine).
+- [x] `specs/56 - comunicazione-retta-mensile.md`: scenari e regole
+      aggiornati (niente più colonna "Email", email sotto il nome;
+      nuovo ordine colonne con marca da bollo dopo retta).
+- [x] `app/admin/rette/page.tsx`: rimossa la colonna "Email"
+      dall'intestazione e da entrambe le righe (`RigaComunicazione` e
+      quella "da inviare"); email aggiunta come riga secondaria sotto
+      nome/cognome nella cella `<th>` (`text-xs text-stone-500`, tra
+      parentesi). Riordinate le celle Retta/Marca da bollo. Aggiornato
+      il colSpan della riga "Costi o email non configurati" (10 → 9,
+      una colonna in meno).
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: rimosso il controllo
+      sull'intestazione colonna "Email" (non esiste più); il test
+      sull'email rinominato e aggiornato per verificarla nella cella
+      Bambino, tra parentesi. Verificato `npx tsc --noEmit`,
+      `npx next lint`, `npx vitest run` e `npx jscpd` puliti, oltre a
+      un avvio del dev server per confermare che `/admin/rette` compila
+      senza errori runtime. Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

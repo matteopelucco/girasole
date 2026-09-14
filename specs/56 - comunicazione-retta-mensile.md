@@ -17,12 +17,12 @@ dati impostati in
 Dato che sono autenticato come admin
 Quando apro "Rette" dal menu
 Allora vedo il nome del mese corrente in intestazione, e una riga per
-ciascun bambino attivo con: l'email a cui verrà inviata la
-comunicazione, retta mensile e marca da bollo (testo), costo pasti
-proiettato, eventuale conguaglio pasti del mese precedente, costo
-pre-asilo e costo post-asilo (questi ultimi tre modificabili), un
-campo "Costi extra" (con una nota facoltativa) da compilare, e il
-totale calcolato
+ciascun bambino attivo con: nome e cognome (con l'email a cui verrà
+inviata la comunicazione subito sotto, tra parentesi), retta mensile e
+marca da bollo (testo, in quest'ordine), costo pasti proiettato,
+eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
+post-asilo (questi ultimi tre modificabili), un campo "Costi extra" (con
+una nota facoltativa) da compilare, e il totale calcolato
 
 ## Scenario: i bambini sono raggruppati per sezione
 Dato che sono sulla tabella di revisione (mese corrente o un mese
@@ -38,10 +38,11 @@ una tabella (niente titoli con sotto una tabella vuota)
 
 ## Scenario: vedere l'email a cui verrà inviata la comunicazione
 Dato che sono sulla tabella di revisione del mese corrente
-Quando guardo la colonna "Email" di un bambino con l'email di
-promemoria configurata (specs/55)
-Allora vedo esattamente quell'indirizzo — lo stesso a cui arriverà la
-comunicazione se invio
+Quando guardo la riga di un bambino con l'email di promemoria
+configurata (specs/55), sotto il suo nome
+Allora vedo esattamente quell'indirizzo tra parentesi, con un carattere
+più piccolo del nome — lo stesso a cui arriverà la comunicazione se
+invio
 
 ## Scenario: modificare manualmente una voce di costo prima dell'invio
 Dato che sono sulla tabella di revisione del mese corrente, su un
@@ -221,12 +222,18 @@ Allora vengo reindirizzato alla dashboard
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
   finché non viene completata.
-- La colonna "Email" mostra `costi_bambini.email_promemoria` così com'è
-  configurata sulla scheda del bambino (specs/55): puramente
-  informativa, non modificabile da qui (per cambiarla si va sulla
-  scheda del bambino) — serve a controllare a colpo d'occhio a chi
-  arriverà ciascuna comunicazione prima di premere "Invia
-  comunicazioni".
+- L'email mostrata sotto il nome (`costi_bambini.email_promemoria`,
+  tra parentesi, carattere più piccolo — non più una colonna a parte,
+  per non sprecare spazio orizzontale) è quella configurata sulla
+  scheda del bambino (specs/55): puramente informativa, non modificabile
+  da qui (per cambiarla si va sulla scheda del bambino) — serve a
+  controllare a colpo d'occhio a chi arriverà ciascuna comunicazione
+  prima di premere "Invia comunicazioni".
+- Ordine delle colonne dei costi: retta, marca da bollo, costo pasti,
+  conguaglio pasti, pre-asilo, post-asilo, costi extra, nota, totale,
+  stato — marca da bollo subito dopo retta (entrambe testo, non
+  modificabili) invece che dopo conguaglio pasti, per tenere vicine le
+  due voci non modificabili.
 - Costo pasti, conguaglio pasti, pre-asilo e post-asilo di un bambino
   da comunicare (oltre ai già modificabili costi extra/nota) sono campi
   compilabili, precompilati con il valore calcolato automaticamente ma

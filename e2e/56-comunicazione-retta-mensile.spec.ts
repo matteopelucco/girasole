@@ -64,7 +64,6 @@ test.describe('56 — Comunicazione retta mensile', () => {
     // "i bambini sono raggruppati per sezione"): più di un'intestazione
     // può ripetere lo stesso nome colonna, .first() basta a verificare
     // che la colonna esista.
-    await expect(page.getByRole('columnheader', { name: 'Email' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Retta' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costo pasti' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' }).first()).toBeVisible();
@@ -203,13 +202,13 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga.getByLabel(new RegExp(`Conguaglio pasti per.*${cognome}`))).toHaveValue('0');
   });
 
-  test("la colonna Email mostra l'indirizzo a cui verrà inviata la comunicazione", async ({ page }) => {
+  test("l'email a cui verrà inviata la comunicazione compare sotto il nome del bambino", async ({ page }) => {
     const email = `e2e-retta-email-${Date.now()}@example.com`;
     const cognome = await creaBambinoConCosti(page, { email, prezzoMensile: '100', prezzoBuonoPasto: '0' });
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga).toContainText(email);
+    await expect(riga).toContainText(`(${email})`);
   });
 
   test('inserire un costo extra lo somma al totale mostrato', async ({ page }) => {

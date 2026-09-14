@@ -94,14 +94,14 @@ function RigaComunicazione({
         <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
           {bambino.nome} {bambino.cognome}
         </Link>
+        <div className="text-xs text-stone-500">({comunicazione.email_destinatario})</div>
       </th>
-      <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{comunicazione.email_destinatario}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.retta_mensile))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.conguaglio_pasti))}
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.costo_pre_asilo))}
       </td>
@@ -135,20 +135,17 @@ const INTESTAZIONE_COLONNE = (
       <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
         Bambino
       </th>
-      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-        Email
-      </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Retta
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Marca da bollo
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Costo pasti
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Conguaglio pasti
-      </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-        Marca da bollo
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Pre-asilo
@@ -277,7 +274,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 {bambino.nome} {bambino.cognome}
               </Link>
             </th>
-            <td colSpan={10} className="px-2 py-1.5 text-left text-xs text-amber-700">
+            <td colSpan={9} className="px-2 py-1.5 text-left text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
@@ -310,9 +307,10 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
               {bambino.nome} {bambino.cognome}
             </Link>
+            <div className="text-xs text-stone-500">({costiBambino.email_promemoria})</div>
           </th>
-          <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{costiBambino.email_promemoria}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
             <input
               type="number"
@@ -334,7 +332,6 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
               className={classeCampoImporto}
             />
           </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
             <input
               type="number"
