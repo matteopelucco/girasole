@@ -2027,6 +2027,77 @@ Richiesta dell'utente: buono pasto 6€, pre/post-asilo 70€ ciascuno.
       questo cambiamento) — da eseguire in locale/CI dopo aver
       applicato la migration 0039.
 
+## Rette: voci di costo modificabili, colonna Email, conferme d'invio (specs/56)
+Richiesta dell'utente, in più passi sulla stessa tabella "Rette":
+correggere ad-hoc una voce di costo prima di inviare (non solo i costi
+extra), vedere l'email di destinazione, confermare l'invio massivo con
+un popup, inviare a un solo bambino con anteprima della mail.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovi scenari
+      (colonna Email, modificare una voce di costo prima dell'invio,
+      conferma dell'invio massivo, invio singolo con anteprima) e nuove
+      Regole per ciascuno.
+- [x] `lib/comunicazioneRetta.ts`: `RiepilogoRetta` resta l'unica forma
+      condivisa, nessuna funzione nuova qui (la lettura dei campi vive
+      nell'action, non essendo usata altrove).
+- [x] `app/admin/rette/actions.ts`: **cambio di fondo** —
+      `inviaComunicazioniRetta` non ricalcola più gli importi da
+      `costi_bambini`/presenze (rimossa la dipendenza da
+      `calcolaRiepilogoRetta`/`giorniAperturaMese`/`chiusurePerPeriodo`
+      in questa action, restano solo in `page.tsx` per precompilare la
+      pagina): legge ogni voce direttamente dal form
+      (`riepilogoDalForm`, nuova), con `importoEuro` (non negativo,
+      come sempre) per tutte tranne `importoConSegno` (nuova) per il
+      conguaglio pasti, l'unica per natura negativa. Estratti
+      `placeholderRetta` e `inviaEPersistiComunicazione` (nuove,
+      condivise) per non duplicare la costruzione dei placeholder e la
+      sequenza "invia, poi registra solo se l'invio è riuscito" tra
+      invio massivo e nuova `inviaComunicazioneRettaSingola` (invio a
+      un solo bambino, formAction diretto con bind di bambinoId, stesso
+      motivo di `annullaComunicazioneRetta` — niente `<form>` annidati
+      nella tabella).
+- [x] `app/admin/rette/page.tsx`: nuova colonna "Email" (per un bambino
+      da comunicare, `costi_bambini.email_promemoria`; per uno già
+      comunicato, `comunicazione.email_destinatario` — l'indirizzo
+      storicamente usato, non quello attuale se nel frattempo cambiato).
+      Retta/Costo pasti/Conguaglio pasti/Marca da bollo/Pre-asilo/
+      Post-asilo non sono più testo statico ma campi `<input>`
+      precompilati col valore calcolato, sovrascrivibili — stesso
+      pattern già in uso per Costi extra. Il totale mostrato in tabella
+      resta una stima non live (invariato, era già così per i costi
+      extra). Nuovo import di `impostazioni_email_retta` (template),
+      prima letto solo dall'action, ora serve anche per l'anteprima
+      dell'invio singolo.
+- [x] `components/PulsanteInvio.tsx`: nuova prop `confermaMessaggio`
+      (popup nativo `window.confirm` prima del submit, annullabile) —
+      usata sul pulsante "Invia comunicazioni" (invio massivo). Non
+      `ConfermaAzione` (che crea un proprio `<form>`, non componibile
+      qui: il pulsante sta già dentro il form che raccoglie tutti i
+      campi della tabella).
+- [x] `components/InvioSingoloRetta.tsx` (nuovo, client): pulsante
+      "Invia comunicazione" per riga con popup di anteprima (a,
+      oggetto, corpo) calcolata lato client leggendo i campi della riga
+      dal DOM (stesso genere di lettura diretta già usato dal pulsante
+      "Copia" di `RigaOreLavoro.tsx`) con le stesse funzioni pure di
+      `lib/comunicazioneRetta.ts` usate anche lato server — "Conferma
+      invio" sottopone lo stesso form della tabella con un formAction
+      diretto (bind del bambinoId), coerente con quanto mostrato in
+      anteprima perché legge dagli stessi campi.
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: nuovi scenari
+      (colonna Email, valore modificato usato per l'invio, popup di
+      conferma dell'invio massivo — confermato e annullato, anteprima
+      dell'invio singolo — aperta/annullata/confermata, isolamento
+      dell'invio singolo dagli altri bambini). Riscritte le due
+      asserzioni che leggevano Costo pasti/Conguaglio pasti come testo
+      statico (ora sono `<input>`: confronto su `value`, non più su
+      `text`, e senza la formattazione italiana con la virgola che vale
+      solo per il testo). Aggiunto `page.once('dialog', ...)` prima di
+      ogni click su "Invia comunicazioni" (altrimenti Playwright
+      annulla da solo il popup nativo di conferma, di default).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      e `npx jscpd` puliti. Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

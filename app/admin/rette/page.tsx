@@ -15,11 +15,13 @@ import {
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
-import { annullaComunicazioneRetta, inviaComunicazioniRetta } from './actions';
+import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
+import { annullaComunicazioneRetta, inviaComunicazioneRettaSingola, inviaComunicazioniRetta } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 type ComunicazioneRettaRiga = {
+  email_destinatario: string;
   retta_mensile: number | string;
   costo_pasti: number | string;
   conguaglio_pasti: number | string;
@@ -55,6 +57,7 @@ function RigaComunicazione({
           {bambino.nome} {bambino.cognome}
         </Link>
       </th>
+      <td className="whitespace-nowrap px-3 py-2 text-left text-stone-600">{comunicazione.email_destinatario}</td>
       <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.retta_mensile))}</td>
       <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
       <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -100,6 +103,9 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       <tr>
         <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
           Bambino
+        </th>
+        <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+          Email
         </th>
         <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
           Retta
@@ -149,24 +155,28 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       .order('cognome');
     const bambinoIds = (bambini ?? []).map((b) => b.id);
 
-    const [{ data: costi }, { data: presenzeAssenza }, { data: comunicazioni }, chiusure] = await Promise.all([
-      bambinoIds.length
-        ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
-        : Promise.resolve({ data: [] }),
-      bambinoIds.length
-        ? supabase
-            .from('presenze')
-            .select('bambino_id')
-            .in('bambino_id', bambinoIds)
-            .gte('data', primoGiornoMese(mesePrecedenteValore))
-            .lte('data', ultimoGiornoMese(mesePrecedenteValore))
-            .in('stato', ['assente', 'malattia'])
-        : Promise.resolve({ data: [] }),
-      bambinoIds.length
-        ? supabase.from('comunicazioni_retta').select('*').eq('mese', meseVisualizzato).in('bambino_id', bambinoIds)
-        : Promise.resolve({ data: [] }),
-      chiusurePerPeriodo(supabase, primoGiornoMese(mesePrecedenteValore), ultimoGiornoMese(meseVisualizzato)),
-    ]);
+    const [{ data: costi }, { data: presenzeAssenza }, { data: comunicazioni }, { data: template }, chiusure] =
+      await Promise.all([
+        bambinoIds.length
+          ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
+          : Promise.resolve({ data: [] }),
+        bambinoIds.length
+          ? supabase
+              .from('presenze')
+              .select('bambino_id')
+              .in('bambino_id', bambinoIds)
+              .gte('data', primoGiornoMese(mesePrecedenteValore))
+              .lte('data', ultimoGiornoMese(mesePrecedenteValore))
+              .in('stato', ['assente', 'malattia'])
+          : Promise.resolve({ data: [] }),
+        bambinoIds.length
+          ? supabase.from('comunicazioni_retta').select('*').eq('mese', meseVisualizzato).in('bambino_id', bambinoIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
+        chiusurePerPeriodo(supabase, primoGiornoMese(mesePrecedenteValore), ultimoGiornoMese(meseVisualizzato)),
+      ]);
+    const oggettoTemplate = template?.oggetto ?? 'Promemoria retta {{mese}}';
+    const corpoTemplate = template?.corpo ?? '';
 
     const giorniApertura = giorniAperturaMese(meseVisualizzato, chiusure);
     const costiPerBambino = new Map((costi ?? []).map((c) => [c.bambino_id, c]));
@@ -178,8 +188,10 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
-        Giorni di apertura stimati questo mese: {giorniApertura}. Il totale mostrato per i bambini da comunicare non
-        include eventuali costi extra non ancora inviati.
+        Giorni di apertura stimati questo mese: {giorniApertura}. Ogni voce di costo è modificabile per una
+        correzione ad-hoc; il totale mostrato per i bambini da comunicare resta la stima calcolata al caricamento
+        della pagina, non si aggiorna mentre modifichi i campi — quello realmente comunicato è la somma dei valori
+        presenti nel form al momento dell&apos;invio.
       </p>
     );
 
@@ -209,7 +221,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                     {bambino.nome} {bambino.cognome}
                   </Link>
                 </th>
-                <td colSpan={9} className="px-3 py-2 text-left text-xs text-amber-700">
+                <td colSpan={10} className="px-3 py-2 text-left text-xs text-amber-700">
                   Costi o email non configurati —{' '}
                   <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                     completa la scheda
@@ -232,6 +244,10 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             costiExtra: 0,
           });
 
+          const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
+          const classeCampoImporto =
+            'w-20 rounded-lg border border-stone-300 px-2 py-1 text-right text-sm outline-none focus:border-stone-500';
+
           return (
             <tr key={bambino.id}>
               <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal">
@@ -239,15 +255,76 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   {bambino.nome} {bambino.cognome}
                 </Link>
               </th>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.costoPasti)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.conguaglioPasti)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.costoPreAsilo)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(riepilogo.costoPostAsilo)}</td>
+              <td className="whitespace-nowrap px-3 py-2 text-left text-stone-600">{costiBambino.email_promemoria}</td>
               <td className="whitespace-nowrap px-3 py-2 text-right">
                 <input
                   type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={riepilogo.rettaMensile}
+                  name={`retta_${bambino.id}`}
+                  aria-label={`Retta per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={riepilogo.costoPasti}
+                  name={`costo_pasti_${bambino.id}`}
+                  aria-label={`Costo pasti per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  step={0.01}
+                  defaultValue={riepilogo.conguaglioPasti}
+                  name={`conguaglio_pasti_${bambino.id}`}
+                  aria-label={`Conguaglio pasti per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={riepilogo.marcaDaBollo}
+                  name={`marca_da_bollo_${bambino.id}`}
+                  aria-label={`Marca da bollo per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={riepilogo.costoPreAsilo}
+                  name={`pre_asilo_${bambino.id}`}
+                  aria-label={`Pre-asilo per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  defaultValue={riepilogo.costoPostAsilo}
+                  name={`post_asilo_${bambino.id}`}
+                  aria-label={`Post-asilo per ${nomeCompleto}`}
+                  className={classeCampoImporto}
+                />
+              </td>
+              <td className="whitespace-nowrap px-3 py-2 text-right">
+                <input
+                  type="number"
+                  min={0}
                   step={0.01}
                   defaultValue={0}
                   name={`costi_extra_${bambino.id}`}
@@ -265,13 +342,27 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 />
               </td>
               <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-left text-xs text-stone-500">Da inviare</td>
+              <td className="whitespace-nowrap px-3 py-2 text-left text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-stone-500">Da inviare</span>
+                  <InvioSingoloRetta
+                    bambinoId={bambino.id}
+                    nome={bambino.nome}
+                    cognome={bambino.cognome}
+                    email={costiBambino.email_promemoria}
+                    mese={meseVisualizzato}
+                    oggettoTemplate={oggettoTemplate}
+                    corpoTemplate={corpoTemplate}
+                    formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}
+                  />
+                </div>
+              </td>
             </tr>
           );
         })}
         {!bambini?.length && (
           <tr>
-            <td colSpan={11} className="px-3 py-4 text-center text-stone-600">
+            <td colSpan={12} className="px-3 py-4 text-center text-stone-600">
               Nessun bambino attivo.
             </td>
           </tr>
@@ -280,7 +371,10 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
     );
 
     piePagina = (
-      <PulsanteInvio className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+      <PulsanteInvio
+        confermaMessaggio="Sei sicuro di voler inviare le comunicazioni? Verrà inviata un'email a ogni bambino con email configurata non ancora comunicato questo mese."
+        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+      >
         Invia comunicazioni
       </PulsanteInvio>
     );
@@ -327,7 +421,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
         ))}
         {!righe.length && (
           <tr>
-            <td colSpan={11} className="px-3 py-4 text-center text-stone-600">
+            <td colSpan={12} className="px-3 py-4 text-center text-stone-600">
               Nessuna comunicazione inviata in questo mese.
             </td>
           </tr>

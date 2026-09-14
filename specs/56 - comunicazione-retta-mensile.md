@@ -17,10 +17,30 @@ dati impostati in
 Dato che sono autenticato come admin
 Quando apro "Rette" dal menu
 Allora vedo il nome del mese corrente in intestazione, e una riga per
-ciascun bambino attivo con: retta mensile, costo pasti proiettato,
-eventuale conguaglio pasti del mese precedente, marca da bollo, costo
-pre-asilo, costo post-asilo, un campo "Costi extra" (con una nota
-facoltativa) da compilare, e il totale calcolato
+ciascun bambino attivo con: l'email a cui verrà inviata la
+comunicazione, retta mensile, costo pasti proiettato, eventuale
+conguaglio pasti del mese precedente, marca da bollo, costo pre-asilo,
+costo post-asilo, un campo "Costi extra" (con una nota facoltativa) da
+compilare, e il totale calcolato
+
+## Scenario: vedere l'email a cui verrà inviata la comunicazione
+Dato che sono sulla tabella di revisione del mese corrente
+Quando guardo la colonna "Email" di un bambino con l'email di
+promemoria configurata (specs/55)
+Allora vedo esattamente quell'indirizzo — lo stesso a cui arriverà la
+comunicazione se invio
+
+## Scenario: modificare manualmente una voce di costo prima dell'invio
+Dato che sono sulla tabella di revisione del mese corrente, su un
+bambino non ancora comunicato
+Quando modifico il valore di una qualunque voce di costo calcolata
+automaticamente (retta, costo pasti, conguaglio pasti, marca da bollo,
+pre-asilo o post-asilo) — non solo i già modificabili costi extra/nota
+— rispetto a quello proposto, e premo "Invia comunicazioni"
+Allora l'email inviata e il log della comunicazione registrano il
+valore che ho scritto io, non quello ricalcolato automaticamente —
+utile per una correzione o uno sconto una tantum che non deriva da
+nessun calcolo
 
 ## Scenario: il costo pasti del mese corrente è proiettato sui giorni di apertura
 Dato che il mese corrente ha un certo numero di giorni feriali di
@@ -45,15 +65,37 @@ eventualmente una nota che lo descrive)
 Allora il totale calcolato per quella riga lo include
 
 ## Scenario: inviare le comunicazioni con un click
-Dato che ho controllato i dati in tabella per il mese corrente
-Quando premo "Invia comunicazioni"
+Dato che ho controllato (ed eventualmente corretto) i dati in tabella
+per il mese corrente
+Quando premo "Invia comunicazioni" e confermo il popup "Sei sicuro di
+voler inviare le comunicazioni?"
 Allora per ogni bambino con un'email di promemoria configurata
 (specs/55) e non ancora comunicato questo mese, viene inviata un'email
-con gli importi (usando il template configurato) e viene registrato un
-log della comunicazione (bambino, mese, ciascun importo, email
-destinatario, chi e quando)
+con gli importi presenti nel form in quel momento (usando il template
+configurato) e viene registrato un log della comunicazione (bambino,
+mese, ciascun importo, email destinatario, chi e quando)
 E i bambini senza email di promemoria configurata non ricevono nulla e
 restano segnalati in tabella come tali
+
+## Scenario: annullare il popup di conferma dell'invio massivo non invia nulla
+Dato che ho premuto "Invia comunicazioni"
+Quando annullo il popup di conferma invece di confermarlo
+Allora nessuna email viene inviata e nessun bambino risulta comunicato:
+la tabella resta quella di prima, tutti i bambini "da inviare" restano
+tali
+
+## Scenario: inviare la comunicazione a un solo bambino con anteprima
+Dato che sono sulla tabella di revisione del mese corrente, su un
+bambino non ancora comunicato con email configurata
+Quando premo "Invia comunicazione" sulla sua riga
+Allora vedo un popup con l'anteprima esatta della mail: a chi (l'email
+di promemoria), oggetto e corpo — calcolati con i valori attualmente
+nel form per quella riga, comprese eventuali correzioni ad-hoc non
+ancora inviate
+E se premo "Conferma invio" quell'unica email parte e viene registrata
+(la riga passa a "Inviata", gli altri bambini non vengono toccati)
+E se premo "Annulla" il popup si chiude senza inviare nulla, la riga
+resta "da inviare" con i valori che avevo scritto
 
 ## Scenario: un bambino già comunicato questo mese non viene reinviato
 Dato che un bambino ha già una comunicazione registrata per il mese
@@ -144,6 +186,57 @@ Allora vengo reindirizzato alla dashboard
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
   finché non viene completata.
+- La colonna "Email" mostra `costi_bambini.email_promemoria` così com'è
+  configurata sulla scheda del bambino (specs/55): puramente
+  informativa, non modificabile da qui (per cambiarla si va sulla
+  scheda del bambino) — serve a controllare a colpo d'occhio a chi
+  arriverà ciascuna comunicazione prima di premere "Invia
+  comunicazioni".
+- Ognuna delle voci di costo di un bambino da comunicare (retta, costo
+  pasti, conguaglio pasti, marca da bollo, pre-asilo, post-asilo, oltre
+  ai già modificabili costi extra/nota) è un campo compilabile,
+  precompilato con il valore calcolato automaticamente ma
+  sovrascrivibile per applicare una correzione ad-hoc che non deriva da
+  nessun calcolo (es. uno sconto una tantum, la correzione di un
+  errore) — coerente con specs/01 - ux.md, non serve toccare i
+  parametri permanenti del bambino (specs/55) per un aggiustamento
+  valido solo questo mese. Conguaglio pasti resta l'unica voce che può
+  essere negativa (è per natura un credito, mai un addebito); le altre
+  restano vincolate a un numero non negativo, come ovunque nell'app.
+- Queste modifiche non hanno un salvataggio separato per riga: restano
+  solo nel form finché non si preme "Invia comunicazioni". A quel
+  punto il server usa esattamente i valori presenti nel form in quel
+  momento (non li ricalcola dai dati vivi di costi/presenze) sia per
+  comporre l'email sia per il record scritto in `comunicazioni_retta` —
+  la persistenza avviene quindi come parte dell'invio stesso, non
+  prima: se non si preme "Invia comunicazioni" le modifiche non
+  lasciano traccia (specs/05 - feedback.md, coerente con "l'effetto è
+  la conferma" per il resto dell'app).
+- Il totale mostrato in tabella per un bambino da comunicare resta una
+  stima calcolata al caricamento della pagina (come già per i costi
+  extra): non si aggiorna dal vivo mentre si modificano gli altri
+  campi. Il totale realmente comunicato (somma di tutti i valori nel
+  form al momento dell'invio) è quello visibile dopo l'invio, nella
+  riga "Inviata".
+- "Invia comunicazioni" chiede conferma con un popup nativo del browser
+  (`window.confirm`, `components/PulsanteInvio.tsx`, prop
+  `confermaMessaggio`) prima di inviare — è un invio massivo (potenziale
+  a tutti i bambini "da inviare" del mese), non reversibile con un
+  semplice "annulla" una volta partito (le email sono già uscite; resta
+  possibile solo "Annulla invio" sulla singola riga dopo, vedi sopra).
+  Annullare il popup non invia nulla e non modifica la tabella.
+- "Invia comunicazione" (singolare, su una riga) usa invece un popup
+  proprio con l'anteprima strutturata della mail
+  (`components/InvioSingoloRetta.tsx`), non un `window.confirm`: il
+  contenuto da far controllare (in particolare il corpo) è
+  potenzialmente lungo e va letto per bene, un popup nativo a una riga
+  di testo non basterebbe. L'anteprima è calcolata lato client dai
+  valori attuali dei campi della riga (stesse funzioni pure di
+  `lib/comunicazioneRetta.ts` usate anche lato server, nessun round-trip
+  necessario) — sempre coerente con quanto verrà davvero inviato, perché
+  "Conferma invio" sottopone lo stesso form con `formAction` diretto
+  (bind del solo `bambinoId`, come "Annulla invio"), non un'azione
+  separata che potrebbe rileggere valori diversi.
 - L'invio scrive un log in `comunicazioni_retta` (un solo record per
   bambino e mese, `supabase/migrations/0036_comunicazione_retta.sql`,
   stesso pattern di `pasti_comunicati` per la comunicazione pasti a

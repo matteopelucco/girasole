@@ -60,6 +60,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   test('tabella di revisione della comunicazione del mese corrente + accessibilità', async ({ page }) => {
     await page.goto('/admin/rette');
     await expect(page.getByRole('heading', { name: /Rette —/ })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Retta' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costo pasti' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' })).toBeVisible();
@@ -129,13 +130,13 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const giorniApertura = Number(testoIntestazione?.match(/(\d+)/)?.[1]);
     expect(giorniApertura).toBeGreaterThan(0);
 
-    const costoPastiAtteso = (giorniApertura * 5).toLocaleString('it-IT', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-
+    // Il campo è ora modificabile (specs/56, "modificare manualmente una
+    // voce di costo prima dell'invio"): il valore proposto è nel campo
+    // stesso, non più testo semplice — confronto il value dell'input
+    // (formato numerico semplice, non la formattazione italiana con la
+    // virgola usata solo per il testo statico).
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga).toContainText(costoPastiAtteso);
+    await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveValue(String(giorniApertura * 5));
   });
 
   test('un bambino senza presenze registrate il mese precedente ha conguaglio pasti zero', async ({ page }) => {
@@ -151,10 +152,16 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    const celle = riga.locator('td');
-    // Colonne (0-based, il nome bambino è un <th>): 0 Retta, 1 Costo
-    // pasti, 2 Conguaglio pasti, 3 Pre-asilo, ...
-    await expect(celle.nth(2)).toHaveText('0,00');
+    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti per.*${cognome}`))).toHaveValue('0');
+  });
+
+  test("la colonna Email mostra l'indirizzo a cui verrà inviata la comunicazione", async ({ page }) => {
+    const email = `e2e-retta-email-${Date.now()}@example.com`;
+    const cognome = await creaBambinoConCosti(page, { email, prezzoMensile: '100', prezzoBuonoPasto: '0' });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await expect(riga).toContainText(email);
   });
 
   test('inserire un costo extra lo somma al totale mostrato', async ({ page }) => {
@@ -188,6 +195,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`)).fill('10');
     await riga.getByLabel(new RegExp(`Nota costi extra per.*${cognome}`)).fill('Materiale didattico');
 
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
     await page.waitForTimeout(3000);
     await page.reload();
@@ -197,6 +205,105 @@ test.describe('56 — Comunicazione retta mensile', () => {
     // 200 retta + 10 extra + 2 marca da bollo (valore predefinito, non toccato dal test), 0 pasti.
     await expect(rigaInviata).toContainText('212,00');
     await expect(rigaInviata).toContainText('Materiale didattico');
+  });
+
+  test('Invia comunicazione su una riga apre un\'anteprima con destinatario, oggetto e corpo', async ({ page }) => {
+    const email = `e2e-retta-anteprima-${Date.now()}@example.com`;
+    const cognome = await creaBambinoConCosti(page, {
+      email,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await expect(popup).toBeVisible();
+    await expect(popup).toContainText(email);
+    await expect(popup.getByRole('button', { name: 'Conferma invio' })).toBeVisible();
+    await nessunaViolazioneA11yGrave(page);
+  });
+
+  test("annullare l'anteprima non invia nulla", async ({ page }) => {
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-anteprima-annulla-${Date.now()}@example.com`,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await expect(popup).toBeVisible();
+    await popup.getByRole('button', { name: 'Annulla' }).click();
+    await expect(popup).toHaveCount(0);
+
+    // Nessun invio: il bambino resta "da inviare", con i suoi campi.
+    await expect(riga.getByText(/Inviata il/)).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
+  });
+
+  test("confermare l'anteprima invia la comunicazione al solo bambino scelto", async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const cognomeA = await creaBambinoConCosti(page, {
+      email: `e2e-retta-singolo-a-${Date.now()}@example.com`,
+      prezzoMensile: '130',
+      prezzoBuonoPasto: '0',
+    });
+    const cognomeB = await creaBambinoConCosti(page, {
+      email: `e2e-retta-singolo-b-${Date.now()}@example.com`,
+      prezzoMensile: '140',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const rigaA = page.locator('tr', { hasText: cognomeA });
+    await rigaA.getByRole('button', { name: 'Invia comunicazione' }).click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeA}`) });
+    await popup.getByRole('button', { name: 'Conferma invio' }).click();
+    await page.waitForTimeout(3000);
+    await page.reload();
+
+    // Solo il bambino scelto (A) risulta comunicato; l'altro (B) no.
+    const rigaAInviata = page.locator('tr', { hasText: cognomeA });
+    await expect(rigaAInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+    // 130 retta + 2 marca da bollo (default), 0 pasti/extra.
+    await expect(rigaAInviata).toContainText('132,00');
+
+    const rigaBAncoraDaInviare = page.locator('tr', { hasText: cognomeB });
+    await expect(rigaBAncoraDaInviare.getByText(/Inviata il/)).toHaveCount(0);
+    await expect(rigaBAncoraDaInviare.getByRole('button', { name: 'Invia comunicazione' })).toBeVisible();
+  });
+
+  test("modificare una voce di costo prima dell'invio usa il valore modificato", async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-modifica-${Date.now()}@example.com`,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    // Correzione ad-hoc: scrivo un valore diverso da quello calcolato
+    // automaticamente (200), prima di inviare.
+    await riga.getByLabel(new RegExp(`Retta per.*${cognome}`)).fill('175');
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
+    await page.waitForTimeout(3000);
+    await page.reload();
+
+    const rigaInviata = page.locator('tr', { hasText: cognome });
+    await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+    // 175 (valore modificato, non 200) + 2 marca da bollo (default), 0 pasti/extra.
+    await expect(rigaInviata).toContainText('177,00');
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
@@ -209,6 +316,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     });
 
     await page.goto('/admin/rette');
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
     await page.waitForTimeout(3000);
     await page.reload();
@@ -226,11 +334,34 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaTornata.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
 
     // E può essere effettivamente reinviato.
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
     await page.waitForTimeout(3000);
     await page.reload();
     const rigaReinviata = page.locator('tr', { hasText: cognome });
     await expect(rigaReinviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+  });
+
+  test("il popup di conferma è necessario per l'invio massivo: annullandolo nessuna email parte", async ({
+    page,
+  }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-annulla-popup-${Date.now()}@example.com`,
+      prezzoMensile: '150',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
+    await page.waitForTimeout(1000);
+
+    // Nessun invio: il bambino resta "da inviare".
+    const riga = page.locator('tr', { hasText: cognome });
+    await expect(riga.getByText(/Inviata il/)).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
   });
 
   test('un bambino già comunicato questo mese non viene reinviato', async ({ page }) => {
@@ -243,6 +374,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     });
 
     await page.goto('/admin/rette');
+    page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
     await page.waitForTimeout(3000);
     await page.reload();
