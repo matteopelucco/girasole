@@ -155,7 +155,10 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
                   type="number"
                   min={0}
                   step={0.01}
-                  defaultValue={costi?.prezzo_buono_pasto ?? 0}
+                  // Come marca da bollo sotto: precompilato all'importo
+                  // corrente tipico (6€), non a 0, solo per un bambino
+                  // senza ancora nessun costo salvato (specs/55).
+                  defaultValue={costi?.prezzo_buono_pasto ?? 6}
                   aria-label="Prezzo buono pasto (€)"
                   className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
                 />
@@ -167,9 +170,9 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
                   type="number"
                   min={0}
                   step={0.01}
-                  // A differenza degli altri prezzi (default 0), la marca da
-                  // bollo precompila 2€: è il suo valore corrente reale,
-                  // non "nessun importo previsto" (specs/55).
+                  // Precompilato all'importo corrente reale (2€), non a 0
+                  // ("nessun importo previsto") — solo per un bambino
+                  // senza ancora nessun costo salvato (specs/55).
                   defaultValue={costi?.prezzo_marca_da_bollo ?? 2}
                   aria-label="Prezzo marca da bollo (€)"
                   className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
@@ -195,7 +198,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
                     type="number"
                     min={0}
                     step={0.01}
-                    defaultValue={costi?.prezzo_pre_asilo ?? 0}
+                    defaultValue={costi?.prezzo_pre_asilo ?? 70}
                     aria-label="Prezzo pre-asilo (€)"
                     className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
                   />
@@ -218,7 +221,7 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
                     type="number"
                     min={0}
                     step={0.01}
-                    defaultValue={costi?.prezzo_post_asilo ?? 0}
+                    defaultValue={costi?.prezzo_post_asilo ?? 70}
                     aria-label="Prezzo post-asilo (€)"
                     className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
                   />

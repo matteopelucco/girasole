@@ -1996,6 +1996,37 @@ lavoro", specs/18).
       sandbox (stesso problema di login ricorrente, indipendente da
       questo cambiamento) — da eseguire in locale/CI.
 
+## Valori predefiniti di buono pasto e pre/post-asilo (specs/55)
+Richiesta dell'utente: buono pasto 6€, pre/post-asilo 70€ ciascuno.
+- [x] `specs/55 - costi-bambino.md`: nuovi default nello scenario di
+      creazione, scenario "hanno un valore predefinito" esteso a
+      includere buono pasto e pre/post-asilo (non più solo marca da
+      bollo). Nuova regola che spiega la scelta di **non** fare
+      backfill delle righe già esistenti (a differenza della marca da
+      bollo, campo nuovo): buono pasto/pre-asilo/post-asilo sono già in
+      uso con importi reali scelti dall'admin, un backfill di massa
+      rischierebbe di alterare dati economici reali senza che nessuno
+      l'abbia chiesto — il nuovo default si vede solo per un bambino
+      senza ancora nessun costo salvato.
+- [x] `supabase/migrations/0039_default_buono_pasto_pre_post_asilo.sql`:
+      solo `ALTER COLUMN ... SET DEFAULT` (nessun backfill, a differenza
+      della 0037) — **da applicare nel SQL Editor di Supabase (dev/test
+      e produzione), dopo la 0038**. Di fatto inerte per l'app stessa
+      (che scrive sempre un valore esplicito nell'upsert), utile solo
+      per coerenza dello schema.
+- [x] `app/admin/bambini/[id]/page.tsx`: `defaultValue` dei tre campi
+      aggiornato (`?? 6`, `?? 70`, `?? 70`) solo per il ramo "nessuna
+      riga costi ancora salvata" (`costi` nullo) — un bambino con costi
+      già salvati, anche a 0, non cambia.
+- [x] `e2e/55-costi-bambino.spec.ts`: aggiornato l'assert del valore
+      predefinito del buono pasto (era '0', ora '6') ed esteso lo
+      scenario dei default a coprire anche pre/post-asilo. Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run` e
+      `npx jscpd` puliti. Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI dopo aver
+      applicato la migration 0039.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

@@ -36,16 +36,19 @@ test.describe('55 — Costi bambino', () => {
     await creaBambinoDiProva(page);
     await expect(page.getByRole('heading', { name: 'Costi' })).toBeVisible();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');
-    await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('0');
+    await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('6');
     await expect(page.getByLabel('Pre-asilo richiesto')).not.toBeChecked();
     await expect(page.getByLabel('Post-asilo richiesto')).not.toBeChecked();
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue('');
     await nessunaViolazioneA11yGrave(page);
   });
 
-  test('il prezzo della marca da bollo ha un valore predefinito di 2€', async ({ page }) => {
+  test('buono pasto, marca da bollo e pre/post-asilo hanno un valore predefinito', async ({ page }) => {
     await creaBambinoDiProva(page);
+    await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('6');
     await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('2');
+    await expect(page.getByLabel('Prezzo pre-asilo (€)')).toHaveValue('70');
+    await expect(page.getByLabel('Prezzo post-asilo (€)')).toHaveValue('70');
   });
 
   test('impostare per la prima volta i costi li salva e restano dopo un ricaricamento', async ({ page }) => {
@@ -122,9 +125,11 @@ test.describe('55 — Costi bambino', () => {
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
 
     // Nulla è stato salvato: dopo un ricaricamento i campi tornano vuoti
-    // (marca da bollo torna al suo valore predefinito, non a 0).
+    // (buono pasto/marca da bollo/pre-post-asilo tornano ai loro valori
+    // predefiniti, non a 0).
     await page.reload();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');
+    await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('6');
     await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('2');
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue('');
   });

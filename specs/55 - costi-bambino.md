@@ -16,18 +16,21 @@ mensile (vedi
 ## Scenario: impostare per la prima volta i costi di un bambino
 Dato che sono autenticato come admin e apro la scheda di dettaglio di un
 bambino che non ha ancora costi impostati
-Quando nella sezione "Costi" trovo i campi (prezzo retta mensile e
-prezzo buono pasto vuoti/a zero, prezzo marca da bollo precompilato a
-2€, pre-asilo/post-asilo non richiesti, email promemoria vuota), li
-compilo e confermo
+Quando nella sezione "Costi" trovo i campi (prezzo retta mensile vuoto/a
+zero, prezzo buono pasto precompilato a 6€, prezzo marca da bollo
+precompilato a 2€, pre-asilo/post-asilo non richiesti con i rispettivi
+prezzi precompilati a 70€, email promemoria vuota), li compilo e
+confermo
 Allora i costi sono salvati e restano visibili riaprendo la scheda
 
-## Scenario: il prezzo della marca da bollo ha un valore predefinito
+## Scenario: buono pasto, marca da bollo e pre/post-asilo hanno un valore predefinito
 Dato che apro la scheda di un bambino che non ha ancora costi impostati
-Quando guardo il campo "Prezzo marca da bollo (€)" nella sezione "Costi"
-Allora lo trovo già precompilato a 2€ (il valore corrente della marca da
-bollo amministrativa), modificabile come qualunque altro prezzo se in
-futuro dovesse cambiare
+Quando guardo i campi "Prezzo buono pasto (€)", "Prezzo marca da bollo
+(€)", "Prezzo pre-asilo (€)" e "Prezzo post-asilo (€)" nella sezione
+"Costi"
+Allora li trovo già precompilati (6€, 2€, 70€ e 70€: gli importi
+correnti tipici di questi servizi), ciascuno modificabile come
+qualunque altro prezzo se in futuro dovesse cambiare
 
 ## Scenario: modificare i costi già impostati
 Dato che un bambino ha già dei costi salvati
@@ -82,6 +85,14 @@ salvato
   di default vale 2€ invece di 0, sia per un bambino appena creato sia
   per uno che ha già dei costi salvati da prima dell'introduzione di
   questo campo (`supabase/migrations/0037_marca_da_bollo.sql`).
+- Buono pasto (6€), pre-asilo e post-asilo (70€ ciascuno) hanno anche
+  loro un valore predefinito diverso da 0 (`supabase/migrations/0039_default_buono_pasto_pre_post_asilo.sql`),
+  ma — a differenza della marca da bollo — **solo per un bambino senza
+  ancora nessuna riga in `costi_bambini`**: un bambino che ha già dei
+  costi salvati (anche a 0) non viene toccato retroattivamente, perché
+  questi tre prezzi sono già in uso con importi reali scelti dall'admin
+  per bambini veri, e non c'è modo di distinguere "mai configurato" da
+  "configurato deliberatamente a zero".
 - Pre-asilo e post-asilo sono due coppie indipendenti flag+prezzo
   (`pre_asilo_richiesto`/`prezzo_pre_asilo`,
   `post_asilo_richiesto`/`prezzo_post_asilo`): se il flag non è
