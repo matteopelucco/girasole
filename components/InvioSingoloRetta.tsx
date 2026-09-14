@@ -5,15 +5,18 @@ import { PulsanteInvio } from './PulsanteInvio';
 import { formattaImporto, sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
 import { formattaMeseItaliano } from '@/lib/date';
 
-// Suffisso del name di ciascun campo importo della riga (vedi
-// app/admin/rette/page.tsx) → placeholder corrispondente nel template
-// (specs/56, `{{...}}`). Condiviso da apriAnteprima sotto: un solo
-// punto che elenca tutte le voci di costo, non ripetuto due volte.
+// Suffisso del name di ciascun campo importo MODIFICABILE della riga
+// (vedi app/admin/rette/page.tsx) → placeholder corrispondente nel
+// template (specs/56, `{{...}}`). Retta e marca da bollo non sono qui:
+// non sono campi del form (non modificabili da questa tabella — retta
+// si cambia sulla scheda del bambino, la marca da bollo non è
+// modificabile da nessuna parte, è un importo fisso per legge), arrivano
+// come prop fisse (rettaMensile/marcaDaBollo sotto). Condiviso da
+// apriAnteprima sotto: un solo punto che elenca le voci modificabili,
+// non ripetuto due volte.
 const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
-  ['retta', 'retta_mensile'],
   ['costo_pasti', 'costo_pasti'],
   ['conguaglio_pasti', 'conguaglio_pasti'],
-  ['marca_da_bollo', 'marca_da_bollo'],
   ['pre_asilo', 'costo_pre_asilo'],
   ['post_asilo', 'costo_post_asilo'],
   ['costi_extra', 'costi_extra'],
@@ -27,14 +30,16 @@ const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
 // controllare è strutturato e potenzialmente lungo (il corpo della
 // mail).
 //
-// L'anteprima è calcolata qui, lato client, leggendo i valori attuali
-// dei campi della riga (che l'admin può aver corretti ad-hoc) tramite
-// il DOM — stesso genere di lettura diretta già usato dal pulsante
-// "Copia" di components/RigaOreLavoro.tsx — invece di un round-trip al
-// server: i dati necessari (template, valori dei campi) sono già tutti
-// disponibili in pagina, e le stesse funzioni pure di formattazione/
-// sostituzione placeholder usate lato server (lib/comunicazioneRetta.ts)
-// sono sicure da eseguire anche nel browser (nessun I/O).
+// L'anteprima è calcolata qui, lato client: retta e marca da bollo
+// arrivano come prop fisse (non modificabili da questa tabella),
+// le altre voci sono lette dai valori attuali dei campi della riga (che
+// l'admin può aver corretti ad-hoc) tramite il DOM — stesso genere di
+// lettura diretta già usato dal pulsante "Copia" di
+// components/RigaOreLavoro.tsx — invece di un round-trip al server: i
+// dati necessari (template, valori dei campi) sono già tutti disponibili
+// in pagina, e le stesse funzioni pure di formattazione/sostituzione
+// placeholder usate lato server (lib/comunicazioneRetta.ts) sono sicure
+// da eseguire anche nel browser (nessun I/O).
 //
 // Il pulsante "Conferma invio" nel popup è un submit del <form> che
 // contiene l'intera tabella (Invia comunicazioni) con un formAction
@@ -48,6 +53,8 @@ export function InvioSingoloRetta({
   cognome,
   email,
   mese,
+  rettaMensile,
+  marcaDaBollo,
   oggettoTemplate,
   corpoTemplate,
   formAction,
@@ -57,6 +64,8 @@ export function InvioSingoloRetta({
   cognome: string;
   email: string;
   mese: string;
+  rettaMensile: number;
+  marcaDaBollo: number;
   oggettoTemplate: string;
   corpoTemplate: string;
   formAction: (formData: FormData) => void | Promise<void>;
@@ -68,8 +77,14 @@ export function InvioSingoloRetta({
     const riga = bottoneRef.current?.closest('tr');
     if (!riga) return;
 
-    const valori: Record<string, string> = { nome, cognome, mese: formattaMeseItaliano(mese) };
-    let totale = 0;
+    const valori: Record<string, string> = {
+      nome,
+      cognome,
+      mese: formattaMeseItaliano(mese),
+      retta_mensile: formattaImporto(rettaMensile),
+      marca_da_bollo: formattaImporto(marcaDaBollo),
+    };
+    let totale = rettaMensile + marcaDaBollo;
     for (const [suffisso, placeholder] of CAMPI_IMPORTO) {
       const campo = riga.querySelector<HTMLInputElement>(`[name="${suffisso}_${bambinoId}"]`);
       const valore = campo ? Number(campo.value) || 0 : 0;

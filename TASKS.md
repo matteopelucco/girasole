@@ -2098,6 +2098,41 @@ un popup, inviare a un solo bambino con anteprima della mail.
       sandbox (stesso problema di login ricorrente, indipendente da
       questo cambiamento) — da eseguire in locale/CI.
 
+## Rette: retta e marca da bollo tornano non modificabili, tabella più compatta
+Richiesta dell'utente dopo aver visto la tabella con tutte le voci
+modificabili: retta e marca da bollo NON devono essere editabili (la
+retta si cambia sulla scheda del bambino, la marca da bollo è fissa per
+legge) — restano modificabili solo costo pasti, conguaglio pasti,
+pre-asilo, post-asilo (oltre ai già modificabili costi extra/nota).
+Chiesta anche una tabella più compatta, uso solo da desktop.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovo scenario
+      "retta e marca da bollo non sono modificabili dalla tabella";
+      corretti gli scenari/regole precedenti che le includevano tra le
+      voci modificabili.
+- [x] `app/admin/rette/actions.ts`: `riepilogoDalForm` non legge più
+      retta/marca da bollo dal form — le riceve come parametri fissi
+      (letti da `costi_bambini.prezzo_mensile`/`prezzo_marca_da_bollo`
+      da chi chiama, sia l'invio massivo sia quello singolo). Le altre
+      quattro voci restano lette dal form come prima.
+- [x] `app/admin/rette/page.tsx`: colonne "Retta" e "Marca da bollo"
+      tornate testo (`formattaImporto`), non più `<input>`. Ridotto
+      padding delle celle (`px-3 py-2` → `px-2 py-1.5`) e larghezza dei
+      campi (`w-20`/`w-24`/`w-40` → `w-14`/`w-16`/`w-32`, con padding
+      interno ridotto) per una tabella più compatta su schermi grandi —
+      nessuna modifica pensata per mobile, come richiesto.
+- [x] `components/InvioSingoloRetta.tsx`: l'anteprima dell'invio
+      singolo riceve retta/marca da bollo come prop fisse (non più
+      lette dal DOM, non essendo più campi) — le altre voci restano
+      lette dai campi della riga come prima.
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: il test di
+      correzione ad-hoc ora modifica "Pre-asilo" invece di "Retta" (non
+      più modificabile); nuovo scenario che verifica esplicitamente
+      l'assenza dei campi "Retta"/"Marca da bollo" (restano visibili
+      come testo). Verificato `npx tsc --noEmit`, `npx next lint`,
+      `npx vitest run` e `npx jscpd` puliti. Suite e2e non eseguibile
+      in questo ambiente sandbox (stesso problema di login ricorrente,
+      indipendente da questo cambiamento) — da eseguire in locale/CI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

@@ -52,28 +52,28 @@ function RigaComunicazione({
 }) {
   return (
     <tr className="bg-emerald-50/40">
-      <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal">
+      <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
         <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
           {bambino.nome} {bambino.cognome}
         </Link>
       </th>
-      <td className="whitespace-nowrap px-3 py-2 text-left text-stone-600">{comunicazione.email_destinatario}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.retta_mensile))}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">
+      <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{comunicazione.email_destinatario}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.retta_mensile))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.conguaglio_pasti))}
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.costo_pre_asilo))}
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.costo_post_asilo))}
       </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right">{formattaImporto(Number(comunicazione.costi_extra))}</td>
-      <td className="px-3 py-2 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-left text-xs">
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costi_extra))}</td>
+      <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-emerald-800">Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}</span>
           {mostraAnnullaInvio && (
@@ -101,40 +101,40 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
   const intestazioneColonne = (
     <thead>
       <tr>
-        <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
           Bambino
         </th>
-        <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
           Email
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Retta
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Costo pasti
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Conguaglio pasti
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Marca da bollo
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Pre-asilo
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Post-asilo
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Costi extra
         </th>
-        <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
           Nota
         </th>
-        <th scope="col" className="px-3 py-2 text-right font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
           Totale
         </th>
-        <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+        <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
           Stato
         </th>
       </tr>
@@ -216,12 +216,12 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
           if (!costiBambino?.email_promemoria) {
             return (
               <tr key={bambino.id}>
-                <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal">
+                <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
                   <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
                     {bambino.nome} {bambino.cognome}
                   </Link>
                 </th>
-                <td colSpan={10} className="px-3 py-2 text-left text-xs text-amber-700">
+                <td colSpan={10} className="px-2 py-1.5 text-left text-xs text-amber-700">
                   Costi o email non configurati —{' '}
                   <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                     completa la scheda
@@ -246,28 +246,18 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
           const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
           const classeCampoImporto =
-            'w-20 rounded-lg border border-stone-300 px-2 py-1 text-right text-sm outline-none focus:border-stone-500';
+            'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500';
 
           return (
             <tr key={bambino.id}>
-              <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal">
+              <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
                 <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
                   {bambino.nome} {bambino.cognome}
                 </Link>
               </th>
-              <td className="whitespace-nowrap px-3 py-2 text-left text-stone-600">{costiBambino.email_promemoria}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={riepilogo.rettaMensile}
-                  name={`retta_${bambino.id}`}
-                  aria-label={`Retta per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
+              <td className="whitespace-nowrap px-2 py-1.5 text-left text-stone-600">{costiBambino.email_promemoria}</td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">
                 <input
                   type="number"
                   min={0}
@@ -278,7 +268,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   className={classeCampoImporto}
                 />
               </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">
                 <input
                   type="number"
                   step={0.01}
@@ -288,18 +278,8 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   className={classeCampoImporto}
                 />
               </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
-                <input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={riepilogo.marcaDaBollo}
-                  name={`marca_da_bollo_${bambino.id}`}
-                  aria-label={`Marca da bollo per ${nomeCompleto}`}
-                  className={classeCampoImporto}
-                />
-              </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">
                 <input
                   type="number"
                   min={0}
@@ -310,7 +290,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   className={classeCampoImporto}
                 />
               </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">
                 <input
                   type="number"
                   min={0}
@@ -321,7 +301,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   className={classeCampoImporto}
                 />
               </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right">
+              <td className="whitespace-nowrap px-2 py-1.5 text-right">
                 <input
                   type="number"
                   min={0}
@@ -329,20 +309,20 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                   defaultValue={0}
                   name={`costi_extra_${bambino.id}`}
                   aria-label={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
-                  className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-right text-sm outline-none focus:border-stone-500"
+                  className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500"
                 />
               </td>
-              <td className="px-3 py-2 text-left">
+              <td className="px-2 py-1.5 text-left">
                 <input
                   type="text"
                   name={`note_extra_${bambino.id}`}
                   placeholder="Nota (opzionale)"
                   aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
-                  className="w-40 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-none focus:border-stone-500"
+                  className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
                 />
               </td>
-              <td className="whitespace-nowrap px-3 py-2 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
-              <td className="whitespace-nowrap px-3 py-2 text-left text-xs">
+              <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
+              <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-stone-500">Da inviare</span>
                   <InvioSingoloRetta
@@ -351,6 +331,8 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                     cognome={bambino.cognome}
                     email={costiBambino.email_promemoria}
                     mese={meseVisualizzato}
+                    rettaMensile={riepilogo.rettaMensile}
+                    marcaDaBollo={riepilogo.marcaDaBollo}
                     oggettoTemplate={oggettoTemplate}
                     corpoTemplate={corpoTemplate}
                     formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}

@@ -18,10 +18,11 @@ Dato che sono autenticato come admin
 Quando apro "Rette" dal menu
 Allora vedo il nome del mese corrente in intestazione, e una riga per
 ciascun bambino attivo con: l'email a cui verrà inviata la
-comunicazione, retta mensile, costo pasti proiettato, eventuale
-conguaglio pasti del mese precedente, marca da bollo, costo pre-asilo,
-costo post-asilo, un campo "Costi extra" (con una nota facoltativa) da
-compilare, e il totale calcolato
+comunicazione, retta mensile e marca da bollo (testo), costo pasti
+proiettato, eventuale conguaglio pasti del mese precedente, costo
+pre-asilo e costo post-asilo (questi ultimi tre modificabili), un
+campo "Costi extra" (con una nota facoltativa) da compilare, e il
+totale calcolato
 
 ## Scenario: vedere l'email a cui verrà inviata la comunicazione
 Dato che sono sulla tabella di revisione del mese corrente
@@ -33,14 +34,22 @@ comunicazione se invio
 ## Scenario: modificare manualmente una voce di costo prima dell'invio
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
-Quando modifico il valore di una qualunque voce di costo calcolata
-automaticamente (retta, costo pasti, conguaglio pasti, marca da bollo,
-pre-asilo o post-asilo) — non solo i già modificabili costi extra/nota
-— rispetto a quello proposto, e premo "Invia comunicazioni"
+Quando modifico il valore di costo pasti, conguaglio pasti, pre-asilo o
+post-asilo — non solo i già modificabili costi extra/nota — rispetto a
+quello proposto, e premo "Invia comunicazioni"
 Allora l'email inviata e il log della comunicazione registrano il
 valore che ho scritto io, non quello ricalcolato automaticamente —
 utile per una correzione o uno sconto una tantum che non deriva da
 nessun calcolo
+
+## Scenario: retta e marca da bollo non sono modificabili dalla tabella
+Dato che sono sulla tabella di revisione del mese corrente, su un
+bambino non ancora comunicato
+Quando guardo le colonne "Retta" e "Marca da bollo"
+Allora le vedo come testo, non come campi compilabili: per cambiare il
+prezzo della retta si va sulla scheda del bambino (specs/55); la marca
+da bollo non è modificabile da nessuna parte, è un importo fisso per
+legge
 
 ## Scenario: il costo pasti del mese corrente è proiettato sui giorni di apertura
 Dato che il mese corrente ha un certo numero di giorni feriali di
@@ -192,22 +201,28 @@ Allora vengo reindirizzato alla dashboard
   scheda del bambino) — serve a controllare a colpo d'occhio a chi
   arriverà ciascuna comunicazione prima di premere "Invia
   comunicazioni".
-- Ognuna delle voci di costo di un bambino da comunicare (retta, costo
-  pasti, conguaglio pasti, marca da bollo, pre-asilo, post-asilo, oltre
-  ai già modificabili costi extra/nota) è un campo compilabile,
-  precompilato con il valore calcolato automaticamente ma
-  sovrascrivibile per applicare una correzione ad-hoc che non deriva da
+- Costo pasti, conguaglio pasti, pre-asilo e post-asilo di un bambino
+  da comunicare (oltre ai già modificabili costi extra/nota) sono campi
+  compilabili, precompilati con il valore calcolato automaticamente ma
+  sovrascrivibili per applicare una correzione ad-hoc che non deriva da
   nessun calcolo (es. uno sconto una tantum, la correzione di un
   errore) — coerente con specs/01 - ux.md, non serve toccare i
   parametri permanenti del bambino (specs/55) per un aggiustamento
   valido solo questo mese. Conguaglio pasti resta l'unica voce che può
   essere negativa (è per natura un credito, mai un addebito); le altre
   restano vincolate a un numero non negativo, come ovunque nell'app.
-- Queste modifiche non hanno un salvataggio separato per riga: restano
-  solo nel form finché non si preme "Invia comunicazioni". A quel
-  punto il server usa esattamente i valori presenti nel form in quel
-  momento (non li ricalcola dai dati vivi di costi/presenze) sia per
-  comporre l'email sia per il record scritto in `comunicazioni_retta` —
+- Retta e marca da bollo restano invece testo, non modificabili da
+  questa tabella: la retta si cambia solo sulla scheda del bambino
+  (specs/55, ha senso solo come cambio permanente, non un aggiustamento
+  di un mese); la marca da bollo non è modificabile da nessuna parte,
+  essendo un importo fisso per legge.
+- Le modifiche a costo pasti/conguaglio pasti/pre-asilo/post-asilo non
+  hanno un salvataggio separato per riga: restano solo nel form finché
+  non si preme "Invia comunicazioni". A quel punto il server usa
+  esattamente i valori presenti nel form in quel momento per queste
+  quattro voci (non li ricalcola dai dati vivi di presenze), mentre
+  retta e marca da bollo restano sempre quelli letti da
+  `costi_bambini` in quel momento (mai dal form, che non li contiene) —
   la persistenza avviene quindi come parte dell'invio stesso, non
   prima: se non si preme "Invia comunicazioni" le modifiche non
   lasciano traccia (specs/05 - feedback.md, coerente con "l'effetto è

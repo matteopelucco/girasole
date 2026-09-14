@@ -291,9 +291,11 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    // Correzione ad-hoc: scrivo un valore diverso da quello calcolato
-    // automaticamente (200), prima di inviare.
-    await riga.getByLabel(new RegExp(`Retta per.*${cognome}`)).fill('175');
+    // Correzione ad-hoc che esula dal calcolo automatico: il pre-asilo
+    // non è nemmeno richiesto per questo bambino (calcolato a 0), eppure
+    // scrivo un importo — dimostra che il valore scritto viene usato
+    // così com'è, non ricalcolato dai parametri del bambino.
+    await riga.getByLabel(new RegExp(`Pre-asilo per.*${cognome}`)).fill('20');
 
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
@@ -302,8 +304,24 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
     await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
-    // 175 (valore modificato, non 200) + 2 marca da bollo (default), 0 pasti/extra.
-    await expect(rigaInviata).toContainText('177,00');
+    // 200 retta (fissa) + 2 marca da bollo (fissa) + 20 pre-asilo ad-hoc, 0 pasti/extra.
+    await expect(rigaInviata).toContainText('222,00');
+  });
+
+  test('Retta e Marca da bollo non sono campi modificabili in tabella', async ({ page }) => {
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-non-modificabile-${Date.now()}@example.com`,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await expect(riga.getByLabel(new RegExp(`Retta per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Marca da bollo per.*${cognome}`))).toHaveCount(0);
+    // Restano comunque visibili come testo, non spariscono dalla riga.
+    await expect(riga).toContainText('200,00');
+    await expect(riga).toContainText('2,00');
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
