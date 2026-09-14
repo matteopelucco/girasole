@@ -1929,6 +1929,41 @@ bollo, di default 2€ (il valore amministrativo corrente).
       condiviso, non causato da questo cambiamento) — da eseguire in
       locale/CI dopo aver applicato la migration 0037.
 
+## Annullare l'invio di una comunicazione retta (specs/56)
+Richiesta dell'utente: poter "sbiancare" il fatto che una comunicazione
+retta sia stata inviata, per poterla reinviare (es. dopo un errore negli
+importi comunicati).
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovo scenario
+      "annullare l'invio di una comunicazione per poterla reinviare";
+      spostato fuori da "Fuori scope" (restano fuori scope solo la
+      modifica degli importi mantenendo la riga, e la tracciabilità di
+      chi/quando ha annullato).
+- [x] `supabase/migrations/0038_annulla_comunicazione_retta.sql`: nuova
+      policy di delete su `comunicazioni_retta`, solo admin (finora
+      nessuna policy di update/delete esisteva da interfaccia) —
+      **da applicare nel SQL Editor di Supabase (dev/test e
+      produzione), dopo la 0037**.
+- [x] `app/admin/rette/actions.ts`: nuova `annullaComunicazioneRetta`
+      (bambinoId, mese) — elimina la riga del log, libera il vincolo
+      unique, nessuna nuova email. Non è wired tramite `useFormState`
+      (niente `EsitoAzione`): la tabella di `/admin/rette` è già dentro
+      un `<FormConEsito action={inviaComunicazioniRetta}>`, quindi non
+      può contenere un secondo `<form>` annidato (HTML non valido) — il
+      pulsante "Annulla invio" la richiama con un `formAction` proprio
+      (bind di bambinoId/mese) sullo stesso form, stesso pattern già
+      usato in `app/dashboard/presenze/[sezioneId]/page.tsx` per più
+      azioni in un solo form.
+- [x] `app/admin/rette/page.tsx`: pulsante "Annulla invio" (rosso)
+      accanto a "Inviata il..." per ogni riga già comunicata.
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: nuovo scenario
+      (annulla, verifica che la riga torni "da inviare", reinvia
+      davvero) — stesso gate `RESEND_API_KEY` dei test di invio già
+      esistenti. Verificato `npx tsc --noEmit`, `npx next lint`,
+      `npx vitest run` e `npx jscpd` puliti. Suite e2e non eseguibile in
+      questo ambiente sandbox (stesso problema di login ricorrente,
+      indipendente da questo cambiamento) — da eseguire in locale/CI
+      dopo aver applicato la migration 0038.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

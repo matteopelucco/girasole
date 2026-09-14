@@ -162,3 +162,22 @@ export async function inviaComunicazioniRetta(
   }
   return { ok: true };
 }
+
+// Annulla l'invio di una comunicazione retta (specs/56, "Annulla
+// invio"): elimina la riga di comunicazioni_retta per quel bambino e
+// quel mese, liberando il vincolo unique così che il bambino torni tra
+// quelli "da inviare" — nessuna nuova email, solo la cancellazione del
+// log. Invocata come formAction diretto di un pulsante dentro al form
+// "Invia comunicazioni" (bind di bambinoId/mese, non tramite
+// useFormState: la tabella è già dentro un altro form con la propria
+// azione, niente <form> annidati — vedi app/admin/rette/page.tsx), non
+// restituisce un EsitoAzione: se la riga sparisce dalla tabella dopo il
+// click l'annullamento è riuscito, stesso principio "l'effetto è la
+// conferma" già usato altrove (specs/05 - feedback.md).
+export async function annullaComunicazioneRetta(bambinoId: string, mese: string, _formData: FormData) {
+  const { supabase } = await requireAdmin();
+
+  await supabase.from('comunicazioni_retta').delete().eq('bambino_id', bambinoId).eq('mese', mese);
+
+  revalidatePath('/admin/rette');
+}

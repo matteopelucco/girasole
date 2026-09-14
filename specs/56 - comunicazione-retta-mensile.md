@@ -63,6 +63,15 @@ Allora quel bambino mostra "Inviata" con gli importi e la data/ora
 effettivamente comunicati, al posto dei campi da compilare
 E non viene incluso in un nuovo invio dello stesso mese
 
+## Scenario: annullare l'invio di una comunicazione per poterla reinviare
+Dato che un bambino ha già una comunicazione registrata per il mese
+corrente (es. inviata con importi sbagliati)
+Quando premo "Annulla invio" sulla sua riga
+Allora la comunicazione registrata per quel bambino e quel mese viene
+eliminata, la riga torna a mostrare i campi da compilare (come un
+bambino non ancora comunicato) e un nuovo click su "Invia comunicazioni"
+può inviargliela di nuovo
+
 ## Scenario: configurare il template della mail
 Dato che sono su "Modello email" (raggiungibile da "Rette")
 Quando modifico oggetto e/o corpo, usando i placeholder disponibili
@@ -99,18 +108,29 @@ Allora vengo reindirizzato alla dashboard
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
   finché non viene completata.
-- L'invio scrive un log immutabile in `comunicazioni_retta` (un solo
-  record per bambino e mese, `supabase/migrations/0036_comunicazione_retta.sql`
-  — nessuna policy di update/delete da interfaccia, stesso pattern di
-  `pasti_comunicati` per la comunicazione pasti a Rojac, vedi
+- L'invio scrive un log in `comunicazioni_retta` (un solo record per
+  bambino e mese, `supabase/migrations/0036_comunicazione_retta.sql`,
+  stesso pattern di `pasti_comunicati` per la comunicazione pasti a
+  Rojac, vedi
   [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)):
   registra gli importi effettivamente comunicati (non ricalcolati in
   seguito, anche se il bambino cambia costi dopo l'invio), l'email
-  destinataria, e chi/quando ha inviato.
+  destinataria, e chi/quando ha inviato. Immutabile nel senso che non si
+  aggiorna mai una riga esistente: per correggerla (vedi "Annulla
+  invio" sotto) la si elimina e se ne crea una nuova al prossimo invio,
+  non la si modifica sul posto (`supabase/migrations/0038_annulla_comunicazione_retta.sql`,
+  unica policy di delete, solo admin).
 - Un bambino con un log già presente per il mese corrente è escluso da
   un nuovo invio con lo stesso click "Invia comunicazioni" (per evitare
   doppi invii accidentali); la tabella mostra per lui gli importi già
-  comunicati invece dei campi da compilare.
+  comunicati invece dei campi da compilare, più un pulsante "Annulla
+  invio" per liberarlo di nuovo.
+- "Annulla invio" elimina la riga di `comunicazioni_retta` per quel
+  bambino e quel mese, senza inviare nessuna nuova email: è solo la
+  cancellazione del log che blocca il reinvio, l'ammissibilità del
+  bambino (costi ed email configurati, ancora attivo) è verificata di
+  nuovo al momento dell'invio successivo, come per qualunque altro
+  bambino "da inviare".
 - Il template della mail (`impostazioni_email_retta`, riga singola —
   `supabase/migrations/0036_comunicazione_retta.sql`) ha un oggetto e un
   corpo in testo semplice, entrambi con placeholder nella forma
@@ -131,10 +151,12 @@ Allora vengo reindirizzato alla dashboard
 - Solo un profilo con ruolo `admin` può accedere a `/admin/rette`, alla
   pagina "Modello email" e inviare comunicazioni (`requireAdmin`, stesso
   pattern di [55 - costi-bambino.md](55%20-%20costi-bambino.md)).
-- Fuori scope in questa fase: modificare o annullare una comunicazione
-  già inviata, reinviarla manualmente, comunicare un mese diverso da
+- Fuori scope in questa fase: modificare gli importi di una
+  comunicazione già inviata mantenendola (l'unico modo per correggerla
+  è annullarla e reinviarla, vedi sopra), comunicare un mese diverso da
   quello corrente, allegati (es. PDF) alla comunicazione, un archivio
-  consultabile delle comunicazioni passate (si vede solo se il bambino
-  è già stato comunicato questo mese), più email/genitori diversi per
+  consultabile delle comunicazioni passate o annullate (si vede solo se
+  il bambino è comunicato questo mese, e un annullamento non lascia
+  traccia di chi/quando l'ha annullato), più email/genitori diversi per
   lo stesso bambino, registrazione dei bonifici ricevuti (resta in
   [00 - overview.md](00%20-%20overview.md), backlog Fase 2).

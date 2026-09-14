@@ -169,6 +169,40 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaInviata).toContainText('Materiale didattico');
   });
 
+  test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-annulla-${Date.now()}@example.com`,
+      prezzoMensile: '150',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
+    await page.waitForTimeout(3000);
+    await page.reload();
+
+    const rigaInviata = page.locator('tr', { hasText: cognome });
+    await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+
+    await rigaInviata.getByRole('button', { name: 'Annulla invio' }).click();
+    await page.waitForTimeout(1000);
+    await page.reload();
+
+    // Tornato "da inviare": niente più "Inviata il", ricompaiono i campi.
+    const rigaTornata = page.locator('tr', { hasText: cognome });
+    await expect(rigaTornata.getByText(/Inviata il/)).toHaveCount(0);
+    await expect(rigaTornata.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
+
+    // E può essere effettivamente reinviato.
+    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
+    await page.waitForTimeout(3000);
+    await page.reload();
+    const rigaReinviata = page.locator('tr', { hasText: cognome });
+    await expect(rigaReinviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+  });
+
   test('un bambino già comunicato questo mese non viene reinviato', async ({ page }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 

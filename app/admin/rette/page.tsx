@@ -14,7 +14,7 @@ import {
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
-import { inviaComunicazioniRetta } from './actions';
+import { annullaComunicazioneRetta, inviaComunicazioniRetta } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -152,8 +152,19 @@ export default async function RettePage() {
                         <td className="whitespace-nowrap px-3 py-2 text-right font-medium">
                           {formattaImporto(Number(comunicazione.totale))}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-left text-xs text-emerald-800">
-                          Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
+                        <td className="whitespace-nowrap px-3 py-2 text-left text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-emerald-800">
+                              Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
+                            </span>
+                            <PulsanteInvio
+                              mantieniTesto
+                              formAction={annullaComunicazioneRetta.bind(null, bambino.id, meseCorrente)}
+                              className="rounded-lg border border-red-300 px-2 py-0.5 font-medium text-red-700 hover:bg-red-50"
+                            >
+                              Annulla invio
+                            </PulsanteInvio>
+                          </div>
                         </td>
                       </tr>
                     );
