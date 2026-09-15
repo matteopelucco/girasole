@@ -31,6 +31,7 @@ import {
   salvaSettimanaOreLavoro,
   confermaSettimanaOreLavoro,
   aggiungiMovimentoMonteOre,
+  eliminaMovimentoMonteOre,
   decidiStraordinarioResiduo,
 } from './actions';
 
@@ -317,6 +318,7 @@ export default async function OreLavoroPage({
           modalitaAdmin={modalitaAdmin}
           utenteId={utenteTarget.id}
           aggiungiMovimento={aggiungiMovimentoMonteOre}
+          eliminaMovimento={eliminaMovimentoMonteOre}
         />
 
         {!confermata && (

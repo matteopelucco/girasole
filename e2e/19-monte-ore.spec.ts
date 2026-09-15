@@ -19,11 +19,13 @@
 // movimento manuale, e che il saldo si aggiorna davvero dopo un
 // salvataggio reale.
 //
-// Il movimento manuale di test (+1.5h) viene sempre compensato con un
-// movimento uguale e opposto in `finally` (nota "Correzione E2E"): i
-// movimenti sono un ledger insert-only (nessun delete, specs/19), quindi
-// "ripristinare" significa riportare il saldo al valore di partenza, non
-// cancellare le righe di test.
+// Il movimento manuale di test (+1.5h) nel primo test sotto viene
+// sempre compensato con un movimento uguale e opposto in `finally`
+// (nota "Correzione E2E"), invece di eliminarlo: resta comunque un modo
+// valido di "ripristinare" il saldo. I movimenti automatici restano un
+// ledger insert-only (nessun delete); un movimento manuale (`precarico`)
+// è invece eliminabile dall'admin — vedi il test dedicato più sotto, che
+// usa proprio l'eliminazione per il proprio cleanup.
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
@@ -152,6 +154,64 @@ test.describe('19 — Monte ore', () => {
         const testoSaldoFinale = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
         const saldoFinale = Number(testoSaldoFinale.match(/(-?\d+(\.\d+)?)h/)?.[1]);
         expect(saldoFinale).toBeCloseTo(saldoIniziale, 2);
+      } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
+      }
+    });
+
+    test('un movimento manuale inserito per errore può essere eliminato, i movimenti automatici no', async ({
+      page,
+    }) => {
+      await page.goto('/admin/maestre');
+      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAbilita.getByLabel('Ore di lavoro').check();
+      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
+      await page.waitForTimeout(1000);
+
+      try {
+        await page.goto('/admin/ore-lavoro');
+        const rigaDipendente = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaDipendente.getByRole('link').click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\?utente=.+/);
+
+        const testoSaldo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
+        const saldoIniziale = Number(testoSaldo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+
+        // Scenario: l'admin elimina un movimento manuale inserito per
+        // errore.
+        const notaMovimento = `Movimento E2E da eliminare ${Date.now()}`;
+        await page.getByLabel('Ore', { exact: true }).fill('2');
+        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
+        await page.getByLabel('Nota', { exact: true }).fill(notaMovimento);
+        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        const rigaMovimento = page.locator('li', { hasText: notaMovimento });
+        await expect(rigaMovimento).toBeVisible({ timeout: 20_000 });
+
+        const testoSaldoDopoAggiunta = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
+        const saldoDopoAggiunta = Number(testoSaldoDopoAggiunta.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+        expect(saldoDopoAggiunta).toBeCloseTo(saldoIniziale + 2, 2);
+
+        page.once('dialog', (dialog) => dialog.accept());
+        await rigaMovimento.getByRole('button', { name: 'Elimina' }).click();
+        await expect(page.locator('li', { hasText: notaMovimento })).toHaveCount(0, { timeout: 20_000 });
+
+        const testoSaldoFinale = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
+        const saldoFinale = Number(testoSaldoFinale.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+        expect(saldoFinale).toBeCloseTo(saldoIniziale, 2);
+
+        // Scenario: i movimenti automatici non sono eliminabili — nessuna
+        // riga dello storico che non sia "(manuale)" mostra "Elimina"
+        // (best-effort: questa suite non conferma mai per davvero una
+        // settimana, quindi potrebbe non essercene nessuna da verificare).
+        const righeNonManuali = page.locator('ul li').filter({ hasNotText: '(manuale)' });
+        const numeroRighe = await righeNonManuali.count();
+        for (let i = 0; i < numeroRighe; i++) {
+          await expect(righeNonManuali.nth(i).getByRole('button', { name: 'Elimina' })).toHaveCount(0);
+        }
       } finally {
         await page.goto('/admin/maestre');
         const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });

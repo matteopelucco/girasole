@@ -86,6 +86,19 @@ export function notaMovimentoStraordinarioResiduo(straordinarioResiduo: number):
   return `Straordinario residuo scalato dal monte ore su decisione dell'admin: ${straordinarioResiduo}h.`;
 }
 
+// Solo un movimento manuale (`precarico`) è eliminabile (specs/19,
+// "l'admin elimina un movimento manuale inserito per errore"): i
+// movimenti automatici (`settimanale`, `straordinario_residuo`) restano
+// immutabili, legati alla conferma di una settimana o a una decisione
+// già presa. Stessa regola usata sia per mostrare/nascondere il
+// pulsante "Elimina" (components/MonteOre.tsx) sia come controllo
+// difensivo lato server (app/dashboard/ore-lavoro/actions.ts) — la RLS
+// (supabase/migrations/0044_elimina_movimento_precarico.sql) resta
+// comunque la difesa primaria. Funzione pura, nessun I/O.
+export function movimentoEliminabile(tipo: string): boolean {
+  return tipo === 'precarico';
+}
+
 export type MovimentoMonteOre = { variazione: number | string };
 
 // Saldo attuale di monte ore (specs/19): somma di tutte le variazioni,

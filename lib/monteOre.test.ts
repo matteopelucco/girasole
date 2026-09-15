@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   controlloSettimanaOreLavoro,
+  movimentoEliminabile,
   notaMovimentoSettimanale,
   notaMovimentoStraordinarioResiduo,
   saldiPerUtente,
@@ -167,6 +168,20 @@ describe('saldoMonteOre', () => {
 
   it('funziona anche con valori stringa (numeric via PostgREST)', () => {
     expect(saldoMonteOre([{ variazione: '2.50' }, { variazione: '-0.50' }])).toBe(2);
+  });
+});
+
+describe('movimentoEliminabile', () => {
+  it('un movimento manuale (precarico) è eliminabile', () => {
+    expect(movimentoEliminabile('precarico')).toBe(true);
+  });
+
+  it('un movimento automatico settimanale non è eliminabile', () => {
+    expect(movimentoEliminabile('settimanale')).toBe(false);
+  });
+
+  it('un movimento di straordinario residuo non è eliminabile', () => {
+    expect(movimentoEliminabile('straordinario_residuo')).toBe(false);
   });
 });
 

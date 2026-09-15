@@ -9,7 +9,12 @@ import {
   settimanaOreLavoroRichiesta,
   utenteBersaglioOreLavoro,
 } from '@/lib/oreLavoro';
-import { controlloSettimanaOreLavoro, notaMovimentoSettimanale, notaMovimentoStraordinarioResiduo } from '@/lib/monteOre';
+import {
+  controlloSettimanaOreLavoro,
+  movimentoEliminabile,
+  notaMovimentoSettimanale,
+  notaMovimentoStraordinarioResiduo,
+} from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -335,6 +340,36 @@ export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: F
   });
   if (error) {
     return { ok: false, messaggio: 'Impossibile registrare il movimento di monte ore.', dettaglio: error.message };
+  }
+
+  revalidatePath('/dashboard/ore-lavoro');
+  return { ok: true };
+}
+
+// specs/19 - monte-ore.md, scenario "l'admin elimina un movimento
+// manuale inserito per errore": solo un movimento `precarico` è
+// eliminabile (movimentoEliminabile, lib/monteOre.ts) — i movimenti
+// automatici (`settimanale`, `straordinario_residuo`) restano
+// immutabili, legati alla conferma di una settimana o a una decisione
+// già presa. Il controllo qui è difensivo (stesso messaggio d'errore
+// se qualcuno aggirasse la UI): la RLS
+// (supabase/migrations/0044_elimina_movimento_precarico.sql) è la
+// difesa primaria, rifiuta comunque la delete lato database.
+export async function eliminaMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const id = (formData.get('id') as string) || '';
+  if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
+
+  const { data: movimento } = await supabase.from('monte_ore_movimenti').select('tipo').eq('id', id).maybeSingle();
+  if (!movimento) return { ok: false, messaggio: 'Movimento non trovato.' };
+  if (!movimentoEliminabile(movimento.tipo)) {
+    return { ok: false, messaggio: 'Solo un movimento manuale può essere eliminato.' };
+  }
+
+  const { error } = await supabase.from('monte_ore_movimenti').delete().eq('id', id);
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile eliminare il movimento.', dettaglio: error.message };
   }
 
   revalidatePath('/dashboard/ore-lavoro');

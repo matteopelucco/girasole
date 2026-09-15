@@ -149,6 +149,24 @@ Quando tento di registrare un movimento manuale senza indicare una nota
 Allora vedo un messaggio d'errore che la richiede
 E nessun movimento viene registrato
 
+## Scenario: l'admin elimina un movimento manuale inserito per errore
+Dato che sono sulle ore di un dipendente (`/dashboard/ore-lavoro?utente=<id>`)
+come admin, e lo storico mostra un movimento manuale (`precarico`) —
+es. ore o nota sbagliate
+Quando premo "Elimina" sulla sua riga e confermo
+Allora il movimento sparisce dallo storico
+E il saldo mostrato si aggiorna di conseguenza (non lo conta più nella
+somma)
+
+## Scenario: i movimenti automatici non sono eliminabili
+Dato che sono sulle ore di un dipendente come admin, e lo storico
+include movimenti automatici (`settimanale` o `straordinario_residuo`)
+Quando guardo le loro righe
+Allora non trovo nessun pulsante "Elimina": restano immutabili, legati
+alla conferma di una settimana o a una decisione già presa — per
+correggerli resta solo la via generale, un movimento `precarico`
+motivato che compensa l'errore (vedi Regole)
+
 ## Scenario: il monte ore può risultare negativo
 Dato che il monte ore di una persona è a zero o vicino a zero
 Quando l'admin sceglie di scalare dal monte ore altro straordinario
@@ -192,9 +210,17 @@ un margine di ore già restituite in anticipo
   decisione non è più modificabile da questa interfaccia (stesso
   principio "immutabile" dei movimenti sotto: un errore si corregge con
   un `precarico` motivato, non riaprendo la decisione).
-- I movimenti sono immutabili una volta registrati (nessun update/
-  delete): una correzione si registra come nuovo movimento (`precarico`)
-  motivato dalla nota, non modificando lo storico.
+- I movimenti automatici (`settimanale`, `straordinario_residuo`) sono
+  immutabili una volta registrati (nessun update/delete su questi due
+  tipi): una correzione si registra come nuovo movimento (`precarico`)
+  motivato dalla nota, non modificando lo storico. Un movimento
+  manuale (`precarico`) può invece essere eliminato dall'admin (vedi
+  scenario sopra) se inserito per errore — evita di dover registrare un
+  contro-movimento di compensazione solo per rimediare a un refuso
+  (importo o nota sbagliati). Nessun tipo di movimento è mai
+  modificabile sul posto (niente update, in nessun caso): solo
+  l'inserimento di un `precarico` e, per quello stesso tipo, la sua
+  eliminazione.
 - Se, per un errore tecnico, il movimento di monte ore non può essere
   registrato subito dopo che la conferma della settimana è comunque
   andata a buon fine, l'azione segnala l'anomalia esplicitamente
@@ -204,6 +230,11 @@ un margine di ore già restituite in anticipo
 - Il saldo è visibile al diretto interessato (sola lettura) e all'admin;
   nessun altro ruolo vi accede (RLS in
   `supabase/migrations/0031_monte_ore.sql`).
+- Solo l'admin può eliminare un movimento, e solo di tipo `precarico`
+  (nuova policy di delete,
+  `supabase/migrations/0044_elimina_movimento_precarico.sql` — un
+  `settimanale`/`straordinario_residuo` resta rifiutato dalla RLS anche
+  se qualcuno tentasse la richiesta a mano).
 - Le colonne del controllo settimanale e della decisione sull'eventuale
   straordinario residuo (`ore_lavoro_settimane`) sono leggibili dagli
   stessi ruoli che leggono già la riga di conferma (diretto interessato

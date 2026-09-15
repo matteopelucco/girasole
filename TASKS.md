@@ -2377,6 +2377,39 @@ diventa automaticamente un nuovo credito/debito.
       ambiente sandbox (stesso problema di credenziali ricorrente) — da
       eseguire in locale/CI prima di considerare la feature chiusa.
 
+## Monte ore: eliminare un movimento manuale inserito per errore
+Bug segnalato dall'utente (con screenshot): un movimento manuale
+("+28h, Ore INPS settembre 26") inserito per errore non poteva essere
+tolto dallo storico, solo compensato con un contro-movimento — non
+c'era alcun modo di eliminarlo.
+- [x] `specs/19 - monte-ore.md`: due nuovi scenari ("l'admin elimina un
+      movimento manuale inserito per errore" e "i movimenti automatici
+      non sono eliminabili") e Regole aggiornate (l'immutabilità resta
+      piena solo per `settimanale`/`straordinario_residuo`; un
+      `precarico` è ora eliminabile).
+- [x] `supabase/migrations/0044_elimina_movimento_precarico.sql`: nuova
+      policy di delete, solo admin e solo `tipo = 'precarico'` — un
+      `settimanale`/`straordinario_residuo` resta rifiutato dalla RLS
+      anche aggirando la UI.
+- [x] `lib/monteOre.ts`: nuova `movimentoEliminabile(tipo)` (vero solo
+      per `precarico`), condivisa fra UI (mostra/nasconde "Elimina") e
+      controllo difensivo lato server. Copertura in
+      `lib/monteOre.test.ts`.
+- [x] `app/dashboard/ore-lavoro/actions.ts`: nuova
+      `eliminaMovimentoMonteOre` (verifica tipo prima di eliminare,
+      messaggio chiaro se non eliminabile o non trovato).
+- [x] `components/MonteOre.tsx`: pulsante "Elimina" (con conferma) su
+      ogni riga eliminabile dello storico; `app/dashboard/ore-lavoro/page.tsx`
+      collega la nuova action.
+- [x] `e2e/19-monte-ore.spec.ts`: nuovo test (registra un movimento
+      manuale, lo elimina, verifica che sparisca e che il saldo torni
+      al valore di partenza; verifica anche, sulle righe non manuali
+      eventualmente presenti, che "Elimina" non compaia). Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run`, `npx jscpd`
+      e `npm run build` puliti. Suite e2e non eseguibile in questo
+      momento (DB di test offline, comunicato dall'utente) — da
+      eseguire in locale/CI appena disponibile.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

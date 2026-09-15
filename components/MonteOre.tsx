@@ -1,4 +1,5 @@
 import { formattaDataItaliana, formattaDataOraItaliana } from '@/lib/date';
+import { movimentoEliminabile } from '@/lib/monteOre';
 import { FormConEsito, type EsitoAzione } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 
@@ -24,12 +25,14 @@ export function MonteOre({
   modalitaAdmin,
   utenteId,
   aggiungiMovimento,
+  eliminaMovimento,
 }: {
   saldo: number;
   movimenti: MovimentoMonteOre[];
   modalitaAdmin: boolean;
   utenteId: string;
   aggiungiMovimento: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
+  eliminaMovimento: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
 }) {
   return (
     <div className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">
@@ -78,18 +81,31 @@ export function MonteOre({
           {movimenti.length > 0 && (
             <ul className="space-y-1 border-t border-purple-200 pt-2">
               {movimenti.slice(0, 20).map((m) => (
-                <li key={m.id} className="text-xs text-purple-800">
-                  {formattaDataOraItaliana(m.created_at)} —{' '}
-                  <strong>
-                    {Number(m.variazione) > 0 ? '+' : ''}
-                    {m.variazione}h
-                  </strong>
-                  {m.tipo === 'precarico'
-                    ? ' (manuale)'
-                    : m.settimana_inizio
-                      ? ` (settimana ${formattaDataItaliana(m.settimana_inizio)})`
-                      : ''}
-                  {m.nota ? ` — ${m.nota}` : ''}
+                <li key={m.id} className="flex flex-wrap items-center gap-2 text-xs text-purple-800">
+                  <span>
+                    {formattaDataOraItaliana(m.created_at)} —{' '}
+                    <strong>
+                      {Number(m.variazione) > 0 ? '+' : ''}
+                      {m.variazione}h
+                    </strong>
+                    {m.tipo === 'precarico'
+                      ? ' (manuale)'
+                      : m.settimana_inizio
+                        ? ` (settimana ${formattaDataItaliana(m.settimana_inizio)})`
+                        : ''}
+                    {m.nota ? ` — ${m.nota}` : ''}
+                  </span>
+                  {movimentoEliminabile(m.tipo) && (
+                    <FormConEsito action={eliminaMovimento}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <PulsanteInvio
+                        confermaMessaggio="Eliminare questo movimento manuale di monte ore?"
+                        className="rounded border border-red-300 px-1.5 py-0.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                      >
+                        Elimina
+                      </PulsanteInvio>
+                    </FormConEsito>
+                  )}
                 </li>
               ))}
             </ul>
