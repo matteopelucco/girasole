@@ -2497,6 +2497,39 @@ confondere).
       `npx tsc --noEmit`, `npx next lint`, `npx vitest run` e
       `npx jscpd` puliti (nessuna logica toccata, solo etichette).
 
+## Bugfix: popup verifica bonifico annidava un <form>, spaginava e non salvava
+Due segnalazioni dell'utente sullo stesso bug, con screenshot: il popup
+"Importo diverso" spaginava la tabella "Rette", e "Bonifico corretto"/
+"Importo diverso" non avevano alcun effetto sullo stato del bonifico.
+Causa: `components/VerificaBonifico.tsx` usava `FormConEsito` (un
+proprio `<form>`) per entrambe le azioni; nella vista del mese
+corrente, `RigaComunicazione` vive già dentro il `<form>` "Invia
+comunicazioni" che avvolge l'intera tabella (specs/56) — un `<form>`
+annidato in un altro è HTML non valido, e il browser lo gestisce
+spaginando il contenuto e non inviando in modo affidabile i dati
+all'azione prevista (coerente con entrambi i sintomi osservati).
+- [x] `components/VerificaBonifico.tsx`: riscritto senza alcun
+      `<form>` — le Server Action (`marcaCorretto`/`marcaImportoErrato`)
+      vengono chiamate direttamente come funzioni async dentro
+      `useTransition`, con pending/esito gestiti a mano (stesso
+      contenuto/testo mostrato all'utente, solo l'implementazione
+      cambia). La validazione "campo obbligatorio" di importo/nota, che
+      prima veniva dal browser via `required` dentro un `<form>`, è ora
+      esplicita in JS (lo stesso `<form>` che sparisce se ne porta via
+      anche la validazione nativa).
+- [x] Nessuna migration necessaria per questo fix (nessuna modifica allo
+      schema): le colonne `bonifico_*` di `comunicazioni_retta` sono
+      già quelle di `0043_bonifico_comunicazione_retta.sql`, già
+      applicata. Restano invece da applicare, se non ancora fatto,
+      `0044_elimina_movimento_precarico.sql` e
+      `0045_movimento_settimanale_netto_pieno.sql` (monte ore, non
+      collegate a questo bug).
+- [x] Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`,
+      `npx jscpd` e `npm run build` puliti. I test e2e già scritti per
+      specs/59 (button/aria-label invariati) restano validi senza
+      modifiche, ma non eseguibili in questo momento (DB di test
+      offline) — da eseguire appena disponibile.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

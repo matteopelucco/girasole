@@ -1,21 +1,30 @@
 'use client';
 
-import { useState } from 'react';
-import { FormConEsito, type EsitoAzione } from './FormConEsito';
-import { PulsanteInvio } from './PulsanteInvio';
+import { useRef, useState, useTransition } from 'react';
+import { ESITO_INIZIALE, type EsitoAzione } from './FormConEsito';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana } from '@/lib/date';
 
 // Verifica del bonifico di una comunicazione già inviata (specs/59 -
 // verifica-bonifico-retta.md): due azioni ("Bonifico corretto"/
 // "Importo diverso") finché è "da verificare", uno stato di sola
-// lettura una volta marcato. Ogni riga ha il proprio `<form>`
-// indipendente (tramite FormConEsito/useFormState, non un formAction
-// annidato nel form "Invia comunicazioni"): a differenza di "Invia
-// comunicazioni"/"Annulla invio", la verifica del bonifico deve
-// funzionare anche nella vista di sola lettura di un mese passato, che
-// non ha nessun `<form>` che la contenga (specs/59, "verificare il
-// bonifico anche su un mese passato").
+// lettura una volta marcato.
+//
+// NON usa FormConEsito/<form> (a differenza della prima versione):
+// nella vista del mese corrente, ogni riga di RigaComunicazione vive
+// già dentro il <form> "Invia comunicazioni" che avvolge l'intera
+// tabella (app/admin/rette/page.tsx) — un secondo <form> annidato qui
+// dentro è HTML non valido e il browser lo gestisce spaginando/
+// riposizionando il contenuto in modo imprevedibile (bug osservato in
+// produzione). Le azioni vengono quindi invocate direttamente come
+// funzioni async (una Server Action è chiamabile così, non solo
+// tramite useFormState) dentro un useTransition, con pending/esito
+// gestiti a mano — stesso genere di problema, e stessa soluzione di
+// "niente form annidati", già presente per "Annulla invio"/"Invia
+// comunicazione singola" in questa pagina, solo che lì basta un
+// formAction bindato su un bottone perché non servono altri campi;
+// "Importo diverso" ne ha tre, quindi niente <form>, solo ref letti al
+// click di "Conferma".
 export function VerificaBonifico({
   bambinoNome,
   totale,
@@ -46,6 +55,13 @@ export function VerificaBonifico({
   marcaImportoErrato: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
 }) {
   const [apertoModale, setApertoModale] = useState(false);
+  const [esitoCorretto, setEsitoCorretto] = useState<EsitoAzione>(ESITO_INIZIALE);
+  const [esitoModale, setEsitoModale] = useState<EsitoAzione>(ESITO_INIZIALE);
+  const [pendingCorretto, avviaCorretto] = useTransition();
+  const [pendingModale, avviaModale] = useTransition();
+  const importoRef = useRef<HTMLInputElement>(null);
+  const notaRef = useRef<HTMLInputElement>(null);
+  const meseRef = useRef<HTMLInputElement>(null);
 
   if (stato === 'corretto') {
     return (
@@ -66,29 +82,75 @@ export function VerificaBonifico({
     );
   }
 
+  function confermaBonificoCorretto() {
+    if (
+      !window.confirm(
+        `Confermi che il bonifico di ${bambinoNome} è stato ricevuto per l'importo corretto (${formattaImporto(totale)})?`
+      )
+    ) {
+      return;
+    }
+    avviaCorretto(async () => {
+      setEsitoCorretto(await marcaCorretto(ESITO_INIZIALE, new FormData()));
+    });
+  }
+
+  // Stessa validazione "campo obbligatorio" che un <input required>
+  // darebbe nativamente dentro un <form> — qui va fatta a mano, perché
+  // senza <form> l'attributo required non ha alcun effetto.
+  function confermaImportoErrato() {
+    const importoValore = importoRef.current?.value ?? '';
+    const notaValore = (notaRef.current?.value ?? '').trim();
+    if (!importoValore) {
+      setEsitoModale({ ok: false, messaggio: "Inserisci l'importo realmente ricevuto." });
+      return;
+    }
+    if (!notaValore) {
+      setEsitoModale({ ok: false, messaggio: 'Scrivi una nota che spieghi la differenza.' });
+      return;
+    }
+
+    const dati = new FormData();
+    dati.set('importo_ricevuto', importoValore);
+    dati.set('nota', notaValore);
+    dati.set('mese_competenza', meseRef.current?.value ?? '');
+    avviaModale(async () => {
+      const risultato = await marcaImportoErrato(ESITO_INIZIALE, dati);
+      setEsitoModale(risultato);
+      if (risultato.ok) setApertoModale(false);
+    });
+  }
+
   return (
     <>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <span className="text-stone-500">Bonifico da verificare</span>
-        <FormConEsito action={marcaCorretto}>
-          <PulsanteInvio
-            mantieniTesto
-            confermaMessaggio={`Confermi che il bonifico di ${bambinoNome} è stato ricevuto per l'importo corretto (${formattaImporto(
-              totale
-            )})?`}
-            className="rounded-lg border border-emerald-300 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-50"
-          >
-            Bonifico corretto
-          </PulsanteInvio>
-        </FormConEsito>
         <button
           type="button"
-          onClick={() => setApertoModale(true)}
+          disabled={pendingCorretto}
+          aria-busy={pendingCorretto}
+          onClick={confermaBonificoCorretto}
+          className="rounded-lg border border-emerald-300 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Bonifico corretto
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setEsitoModale(ESITO_INIZIALE);
+            setApertoModale(true);
+          }}
           className="rounded-lg border border-amber-300 px-2 py-0.5 font-medium text-amber-700 hover:bg-amber-50"
         >
           Importo diverso
         </button>
       </div>
+      {!esitoCorretto.ok && (
+        <div role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+          <p className="font-medium">{esitoCorretto.messaggio}</p>
+          {esitoCorretto.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoCorretto.dettaglio}</p>}
+        </div>
+      )}
 
       {apertoModale && (
         <div
@@ -97,20 +159,16 @@ export function VerificaBonifico({
           aria-label={`Importo bonifico diverso per ${bambinoNome}`}
           className="fixed inset-0 z-40 flex items-center justify-center bg-stone-900/40 p-4"
         >
-          <FormConEsito
-            action={marcaImportoErrato}
-            className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 text-left shadow-lg"
-          >
+          <div className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 text-left shadow-lg">
             <h2 className="text-base font-medium">Importo bonifico diverso — {bambinoNome}</h2>
             <p className="text-xs text-stone-600">Importo atteso: {formattaImporto(totale)}</p>
             <label className="block text-xs text-stone-600">
               Importo ricevuto (€)
               <input
-                name="importo_ricevuto"
+                ref={importoRef}
                 type="number"
                 min={0}
                 step={0.01}
-                required
                 aria-label="Importo ricevuto (€)"
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               />
@@ -118,8 +176,7 @@ export function VerificaBonifico({
             <label className="block text-xs text-stone-600">
               Nota (obbligatoria)
               <input
-                name="nota"
-                required
+                ref={notaRef}
                 placeholder="Motivo della differenza"
                 aria-label="Nota bonifico"
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
@@ -128,7 +185,7 @@ export function VerificaBonifico({
             <label className="block text-xs text-stone-600">
               Mese su cui conteggiare la differenza
               <input
-                name="mese_competenza"
+                ref={meseRef}
                 type="month"
                 min={meseMinimo}
                 defaultValue={meseSuggerito}
@@ -136,6 +193,12 @@ export function VerificaBonifico({
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
               />
             </label>
+            {!esitoModale.ok && (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-800">
+                <p className="font-medium">{esitoModale.messaggio}</p>
+                {esitoModale.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoModale.dettaglio}</p>}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -144,11 +207,17 @@ export function VerificaBonifico({
               >
                 Annulla
               </button>
-              <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800">
-                Conferma
-              </PulsanteInvio>
+              <button
+                type="button"
+                disabled={pendingModale}
+                aria-busy={pendingModale}
+                onClick={confermaImportoErrato}
+                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {pendingModale ? 'Attendere…' : 'Conferma'}
+              </button>
             </div>
-          </FormConEsito>
+          </div>
         </div>
       )}
     </>
