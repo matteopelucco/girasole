@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  calcolaDifferenzaBonifico,
   calcolaRiepilogoRetta,
   formattaImporto,
   giorniAperturaMese,
@@ -69,6 +70,7 @@ describe('calcolaRiepilogoRetta', () => {
     postAsiloRichiesto: false,
     prezzoPostAsilo: 0,
     costiExtra: 0,
+    creditoDebito: 0,
   };
 
   it('solo retta e pasti proiettati, nessun extra', () => {
@@ -81,6 +83,7 @@ describe('calcolaRiepilogoRetta', () => {
       costoPreAsilo: 0,
       costoPostAsilo: 0,
       costiExtra: 0,
+      creditoDebito: 0,
       totale: 350,
     });
   });
@@ -122,6 +125,18 @@ describe('calcolaRiepilogoRetta', () => {
     expect(riepilogo.totale).toBe(365.5);
   });
 
+  it('un debito (credito/debito positivo) si somma al totale', () => {
+    const riepilogo = calcolaRiepilogoRetta({ ...base, creditoDebito: 20 });
+    expect(riepilogo.creditoDebito).toBe(20);
+    expect(riepilogo.totale).toBe(370);
+  });
+
+  it('un credito (credito/debito negativo) si sottrae dal totale', () => {
+    const riepilogo = calcolaRiepilogoRetta({ ...base, creditoDebito: -20 });
+    expect(riepilogo.creditoDebito).toBe(-20);
+    expect(riepilogo.totale).toBe(330);
+  });
+
   it('il totale può risultare negativo se il conguaglio supera gli altri importi', () => {
     const riepilogo = calcolaRiepilogoRetta({
       prezzoMensile: 0,
@@ -134,6 +149,7 @@ describe('calcolaRiepilogoRetta', () => {
       postAsiloRichiesto: false,
       prezzoPostAsilo: 0,
       costiExtra: 0,
+      creditoDebito: 0,
     });
     expect(riepilogo.totale).toBe(-50);
   });
@@ -141,6 +157,24 @@ describe('calcolaRiepilogoRetta', () => {
   it('arrotonda a due decimali eventuali errori di somma in virgola mobile', () => {
     const riepilogo = calcolaRiepilogoRetta({ ...base, prezzoMensile: 0.1, costiExtra: 0.2 - 0.3 + 250 });
     expect(riepilogo.totale).toBe(350);
+  });
+});
+
+describe('calcolaDifferenzaBonifico', () => {
+  it('nessuna differenza se l’importo ricevuto è uguale al totale', () => {
+    expect(calcolaDifferenzaBonifico(200, 200)).toBe(0);
+  });
+
+  it('positiva (debito) se ha pagato meno del dovuto', () => {
+    expect(calcolaDifferenzaBonifico(200, 180)).toBe(20);
+  });
+
+  it('negativa (credito) se ha pagato più del dovuto', () => {
+    expect(calcolaDifferenzaBonifico(200, 220)).toBe(-20);
+  });
+
+  it('arrotonda a due decimali eventuali errori di virgola mobile', () => {
+    expect(calcolaDifferenzaBonifico(0.3, 0.1 + 0.1)).toBe(0.1);
   });
 });
 

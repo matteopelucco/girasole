@@ -133,4 +133,31 @@ test.describe('55 — Costi bambino', () => {
     await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('2');
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue('');
   });
+
+  test('più indirizzi email separati da ";" vengono salvati', async ({ page }) => {
+    await creaBambinoDiProva(page);
+
+    const email = 'genitore1@esempio.it; genitore2@esempio.it';
+    await page.getByLabel('Prezzo retta mensile (€)').fill('150');
+    await page.getByLabel('Email promemoria retta').fill(email);
+    await page.getByRole('button', { name: 'Salva costi' }).click();
+
+    await expect(page.getByLabel('Email promemoria retta')).toHaveValue(email, { timeout: 20_000 });
+    await page.reload();
+    await expect(page.getByLabel('Email promemoria retta')).toHaveValue(email);
+  });
+
+  test('uno solo dei più indirizzi non valido viene rifiutato e non salva nulla', async ({ page }) => {
+    await creaBambinoDiProva(page);
+
+    await page.getByLabel('Prezzo retta mensile (€)').fill('150');
+    await page.getByLabel('Email promemoria retta').fill('genitore1@esempio.it; non-una-email');
+    await page.getByRole('button', { name: 'Salva costi' }).click();
+
+    await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
+
+    await page.reload();
+    await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');
+    await expect(page.getByLabel('Email promemoria retta')).toHaveValue('');
+  });
 });

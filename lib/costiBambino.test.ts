@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailValida } from './costiBambino';
+import { emailListaValida, emailValida, emailsDaCampo } from './costiBambino';
 
 // emailValida è pura (nessun I/O): copre le combinazioni di formato
 // dell'email di promemoria di specs/55 - costi-bambino.md.
@@ -38,5 +38,51 @@ describe('emailValida', () => {
 
   it('rifiuta una stringa con il dominio mancante', () => {
     expect(emailValida('mario@')).toBe(false);
+  });
+});
+
+describe('emailsDaCampo', () => {
+  it('un singolo indirizzo diventa un elenco di uno', () => {
+    expect(emailsDaCampo('genitore@esempio.it')).toEqual(['genitore@esempio.it']);
+  });
+
+  it('separa più indirizzi su ";", ignorando gli spazi intorno', () => {
+    expect(emailsDaCampo('genitore1@esempio.it; genitore2@esempio.it')).toEqual([
+      'genitore1@esempio.it',
+      'genitore2@esempio.it',
+    ]);
+  });
+
+  it('scarta le parti vuote (es. un ";" finale)', () => {
+    expect(emailsDaCampo('genitore1@esempio.it; genitore2@esempio.it;')).toEqual([
+      'genitore1@esempio.it',
+      'genitore2@esempio.it',
+    ]);
+  });
+
+  it('un campo vuoto produce un elenco vuoto', () => {
+    expect(emailsDaCampo('')).toEqual([]);
+  });
+});
+
+describe('emailListaValida', () => {
+  it('un singolo indirizzo valido', () => {
+    expect(emailListaValida('genitore@esempio.it')).toBe(true);
+  });
+
+  it('più indirizzi validi separati da ";"', () => {
+    expect(emailListaValida('genitore1@esempio.it; genitore2@esempio.it')).toBe(true);
+  });
+
+  it('rifiuta se anche un solo indirizzo non è valido', () => {
+    expect(emailListaValida('genitore1@esempio.it; non-una-email')).toBe(false);
+  });
+
+  it('rifiuta un campo vuoto', () => {
+    expect(emailListaValida('')).toBe(false);
+  });
+
+  it('rifiuta un campo con solo ";" (nessun indirizzo dopo la pulizia)', () => {
+    expect(emailListaValida(';;')).toBe(false);
   });
 });

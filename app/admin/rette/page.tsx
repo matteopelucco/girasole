@@ -16,7 +16,14 @@ import {
   ultimoGiornoMese,
 } from '@/lib/date';
 import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
-import { annullaComunicazioneRetta, inviaComunicazioneRettaSingola, inviaComunicazioniRetta } from './actions';
+import { VerificaBonifico } from '@/components/VerificaBonifico';
+import {
+  annullaComunicazioneRetta,
+  inviaComunicazioneRettaSingola,
+  inviaComunicazioniRetta,
+  marcaBonificoCorretto,
+  marcaBonificoImportoErrato,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +66,7 @@ function raggruppaPerSezione<T>(
 }
 
 type ComunicazioneRettaRiga = {
+  id: string;
   email_destinatario: string;
   retta_mensile: number | string;
   costo_pasti: number | string;
@@ -68,25 +76,37 @@ type ComunicazioneRettaRiga = {
   costo_post_asilo: number | string;
   costi_extra: number | string;
   note_costi_extra: string | null;
+  credito_debito: number | string;
+  nota_credito_debito: string | null;
   totale: number | string;
+  mese: string;
   inviata_il: string;
+  bonifico_stato: 'in_attesa' | 'corretto' | 'importo_errato';
+  bonifico_importo_ricevuto: number | string | null;
+  bonifico_nota: string | null;
+  bonifico_verificato_da_nome: string | null;
+  bonifico_verificato_il: string | null;
 };
 
 // Riga di un bambino già comunicato (specs/56): stessa forma sia nella
 // vista del mese corrente sia in quella di revisione di un mese passato
-// — solo "Annulla invio" cambia (mai disponibile per un mese passato,
-// "Fuori scope"), fattorizzata qui per non duplicare le 9 celle tra le
-// due viste (CLAUDE.md, jscpd).
+// — solo "Annulla invio" cambia (mai disponibile per un mese passato, né
+// per un bonifico già verificato — specs/59), fattorizzata qui per non
+// duplicare le celle tra le due viste (CLAUDE.md, jscpd). La verifica
+// del bonifico (specs/59) resta invece disponibile in entrambe le viste,
+// finché è "da verificare".
 function RigaComunicazione({
   bambino,
   comunicazione,
   mostraAnnullaInvio,
   mese,
+  meseReale,
 }: {
   bambino: { id: string; nome: string; cognome: string };
   comunicazione: ComunicazioneRettaRiga;
   mostraAnnullaInvio: boolean;
   mese: string;
+  meseReale: string;
 }) {
   return (
     <tr className="bg-emerald-50/40">
@@ -110,11 +130,15 @@ function RigaComunicazione({
       </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costi_extra))}</td>
       <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.credito_debito))}
+      </td>
+      <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.nota_credito_debito ?? ''}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-emerald-800">Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}</span>
-          {mostraAnnullaInvio && (
+          {mostraAnnullaInvio && comunicazione.bonifico_stato === 'in_attesa' && (
             <PulsanteInvio
               mantieniTesto
               formAction={annullaComunicazioneRetta.bind(null, bambino.id, mese)}
@@ -124,6 +148,19 @@ function RigaComunicazione({
             </PulsanteInvio>
           )}
         </div>
+        <VerificaBonifico
+          bambinoNome={`${bambino.nome} ${bambino.cognome}`}
+          totale={Number(comunicazione.totale)}
+          stato={comunicazione.bonifico_stato}
+          importoRicevuto={comunicazione.bonifico_importo_ricevuto !== null ? Number(comunicazione.bonifico_importo_ricevuto) : null}
+          nota={comunicazione.bonifico_nota}
+          verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
+          verificatoIl={comunicazione.bonifico_verificato_il}
+          meseSuggerito={meseSuccessivo(comunicazione.mese)}
+          meseMinimo={meseReale}
+          marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
+          marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
+        />
       </td>
     </tr>
   );
@@ -157,7 +194,13 @@ const INTESTAZIONE_COLONNE = (
         Costi extra
       </th>
       <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-        Nota
+        Nota costi extra
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+        Credito/Debito
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Nota cred./deb.
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Totale
@@ -210,7 +253,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       .order('cognome');
     const bambinoIds = (bambini ?? []).map((b) => b.id);
 
-    const [{ data: costi }, { data: presenzeAssenza }, { data: comunicazioni }, { data: template }, chiusure] =
+    const [{ data: costi }, { data: presenzeAssenza }, { data: comunicazioni }, { data: creditiDebiti }, { data: template }, chiusure] =
       await Promise.all([
         bambinoIds.length
           ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
@@ -227,6 +270,17 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
         bambinoIds.length
           ? supabase.from('comunicazioni_retta').select('*').eq('mese', meseVisualizzato).in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
+        // specs/58: al più un credito/debito "da conteggiare" per
+        // bambino su questo mese (indice unico parziale), quindi una
+        // mappa 1:1 basta — nessuna somma necessaria.
+        bambinoIds.length
+          ? supabase
+              .from('crediti_debiti_bambini')
+              .select('bambino_id, importo, nota')
+              .in('bambino_id', bambinoIds)
+              .eq('mese_competenza', meseVisualizzato)
+              .is('applicato_il', null)
+          : Promise.resolve({ data: [] }),
         supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
         chiusurePerPeriodo(supabase, primoGiornoMese(mesePrecedenteValore), ultimoGiornoMese(meseVisualizzato)),
       ]);
@@ -236,6 +290,9 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
     const giorniApertura = giorniAperturaMese(meseVisualizzato, chiusure);
     const costiPerBambino = new Map((costi ?? []).map((c) => [c.bambino_id, c]));
     const comunicazionePerBambino = new Map((comunicazioni ?? []).map((c) => [c.bambino_id, c]));
+    const creditoDebitoPerBambino = new Map(
+      (creditiDebiti ?? []).map((c) => [c.bambino_id, { importo: Number(c.importo), nota: c.nota }])
+    );
     const assenzePerBambino = new Map<string, number>();
     for (const riga of presenzeAssenza ?? []) {
       assenzePerBambino.set(riga.bambino_id, (assenzePerBambino.get(riga.bambino_id) ?? 0) + 1);
@@ -262,6 +319,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             comunicazione={comunicazione}
             mostraAnnullaInvio
             mese={meseVisualizzato}
+            meseReale={meseReale}
           />
         );
       }
@@ -274,7 +332,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 {bambino.nome} {bambino.cognome}
               </Link>
             </th>
-            <td colSpan={9} className="px-2 py-1.5 text-left text-xs text-amber-700">
+            <td colSpan={12} className="px-2 py-1.5 text-left text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
@@ -284,6 +342,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
         );
       }
 
+      const creditoDebito = creditoDebitoPerBambino.get(bambino.id);
       const riepilogo = calcolaRiepilogoRetta({
         prezzoMensile: Number(costiBambino.prezzo_mensile),
         prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
@@ -295,6 +354,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
         postAsiloRichiesto: costiBambino.post_asilo_richiesto,
         prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
         costiExtra: 0,
+        creditoDebito: creditoDebito?.importo ?? 0,
       });
 
       const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
@@ -371,6 +431,26 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
               name={`note_extra_${bambino.id}`}
               placeholder="Nota (opzionale)"
               aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
+              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
+            />
+          </td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              step={0.01}
+              defaultValue={riepilogo.creditoDebito}
+              name={`credito_debito_${bambino.id}`}
+              aria-label={`Credito/Debito per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="px-2 py-1.5 text-left">
+            <input
+              type="text"
+              defaultValue={creditoDebito?.nota ?? ''}
+              name={`nota_credito_debito_${bambino.id}`}
+              placeholder="Nota (opzionale)"
+              aria-label={`Nota credito/debito per ${nomeCompleto}`}
               className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
             />
           </td>
@@ -463,6 +543,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 comunicazione={comunicazione}
                 mostraAnnullaInvio={false}
                 mese={meseVisualizzato}
+                meseReale={meseReale}
               />
             ))}
           />

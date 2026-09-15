@@ -11,7 +11,11 @@ mensile con tutti i bambini attivi, il calcolo automatico degli
 importi, l'inserimento di eventuali costi extra del mese, l'invio delle
 email (una per bambino) e la configurazione del template. Si basa sui
 dati impostati in
-[55 - costi-bambino.md](55%20-%20costi-bambino.md).
+[55 - costi-bambino.md](55%20-%20costi-bambino.md). Un eventuale
+credito/debito "da conteggiare" quel mese (specs/58) compare come voce
+aggiuntiva nella stessa tabella; la verifica del bonifico ricevuto per
+ogni comunicazione già inviata è invece descritta in
+[59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md).
 
 ## Scenario: vedere la tabella di revisione della comunicazione del mese corrente
 Dato che sono autenticato come admin
@@ -22,7 +26,9 @@ inviata la comunicazione subito sotto, tra parentesi), retta mensile e
 marca da bollo (testo, in quest'ordine), costo pasti proiettato,
 eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
 post-asilo (questi ultimi tre modificabili), un campo "Costi extra" (con
-una nota facoltativa) da compilare, e il totale calcolato
+una nota facoltativa) da compilare, un eventuale credito/debito "da
+conteggiare" questo mese (specs/58, con la sua nota, anch'esso
+modificabile), e il totale calcolato
 
 ## Scenario: i bambini sono raggruppati per sezione
 Dato che sono sulla tabella di revisione (mese corrente o un mese
@@ -225,9 +231,10 @@ Allora vengo reindirizzato alla dashboard
   né dalle presenze effettive.
 - Il totale di una riga è: retta mensile + costo pasti (proiettato) +
   conguaglio pasti (negativo o zero) + marca da bollo + costo pre-asilo
-  + costo post-asilo + costi extra. Può risultare negativo (credito
-  verso la famiglia) se il conguaglio supera gli altri importi: non
-  viene forzato a zero.
+  + costo post-asilo + costi extra + credito/debito (specs/58,
+  negativo se credito, positivo se debito). Può risultare negativo
+  (credito verso la famiglia) se conguaglio e/o credito superano gli
+  altri importi: non viene forzato a zero.
 - Un bambino senza una riga in `costi_bambini`, o con `email_promemoria`
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
@@ -326,7 +333,15 @@ Allora vengo reindirizzato alla dashboard
   cancellazione del log che blocca il reinvio, l'ammissibilità del
   bambino (costi ed email configurati, ancora attivo) è verificata di
   nuovo al momento dell'invio successivo, come per qualunque altro
-  bambino "da inviare".
+  bambino "da inviare". Se quella comunicazione includeva un
+  credito/debito applicato (specs/58), l'annullo lo libera di nuovo
+  ("da conteggiare"), disponibile per il prossimo invio dello stesso
+  mese o modificabile/eliminabile dalla scheda del bambino.
+- "Annulla invio" resta disponibile solo finché il bonifico di quella
+  comunicazione è ancora "da verificare" (specs/59): una volta marcato
+  (corretto o con importo diverso), annullare l'invio cancellerebbe
+  anche la registrazione di un pagamento reale già avvenuto, quindi il
+  pulsante sparisce.
 - Il template della mail (`impostazioni_email_retta`, riga singola —
   `supabase/migrations/0036_comunicazione_retta.sql`) ha un oggetto e un
   corpo in testo semplice, entrambi con placeholder nella forma
@@ -339,14 +354,17 @@ Allora vengo reindirizzato alla dashboard
   "settembre 2026"), `{{retta_mensile}}`, `{{costo_pasti}}`,
   `{{conguaglio_pasti}}`, `{{marca_da_bollo}}`, `{{costo_pre_asilo}}`,
   `{{costo_post_asilo}}`, `{{costi_extra}}`, `{{note_costi_extra}}`,
+  `{{credito_debito}}`, `{{nota_credito_debito}}` (specs/58),
   `{{totale}}` — tutti gli importi già formattati in euro con la
-  virgola (es. "250,00"); `{{note_costi_extra}}` è invece testo libero
-  (il contenuto del campo "Nota" della riga, stringa vuota se non
-  compilato). Un modello salvato prima dell'introduzione di un nuovo
-  placeholder (es. `{{marca_da_bollo}}`, `{{note_costi_extra}}`) resta
-  valido così com'è: il nuovo placeholder va aggiunto a mano dall'admin
-  in "Modello email" se lo si vuole vedere nel testo dell'email (il
-  totale lo include comunque, a prescindere dal template).
+  virgola (es. "250,00"); `{{note_costi_extra}}` e
+  `{{nota_credito_debito}}` sono invece testo libero (il contenuto del
+  rispettivo campo nota, stringa vuota se non compilato). Un modello
+  salvato prima dell'introduzione di un nuovo placeholder (es.
+  `{{marca_da_bollo}}`, `{{note_costi_extra}}`, `{{credito_debito}}`)
+  resta valido così com'è: il nuovo placeholder va aggiunto a mano
+  dall'admin in "Modello email" se lo si vuole vedere nel testo
+  dell'email (il totale lo include comunque, a prescindere dal
+  template).
 - Solo un profilo con ruolo `admin` può accedere a `/admin/rette`, alla
   pagina "Modello email" e inviare comunicazioni (`requireAdmin`, stesso
   pattern di [55 - costi-bambino.md](55%20-%20costi-bambino.md)).

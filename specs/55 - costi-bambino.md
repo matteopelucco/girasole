@@ -61,6 +61,21 @@ valido (es. "non-una-email") e confermo
 Allora vedo un messaggio di errore e nessuno dei valori del form viene
 salvato
 
+## Scenario: più indirizzi email di promemoria, separati da ";"
+Quando compilo il campo email con più indirizzi validi separati da
+`;` (es. "genitore1@esempio.it; genitore2@esempio.it") e confermo
+Allora è salvato senza errore, resta visibile così com'è riaprendo la
+scheda, e la comunicazione retta (specs/56) verrà inviata a entrambi
+gli indirizzi
+
+## Scenario: uno solo dei più indirizzi non è valido
+Quando compilo il campo email con più indirizzi separati da `;`, di cui
+almeno uno non è un formato email valido (es.
+"genitore1@esempio.it; non-una-email")
+Allora vedo un messaggio di errore e nessuno dei valori del form viene
+salvato — stessa regola "tutto o niente" di un singolo indirizzo non
+valido
+
 ## Regole
 - I costi sono per bambino, in una tabella dedicata (`costi_bambini`,
   chiave primaria `bambino_id`, `on delete cascade` —
@@ -106,6 +121,16 @@ salvato
   nessun campo del form (nemmeno i prezzi) viene scritto — evita di
   salvare prezzi aggiornati insieme a un'email sbagliata che poi
   nessuno nota.
+- Il campo può contenere più di un indirizzo, separati da `;` (spazi
+  intorno ignorati — `lib/costiBambino.ts`, `emailListaValida`/
+  `emailsDaCampo`): valido solo se OGNI indirizzo, una volta separato e
+  ripulito degli spazi, è un formato email valido, e ne resta almeno
+  uno dopo aver scartato le parti vuote (es. un `;` finale). Il valore
+  è salvato as-is (la stringa così com'è scritta, non riformattata) in
+  `costi_bambini.email_promemoria` (resta una singola colonna `text`,
+  nessuna nuova tabella): alla comunicazione retta (specs/56), la mail
+  viene inviata a tutti gli indirizzi elencati (destinatari multipli
+  dello stesso invio, non un'email separata per indirizzo).
 - Il salvataggio è un upsert su `bambino_id`: la prima conferma crea la
   riga dei costi per quel bambino, le successive la aggiornano.
 - Fuori scope in questa fase: tracciare i giorni effettivi di

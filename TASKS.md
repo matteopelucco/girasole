@@ -2280,7 +2280,109 @@ usato dal cron del report notturno (specs/52) e dagli allarmi
       la suite non ispeziona il contenuto reale delle email inviate
       (stesso limite già presente per oggetto/corpo), solo DB e UI.
 
+## Rette: più indirizzi email di promemoria per bambino
+Richiesta dell'utente: il campo "Email promemoria retta" può contenere
+più indirizzi separati da `;`, e la comunicazione retta (specs/56) va
+inviata a tutti.
+- [x] `specs/55 - costi-bambino.md`: due nuovi scenari ("più indirizzi
+      email... separati da ;" e "uno solo dei più indirizzi non è
+      valido") e regola sul salvataggio as-is/invio a tutti gli
+      indirizzi.
+- [x] `lib/costiBambino.ts`: nuove `emailsDaCampo` (separa e ripulisce)
+      ed `emailListaValida` (ogni indirizzo valido, almeno uno),
+      `emailValida` riusata internamente.
+- [x] `lib/costiBambino.test.ts`: nuova copertura per `emailsDaCampo`/
+      `emailListaValida` (separatore con/senza spazi, `;` finale, campo
+      vuoto, un solo indirizzo non valido su più) accanto a quella già
+      esistente di `emailValida`.
+- [x] `app/admin/actions.ts` (`aggiornaCostiBambino`): valida con
+      `emailListaValida` invece di `emailValida`, messaggio d'errore
+      aggiornato.
+- [x] `app/admin/bambini/[id]/page.tsx`: rimosso `type="email"` dal
+      campo (la validazione nativa del browser non ammette `;` come
+      separatore) e placeholder aggiornato.
+- [x] `lib/email.ts` (`inviaEmail`): `a` accetta ora anche un array di
+      destinatari.
+- [x] `app/admin/rette/actions.ts`: l'invio (massivo e singolo) separa
+      il campo con `emailsDaCampo` prima di chiamare `inviaEmail`;
+      `email_destinatario` continua a salvare la stringa originale
+      as-is.
+- [x] `e2e/55-costi-bambino.spec.ts`: due nuovi test (più indirizzi
+      salvati e ripresentati dopo reload; uno non valido rifiuta tutto
+      il salvataggio). Verificato `npx tsc --noEmit`, `npx next lint`,
+      `npx vitest run`, `npx jscpd` e `npm run build` puliti. Suite e2e
+      non eseguibile in questo ambiente sandbox (stesso problema di
+      credenziali ricorrente) — da eseguire in locale/CI.
+
+## Crediti/debiti di un bambino e verifica del bonifico retta
+Richiesta dell'utente (backlog Fase 2, "Registrare i bonifici ricevuti"
+e "Stato di pagamento/saldo per bambino"): un bambino può avere un
+credito/debito verso l'asilo non derivante dal calcolo automatico della
+retta, inserito dalla scheda con una nota obbligatoria e un mese di
+competenza — applicato automaticamente alla comunicazione di quel mese.
+Sopra a questo, la verifica rapida del bonifico ricevuto per ogni
+comunicazione inviata: se l'importo non corrisponde, la differenza
+diventa automaticamente un nuovo credito/debito.
+- [x] `specs/58 - crediti-debiti-bambino.md` (nuovo) e
+      `specs/59 - verifica-bonifico-retta.md` (nuovo), indice
+      aggiornato in `specs/00 - overview.md`; `specs/56` aggiornato
+      (colonne "Credito/Debito"/"Nota cred./deb.", nuova regola
+      sull'"Annulla invio" che libera il credito/debito applicato e che
+      resta possibile solo a bonifico ancora "da verificare", nuovi
+      placeholder `{{credito_debito}}`/`{{nota_credito_debito}}`).
+- [x] `supabase/migrations/0041_crediti_debiti_bambini.sql`: nuova
+      tabella, RLS solo admin, indice unico parziale "un solo
+      credito/debito da conteggiare per bambino e mese"
+      (`crediti_debiti_bambini_pendenti_uniq`, `where applicato_il is
+      null`).
+- [x] `supabase/migrations/0042_credito_debito_comunicazione_retta.sql`:
+      `comunicazioni_retta.credito_debito`/`.nota_credito_debito`.
+- [x] `supabase/migrations/0043_bonifico_comunicazione_retta.sql`:
+      `comunicazioni_retta.bonifico_stato`/`.bonifico_importo_ricevuto`/
+      `.bonifico_nota`/`.bonifico_verificato_da(_nome/_il)`.
+- [x] `lib/comunicazioneRetta.ts`: `calcolaRiepilogoRetta` include
+      `creditoDebito` nel totale; nuova `calcolaDifferenzaBonifico`
+      (differenza atteso/ricevuto, stessa convenzione di segno).
+      Copertura in `lib/comunicazioneRetta.test.ts`.
+- [x] `app/admin/actions.ts`: nuove `aggiungiCreditoDebito`
+      (validazione tipo/importo/mese/nota, gestione dell'errore di
+      unicità 23505 con un messaggio comprensibile) ed
+      `eliminaCreditoDebito` (la RLS rifiuta già un applicato).
+- [x] `app/admin/bambini/[id]/page.tsx`: nuova sezione "Crediti e
+      debiti" (elenco + form di aggiunta, mese precompilato con
+      `meseSuccessivo(oggi)`).
+- [x] `app/admin/rette/actions.ts`: `riepilogoDalForm`/
+      `placeholderRetta`/`inviaEPersistiComunicazione` includono
+      credito/debito; l'invio applica (`applicato_il`) il
+      credito/debito pendente del mese; `annullaComunicazioneRetta` lo
+      libera di nuovo e si rifiuta se il bonifico non è più "in
+      attesa"; nuove `marcaBonificoCorretto`/`marcaBonificoImportoErrato`
+      (quest'ultima crea il credito/debito dalla differenza), con
+      `comunicazioneDaVerificare`/`registraVerificaBonifico` estratte
+      per non duplicare la logica comune tra le due (CLAUDE.md, jscpd).
+- [x] `app/admin/rette/page.tsx`: colonne "Credito/Debito"/"Nota
+      cred./deb." (precompilate dal credito/debito pendente del mese),
+      componente `VerificaBonifico` in ogni riga comunicata (mese
+      corrente e passato).
+- [x] `components/VerificaBonifico.tsx` (nuovo): stato/azioni del
+      bonifico, ogni riga con il proprio `<form>` indipendente (deve
+      funzionare anche nella vista di sola lettura di un mese passato,
+      che non ha un form che la contenga).
+- [x] `app/admin/rette/template/page.tsx`: nuovi placeholder in elenco.
+- [x] `e2e/58-crediti-debiti-bambino.spec.ts` ed
+      `e2e/59-verifica-bonifico-retta.spec.ts` (nuovi, uno scenario e2e
+      per ciascun `## Scenario:` dei due requisiti). Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run`, `npx jscpd`
+      e `npm run build` puliti. Suite e2e non eseguibile in questo
+      ambiente sandbox (stesso problema di credenziali ricorrente) — da
+      eseguire in locale/CI prima di considerare la feature chiusa.
+
 ## Backlog — Fase 2/3
-- [ ] Registrare i bonifici ricevuti, con le opportune note
-- [ ] Stato di pagamento/saldo per bambino
+- [x] Registrare i bonifici ricevuti, con le opportune note — vedi
+      "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
+      (`specs/59 - verifica-bonifico-retta.md`)
+- [ ] Stato di pagamento/saldo per bambino — solo parzialmente coperto:
+      crediti/debiti (`specs/58`) e verifica bonifico (`specs/59`) sono
+      per singola comunicazione/mese, non ancora una vista di saldo
+      complessivo aggregato per bambino
 - [ ] Portale genitori (UI dedicata)

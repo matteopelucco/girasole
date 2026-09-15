@@ -39,6 +39,10 @@ export type ParametriRiepilogoRetta = {
   postAsiloRichiesto: boolean;
   prezzoPostAsilo: number;
   costiExtra: number;
+  // Credito/debito "da conteggiare" questo mese (specs/58): negativo se
+  // credito, positivo se debito, 0 se il bambino non ne ha nessuno in
+  // attesa per questo mese.
+  creditoDebito: number;
 };
 
 export type RiepilogoRetta = {
@@ -49,6 +53,7 @@ export type RiepilogoRetta = {
   costoPreAsilo: number;
   costoPostAsilo: number;
   costiExtra: number;
+  creditoDebito: number;
   totale: number;
 };
 
@@ -63,13 +68,15 @@ function arrotonda(valore: number): number {
 // corrente (specs/56): costo pasti proiettato sui giorni di apertura
 // (il mese non è ancora trascorso), conguaglio pasti negativo sui
 // giorni di assenza/malattia del mese precedente (già trascorso, dati
-// reali), pre-asilo/post-asilo al prezzo pieno solo se richiesti.
-// Funzione pura, nessun I/O.
+// reali), pre-asilo/post-asilo al prezzo pieno solo se richiesti,
+// credito/debito "da conteggiare" questo mese (specs/58). Funzione
+// pura, nessun I/O.
 export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): RiepilogoRetta {
   const costoPasti = arrotonda(parametri.giorniAperturaMeseCorrente * parametri.prezzoBuonoPasto);
   const conguaglioPasti = arrotonda(-parametri.giorniAssenzaMesePrecedente * parametri.prezzoBuonoPasto);
   const costoPreAsilo = parametri.preAsiloRichiesto ? parametri.prezzoPreAsilo : 0;
   const costoPostAsilo = parametri.postAsiloRichiesto ? parametri.prezzoPostAsilo : 0;
+  const creditoDebito = arrotonda(parametri.creditoDebito);
   const totale = arrotonda(
     parametri.prezzoMensile +
       costoPasti +
@@ -77,7 +84,8 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
       parametri.marcaDaBollo +
       costoPreAsilo +
       costoPostAsilo +
-      parametri.costiExtra
+      parametri.costiExtra +
+      creditoDebito
   );
 
   return {
@@ -88,8 +96,18 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
     costoPreAsilo,
     costoPostAsilo,
     costiExtra: parametri.costiExtra,
+    creditoDebito,
     totale,
   };
+}
+
+// La differenza tra il totale comunicato e l'importo realmente
+// ricevuto via bonifico (specs/59): positiva se la famiglia ha pagato
+// meno del dovuto (diventerà un debito sulla prossima retta), negativa
+// se ha pagato di più (diventerà un credito) — stessa convenzione di
+// segno di `creditoDebito` sopra. Funzione pura, nessun I/O.
+export function calcolaDifferenzaBonifico(totaleComunicato: number, importoRicevuto: number): number {
+  return arrotonda(totaleComunicato - importoRicevuto);
 }
 
 // Sostituisce i placeholder "{{chiave}}" nel template della mail

@@ -20,6 +20,7 @@ const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
   ['pre_asilo', 'costo_pre_asilo'],
   ['post_asilo', 'costo_post_asilo'],
   ['costi_extra', 'costi_extra'],
+  ['credito_debito', 'credito_debito'],
 ];
 
 // Pulsante "Invia comunicazione" per un solo bambino, con anteprima
@@ -95,6 +96,9 @@ export function InvioSingoloRetta({
 
     const campoNota = riga.querySelector<HTMLInputElement>(`[name="note_extra_${bambinoId}"]`);
     valori.note_costi_extra = campoNota?.value ?? '';
+
+    const campoNotaCreditoDebito = riga.querySelector<HTMLInputElement>(`[name="nota_credito_debito_${bambinoId}"]`);
+    valori.nota_credito_debito = campoNotaCreditoDebito?.value ?? '';
 
     setAnteprima({
       oggetto: sostituisciPlaceholder(oggettoTemplate, valori),

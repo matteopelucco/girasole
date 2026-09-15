@@ -24,7 +24,10 @@ export async function inviaEmail({
   html,
   allegati,
 }: {
-  a: string;
+  // Uno o più destinatari (specs/55, "più indirizzi email di
+  // promemoria, separati da ;"): un solo invio con più "to", non
+  // un'email separata per destinatario.
+  a: string | string[];
   cc?: string;
   oggetto: string;
   html: string;
@@ -43,7 +46,7 @@ export async function inviaEmail({
     },
     body: JSON.stringify({
       from: mittente,
-      to: [a],
+      to: Array.isArray(a) ? a : [a],
       cc: cc ? [cc] : undefined,
       subject: oggetto,
       html,

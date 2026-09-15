@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
-import { emailValida } from '@/lib/costiBambino';
+import { emailListaValida } from '@/lib/costiBambino';
+import { formattaMeseItaliano, meseDaData, oggi } from '@/lib/date';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 export async function creaSezione(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
@@ -208,10 +209,11 @@ export async function aggiornaCostiBambino(
   const emailPromemoria = ((formData.get('email_promemoria') as string) || '').trim();
 
   if (!bambinoId) return { ok: false, messaggio: 'Bambino non valido.' };
-  if (emailPromemoria && !emailValida(emailPromemoria)) {
+  if (emailPromemoria && !emailListaValida(emailPromemoria)) {
     return {
       ok: false,
-      messaggio: "Inserisci un indirizzo email valido per il promemoria, oppure lascia il campo vuoto.",
+      messaggio:
+        "Inserisci uno o più indirizzi email validi per il promemoria (separati da \";\"), oppure lascia il campo vuoto.",
     };
   }
 
@@ -228,6 +230,99 @@ export async function aggiornaCostiBambino(
   });
   if (error) {
     return { ok: false, messaggio: 'Impossibile salvare i costi.', dettaglio: error.message };
+  }
+
+  revalidatePath(`/admin/bambini/${bambinoId}`);
+  revalidatePath('/admin/rette');
+  return { ok: true };
+}
+
+// specs/58 - crediti-debiti-bambino.md, scenario "aggiungere un
+// credito o un debito dalla scheda del bambino": importo sempre
+// positivo in ingresso (il segno lo sceglie l'admin con "tipo"), nota
+// obbligatoria, mese di competenza mai precedente al mese corrente
+// (un mese già trascorso ha già la sua comunicazione, o non ne avrà
+// mai una nuova — Regole del requisito). L'unicità "un solo
+// credito/debito da conteggiare per bambino e mese" è imposta anche a
+// livello di indice (0041_crediti_debiti_bambini.sql,
+// crediti_debiti_bambini_pendenti_uniq): la violazione (codice
+// Postgres 23505) diventa qui un messaggio comprensibile invece
+// dell'errore tecnico grezzo.
+export async function aggiungiCreditoDebito(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase, user, profilo } = await requireAdmin();
+  const bambinoId = formData.get('bambino_id') as string;
+  const tipo = formData.get('tipo') as string;
+  const importoPositivo = Number(formData.get('importo'));
+  const meseCompetenza = (formData.get('mese_competenza') as string) || '';
+  const nota = ((formData.get('nota') as string) || '').trim();
+
+  if (!bambinoId) return { ok: false, messaggio: 'Bambino non valido.' };
+  if (tipo !== 'credito' && tipo !== 'debito') {
+    return { ok: false, messaggio: 'Scegli se è un credito o un debito.' };
+  }
+  if (!Number.isFinite(importoPositivo) || importoPositivo <= 0) {
+    return { ok: false, messaggio: "Inserisci un importo maggiore di zero." };
+  }
+  if (!/^\d{4}-\d{2}$/.test(meseCompetenza)) {
+    return { ok: false, messaggio: 'Scegli un mese di competenza valido.' };
+  }
+  const meseCorrente = meseDaData(oggi());
+  if (meseCompetenza < meseCorrente) {
+    return { ok: false, messaggio: 'Il mese di competenza non può essere precedente al mese corrente.' };
+  }
+  if (!nota) {
+    return { ok: false, messaggio: 'Scrivi una nota che spieghi il motivo del credito/debito.' };
+  }
+
+  const importoConSegno = Math.round((tipo === 'credito' ? -importoPositivo : importoPositivo) * 100) / 100;
+  const creatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
+
+  const { error } = await supabase.from('crediti_debiti_bambini').insert({
+    bambino_id: bambinoId,
+    mese_competenza: meseCompetenza,
+    importo: importoConSegno,
+    nota,
+    creato_da: user.id,
+    creato_da_nome: creatoDaNome,
+  });
+  if (error) {
+    if (error.code === '23505') {
+      return {
+        ok: false,
+        messaggio: `Esiste già un credito/debito da conteggiare per ${formattaMeseItaliano(
+          meseCompetenza
+        )} su questo bambino: modificalo o eliminalo dall'elenco, oppure scegli un altro mese.`,
+      };
+    }
+    return { ok: false, messaggio: 'Impossibile salvare il credito/debito.', dettaglio: error.message };
+  }
+
+  revalidatePath(`/admin/bambini/${bambinoId}`);
+  revalidatePath('/admin/rette');
+  return { ok: true };
+}
+
+// specs/58, scenario "un credito o debito non ancora applicato può
+// essere eliminato": la policy RLS di delete
+// (crediti_debiti_bambini_admin_delete) già rifiuta la riga se
+// applicato_il non è più null, quindi il .eq qui sotto basta — nessun
+// controllo aggiuntivo necessario lato applicazione.
+export async function eliminaCreditoDebito(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+  const id = formData.get('id') as string;
+  const bambinoId = formData.get('bambino_id') as string;
+
+  if (!id || !bambinoId) return { ok: false, messaggio: 'Credito/debito non valido.' };
+
+  const { error } = await supabase.from('crediti_debiti_bambini').delete().eq('id', id);
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile eliminare il credito/debito.', dettaglio: error.message };
   }
 
   revalidatePath(`/admin/bambini/${bambinoId}`);

@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
-import { formattaImporto, sostituisciPlaceholder, type RiepilogoRetta } from '@/lib/comunicazioneRetta';
+import {
+  calcolaDifferenzaBonifico,
+  formattaImporto,
+  sostituisciPlaceholder,
+  type RiepilogoRetta,
+} from '@/lib/comunicazioneRetta';
+import { emailsDaCampo } from '@/lib/costiBambino';
 import { meseDaData, oggi, formattaMeseItaliano } from '@/lib/date';
 import { destinatarioNotifiche, inviaEmail } from '@/lib/email';
 import type { EsitoAzione } from '@/components/FormConEsito';
@@ -51,11 +57,31 @@ function riepilogoDalForm(
   const costoPreAsilo = importoEuro(formData.get(`pre_asilo_${bambinoId}`));
   const costoPostAsilo = importoEuro(formData.get(`post_asilo_${bambinoId}`));
   const costiExtra = importoEuro(formData.get(`costi_extra_${bambinoId}`));
+  const creditoDebito = importoConSegno(formData.get(`credito_debito_${bambinoId}`));
   const totale =
-    Math.round((rettaMensile + costoPasti + conguaglioPasti + marcaDaBollo + costoPreAsilo + costoPostAsilo + costiExtra) * 100) /
-    100;
+    Math.round(
+      (rettaMensile +
+        costoPasti +
+        conguaglioPasti +
+        marcaDaBollo +
+        costoPreAsilo +
+        costoPostAsilo +
+        costiExtra +
+        creditoDebito) *
+        100
+    ) / 100;
 
-  return { rettaMensile, costoPasti, conguaglioPasti, marcaDaBollo, costoPreAsilo, costoPostAsilo, costiExtra, totale };
+  return {
+    rettaMensile,
+    costoPasti,
+    conguaglioPasti,
+    marcaDaBollo,
+    costoPreAsilo,
+    costoPostAsilo,
+    costiExtra,
+    creditoDebito,
+    totale,
+  };
 }
 
 // Placeholder sostituiti nel template della mail (specs/56), a partire
@@ -66,7 +92,8 @@ function placeholderRetta(
   bambino: { nome: string; cognome: string },
   mese: string,
   riepilogo: RiepilogoRetta,
-  noteExtra: string | null
+  noteExtra: string | null,
+  notaCreditoDebito: string | null
 ): Record<string, string> {
   return {
     nome: bambino.nome,
@@ -80,6 +107,8 @@ function placeholderRetta(
     costo_post_asilo: formattaImporto(riepilogo.costoPostAsilo),
     costi_extra: formattaImporto(riepilogo.costiExtra),
     note_costi_extra: noteExtra ?? '',
+    credito_debito: formattaImporto(riepilogo.creditoDebito),
+    nota_credito_debito: notaCreditoDebito ?? '',
     totale: formattaImporto(riepilogo.totale),
   };
 }
@@ -102,15 +131,18 @@ async function inviaEPersistiComunicazione(
   mese: string,
   riepilogo: RiepilogoRetta,
   noteExtra: string | null,
+  notaCreditoDebito: string | null,
   template: TemplateRetta,
   inviataDa: { id: string; nome: string }
 ): Promise<boolean> {
-  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra);
+  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra, notaCreditoDebito);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
   const corpoHtml = sostituisciPlaceholder(template?.corpo ?? '', valoriPlaceholder).replace(/\n/g, '<br>');
 
   try {
-    await inviaEmail({ a: email, cc: destinatarioNotifiche(), oggetto, html: corpoHtml });
+    // specs/55, "più indirizzi email di promemoria, separati da ;": un
+    // solo invio, con tutti gli indirizzi come destinatari.
+    await inviaEmail({ a: emailsDaCampo(email), cc: destinatarioNotifiche(), oggetto, html: corpoHtml });
   } catch (errore) {
     return false;
   }
@@ -126,13 +158,28 @@ async function inviaEPersistiComunicazione(
     costo_post_asilo: riepilogo.costoPostAsilo,
     costi_extra: riepilogo.costiExtra,
     note_costi_extra: noteExtra,
+    credito_debito: riepilogo.creditoDebito,
+    nota_credito_debito: notaCreditoDebito,
     totale: riepilogo.totale,
     email_destinatario: email,
     inviata_da: inviataDa.id,
     inviata_da_nome: inviataDa.nome,
   });
 
-  return !erroreLog;
+  if (erroreLog) return false;
+
+  // specs/58, scenario "inviare la comunicazione applica il
+  // credito/debito": il credito/debito "da conteggiare" per questo
+  // bambino e questo mese (se esiste) passa da "da conteggiare" a
+  // "conteggiato" — un no-op sicuro se non ce n'era nessuno.
+  await supabase
+    .from('crediti_debiti_bambini')
+    .update({ applicato_il: new Date().toISOString() })
+    .eq('bambino_id', bambino.id)
+    .eq('mese_competenza', mese)
+    .is('applicato_il', null);
+
+  return true;
 }
 
 // specs/56 - comunicazione-retta-mensile.md, scenario "inviare le
@@ -188,6 +235,7 @@ export async function inviaComunicazioniRetta(
     }
 
     const noteExtra = ((formData.get(`note_extra_${bambino.id}`) as string) || '').trim() || null;
+    const notaCreditoDebito = ((formData.get(`nota_credito_debito_${bambino.id}`) as string) || '').trim() || null;
     const riepilogo = riepilogoDalForm(
       formData,
       bambino.id,
@@ -202,6 +250,7 @@ export async function inviaComunicazioniRetta(
       meseCorrente,
       riepilogo,
       noteExtra,
+      notaCreditoDebito,
       template,
       inviataDa
     );
@@ -262,6 +311,7 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
   }
 
   const noteExtra = ((formData.get(`note_extra_${bambinoId}`) as string) || '').trim() || null;
+  const notaCreditoDebito = ((formData.get(`nota_credito_debito_${bambinoId}`) as string) || '').trim() || null;
   const riepilogo = riepilogoDalForm(
     formData,
     bambinoId,
@@ -277,6 +327,7 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
     meseCorrente,
     riepilogo,
     noteExtra,
+    notaCreditoDebito,
     template,
     { id: user.id, nome: inviataDaNome }
   );
@@ -295,10 +346,200 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
 // restituisce un EsitoAzione: se la riga sparisce dalla tabella dopo il
 // click l'annullamento è riuscito, stesso principio "l'effetto è la
 // conferma" già usato altrove (specs/05 - feedback.md).
+//
+// specs/56, "'Annulla invio' resta disponibile solo finché il bonifico
+// [...] è ancora 'da verificare'": un bonifico già marcato registra un
+// pagamento reale, annullare cancellerebbe quella registrazione insieme
+// alla comunicazione — il pulsante non compare nemmeno in pagina
+// (RigaComunicazione), ma la guardia qui rifiuta comunque l'azione a
+// chi la invocasse comunque (es. un form ormai disallineato dallo stato
+// reale dopo un aggiornamento concorrente).
+//
+// specs/58, "annullare l'invio di una comunicazione libera di nuovo il
+// credito/debito": un eventuale credito/debito applicato a questa
+// comunicazione (stesso bambino, stesso mese di competenza) torna "da
+// conteggiare" — no-op sicuro se non ce n'era nessuno.
 export async function annullaComunicazioneRetta(bambinoId: string, mese: string, _formData: FormData) {
   const { supabase } = await requireAdmin();
 
-  await supabase.from('comunicazioni_retta').delete().eq('bambino_id', bambinoId).eq('mese', mese);
+  const { data: comunicazione } = await supabase
+    .from('comunicazioni_retta')
+    .select('id, bonifico_stato')
+    .eq('bambino_id', bambinoId)
+    .eq('mese', mese)
+    .maybeSingle();
+  if (!comunicazione || comunicazione.bonifico_stato !== 'in_attesa') return;
+
+  await supabase.from('comunicazioni_retta').delete().eq('id', comunicazione.id);
+  await supabase
+    .from('crediti_debiti_bambini')
+    .update({ applicato_il: null })
+    .eq('bambino_id', bambinoId)
+    .eq('mese_competenza', mese)
+    .not('applicato_il', 'is', null);
 
   revalidatePath('/admin/rette');
+}
+
+// Recupera una comunicazione ancora "da verificare" (specs/59): stesso
+// controllo per "Bonifico corretto" e "Importo diverso", estratto per
+// non duplicarlo (CLAUDE.md, jscpd).
+async function comunicazioneDaVerificare(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'],
+  comunicazioneId: string
+): Promise<{ ok: true; totale: number } | { ok: false; errore: EsitoAzione }> {
+  const { data: comunicazione } = await supabase
+    .from('comunicazioni_retta')
+    .select('totale, bonifico_stato')
+    .eq('id', comunicazioneId)
+    .maybeSingle();
+  if (!comunicazione) {
+    return { ok: false, errore: { ok: false, messaggio: 'Comunicazione non trovata.' } };
+  }
+  if (comunicazione.bonifico_stato !== 'in_attesa') {
+    return {
+      ok: false,
+      errore: { ok: false, messaggio: 'Il bonifico di questa comunicazione è già stato verificato.' },
+    };
+  }
+  return { ok: true, totale: Number(comunicazione.totale) };
+}
+
+// Registra l'esito della verifica sulla comunicazione (specs/59): stesso
+// update/gestione errore/revalidate per "corretto" e "importo diverso",
+// estratto per non duplicarlo (CLAUDE.md, jscpd) — cambiano solo i tre
+// campi passati in `esito`.
+async function registraVerificaBonifico(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'],
+  comunicazioneId: string,
+  esito: { stato: 'corretto' | 'importo_errato'; importoRicevuto: number; nota: string | null },
+  verificatoDa: { id: string; nome: string }
+): Promise<EsitoAzione> {
+  const { error } = await supabase
+    .from('comunicazioni_retta')
+    .update({
+      bonifico_stato: esito.stato,
+      bonifico_importo_ricevuto: esito.importoRicevuto,
+      bonifico_nota: esito.nota,
+      bonifico_verificato_da: verificatoDa.id,
+      bonifico_verificato_da_nome: verificatoDa.nome,
+      bonifico_verificato_il: new Date().toISOString(),
+    })
+    .eq('id', comunicazioneId);
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile registrare la verifica del bonifico.', dettaglio: error.message };
+  }
+
+  revalidatePath('/admin/rette');
+  return { ok: true };
+}
+
+// specs/59 - verifica-bonifico-retta.md, scenario "marcare un bonifico
+// come corretto": l'importo ricevuto è per definizione quello atteso
+// (comunicazioni_retta.totale), nessuna nota, nessun credito/debito
+// generato. Stesso schema di FormConEsito/useFormState di
+// aggiungiCreditoDebito sopra (non il "formAction diretto" di
+// annullaComunicazioneRetta) perché deve funzionare anche fuori dal
+// form "Invia comunicazioni" — su un mese passato, in sola lettura per
+// invio/annullo, la verifica del bonifico resta comunque possibile
+// (specs/59, "verificare il bonifico anche su un mese passato"): ogni
+// riga ha quindi il proprio `<form>` indipendente
+// (components/VerificaBonifico.tsx), niente da annidare in nessun altro
+// form. `comunicazioneId` è già "bindato" dal chiamante (vedi
+// VerificaBonifico), coerente con l'uso di `.bind()` con
+// `useFormState` — gli argomenti bindati precedono lo stato e la
+// FormData nella firma.
+export async function marcaBonificoCorretto(
+  comunicazioneId: string,
+  _stato: EsitoAzione,
+  _formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase, user, profilo } = await requireAdmin();
+
+  const comunicazione = await comunicazioneDaVerificare(supabase, comunicazioneId);
+  if (!comunicazione.ok) return comunicazione.errore;
+
+  const verificatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
+  return registraVerificaBonifico(
+    supabase,
+    comunicazioneId,
+    { stato: 'corretto', importoRicevuto: comunicazione.totale, nota: null },
+    { id: user.id, nome: verificatoDaNome }
+  );
+}
+
+// specs/59, scenario "marcare un bonifico con importo diverso da
+// quello atteso": richiede l'importo realmente ricevuto e una nota
+// obbligatoria, genera un credito/debito (specs/58) sul bambino per il
+// mese scelto pari alla differenza (positiva = debito, negativa =
+// credito — calcolaDifferenzaBonifico, lib/comunicazioneRetta.ts),
+// tranne quando la differenza è zero (l'admin ha comunque voluto
+// lasciare una nota, ma non c'è nulla da conteggiare).
+export async function marcaBonificoImportoErrato(
+  comunicazioneId: string,
+  bambinoId: string,
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase, user, profilo } = await requireAdmin();
+
+  const importoRicevuto = Number(formData.get('importo_ricevuto'));
+  const nota = ((formData.get('nota') as string) || '').trim();
+  const meseCompetenza = (formData.get('mese_competenza') as string) || '';
+
+  if (!Number.isFinite(importoRicevuto) || importoRicevuto < 0) {
+    return { ok: false, messaggio: "Inserisci l'importo realmente ricevuto." };
+  }
+  if (!nota) {
+    return { ok: false, messaggio: 'Scrivi una nota che spieghi la differenza.' };
+  }
+  if (!/^\d{4}-\d{2}$/.test(meseCompetenza)) {
+    return { ok: false, messaggio: 'Scegli un mese valido su cui conteggiare la differenza.' };
+  }
+  const meseCorrente = meseDaData(oggi());
+  if (meseCompetenza < meseCorrente) {
+    return { ok: false, messaggio: 'Il mese scelto non può essere precedente al mese corrente.' };
+  }
+
+  const comunicazione = await comunicazioneDaVerificare(supabase, comunicazioneId);
+  if (!comunicazione.ok) return comunicazione.errore;
+
+  const verificatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
+  const differenza = calcolaDifferenzaBonifico(comunicazione.totale, importoRicevuto);
+
+  if (differenza !== 0) {
+    const { error: erroreCredito } = await supabase.from('crediti_debiti_bambini').insert({
+      bambino_id: bambinoId,
+      mese_competenza: meseCompetenza,
+      importo: differenza,
+      nota,
+      origine: 'bonifico',
+      creato_da: user.id,
+      creato_da_nome: verificatoDaNome,
+    });
+    if (erroreCredito) {
+      if (erroreCredito.code === '23505') {
+        return {
+          ok: false,
+          messaggio: `Esiste già un credito/debito da conteggiare per ${formattaMeseItaliano(
+            meseCompetenza
+          )} su questo bambino: scegli un altro mese, oppure intervieni prima su quello esistente dalla sua scheda.`,
+        };
+      }
+      return {
+        ok: false,
+        messaggio: 'Impossibile registrare il credito/debito generato dal bonifico.',
+        dettaglio: erroreCredito.message,
+      };
+    }
+  }
+
+  const esito = await registraVerificaBonifico(
+    supabase,
+    comunicazioneId,
+    { stato: 'importo_errato', importoRicevuto, nota },
+    { id: user.id, nome: verificatoDaNome }
+  );
+  if (esito.ok) revalidatePath(`/admin/bambini/${bambinoId}`);
+  return esito;
 }

@@ -101,6 +101,14 @@ della maestra, `5x` amministrazione.
   "Reset giornata": l'admin elimina tutte le presenze e i pasti di una
   data (anche passata), con doppia conferma e disclaimer sulle
   comunicazioni già inviate
+- [58 - crediti-debiti-bambino.md](58%20-%20crediti-debiti-bambino.md) —
+  crediti/debiti non derivanti dal calcolo automatico, inseriti dalla
+  scheda del bambino con una nota obbligatoria e un mese di competenza,
+  applicati automaticamente alla comunicazione retta di quel mese
+- [59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md) —
+  marcare il bonifico di una comunicazione come corretto o con importo
+  diverso; un importo diverso genera un credito/debito sulla retta di
+  un mese scelto
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
