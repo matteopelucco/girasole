@@ -2260,6 +2260,26 @@ mancava il placeholder corrispondente.
       sandbox (stesso problema di login ricorrente, indipendente da
       questo cambiamento) — da eseguire in locale/CI prima del merge.
 
+## Rette: CC all'asilo su ogni comunicazione
+Richiesta dell'utente: ogni mail di comunicazione retta va spedita in
+copia conoscenza a `info@asilosartorio.it`, lo stesso indirizzo già
+usato dal cron del report notturno (specs/52) e dagli allarmi
+(specs/07), così l'asilo ha sempre traccia di cosa è stato comunicato.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuova regola sulla
+      CC fissa (`destinatarioNotifiche()`, non configurabile dall'admin
+      in pagina).
+- [x] `lib/email.ts`: `inviaEmail` accetta un `cc` opzionale, passato a
+      Resend solo se presente (nessuna modifica per i chiamanti
+      esistenti che non lo passano — report notturno, allarmi,
+      comunicazione pasti Rojac).
+- [x] `app/admin/rette/actions.ts`: `inviaEPersistiComunicazione` passa
+      `cc: destinatarioNotifiche()` a ogni invio (massivo e singolo,
+      stessa funzione condivisa).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      e `npx jscpd` puliti. Nessun test e2e aggiunto per la CC in sé:
+      la suite non ispeziona il contenuto reale delle email inviate
+      (stesso limite già presente per oggetto/corpo), solo DB e UI.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

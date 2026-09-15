@@ -19,11 +19,13 @@ export function destinatarioNotifiche(): string {
 
 export async function inviaEmail({
   a,
+  cc,
   oggetto,
   html,
   allegati,
 }: {
   a: string;
+  cc?: string;
   oggetto: string;
   html: string;
   allegati?: AllegatoEmail[];
@@ -42,6 +44,7 @@ export async function inviaEmail({
     body: JSON.stringify({
       from: mittente,
       to: [a],
+      cc: cc ? [cc] : undefined,
       subject: oggetto,
       html,
       attachments: allegati?.map((a) => ({

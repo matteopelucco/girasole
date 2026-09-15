@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto, sostituisciPlaceholder, type RiepilogoRetta } from '@/lib/comunicazioneRetta';
 import { meseDaData, oggi, formattaMeseItaliano } from '@/lib/date';
-import { inviaEmail } from '@/lib/email';
+import { destinatarioNotifiche, inviaEmail } from '@/lib/email';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 // Un importo non negativo (retta, pasti, marca da bollo, pre/post-
@@ -110,7 +110,7 @@ async function inviaEPersistiComunicazione(
   const corpoHtml = sostituisciPlaceholder(template?.corpo ?? '', valoriPlaceholder).replace(/\n/g, '<br>');
 
   try {
-    await inviaEmail({ a: email, oggetto, html: corpoHtml });
+    await inviaEmail({ a: email, cc: destinatarioNotifiche(), oggetto, html: corpoHtml });
   } catch (errore) {
     return false;
   }

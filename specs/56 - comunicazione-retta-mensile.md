@@ -295,6 +295,15 @@ Allora vengo reindirizzato alla dashboard
   "Conferma invio" sottopone lo stesso form con `formAction` diretto
   (bind del solo `bambinoId`, come "Annulla invio"), non un'azione
   separata che potrebbe rileggere valori diversi.
+- Ogni comunicazione (massiva o singola) viene inviata al genitore con
+  in copia conoscenza (CC) l'indirizzo dell'asilo
+  (`lib/email.ts`, `destinatarioNotifiche()` — stesso indirizzo usato
+  dal cron del report notturno, specs/52, e dagli allarmi, specs/07:
+  `info@asilosartorio.it` di default, sovrascrivibile con la variabile
+  d'ambiente `REPORT_EMAIL_DESTINATARIO`), così l'asilo ha sempre una
+  copia di ogni comunicazione inviata ai genitori. La CC non è
+  visibile né configurabile dall'admin in pagina: è un comportamento
+  fisso, non un'ulteriore voce del template.
 - L'invio scrive un log in `comunicazioni_retta` (un solo record per
   bambino e mese, `supabase/migrations/0036_comunicazione_retta.sql`,
   stesso pattern di `pasti_comunicati` per la comunicazione pasti a
