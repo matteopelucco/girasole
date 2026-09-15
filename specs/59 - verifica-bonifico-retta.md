@@ -11,7 +11,9 @@ conto corrente corrisponda all'importo comunicato: se sì, si marca
 come corretto; se l'importo ricevuto è diverso, si registra l'importo
 realmente ricevuto e una nota, e la differenza viene automaticamente
 aggiunta come credito o debito (specs/58) sulla retta di un mese scelto
-dall'admin (di norma la prossima). Si basa su
+dall'admin (di norma la prossima). Una verifica presa per errore (click
+sbagliato) può essere annullata, riportando il bonifico "da
+verificare". Si basa su
 [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)
 e [58 - crediti-debiti-bambino.md](58%20-%20crediti-debiti-bambino.md).
 
@@ -48,15 +50,31 @@ Dato che sto marcando un bonifico con importo diverso da quello atteso
 Quando provo a confermare senza aver scritto una nota
 Allora vedo un errore e non viene registrato nulla
 
-## Scenario: un bonifico già verificato non è più modificabile
+## Scenario: un bonifico già verificato mostra solo lo stato e "Annulla verifica"
 Dato che il bonifico di una comunicazione è già stato marcato (corretto
 o con importo diverso)
 Quando guardo la sua riga
-Allora vedo solo lo stato registrato, senza più le azioni "Bonifico
-corretto"/"Importo diverso" — per correggere un errore di
-verifica bisogna prima annullare l'invio della comunicazione (specs/56;
-se era stato generato un credito/debito, resta comunque sulla scheda
-del bambino, vedi Regole)
+Allora vedo lo stato registrato, senza più le azioni "Bonifico
+corretto"/"Importo diverso" — al loro posto un solo pulsante "Annulla
+verifica"
+
+## Scenario: annullare la verifica di un bonifico marcato corretto
+Dato che il bonifico di una comunicazione è stato marcato "corretto"
+Quando premo "Annulla verifica" e confermo
+Allora torna "da verificare" (ricompaiono "Bonifico corretto" e
+"Importo diverso")
+E non serve nessun'altra azione: non era stato generato nessun
+credito/debito
+
+## Scenario: annullare la verifica di un bonifico marcato con importo diverso
+Dato che il bonifico di una comunicazione è stato marcato "importo
+diverso" (con un credito/debito eventualmente generato, specs/58)
+Quando premo "Annulla verifica" e confermo
+Allora torna "da verificare"
+E vedo un avviso che mi invita a ricontrollare i crediti/debiti di
+quel bambino, con un link di cortesia alla sua scheda — l'annullo non
+tocca in nessun modo l'eventuale credito/debito già generato (resta lì
+finché non lo corregge a mano, vedi Regole)
 
 ## Scenario: verificare il bonifico anche su un mese passato
 Dato che sto rivedendo un mese passato in "Rette" (specs/56, sola
@@ -76,8 +94,12 @@ bonifico spesso arriva settimane dopo l'invio
   numeric(10,2)`, `bonifico_nota text`, `bonifico_verificato_da uuid`,
   `bonifico_verificato_da_nome text`, `bonifico_verificato_il
   timestamptz`. Ogni comunicazione nasce `in_attesa`; solo un admin può
-  farla transitare a `corretto` o `importo_errato` (mai il contrario,
-  stessa immutabilità di `comunicazioni_retta`, specs/56).
+  farla transitare a `corretto` o `importo_errato`, e solo un admin può
+  farla tornare `in_attesa` ("Annulla verifica", vedi sotto) — a
+  differenza del resto di `comunicazioni_retta` (specs/56, importi e
+  log di invio restano immutabili), lo stato di verifica del bonifico
+  è pensato per essere corretto sul posto, non solo con un nuovo
+  movimento.
 - "Bonifico corretto": imposta `bonifico_stato = 'corretto'`,
   `bonifico_importo_ricevuto` = `comunicazioni_retta.totale`,
   `bonifico_nota = null`, verificato da/il. Nessuna riga in
@@ -104,15 +126,35 @@ bonifico spesso arriva settimane dopo l'invio
   credito/debito "da conteggiare" (indice unico di specs/58), il
   salvataggio fallisce con un errore che invita l'admin a scegliere un
   altro mese o a intervenire prima su quello esistente.
+- "Annulla verifica" (`resettaVerificaBonifico`,
+  `app/admin/rette/actions.ts`): riporta `bonifico_stato = 'in_attesa'`
+  e azzera `bonifico_importo_ricevuto`/`bonifico_nota`/
+  `bonifico_verificato_da(_nome/_il)`, per correggere un click
+  sbagliato ("Bonifico corretto" invece di "Importo diverso", o
+  viceversa) senza dover passare da "Annulla invio" (che cancella
+  l'intera comunicazione, non solo la verifica del bonifico — vedi
+  sotto). Non è una transizione "storica" tracciata da nessuna parte
+  (a differenza della prima decisione, che resta comunque visibile
+  finché non viene annullata): dopo il reset, dell'eventuale verifica
+  precedente non resta traccia sulla riga. Non tocca in nessun caso un
+  eventuale credito/debito generato da "Importo diverso" (resta "da
+  conteggiare" o "conteggiato" così com'era): se lo stato annullato
+  era `importo_errato`, la UI (`components/VerificaBonifico.tsx`)
+  mostra un avviso che invita l'admin a ricontrollarlo a mano dalla
+  scheda del bambino, con un link diretto — è un promemoria, non
+  un'azione automatica: correggere o eliminare quel credito/debito
+  resta una scelta manuale dell'admin (specs/58).
 - Annullare l'invio di una comunicazione (specs/56, "Annulla invio")
   elimina la riga di `comunicazioni_retta`, quindi anche il suo stato
   di verifica bonifico (le colonne vivono sulla stessa riga): non c'è
-  più nulla da "riportare in attesa" per quella specifica riga. Un
-  eventuale credito/debito generato da "Importo diverso" resta invece
-  intatto (vive come riga indipendente in `crediti_debiti_bambini`, con
-  il proprio mese di competenza, spesso diverso da quello annullato):
-  fuori scope in questa fase collegarlo automaticamente all'annullo
-  della comunicazione originale — è una situazione limite da correggere
+  più nulla da "riportare in attesa" per quella specifica riga (in
+  questo caso non serve "Annulla verifica", la riga sparisce del
+  tutto). Un eventuale credito/debito generato da "Importo diverso"
+  resta invece intatto (vive come riga indipendente in
+  `crediti_debiti_bambini`, con il proprio mese di competenza, spesso
+  diverso da quello annullato): fuori scope in questa fase collegarlo
+  automaticamente all'annullo della comunicazione originale — è una
+  situazione limite da correggere
   a mano (modificare o eliminare quel credito/debito dalla scheda del
   bambino, se ancora "da conteggiare").
 - Solo un profilo `admin` può leggere/scrivere lo stato di verifica

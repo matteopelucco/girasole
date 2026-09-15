@@ -543,3 +543,51 @@ export async function marcaBonificoImportoErrato(
   if (esito.ok) revalidatePath(`/admin/bambini/${bambinoId}`);
   return esito;
 }
+
+// specs/59, scenari "annullare la verifica di un bonifico marcato
+// corretto/con importo diverso": riporta il bonifico "da verificare"
+// (stesso stato di prima di qualunque decisione), per correggere un
+// click sbagliato. Non tocca in nessun caso un eventuale
+// credito/debito generato da "Importo diverso" (specs/58, "annullare
+// l'invio di una comunicazione libera di nuovo il credito/debito" è
+// l'unico caso che lo fa, e qui non si sta annullando l'invio): il
+// chiamante (components/VerificaBonifico.tsx) è responsabile di
+// avvisare l'admin di ricontrollarlo a mano quando lo stato annullato
+// era "importo_errato" — l'unico dato che serve per deciderlo (lo
+// stato prima del reset) è già noto lato client, nessun bisogno che il
+// server lo rimandi indietro.
+export async function resettaVerificaBonifico(
+  comunicazioneId: string,
+  _stato: EsitoAzione,
+  _formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const { data: comunicazione } = await supabase
+    .from('comunicazioni_retta')
+    .select('bonifico_stato')
+    .eq('id', comunicazioneId)
+    .maybeSingle();
+  if (!comunicazione) return { ok: false, messaggio: 'Comunicazione non trovata.' };
+  if (comunicazione.bonifico_stato === 'in_attesa') {
+    return { ok: false, messaggio: 'Il bonifico di questa comunicazione è già da verificare.' };
+  }
+
+  const { error } = await supabase
+    .from('comunicazioni_retta')
+    .update({
+      bonifico_stato: 'in_attesa',
+      bonifico_importo_ricevuto: null,
+      bonifico_nota: null,
+      bonifico_verificato_da: null,
+      bonifico_verificato_da_nome: null,
+      bonifico_verificato_il: null,
+    })
+    .eq('id', comunicazioneId);
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile annullare la verifica del bonifico.', dettaglio: error.message };
+  }
+
+  revalidatePath('/admin/rette');
+  return { ok: true };
+}

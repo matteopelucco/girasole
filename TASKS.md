@@ -2547,6 +2547,43 @@ collegate), e la migration corrispondente non era mai stata scritta.
 - [x] Verificato `npx tsc --noEmit` e `npx next lint` puliti (nessun
       codice applicativo toccato, solo la migration mancante).
 
+## Verifica bonifico: annullare una verifica presa per errore
+Richiesta dell'utente: poter "tornare indietro" dopo aver marcato un
+bonifico (corretto o con importo diverso) — nel primo caso senza
+ulteriori azioni, nel secondo con un avviso che invita a ricontrollare
+i crediti/debiti del bambino, con un link di cortesia alla sua scheda.
+- [x] `specs/59 - verifica-bonifico-retta.md`: due nuovi scenari
+      ("annullare la verifica di un bonifico marcato corretto"/"...con
+      importo diverso"), scenario "un bonifico già verificato non è
+      più modificabile" riscritto (ora mostra "Annulla verifica"
+      invece di essere définitivamente bloccato), nuova Regola che
+      descrive `resettaVerificaBonifico` e la distingue da "Annulla
+      invio" (specs/56, che cancella l'intera comunicazione, non solo
+      lo stato del bonifico).
+- [x] `app/admin/rette/actions.ts`: nuova `resettaVerificaBonifico`
+      (azzera `bonifico_stato`/`bonifico_importo_ricevuto`/
+      `bonifico_nota`/`bonifico_verificato_da(_nome/_il)`; rifiuta se
+      il bonifico è già "da verificare"). Nessun credito/debito viene
+      toccato: resta compito dell'admin correggerlo a mano se serve.
+- [x] `components/VerificaBonifico.tsx`: pulsante "Annulla verifica" su
+      entrambi gli stati verificati (con conferma); dopo un annullo di
+      "importo diverso", un avviso persistente con link alla scheda del
+      bambino (`bambinoId` è tornato tra le prop, serviva solo per
+      questo).
+- [x] `app/admin/rette/page.tsx`: passa `bambinoId` e la nuova azione
+      bindata (`resettaVerificaBonifico.bind(null, comunicazione.id)`).
+- [x] `e2e/59-verifica-bonifico-retta.spec.ts`: tre nuovi/aggiornati
+      test (pulsante "Annulla verifica" presente sullo stato
+      verificato; annullo da "corretto" torna "da verificare" senza
+      avvisi; annullo da "importo diverso" mostra l'avviso col link,
+      verificato fino ad atterrare sulla scheda del bambino giusta).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test), `npx jscpd` e `npm run build` puliti. Nessuna nuova
+      migration (nessuna modifica allo schema, solo nuovi valori
+      possibili per colonne già esistenti). Suite e2e non eseguibile in
+      questo momento (DB di test offline) — da eseguire in locale/CI
+      appena disponibile.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

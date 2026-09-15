@@ -115,13 +115,16 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
     const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${cognome}`) });
     await popup.getByLabel('Importo ricevuto (€)').fill('100');
-    // Nota lasciata vuota: il campo required blocca il submit lato
-    // browser, nessuna richiesta arriva al server.
+    // Nota lasciata vuota: la validazione JS (VerificaBonifico.tsx, non
+    // più un <form required> dopo il fix del bug "spagina" — vedi
+    // TASKS.md) blocca l'invio, nessuna richiesta arriva al server.
     await popup.getByRole('button', { name: 'Conferma' }).click();
     await expect(rigaInviata.getByText('Bonifico ricevuto (importo diverso)', { exact: false })).toHaveCount(0);
   });
 
-  test('un bonifico già verificato non è più modificabile e nasconde "Annulla invio"', async ({ page }) => {
+  test('un bonifico già verificato mostra solo lo stato, "Annulla verifica" e nasconde "Annulla invio"', async ({
+    page,
+  }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 
     const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '150');
@@ -133,5 +136,49 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
     await expect(rigaInviata.getByRole('button', { name: 'Importo diverso' })).toHaveCount(0);
     await expect(rigaInviata.getByRole('button', { name: 'Annulla invio' })).toHaveCount(0);
+    await expect(rigaInviata.getByRole('button', { name: 'Annulla verifica' })).toBeVisible();
+  });
+
+  test('annullare la verifica di un bonifico corretto torna "da verificare", senza altri avvisi', async ({
+    page,
+  }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '160');
+    page.once('dialog', (dialog) => dialog.accept());
+    await rigaInviata.getByRole('button', { name: 'Bonifico corretto' }).click();
+    await expect(rigaInviata.getByRole('button', { name: 'Annulla verifica' })).toBeVisible({ timeout: 20_000 });
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await rigaInviata.getByRole('button', { name: 'Annulla verifica' }).click();
+
+    await expect(rigaInviata.getByText('Bonifico da verificare')).toBeVisible({ timeout: 20_000 });
+    await expect(rigaInviata.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
+    await expect(rigaInviata.getByRole('button', { name: 'Importo diverso' })).toBeVisible();
+    await expect(rigaInviata.getByText('ricontrolla i crediti/debiti', { exact: false })).toHaveCount(0);
+  });
+
+  test('annullare la verifica di un bonifico con importo diverso avvisa di ricontrollare i crediti/debiti', async ({
+    page,
+  }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, '170');
+    await rigaInviata.getByRole('button', { name: 'Importo diverso' }).click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${cognome}`) });
+    await popup.getByLabel('Importo ricevuto (€)').fill('150');
+    await popup.getByLabel('Nota bonifico').fill('Bonifico incompleto E2E annullo');
+    await popup.getByRole('button', { name: 'Conferma' }).click();
+    await expect(rigaInviata.getByRole('button', { name: 'Annulla verifica' })).toBeVisible({ timeout: 20_000 });
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await rigaInviata.getByRole('button', { name: 'Annulla verifica' }).click();
+
+    await expect(rigaInviata.getByText('Bonifico da verificare')).toBeVisible({ timeout: 20_000 });
+    const avviso = rigaInviata.getByText('ricontrolla i crediti/debiti', { exact: false });
+    await expect(avviso).toBeVisible();
+    await avviso.getByRole('link', { name: 'vai alla scheda' }).click();
+    await page.waitForURL(/\/admin\/bambini\/.+/);
+    await expect(page.getByRole('heading', { name: new RegExp(cognome) })).toBeVisible();
   });
 });

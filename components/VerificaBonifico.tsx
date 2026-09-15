@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRef, useState, useTransition } from 'react';
 import { ESITO_INIZIALE, type EsitoAzione } from './FormConEsito';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
@@ -7,8 +8,13 @@ import { formattaDataOraItaliana } from '@/lib/date';
 
 // Verifica del bonifico di una comunicazione già inviata (specs/59 -
 // verifica-bonifico-retta.md): due azioni ("Bonifico corretto"/
-// "Importo diverso") finché è "da verificare", uno stato di sola
-// lettura una volta marcato.
+// "Importo diverso") finché è "da verificare"; una volta marcato, uno
+// stato di sola lettura con un pulsante "Annulla verifica" per tornare
+// "da verificare" (per correggere un click sbagliato) — se lo stato
+// annullato era "importo diverso", un avviso persistente invita
+// l'admin a ricontrollare i crediti/debiti del bambino (l'annullo non
+// li tocca automaticamente, specs/59), con un link di cortesia alla
+// sua scheda.
 //
 // NON usa FormConEsito/<form> (a differenza della prima versione):
 // nella vista del mese corrente, ogni riga di RigaComunicazione vive
@@ -26,6 +32,7 @@ import { formattaDataOraItaliana } from '@/lib/date';
 // "Importo diverso" ne ha tre, quindi niente <form>, solo ref letti al
 // click di "Conferma".
 export function VerificaBonifico({
+  bambinoId,
   bambinoNome,
   totale,
   stato,
@@ -37,11 +44,16 @@ export function VerificaBonifico({
   meseMinimo,
   marcaCorretto,
   marcaImportoErrato,
+  resettaVerifica,
 }: {
-  // comunicazioneId/bambinoId non sono tra le prop: `marcaCorretto`/
-  // `marcaImportoErrato` arrivano già "bindate" a quegli id dal
-  // chiamante (app/admin/rette/page.tsx) — coerente con lo stesso
-  // pattern già usato per "Annulla invio"/"Invia comunicazione".
+  // comunicazioneId non è tra le prop: `marcaCorretto`/
+  // `marcaImportoErrato`/`resettaVerifica` arrivano già "bindate" a
+  // quell'id dal chiamante (app/admin/rette/page.tsx) — coerente con
+  // lo stesso pattern già usato per "Annulla invio"/"Invia
+  // comunicazione". `bambinoId` invece serve qui per il link di
+  // cortesia alla scheda del bambino dopo un annullo di "importo
+  // diverso".
+  bambinoId: string;
   bambinoNome: string;
   totale: number;
   stato: 'in_attesa' | 'corretto' | 'importo_errato';
@@ -53,32 +65,67 @@ export function VerificaBonifico({
   meseMinimo: string;
   marcaCorretto: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   marcaImportoErrato: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
+  resettaVerifica: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
 }) {
   const [apertoModale, setApertoModale] = useState(false);
   const [esitoCorretto, setEsitoCorretto] = useState<EsitoAzione>(ESITO_INIZIALE);
   const [esitoModale, setEsitoModale] = useState<EsitoAzione>(ESITO_INIZIALE);
+  const [esitoReset, setEsitoReset] = useState<EsitoAzione>(ESITO_INIZIALE);
+  const [avvisaControlloConguagli, setAvvisaControlloConguagli] = useState(false);
   const [pendingCorretto, avviaCorretto] = useTransition();
   const [pendingModale, avviaModale] = useTransition();
+  const [pendingReset, avviaReset] = useTransition();
   const importoRef = useRef<HTMLInputElement>(null);
   const notaRef = useRef<HTMLInputElement>(null);
   const meseRef = useRef<HTMLInputElement>(null);
 
-  if (stato === 'corretto') {
-    return (
-      <p className="mt-1 text-xs text-emerald-700">
-        Bonifico ricevuto (importo corretto) — verificato da {verificatoDaNome} il{' '}
-        {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
-      </p>
-    );
+  function confermaReset(statoAttuale: 'corretto' | 'importo_errato') {
+    const messaggioConferma =
+      statoAttuale === 'importo_errato'
+        ? `Annullare la verifica del bonifico di ${bambinoNome}? Tornerà "da verificare" — ricordati di ricontrollare i crediti/debiti eventualmente generati sulla sua scheda.`
+        : `Annullare la verifica del bonifico di ${bambinoNome}? Tornerà "da verificare".`;
+    if (!window.confirm(messaggioConferma)) return;
+
+    avviaReset(async () => {
+      const risultato = await resettaVerifica(ESITO_INIZIALE, new FormData());
+      setEsitoReset(risultato);
+      if (risultato.ok && statoAttuale === 'importo_errato') {
+        setAvvisaControlloConguagli(true);
+      }
+    });
   }
 
-  if (stato === 'importo_errato') {
+  if (stato === 'corretto' || stato === 'importo_errato') {
     return (
-      <p className="mt-1 text-xs text-amber-700">
-        Bonifico ricevuto (importo diverso): {formattaImporto(importoRicevuto ?? 0)} invece di{' '}
-        {formattaImporto(totale)} — {nota} — verificato da {verificatoDaNome} il{' '}
-        {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
-      </p>
+      <div className="mt-1">
+        {stato === 'corretto' ? (
+          <p className="text-xs text-emerald-700">
+            Bonifico ricevuto (importo corretto) — verificato da {verificatoDaNome} il{' '}
+            {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
+          </p>
+        ) : (
+          <p className="text-xs text-amber-700">
+            Bonifico ricevuto (importo diverso): {formattaImporto(importoRicevuto ?? 0)} invece di{' '}
+            {formattaImporto(totale)} — {nota} — verificato da {verificatoDaNome} il{' '}
+            {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={pendingReset}
+          aria-busy={pendingReset}
+          onClick={() => confermaReset(stato)}
+          className="mt-1 rounded-lg border border-stone-300 px-2 py-0.5 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Annulla verifica
+        </button>
+        {!esitoReset.ok && (
+          <div role="alert" className="mt-1 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+            <p className="font-medium">{esitoReset.messaggio}</p>
+            {esitoReset.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoReset.dettaglio}</p>}
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -123,6 +170,15 @@ export function VerificaBonifico({
 
   return (
     <>
+      {avvisaControlloConguagli && (
+        <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+          Hai annullato una verifica &quot;importo diverso&quot;: ricontrolla i crediti/debiti di {bambinoNome}, non
+          sono stati toccati automaticamente —{' '}
+          <Link href={`/admin/bambini/${bambinoId}`} className="underline">
+            vai alla scheda
+          </Link>
+        </p>
+      )}
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <span className="text-stone-500">Bonifico da verificare</span>
         <button

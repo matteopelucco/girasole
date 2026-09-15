@@ -23,6 +23,7 @@ import {
   inviaComunicazioniRetta,
   marcaBonificoCorretto,
   marcaBonificoImportoErrato,
+  resettaVerificaBonifico,
 } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -149,6 +150,7 @@ function RigaComunicazione({
           )}
         </div>
         <VerificaBonifico
+          bambinoId={bambino.id}
           bambinoNome={`${bambino.nome} ${bambino.cognome}`}
           totale={Number(comunicazione.totale)}
           stato={comunicazione.bonifico_stato}
@@ -160,6 +162,7 @@ function RigaComunicazione({
           meseMinimo={meseReale}
           marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
           marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
+          resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
         />
       </td>
     </tr>
