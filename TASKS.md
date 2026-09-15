@@ -2530,6 +2530,23 @@ all'azione prevista (coerente con entrambi i sintomi osservati).
       modifiche, ma non eseguibili in questo momento (DB di test
       offline) — da eseguire appena disponibile.
 
+## Bugfix: mancava la policy di update per la verifica bonifico
+Segnalato dall'utente con screenshot: "Impossibile registrare la
+verifica del bonifico. permission denied for table comunicazioni_retta".
+Causa: `comunicazioni_retta` non ha mai avuto una policy/grant di
+update (pensata come insert/delete soltanto,
+`0038_annulla_comunicazione_retta.sql`, che escludeva esplicitamente
+l'update) — la verifica del bonifico (specs/59) è il primo caso reale
+che deve aggiornare una riga sul posto (`bonifico_stato` e colonne
+collegate), e la migration corrispondente non era mai stata scritta.
+- [x] `supabase/migrations/0046_update_bonifico_comunicazione_retta.sql`
+      (nuova): policy di update solo admin + grant su
+      `comunicazioni_retta`.
+- [x] `specs/59 - verifica-bonifico-retta.md`: corretta la Regola che
+      affermava (erroneamente) che non servisse una nuova policy RLS.
+- [x] Verificato `npx tsc --noEmit` e `npx next lint` puliti (nessun
+      codice applicativo toccato, solo la migration mancante).
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

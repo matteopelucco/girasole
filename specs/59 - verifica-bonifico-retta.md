@@ -116,9 +116,14 @@ bonifico spesso arriva settimane dopo l'invio
   a mano (modificare o eliminare quel credito/debito dalla scheda del
   bambino, se ancora "da conteggiare").
 - Solo un profilo `admin` può leggere/scrivere lo stato di verifica
-  bonifico — stessa `requireAdmin` di specs/56, nessuna nuova policy
-  RLS necessaria (le colonne vivono su `comunicazioni_retta`, già
-  protetta).
+  bonifico — stessa `requireAdmin` di specs/56. Le colonne vivono su
+  `comunicazioni_retta`, già protetta in lettura/inserimento/
+  eliminazione, ma quella tabella non aveva mai avuto una policy di
+  update (pensata come insert/delete soltanto,
+  `0038_annulla_comunicazione_retta.sql`): la verifica del bonifico è
+  il primo caso reale di update sul posto, quindi serve una nuova
+  policy dedicata
+  (`supabase/migrations/0046_update_bonifico_comunicazione_retta.sql`).
 - Nessun collegamento con un vero servizio bancario: la verifica resta
   manuale, l'admin guarda l'estratto conto reale e marca di conseguenza
   — coerente con l'obiettivo generale del progetto (fuori scope
