@@ -277,10 +277,10 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   profilo resta comunque visibile come testo statico accanto al campo
   (mai dentro un campo di input) per tutta la durata della modifica, con
   un pulsante "Copia" per reimpostarlo con un tap in qualunque momento.
-- Le ore straordinarie (insieme alla carenza rispetto al profilo
-  orario) concorrono al calcolo del monte ore del personale, aggiornato
-  automaticamente alla conferma di ogni settimana — vedi
-  [19 - monte-ore.md](19%20-%20monte-ore.md).
+- Le ore ordinarie e straordinarie erogate, confrontate con le ore
+  dovute dal profilo orario, concorrono al calcolo del monte ore del
+  personale, aggiornato automaticamente alla conferma di ogni
+  settimana — vedi [19 - monte-ore.md](19%20-%20monte-ore.md).
 - La settimana è "confermata" quando esiste una riga corrispondente
   nella tabella `ore_lavoro_settimane` (stesso pattern di
   `report_giornalieri_inviati`/`report_periodici_inviati`, specs/52:

@@ -22,7 +22,7 @@ import {
   ETICHETTE_STATO_ORE_LAVORO,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
-import { saldoMonteOre, controlloSettimanaOreLavoro } from '@/lib/monteOre';
+import { saldoMonteOre, controlloSettimanaOreLavoro, descrizioneEffettoMonteOre } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { MonteOre } from '@/components/MonteOre';
@@ -171,20 +171,25 @@ export default async function OreLavoroPage({
   // Ore dovute/ordinarie/straordinarie erogate della scheda settimanale
   // (specs/18, specs/19): finché la settimana non è confermata, il
   // riepilogo è calcolato "a vivo" sugli stessi dati mostrati nel form
-  // (righe, che includono i precaricati non ancora salvati); una volta
-  // confermata, mostra invece lo snapshot immutabile registrato alla
-  // conferma (un cambio di profilo orario o una correzione successiva
-  // non lo ricalcola, specs/19).
+  // (righe, che includono i precaricati non ancora salvati) — questo
+  // stesso calcolo include anche `variazioneMonteOre`, l'anteprima
+  // dell'effetto sul monte ore mostrata sotto (specs/19, "il personale
+  // vede in anteprima l'effetto sul monte ore prima di confermare").
+  // Una volta confermata, mostra invece lo snapshot immutabile
+  // registrato alla conferma (un cambio di profilo orario o una
+  // correzione successiva non lo ricalcola, specs/19): a quel punto non
+  // serve più un'anteprima, il movimento reale è già nello storico.
+  const controlloVivo = controlloSettimanaOreLavoro(
+    righe.map((r) => ({ data: r.data, stato: r.stato, oreOrdinarie: r.oreOrdinarie, oreStraordinarie: r.oreStraordinarie })),
+    profiloOrario
+  );
   const controllo = confermata
     ? {
         oreDovute: Number(settimana!.ore_dovute),
         oreOrdinarieErogate: Number(settimana!.ore_ordinarie_erogate),
         oreStraordinarieErogate: Number(settimana!.ore_straordinarie_erogate),
       }
-    : controlloSettimanaOreLavoro(
-        righe.map((r) => ({ data: r.data, stato: r.stato, oreOrdinarie: r.oreOrdinarie, oreStraordinarie: r.oreStraordinarie })),
-        profiloOrario
-      );
+    : controlloVivo;
   const straordinarioResiduo = confermata ? Number(settimana!.straordinario_residuo) : 0;
 
   return (
@@ -298,6 +303,11 @@ export default async function OreLavoroPage({
           <p>
             Ore straordinarie erogate: <strong>{controllo.oreStraordinarieErogate}h</strong>
           </p>
+          {!confermata && (
+            <p className="mt-2 border-t border-stone-100 pt-2 text-purple-800">
+              A settimana confermata: <strong>{descrizioneEffettoMonteOre(controlloVivo.variazioneMonteOre)}</strong>
+            </p>
+          )}
         </div>
 
         {confermata && (

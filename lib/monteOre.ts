@@ -18,9 +18,10 @@ export type ControlloSettimanaOreLavoro = {
   oreDovute: number;
   oreOrdinarieErogate: number;
   oreStraordinarieErogate: number;
-  carenza: number;
-  carenzaResidua: number;
-  straordinarioResiduo: number;
+  // Variazione del movimento automatico "settimanale" (specs/19): può
+  // essere negativa (scala il monte ore) da quando la formula è a
+  // netto pieno — vedi sotto.
+  variazioneMonteOre: number;
 };
 
 // Controllo di una settimana di ore di lavoro alla conferma (specs/19 -
@@ -32,14 +33,18 @@ export type ControlloSettimanaOreLavoro = {
 // collaterale dei dati). Riusa oreOrdinariePreviste (stessa fonte di
 // verità del precaricamento in specs/18, CLAUDE.md/jscpd).
 //
-// La carenza (ore dovute non coperte dall'ordinario erogato) viene
-// prima coperta dallo straordinario erogato della stessa settimana:
-// solo quanto resta scoperto ("carenza residua") fa aumentare il monte
-// ore. Lo straordinario che resta dopo questa copertura
-// ("straordinario residuo") NON scala automaticamente il monte ore:
-// richiede una decisione dell'admin (vedi
-// app/dashboard/ore-lavoro/actions.ts:decidiStraordinarioResiduo).
-// Funzione pura, nessun I/O.
+// Netto pieno: variazioneMonteOre = ore dovute − ore ordinarie erogate
+// − ore straordinarie erogate. Positiva = il monte ore aumenta (ha
+// lavorato meno del dovuto); negativa = il monte ore scala (ha
+// lavorato più del dovuto, ordinario e straordinario insieme). Nessuna
+// decisione dell'admin richiesta: il movimento automatico copre da solo
+// sia la carenza sia l'eventuale eccedenza (a differenza del modello
+// precedente con "straordinario residuo" in attesa di decisione, ormai
+// solo per lo storico — vedi
+// app/dashboard/ore-lavoro/actions.ts:decidiStraordinarioResiduo,
+// components/StraordinarioResiduo.tsx, che restano per risolvere le
+// settimane confermate PRIMA di questo cambio, ma non se ne generano
+// più di nuove). Funzione pura, nessun I/O.
 export function controlloSettimanaOreLavoro(
   giorni: GiornoPerMonteOre[],
   profiloOrario: ProfiloOrario | null | undefined
@@ -60,12 +65,21 @@ export function controlloSettimanaOreLavoro(
   oreOrdinarieErogate = arrotonda(oreOrdinarieErogate);
   oreStraordinarieErogate = arrotonda(oreStraordinarieErogate);
 
-  const carenza = arrotonda(Math.max(0, oreDovute - oreOrdinarieErogate));
-  const carenzaCoperta = Math.min(carenza, oreStraordinarieErogate);
-  const carenzaResidua = arrotonda(carenza - carenzaCoperta);
-  const straordinarioResiduo = arrotonda(Math.max(0, oreStraordinarieErogate - carenzaCoperta));
+  const variazioneMonteOre = arrotonda(oreDovute - oreOrdinarieErogate - oreStraordinarieErogate);
 
-  return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate, carenza, carenzaResidua, straordinarioResiduo };
+  return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate, variazioneMonteOre };
+}
+
+// Descrizione in italiano dell'effetto di una variazione di monte ore
+// (specs/19): stessa frase riusata sia nell'anteprima mostrata prima
+// della conferma ("Ore di lavoro", tabellina del riepilogo settimanale)
+// sia nella nota del movimento registrato alla conferma — un solo posto
+// che decide come esprimere "positiva"/"negativa"/"zero" (CLAUDE.md,
+// jscpd). Funzione pura.
+export function descrizioneEffettoMonteOre(variazioneMonteOre: number): string {
+  if (variazioneMonteOre > 0) return `${variazioneMonteOre}h in più sul monte ore`;
+  if (variazioneMonteOre < 0) return `${Math.abs(variazioneMonteOre)}h in meno sul monte ore`;
+  return 'nessuna variazione del monte ore';
 }
 
 // Nota descrittiva del movimento automatico settimanale, mostrata nello
@@ -75,7 +89,7 @@ export function controlloSettimanaOreLavoro(
 export function notaMovimentoSettimanale(controllo: ControlloSettimanaOreLavoro): string {
   return (
     `Calcolo automatico: ${controllo.oreDovute}h dovute, ${controllo.oreOrdinarieErogate}h ordinarie erogate, ` +
-    `${controllo.carenzaResidua}h di carenza residua dopo la copertura dallo straordinario.`
+    `${controllo.oreStraordinarieErogate}h straordinarie erogate — ${descrizioneEffettoMonteOre(controllo.variazioneMonteOre)}.`
   );
 }
 

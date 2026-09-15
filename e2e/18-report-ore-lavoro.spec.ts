@@ -120,6 +120,15 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByText('Ore ordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
         await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
 
+        // specs/19, "vedere in anteprima l'effetto sul monte ore prima
+        // di confermare": presente finché la settimana non è
+        // confermata (siamo in questo ramo perché non lo è), con uno
+        // dei tre esiti possibili — il valore esatto dipende dallo
+        // storico condiviso dell'account di test, non lo fissiamo.
+        await expect(page.getByText('A settimana confermata:', { exact: false })).toContainText(
+          /(\d+(\.\d+)? in (più|meno) sul monte ore|nessuna variazione del monte ore)/
+        );
+
         // Straordinario senza motivo: rifiutato, nessuna scrittura.
         await page.getByLabel('Ore straordinarie Lunedì').fill('2');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();

@@ -2410,6 +2410,57 @@ c'era alcun modo di eliminarlo.
       momento (DB di test offline, comunicato dall'utente) — da
       eseguire in locale/CI appena disponibile.
 
+## Monte ore: anteprima e calcolo a netto pieno
+Richiesta dell'utente: vedere in anteprima, nella tabellina di
+riepilogo settimanale ("Ore dovute"/"Ore ordinarie erogate"/"Ore
+straordinarie erogate"), l'effetto della conferma sul monte ore. I tre
+esempi numerici forniti implicavano però una formula diversa da quella
+esistente (netto pieno fra dovute ed erogate, con scalo automatico se
+il risultato è negativo) — confermato esplicitamente con l'utente prima
+di procedere, dato che elimina la necessità del passaggio "decisione
+admin sullo straordinario residuo" per le nuove settimane (specs/19,
+"Attenzione alla direzione").
+- [x] `specs/19 - monte-ore.md`: riscritto il calcolo automatico
+      (netto pieno, può scalare), nuovo scenario "vedere in anteprima
+      l'effetto sul monte ore prima di confermare", gli scenari sulla
+      decisione admin spostati in una sezione dedicata "Settimane
+      confermate prima del calcolo a netto pieno" (restano validi solo
+      per lo storico pregresso — nessuna nuova settimana può più
+      generare uno straordinario residuo da decidere).
+- [x] `lib/monteOre.ts`: `controlloSettimanaOreLavoro` restituisce ora
+      `variazioneMonteOre` (può essere negativa) al posto di
+      carenza/carenzaResidua/straordinarioResiduo; nuova
+      `descrizioneEffettoMonteOre` (testo condiviso fra l'anteprima e
+      la nota del movimento, CLAUDE.md/jscpd); `notaMovimentoSettimanale`
+      aggiornata. `notaMovimentoStraordinarioResiduo` resta invariata
+      (serve ancora per risolvere lo storico pregresso).
+- [x] `lib/monteOre.test.ts`: riscritto per la nuova formula — i casi
+      di test coprono esattamente i tre esempi numerici dell'utente,
+      oltre a `descrizioneEffettoMonteOre`.
+- [x] `supabase/migrations/0045_movimento_settimanale_netto_pieno.sql`:
+      rimosso il vincolo che imponeva `variazione >= 0` per un
+      movimento `settimanale` (ora può scalare il monte ore
+      direttamente). `decidiStraordinarioResiduo`,
+      `components/StraordinarioResiduo.tsx` e le colonne
+      `ore_lavoro_settimane.straordinario_residuo`/
+      `decisione_straordinari*` restano intatte per lo storico
+      pregresso, ma da questo momento ogni nuova conferma scrive
+      sempre `straordinario_residuo = 0`.
+- [x] `app/dashboard/ore-lavoro/actions.ts`
+      (`confermaSettimanaOreLavoro`): il movimento automatico usa
+      `controllo.variazioneMonteOre` (può essere negativo).
+- [x] `app/dashboard/ore-lavoro/page.tsx`: nuova riga "A settimana
+      confermata: ...h in più/meno sul monte ore" nella tabellina di
+      riepilogo, visibile solo finché la settimana non è confermata,
+      calcolata dal vivo sugli stessi dati mostrati nel form.
+- [x] `e2e/18-report-ore-lavoro.spec.ts`: nuova asserzione sull'anteprima
+      (non richiede una conferma reale, quindi verificabile in e2e a
+      differenza del movimento vero e proprio).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test), `npx jscpd` e `npm run build` puliti. Suite e2e non
+      eseguibile in questo momento (DB di test offline) — da eseguire
+      in locale/CI appena disponibile.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

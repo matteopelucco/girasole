@@ -202,7 +202,12 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     ore_dovute: controllo.oreDovute,
     ore_ordinarie_erogate: controllo.oreOrdinarieErogate,
     ore_straordinarie_erogate: controllo.oreStraordinarieErogate,
-    straordinario_residuo: controllo.straordinarioResiduo,
+    // Il concetto di "straordinario residuo in attesa di decisione" non
+    // si genera più da questo punto in poi (specs/19, netto pieno): la
+    // colonna resta per lo storico delle settimane confermate PRIMA di
+    // questo cambio (StraordinarioResiduo.tsx continua a mostrarle),
+    // ma da qui in avanti è sempre 0.
+    straordinario_residuo: 0,
   });
   if (error) {
     if (error.code === '23505') {
@@ -212,19 +217,19 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
   }
 
   // Movimento automatico di monte ore della settimana appena confermata
-  // (specs/19): solo la carenza residua (non coperta dallo straordinario
-  // della stessa settimana) lo fa aumentare — mai una compensazione
-  // automatica dell'eventuale straordinario residuo, che resta in
-  // attesa della decisione dell'admin (decidiStraordinarioResiduo sotto).
-  // La conferma resta valida anche se questo insert fallisse (è già
-  // stata registrata sopra), ma segnaliamo esplicitamente l'anomalia
-  // invece di lasciare un saldo silenziosamente incompleto — serve una
-  // correzione manuale dell'admin (movimento "precarico").
+  // (specs/19): netto pieno fra ore dovute ed erogate (ordinarie +
+  // straordinarie), può essere negativo (scala il monte ore) — a
+  // differenza del modello precedente, nessuna decisione dell'admin è
+  // più richiesta. La conferma resta valida anche se questo insert
+  // fallisse (è già stata registrata sopra), ma segnaliamo
+  // esplicitamente l'anomalia invece di lasciare un saldo silenziosamente
+  // incompleto — serve una correzione manuale dell'admin (movimento
+  // "precarico").
   const { error: erroreMovimento } = await supabase.from('monte_ore_movimenti').insert({
     utente_id: utenteId,
     tipo: 'settimanale',
     settimana_inizio: settimanaInizio,
-    variazione: controllo.carenzaResidua,
+    variazione: controllo.variazioneMonteOre,
     nota: notaMovimentoSettimanale(controllo),
   });
   if (erroreMovimento) {
