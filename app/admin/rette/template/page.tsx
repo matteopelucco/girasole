@@ -18,6 +18,7 @@ const PLACEHOLDER_DISPONIBILI = [
   '{{costo_pre_asilo}}',
   '{{costo_post_asilo}}',
   '{{costi_extra}}',
+  '{{note_costi_extra}}',
   '{{totale}}',
 ];
 

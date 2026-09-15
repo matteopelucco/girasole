@@ -2234,6 +2234,32 @@ subito dopo "Retta" (erano entrambe non modificabili, ora vicine).
       sandbox (stesso problema di login ricorrente, indipendente da
       questo cambiamento) — da eseguire in locale/CI.
 
+## Rette: placeholder {{note_costi_extra}} nella mail
+Bug segnalato dall'utente: la nota scritta accanto a un costo extra
+(specs/56, "inserire un costo extra del mese e vederlo nel totale")
+era visibile solo in tabella, non recuperabile nel testo della mail —
+mancava il placeholder corrispondente.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: nuovo scenario "la
+      nota del costo extra è disponibile nella mail" e
+      `{{note_costi_extra}}` aggiunto all'elenco placeholder disponibili
+      (stringa vuota se la nota non è compilata, stesso pattern già
+      usato per `{{marca_da_bollo}}` sui modelli preesistenti).
+- [x] `app/admin/rette/actions.ts`: `placeholderRetta` accetta ora
+      `noteExtra` e lo espone come `note_costi_extra`.
+- [x] `components/InvioSingoloRetta.tsx`: l'anteprima lato client legge
+      anche il campo nota della riga e lo espone come
+      `note_costi_extra`, coerente con quanto verrà davvero inviato.
+- [x] `app/admin/rette/template/page.tsx`: `{{note_costi_extra}}`
+      aggiunto all'elenco dei placeholder mostrato in "Modello email".
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: nuovo test che
+      configura un template con `{{note_costi_extra}}`, verifica che
+      l'anteprima lo sostituisca con la nota scritta, e che resti una
+      stringa vuota (non "undefined"/"null") quando la nota è assente.
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      e `npx jscpd` puliti. Suite e2e non eseguibile in questo ambiente
+      sandbox (stesso problema di login ricorrente, indipendente da
+      questo cambiamento) — da eseguire in locale/CI prima del merge.
+
 ## Backlog — Fase 2/3
 - [ ] Registrare i bonifici ricevuti, con le opportune note
 - [ ] Stato di pagamento/saldo per bambino

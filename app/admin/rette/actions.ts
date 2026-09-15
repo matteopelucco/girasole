@@ -65,7 +65,8 @@ function riepilogoDalForm(
 function placeholderRetta(
   bambino: { nome: string; cognome: string },
   mese: string,
-  riepilogo: RiepilogoRetta
+  riepilogo: RiepilogoRetta,
+  noteExtra: string | null
 ): Record<string, string> {
   return {
     nome: bambino.nome,
@@ -78,6 +79,7 @@ function placeholderRetta(
     costo_pre_asilo: formattaImporto(riepilogo.costoPreAsilo),
     costo_post_asilo: formattaImporto(riepilogo.costoPostAsilo),
     costi_extra: formattaImporto(riepilogo.costiExtra),
+    note_costi_extra: noteExtra ?? '',
     totale: formattaImporto(riepilogo.totale),
   };
 }
@@ -103,7 +105,7 @@ async function inviaEPersistiComunicazione(
   template: TemplateRetta,
   inviataDa: { id: string; nome: string }
 ): Promise<boolean> {
-  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo);
+  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
   const corpoHtml = sostituisciPlaceholder(template?.corpo ?? '', valoriPlaceholder).replace(/\n/g, '<br>');
 

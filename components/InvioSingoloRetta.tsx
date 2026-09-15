@@ -93,6 +93,9 @@ export function InvioSingoloRetta({
     }
     valori.totale = formattaImporto(totale);
 
+    const campoNota = riga.querySelector<HTMLInputElement>(`[name="note_extra_${bambinoId}"]`);
+    valori.note_costi_extra = campoNota?.value ?? '';
+
     setAnteprima({
       oggetto: sostituisciPlaceholder(oggettoTemplate, valori),
       corpo: sostituisciPlaceholder(corpoTemplate, valori),

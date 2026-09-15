@@ -86,6 +86,16 @@ Quando scrivo un importo nel campo "Costi extra" di un bambino (ed
 eventualmente una nota che lo descrive)
 Allora il totale calcolato per quella riga lo include
 
+## Scenario: la nota del costo extra è disponibile nella mail
+Dato che ho scritto un importo nel campo "Costi extra" di un bambino e
+una nota che ne spiega il motivo
+Quando invio (o apro l'anteprima del)la comunicazione
+Allora la mail può includere quella nota tramite il placeholder
+`{{note_costi_extra}}` nel template — utile per far sapere ai genitori a
+cosa corrisponde l'importo extra addebitato
+E se non ho scritto nessuna nota, il placeholder viene sostituito con
+una stringa vuota (nessun errore, nessun testo residuo tipo "null")
+
 ## Scenario: inviare le comunicazioni con un click
 Dato che ho controllato (ed eventualmente corretto) i dati in tabella
 per il mese corrente
@@ -319,9 +329,12 @@ Allora vengo reindirizzato alla dashboard
 - Placeholder disponibili: `{{nome}}`, `{{cognome}}`, `{{mese}}` (es.
   "settembre 2026"), `{{retta_mensile}}`, `{{costo_pasti}}`,
   `{{conguaglio_pasti}}`, `{{marca_da_bollo}}`, `{{costo_pre_asilo}}`,
-  `{{costo_post_asilo}}`, `{{costi_extra}}`, `{{totale}}` — tutti gli
-  importi già formattati in euro con la virgola (es. "250,00"). Un
-  modello salvato prima dell'introduzione di `{{marca_da_bollo}}` resta
+  `{{costo_post_asilo}}`, `{{costi_extra}}`, `{{note_costi_extra}}`,
+  `{{totale}}` — tutti gli importi già formattati in euro con la
+  virgola (es. "250,00"); `{{note_costi_extra}}` è invece testo libero
+  (il contenuto del campo "Nota" della riga, stringa vuota se non
+  compilato). Un modello salvato prima dell'introduzione di un nuovo
+  placeholder (es. `{{marca_da_bollo}}`, `{{note_costi_extra}}`) resta
   valido così com'è: il nuovo placeholder va aggiunto a mano dall'admin
   in "Modello email" se lo si vuole vedere nel testo dell'email (il
   totale lo include comunque, a prescindere dal template).

@@ -228,6 +228,50 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toHaveValue('15');
   });
 
+  test('la nota del costo extra è disponibile nella mail tramite {{note_costi_extra}}', async ({ page }) => {
+    // Configura il template perché includa il nuovo placeholder — un
+    // modello preesistente non lo contiene finché l'admin non lo
+    // aggiunge a mano (specs/56, stesso pattern già usato per
+    // {{marca_da_bollo}}).
+    await page.goto('/admin/rette/template');
+    const corpoUnico = `Nota costo extra: [{{note_costi_extra}}] — E2E ${Date.now()}`;
+    await page.getByLabel('Corpo').fill(corpoUnico);
+    await page.getByRole('button', { name: 'Salva modello' }).click();
+    await expect(page.getByLabel('Corpo')).toHaveValue(corpoUnico, { timeout: 20_000 });
+
+    const cognomeConNota = await creaBambinoConCosti(page, {
+      email: `e2e-retta-nota-${Date.now()}@example.com`,
+      prezzoMensile: '100',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const rigaConNota = page.locator('tr', { hasText: cognomeConNota });
+    await rigaConNota.getByLabel(new RegExp(`Nota costi extra per.*${cognomeConNota}`)).fill('Uscita didattica');
+    await rigaConNota.getByRole('button', { name: 'Invia comunicazione' }).click();
+
+    const popupConNota = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeConNota}`) });
+    await expect(popupConNota).toContainText('Nota costo extra: [Uscita didattica]');
+    await popupConNota.getByRole('button', { name: 'Annulla' }).click();
+
+    // Senza nota scritta, il placeholder diventa una stringa vuota, non
+    // "undefined"/"null".
+    const cognomeSenzaNota = await creaBambinoConCosti(page, {
+      email: `e2e-retta-senza-nota-${Date.now()}@example.com`,
+      prezzoMensile: '100',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const rigaSenzaNota = page.locator('tr', { hasText: cognomeSenzaNota });
+    await rigaSenzaNota.getByRole('button', { name: 'Invia comunicazione' }).click();
+
+    const popupSenzaNota = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeSenzaNota}`) });
+    await expect(popupSenzaNota).toContainText('Nota costo extra: []');
+    await expect(popupSenzaNota).not.toContainText('undefined');
+    await expect(popupSenzaNota).not.toContainText('null');
+  });
+
   test('inviare le comunicazioni con un click registra il log e mostra "Inviata"', async ({ page }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 
