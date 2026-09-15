@@ -82,7 +82,8 @@ Allora l'importo mostrato è (giorni di apertura del mese corrente) ×
 ## Scenario: il conguaglio pasti riflette le assenze del mese precedente
 Dato che nel mese precedente il bambino risulta assente o malato in
 alcuni giorni (presenze già registrate e concluse)
-Quando guardo la colonna "Conguaglio pasti" di quel bambino
+Quando guardo la colonna "Conguaglio pasti mese precedente" di quel
+bambino
 Allora l'importo mostrato è negativo, pari a (giorni di assenza/
 malattia del mese precedente) × (prezzo del suo buono pasto) — un
 rimborso per i pasti stimati ma non consumati

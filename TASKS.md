@@ -2483,6 +2483,20 @@ differenza del resto dell'app dove "l'effetto è la conferma"
       (DB di test offline) — da eseguire in locale/CI appena
       disponibile.
 
+## Rette: rinomina colonna "Conguaglio pasti" → "Conguaglio pasti mese precedente"
+Richiesta dell'utente, per chiarezza (il conguaglio riguarda le assenze
+del mese precedente, non del mese in corso, e senza precisarlo può
+confondere).
+- [x] `specs/56 - comunicazione-retta-mensile.md`: testo dello
+      scenario aggiornato.
+- [x] `app/admin/rette/page.tsx`: intestazione colonna e `aria-label`
+      del campo aggiornati (la seconda per coerenza, oltre
+      all'intestazione).
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: le due asserzioni
+      che leggevano il testo precedente aggiornate. Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run` e
+      `npx jscpd` puliti (nessuna logica toccata, solo etichette).
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

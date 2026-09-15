@@ -66,7 +66,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     // che la colonna esista.
     await expect(page.getByRole('columnheader', { name: 'Retta' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costo pasti' }).first()).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti mese precedente' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Marca da bollo' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Pre-asilo' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Post-asilo' }).first()).toBeVisible();
@@ -199,7 +199,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti per.*${cognome}`))).toHaveValue('0');
+    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveValue('0');
   });
 
   test("l'email a cui verrà inviata la comunicazione compare sotto il nome del bambino", async ({ page }) => {

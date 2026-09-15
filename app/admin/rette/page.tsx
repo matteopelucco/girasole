@@ -182,7 +182,7 @@ const INTESTAZIONE_COLONNE = (
         Costo pasti
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-        Conguaglio pasti
+        Conguaglio pasti mese precedente
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Pre-asilo
@@ -388,7 +388,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
               step={0.01}
               defaultValue={riepilogo.conguaglioPasti}
               name={`conguaglio_pasti_${bambino.id}`}
-              aria-label={`Conguaglio pasti per ${nomeCompleto}`}
+              aria-label={`Conguaglio pasti mese precedente per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
           </td>
