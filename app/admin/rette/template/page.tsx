@@ -3,6 +3,7 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
+import { formattaDataOraItaliana } from '@/lib/date';
 import { aggiornaTemplateEmailRetta } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function TemplateEmailRettaPage() {
 
   const { data: template } = await supabase
     .from('impostazioni_email_retta')
-    .select('oggetto, corpo')
+    .select('oggetto, corpo, updated_at')
     .eq('id', true)
     .maybeSingle();
 
@@ -77,6 +78,11 @@ export default async function TemplateEmailRettaPage() {
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modello
           </PulsanteInvio>
+          {template?.updated_at && (
+            <p className="text-xs text-stone-500">
+              Ultimo salvataggio: {formattaDataOraItaliana(template.updated_at).replace('_', ' alle ')}
+            </p>
+          )}
         </FormConEsito>
       </main>
     </NavHeader>

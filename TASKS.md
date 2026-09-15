@@ -2461,6 +2461,28 @@ admin sullo straordinario residuo" per le nuove settimane (specs/19,
       eseguibile in questo momento (DB di test offline) — da eseguire
       in locale/CI appena disponibile.
 
+## Modello email retta: feedback dopo il salvataggio
+Bug segnalato dall'utente: salvare "Modello email" non dava alcun
+riscontro di successo o errore — il form già mostrava l'errore
+(FormConEsito), ma un salvataggio riuscito non aveva alcun effetto
+visibile (il testo in pagina resta lo stesso appena scritto), a
+differenza del resto dell'app dove "l'effetto è la conferma"
+(specs/05).
+- [x] `specs/56 - comunicazione-retta-mensile.md`: scenario
+      "configurare il template della mail" aggiornato con la data/ora
+      dell'ultimo salvataggio come effetto visibile della conferma.
+- [x] `app/admin/rette/template/page.tsx`: seleziona anche `updated_at`
+      (colonna già scritta da `aggiornaTemplateEmailRetta`, solo non
+      ancora letta/mostrata) e la visualizza come "Ultimo salvataggio:
+      ..." sotto il pulsante — si aggiorna ad ogni salvataggio riuscito
+      grazie a `revalidatePath` già presente nell'azione.
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: nuova asserzione
+      sulla presenza della data/ora dopo il salvataggio. Verificato
+      `npx tsc --noEmit`, `npx next lint`, `npx vitest run` e
+      `npx jscpd` puliti. Suite e2e non eseguibile in questo momento
+      (DB di test offline) — da eseguire in locale/CI appena
+      disponibile.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

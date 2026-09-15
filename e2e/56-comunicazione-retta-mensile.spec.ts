@@ -506,6 +506,14 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await page.getByRole('button', { name: 'Salva modello' }).click();
     await expect(page.getByLabel('Oggetto')).toHaveValue(oggettoUnico, { timeout: 20_000 });
 
+    // Unico feedback visibile del salvataggio riuscito (specs/56): il
+    // form non cambia aspetto altrimenti (stesso testo appena scritto),
+    // quindi senza questa data non ci sarebbe modo di accorgersi che è
+    // davvero avvenuto.
+    await expect(page.getByText('Ultimo salvataggio:', { exact: false })).toContainText(
+      /\d{2}\/\d{2}\/\d{4} alle \d{2}:\d{2}/
+    );
+
     await page.reload();
     await expect(page.getByLabel('Oggetto')).toHaveValue(oggettoUnico);
   });

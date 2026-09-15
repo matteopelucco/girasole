@@ -183,6 +183,12 @@ Dato che sono su "Modello email" (raggiungibile da "Rette")
 Quando modifico oggetto e/o corpo, usando i placeholder disponibili
 documentati in pagina, e confermo
 Allora il nuovo modello viene salvato e usato dai prossimi invii
+E vedo la data/ora dell'ultimo salvataggio aggiornarsi sotto il
+pulsante "Salva modello" — l'effetto visibile della conferma (specs/05):
+a differenza di un elenco dove compare un nuovo elemento, qui il
+contenuto del form resta lo stesso testo appena scritto, quindi senza
+questa data non ci sarebbe alcun modo di accorgersi che il salvataggio
+è davvero avvenuto
 
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
