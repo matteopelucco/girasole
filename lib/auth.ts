@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { oggi } from '@/lib/date';
+import { chiusuraPerData, isGiornoChiuso, messaggioChiusura } from '@/lib/calendarioScolastico';
 
 // Vero se una richiesta a una route di cron (specs/52 -
 // report-email-automatico.md; specs/07 - allarmi.md) porta il secret
@@ -118,4 +120,34 @@ export function assicuraScrivibile(ruolo: string | null | undefined, data: strin
   if (!puoScrivereData(ruolo, data)) {
     throw new Error('Le maestre possono modificare solo i dati della giornata odierna.');
   }
+}
+
+// Se la pagina Presenze/Pasti è scrivibile per questo ruolo e questa
+// data, e l'eventuale messaggio da mostrare se è un giorno di chiusura
+// scolastica (specs/53): combina la chiusura del giorno (fa I/O) con la
+// regola "sola data odierna per maestra/assistente" sopra — stesso
+// calcolo ripetuto identico in app/dashboard/presenze/page.tsx e
+// app/dashboard/pasti/page.tsx prima di questa estrazione (CLAUDE.md,
+// jscpd). Vive qui (non in lib/calendarioScolastico.ts, dove è nato) e
+// non lì perché quel modulo è importato anche da componenti client
+// (components/VerificaBonifico.tsx, via lib/comunicazioneRetta.ts): un
+// suo import da lib/auth.ts (che porta con sé next/headers tramite
+// lib/supabase/server.ts) rompeva la build ("You're importing a
+// component that needs next/headers") — lib/auth.ts invece non è mai
+// importato da codice client, quindi può tranquillamente dipendere da
+// calendarioScolastico.ts (direzione sicura: mai il contrario).
+export async function editabilitaGiorno(
+  supabase: SupabaseClient,
+  data: string,
+  ruolo: string | null | undefined
+): Promise<{ editable: boolean; messaggioChiuso: string | null }> {
+  const chiusura = await chiusuraPerData(supabase, data);
+  const chiusure = chiusura ? [chiusura] : [];
+  return {
+    // Un giorno di chiusura scolastica non è scrivibile da nessuno,
+    // admin incluso — a differenza della regola "sola data odierna"
+    // sopra, che esenta l'admin.
+    editable: puoScrivereData(ruolo, data) && !isGiornoChiuso(data, chiusure),
+    messaggioChiuso: messaggioChiusura(data, chiusure),
+  };
 }

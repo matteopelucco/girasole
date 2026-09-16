@@ -5,12 +5,11 @@ import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
-import { requireStaff } from '@/lib/auth';
+import { requireStaff, editabilitaGiorno } from '@/lib/auth';
 import { sezioniEBambiniVisibili, raggruppaPerSezione, messaggioSezioniVuote } from '@/lib/sezioni';
 import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza } from '@/lib/presenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
-import { editabilitaGiorno } from '@/lib/calendarioScolastico';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo, salvaNotaPresenza } from './actions';
 
 export const dynamic = 'force-dynamic';

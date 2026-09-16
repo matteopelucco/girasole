@@ -8,12 +8,11 @@ import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
-import { requireStaff, puoScrivereData, assicuraAccessoPasti } from '@/lib/auth';
+import { requireStaff, puoScrivereData, assicuraAccessoPasti, editabilitaGiorno } from '@/lib/auth';
 import { sezioniEBambiniVisibili, raggruppaPerSezione, messaggioSezioniVuote } from '@/lib/sezioni';
 import { classePulsanteStato } from '@/lib/classiStato';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { formattaDataOraItaliana } from '@/lib/date';
-import { editabilitaGiorno } from '@/lib/calendarioScolastico';
 import { contaPastiSiOggiTuttoAsilo, contaBambiniSenzaPresenzaOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
 import { segnaPasto, salvaNotaPasto, comunicaPastiRojac } from './actions';
 

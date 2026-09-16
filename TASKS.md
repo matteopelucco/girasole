@@ -2823,6 +2823,52 @@ salvataggio".
       Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
       (312 test) e `npx jscpd` puliti. Suite e2e sospesa, come sopra.
 
+## Bugfix: due deploy Vercel di fila falliti (v0.39.0, v0.40.0 mai andate in produzione)
+Segnalato dall'utente: "vedo la versione 0.38.1 in prod... non la 0.40".
+Verificato via l'API di GitHub (`/commits/{sha}/status`) che i deploy
+Vercel dei due commit precedenti (v0.39.0 "Presenze/Pasti: navigazione a
+2 livelli", v0.40.0 "Fix: form di modifica...") erano entrambi falliti
+in build — l'ultimo deploy riuscito restava v0.38.1. `npm run build`
+locale ha riprodotto lo stesso identico errore del log Vercel incollato
+dall'utente: `lib/supabase/server.ts` (che importa `next/headers`,
+un'API valida solo nei Server Component) veniva trascinato dentro il
+bundle di `components/VerificaBonifico.tsx` (`'use client'`), tramite
+`lib/comunicazioneRetta.ts` → `lib/calendarioScolastico.ts` →
+`lib/auth.ts` → `lib/supabase/server.ts`.
+- **Causa**: introdotta da me stesso in questa stessa sessione, aggiungendo
+  `editabilitaGiorno` a `lib/calendarioScolastico.ts` con un import di
+  `puoScrivereData` da `lib/auth.ts` (vedi la sezione "Presenze/Pasti:
+  navigazione a 2 livelli" sopra) — prima di allora
+  `calendarioScolastico.ts` non dipendeva mai da `auth.ts`, ed era per
+  questo sicuro da importare anche in codice client (tramite
+  `comunicazioneRetta.ts`). Il pre-push hook (tsc/ESLint/vitest/jscpd)
+  non intercetta questo genere di violazione di confine client/server:
+  serve `next build` (o `npm run build`), che né il hook né questa
+  sessione avevano eseguito prima di quei due push.
+- [x] `lib/calendarioScolastico.ts`: rimossi `editabilitaGiorno` e
+  l'import di `puoScrivereData`/`lib/auth.ts` — torna a non dipendere
+  da nulla lato server/auth, sicuro da importare in codice client.
+- [x] `lib/auth.ts`: `editabilitaGiorno` spostata qui (importa
+  `chiusuraPerData`/`isGiornoChiuso`/`messaggioChiusura` da
+  `calendarioScolastico.ts`, direzione sicura — `auth.ts` non è mai
+  importato da componenti client, quindi può dipendere da lì senza
+  rischio, mai il contrario).
+- [x] `app/dashboard/presenze/page.tsx` e `app/dashboard/pasti/page.tsx`:
+  importano `editabilitaGiorno` da `@/lib/auth` invece che da
+  `@/lib/calendarioScolastico`.
+- [x] Verificato che `npm run build` (non solo `tsc --noEmit`) completi
+  senza errori prima di ripushare — replica esattamente il webpack
+  bundler usato da Vercel, a differenza del solo type-check. Verificato
+  anche `npx tsc --noEmit`, `npx next lint`, `npx vitest run` (312
+  test) e `npx jscpd` puliti.
+- **Nota per il futuro**: quando un modulo `lib/` che finisce (anche
+  transitivamente) in un componente client acquisisce un nuovo import,
+  controllare che la nuova dipendenza non porti con sé `next/headers`/
+  `next/navigation` lato server (`lib/auth.ts`, `lib/supabase/server.ts`
+  sono i punti di ingresso più a rischio in questo progetto) — il
+  pre-push hook non lo rileva, va verificato con `npm run build` prima
+  di un push che tocca `lib/`.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
