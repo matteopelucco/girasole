@@ -2765,6 +2765,64 @@ lettura/scrittura di presenze/pasti, solo la navigazione per arrivarci.
       attenzione a questi tre file dato il refactor non banale dei
       locator.
 
+## Bugfix: "Salva costi" (e altri form di modifica) senza feedback di successo
+Segnalato dall'utente: il pulsante "Salva costi" tornava attivo dopo il
+salvataggio senza dare alcun riscontro concreto. L'utente ha inizialmente
+chiesto una barra di avanzamento globale + disabilitazione di tutti i
+pulsanti della pagina + icona ok/ko esplicita per ogni azione dell'app —
+proposta che contraddice una scelta deliberata già documentata in
+specs/05 - feedback.md ("Niente barra di avanzamento globale... il
+successo non genera notifiche aggiuntive oltre all'effetto visibile").
+Chiarito il conflitto con l'utente, che ha scelto di mantenere
+l'architettura di specs/05 e limitarsi al fix mirato: "Salva costi" (e
+gli altri form di modifica scoperti dallo stesso audit) non avevano
+NESSUN effetto visibile dopo un salvataggio riuscito (i campi restano
+con gli stessi valori appena scritti) — un buco reale nell'applicazione
+dello scenario "azione completata con successo", non coperto
+dall'eccezione "Salva modello" (specs/56) che invece mostra già "Ultimo
+salvataggio".
+- [x] `specs/05 - feedback.md`: nuovo scenario "un form di modifica
+      senza altro effetto visibile mostra 'Ultimo salvataggio'" e nuova
+      Regola che generalizza il pattern (già introdotto per "Salva
+      modello", specs/56) a tutti i form di modifica dell'app.
+- [x] Sei form corretti con lo stesso pattern (colonna/riga
+      `updated_at` bumpata esplicitamente nell'azione — un upsert/update
+      non la tocca da sola, mai passata nel payload prima d'ora — testo
+      "Ultimo salvataggio: {data} alle {ora}" sotto il pulsante):
+      - `app/admin/bambini/[id]/page.tsx` + `app/admin/actions.ts`:
+        "Salva costi" (`aggiornaCostiBambino`, il bug originale) e
+        "Salva modifiche" (`aggiornaBambino`).
+      - `app/admin/calendario/[id]/page.tsx` + `.../actions.ts`: "Salva
+        modifiche" di un giorno di chiusura (`aggiornaGiornoChiusura`).
+      - `app/admin/profili-orari/[id]/page.tsx` + `.../actions.ts`:
+        "Salva modifiche" di un profilo orario (`aggiornaProfiloOrario`).
+      - `app/admin/maestre/page.tsx` + `.../actions.ts`: "Aggiorna" di
+        un utente (`aggiornaUtente`).
+      - `app/dashboard/promemoria/[id]/page.tsx` +
+        `app/dashboard/actions.ts`: "Salva modifiche" di un avviso
+        (`aggiornaPromemoria`).
+      - `app/dashboard/ore-lavoro/page.tsx`: "Salva modifiche" della
+        settimana (`salvaSettimanaOreLavoro` in `.../actions.ts` bumpava
+        già `updated_at` correttamente — mancava solo leggerlo/mostrarlo
+        in pagina, il più recente tra i 7 giorni salvati).
+- [x] `supabase/migrations/0047_updated_at_bambini.sql` … `0051_updated_at_promemoria.sql`
+      (cinque nuove migration): aggiungono `updated_at timestamptz not
+      null default now()` a `bambini`, `giorni_chiusura`,
+      `profili_orari`, `profili`, `promemoria` — nessuna delle cinque
+      tabelle ne aveva già una. `costi_bambini` e `ore_lavoro_giorni`
+      ce l'avevano già (nessuna nuova migration per loro). **Da
+      applicare da parte tua** sul progetto Supabase di test e su quello
+      di produzione (SQL Editor, una volta ciascuna) prima che l'effetto
+      sia visibile in produzione.
+- [x] `e2e/05-feedback.spec.ts`: nuovo test — crea un bambino, salva i
+      costi coi valori precompilati di default (nessun cambiamento reale
+      nei dati) e verifica che compaia comunque "Ultimo salvataggio"
+      col formato data/ora atteso. Un solo test rappresentativo per il
+      pattern condiviso, non uno per ciascuno dei sei form (stessa
+      logica, stesso componente `FormConEsito`/pattern `updated_at`).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test) e `npx jscpd` puliti. Suite e2e sospesa, come sopra.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

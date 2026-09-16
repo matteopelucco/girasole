@@ -69,6 +69,11 @@ export async function aggiornaProfiloOrario(_stato: EsitoAzione, formData: FormD
       ore_mercoledi: oreMercoledi,
       ore_giovedi: oreGiovedi,
       ore_venerdi: oreVenerdi,
+      // Effetto visibile della conferma (specs/05 - feedback.md): "Ultimo
+      // salvataggio" nella pagina, l'unico modo di accorgersi del
+      // salvataggio quando i valori scritti coincidono con quelli già
+      // presenti (es. si ricorregge lo stesso nome).
+      updated_at: new Date().toISOString(),
     })
     .eq('id', profiloId);
   if (error) {

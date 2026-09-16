@@ -5,6 +5,7 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { CampiOreSettimana } from '@/components/CampiOreSettimana';
 import { requireAdmin } from '@/lib/auth';
+import { formattaDataOraItaliana } from '@/lib/date';
 import { totaleOreSettimanali } from '@/lib/profiliOrari';
 import { aggiornaProfiloOrario, eliminaProfiloOrario } from '../actions';
 
@@ -15,7 +16,7 @@ export default async function ProfiloOrarioDettaglioPage({ params }: { params: {
 
   const { data: profiloOrario } = await supabase
     .from('profili_orari')
-    .select('id, nome, ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi')
+    .select('id, nome, ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi, updated_at')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -47,6 +48,11 @@ export default async function ProfiloOrarioDettaglioPage({ params }: { params: {
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modifiche
           </PulsanteInvio>
+          {profiloOrario.updated_at && (
+            <p className="text-xs text-stone-500">
+              Ultimo salvataggio: {formattaDataOraItaliana(profiloOrario.updated_at).replace('_', ' alle ')}
+            </p>
+          )}
         </FormConEsito>
 
         <ConfermaAzione

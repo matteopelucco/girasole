@@ -21,14 +21,14 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
   const [{ data: bambino }, { data: sezioni }, { data: costi }, { data: creditiDebiti }] = await Promise.all([
     supabase
       .from('bambini')
-      .select('id, nome, cognome, data_nascita, sesso, sezione_id, note_allergie, altre_note, attiva')
+      .select('id, nome, cognome, data_nascita, sesso, sezione_id, note_allergie, altre_note, attiva, updated_at')
       .eq('id', params.id)
       .maybeSingle(),
     supabase.from('sezioni').select('id, nome').order('nome'),
     supabase
       .from('costi_bambini')
       .select(
-        'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria'
+        'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria, updated_at'
       )
       .eq('bambino_id', params.id)
       .maybeSingle(),
@@ -137,6 +137,11 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modifiche
           </PulsanteInvio>
+          {bambino.updated_at && (
+            <p className="text-xs text-stone-500">
+              Ultimo salvataggio: {formattaDataOraItaliana(bambino.updated_at).replace('_', ' alle ')}
+            </p>
+          )}
         </FormConEsito>
 
         <FormConEsito action={toggleAttivaBambino}>
@@ -262,6 +267,11 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Salva costi
             </PulsanteInvio>
+            {costi?.updated_at && (
+              <p className="text-xs text-stone-500">
+                Ultimo salvataggio: {formattaDataOraItaliana(costi.updated_at).replace('_', ' alle ')}
+              </p>
+            )}
           </FormConEsito>
         </div>
 

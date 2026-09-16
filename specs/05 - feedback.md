@@ -24,6 +24,18 @@ Allora il pulsante torna allo stato normale
 E vedo l'effetto dell'azione (es. il nuovo elemento in lista, un badge
 aggiornato, una riga rimossa), senza notifiche aggiuntive invasive
 
+## Scenario: un form di modifica senza altro effetto visibile mostra "Ultimo salvataggio"
+Dato che sto compilando un form che modifica un dato già esistente (es.
+i costi di un bambino, un giorno di chiusura, un profilo orario, un
+utente, un avviso, la settimana di ore di lavoro) e i valori che scrivo
+coincidono con quelli già presenti, o comunque il form resta con lo
+stesso aspetto dopo l'invio
+Quando l'azione termina con successo
+Allora vedo, sotto il pulsante di invio, un testo "Ultimo salvataggio:
+{data} alle {ora}" aggiornarsi — è questo, non un elenco che cambia, l'
+"effetto visibile" richiesto sopra: senza questa data non ci sarebbe
+alcun modo di accorgersi che il salvataggio è davvero avvenuto
+
 ## Scenario: azione fallita per un motivo previsto (validazione)
 Quando invio un form con dati non validi o incompleti per quel campo
 Allora vedo, vicino al form, un messaggio chiaro sul perché l'azione non
@@ -82,6 +94,20 @@ bianca o un errore non gestito
 - Il successo non genera notifiche aggiuntive oltre all'effetto visibile
   dell'azione: è già la conferma richiesta dallo scenario "done", ed
   evita di essere invasivi (vedi Note di implementazione).
+- Per un form di modifica in cui i campi restano con lo stesso aspetto
+  dopo un salvataggio riuscito (a differenza di un elenco dove compare/
+  sparisce un elemento), l'effetto visibile è una colonna/riga
+  `updated_at` sulla tabella interessata, bumpata esplicitamente ad ogni
+  salvataggio (un upsert/update non tocca `updated_at` da solo, senza
+  passarlo nel payload), mostrata come "Ultimo salvataggio: {data} alle
+  {ora}" sotto il pulsante di invio (`lib/date.ts`,
+  `formattaDataOraItaliana`). Pattern introdotto per il modello email
+  della retta (specs/56, "Salva modello") e poi esteso, a un bug
+  segnalato dall'utente, a tutti gli altri form di modifica dell'app
+  (bambino, costi bambino, giorno di chiusura, profilo orario, utente,
+  avviso, settimana di ore di lavoro) — nessuno di questi aveva alcun
+  effetto visibile dopo un salvataggio riuscito prima di questa
+  estensione.
 
 ## Note di implementazione
 - Niente barra di avanzamento globale in un footer (una delle opzioni

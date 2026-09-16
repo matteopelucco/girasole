@@ -77,6 +77,11 @@ export async function aggiornaPromemoria(
       destinatario_tipo: campi.destinatarioTipo,
       sezione_id: campi.destinatarioTipo === 'sezione' ? campi.sezioneId : null,
       bambino_id: campi.destinatarioTipo === 'bambino' ? campi.bambinoId : null,
+      // Effetto visibile della conferma (specs/05 - feedback.md): "Ultimo
+      // salvataggio" sotto "Salva modifiche", l'unico modo di accorgersi
+      // del salvataggio quando i valori scritti coincidono con quelli
+      // già presenti.
+      updated_at: new Date().toISOString(),
     })
     .eq('id', promemoriaId);
   if (error) {

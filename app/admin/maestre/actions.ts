@@ -116,6 +116,11 @@ export async function aggiornaUtente(
       note,
       abilitato_ore_lavoro: abilitatoOreLavoro,
       profilo_orario_id: profiloOrarioId,
+      // Effetto visibile della conferma (specs/05 - feedback.md): "Ultimo
+      // salvataggio" sotto "Aggiorna", l'unico modo di accorgersi del
+      // salvataggio quando i valori scritti coincidono con quelli già
+      // presenti.
+      updated_at: new Date().toISOString(),
     })
     .eq('id', profiloId);
   if (error) {

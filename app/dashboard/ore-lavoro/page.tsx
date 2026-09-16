@@ -104,7 +104,9 @@ export default async function OreLavoroPage({
     recuperaProfiloOrario(supabase, utenteTarget.profiloOrarioId),
     supabase
       .from('ore_lavoro_giorni')
-      .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
+      .select(
+        'data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza, updated_at'
+      )
       .eq('utente_id', utenteTarget.id)
       .in('data', giorni),
     supabase
@@ -141,6 +143,14 @@ export default async function OreLavoroPage({
   }
 
   const righePerGiorno = new Map((righeGiorni ?? []).map((r) => [r.data, r]));
+  // Effetto visibile della conferma (specs/05 - feedback.md): il più
+  // recente tra gli `updated_at` dei 7 giorni salvati, l'unico modo di
+  // accorgersi del salvataggio quando le ore scritte coincidono con
+  // quelle già presenti.
+  const ultimoSalvataggio = (righeGiorni ?? []).reduce<string | null>(
+    (piuRecente, r) => (!piuRecente || r.updated_at > piuRecente ? r.updated_at : piuRecente),
+    null
+  );
   const confermata = !!settimana?.confermata_at;
   // L'admin vede sempre i campi modificabili, anche su una settimana
   // già confermata (specs/18): solo il diretto interessato la vede in
@@ -290,6 +300,11 @@ export default async function OreLavoroPage({
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Salva modifiche
             </PulsanteInvio>
+            {ultimoSalvataggio && (
+              <p className="text-xs text-stone-500">
+                Ultimo salvataggio: {formattaDataOraItaliana(ultimoSalvataggio).replace('_', ' alle ')}
+              </p>
+            )}
           </FormConEsito>
         )}
 

@@ -52,7 +52,11 @@ export async function aggiornaGiornoChiusura(_stato: EsitoAzione, formData: Form
 
   const { error } = await supabase
     .from('giorni_chiusura')
-    .update({ data_inizio: dataInizio, data_fine: dataFine, nota })
+    // updated_at esplicito per l'effetto visibile "Ultimo salvataggio"
+    // (specs/05 - feedback.md): i campi restano con gli stessi valori
+    // appena scritti, senza questo timestamp non ci sarebbe modo di
+    // accorgersi che il salvataggio è davvero avvenuto.
+    .update({ data_inizio: dataInizio, data_fine: dataFine, nota, updated_at: new Date().toISOString() })
     .eq('id', giornoId);
   if (error) {
     return { ok: false, messaggio: 'Impossibile aggiornare il giorno di chiusura.', dettaglio: error.message };

@@ -67,6 +67,33 @@ test.describe('05 — Feedback sulle azioni', () => {
     await nessunaViolazioneA11yGrave(page);
   });
 
+  test('form di modifica senza altro effetto visibile mostra "Ultimo salvataggio"', async ({ page }) => {
+    // "Salva costi" sulla scheda di un bambino appena creato: i valori
+    // scritti coincidono con quelli precompilati di default, quindi il
+    // form ha esattamente lo stesso aspetto prima e dopo l'invio — solo
+    // "Ultimo salvataggio" segnala che è davvero avvenuto (specs/05).
+    await page.goto('/admin');
+    const cognome = `Feedback${Date.now()}`;
+    await page.getByPlaceholder('Nome', { exact: true }).fill('Feedback');
+    await page.getByPlaceholder('Cognome').fill(cognome);
+    await page.getByLabel('Data di nascita').fill('2021-01-01');
+    await page.getByLabel('Sesso').selectOption('F');
+    await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
+
+    const link = page.getByRole('link', { name: new RegExp(cognome) });
+    await expect(link).toBeVisible({ timeout: 20_000 });
+    await link.click();
+    await page.waitForURL(/\/admin\/bambini\/.+/);
+
+    await expect(page.getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Salva costi' }).click();
+
+    await expect(page.getByText('Ultimo salvataggio:', { exact: false })).toContainText(
+      /\d{2}\/\d{2}\/\d{4} alle \d{2}:\d{2}/,
+      { timeout: 20_000 }
+    );
+  });
+
   test('azione fallita per validazione: messaggio chiaro vicino al form', async ({ page }) => {
     await page.goto('/admin');
     // Nessun campo dell'app lascia passare dati non validi lato client:

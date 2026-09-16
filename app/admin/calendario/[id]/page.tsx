@@ -4,6 +4,7 @@ import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { requireAdmin } from '@/lib/auth';
+import { formattaDataOraItaliana } from '@/lib/date';
 import { aggiornaGiornoChiusura, eliminaGiornoChiusura } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ export default async function GiornoChiusuraDettaglioPage({ params }: { params: 
 
   const { data: giorno } = await supabase
     .from('giorni_chiusura')
-    .select('id, data_inizio, data_fine, nota')
+    .select('id, data_inizio, data_fine, nota, updated_at')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -60,6 +61,11 @@ export default async function GiornoChiusuraDettaglioPage({ params }: { params: 
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modifiche
           </PulsanteInvio>
+          {giorno.updated_at && (
+            <p className="text-xs text-stone-500">
+              Ultimo salvataggio: {formattaDataOraItaliana(giorno.updated_at).replace('_', ' alle ')}
+            </p>
+          )}
         </FormConEsito>
 
         <ConfermaAzione

@@ -140,6 +140,12 @@ export async function aggiornaBambino(_stato: EsitoAzione, formData: FormData): 
       sesso,
       note_allergie: noteAllergie,
       altre_note: altreNote,
+      // Effetto visibile della conferma (specs/05 - feedback.md): i
+      // campi del form restano con gli stessi valori appena scritti,
+      // senza questo timestamp non ci sarebbe modo di accorgersi che
+      // il salvataggio è davvero avvenuto (stesso pattern di
+      // app/admin/rette/template/actions.ts, "Ultimo salvataggio").
+      updated_at: new Date().toISOString(),
     })
     .eq('id', bambinoId);
   if (error) return esitoErroreBambino(error);
@@ -227,6 +233,12 @@ export async function aggiornaCostiBambino(
     post_asilo_richiesto: postAsiloRichiesto,
     prezzo_post_asilo: prezzoPostAsilo,
     email_promemoria: emailPromemoria || null,
+    // Senza questo campo esplicito, upsert lascia `updated_at` al
+    // default (solo insert) invariato sui salvataggi successivi — la
+    // pagina non avrebbe modo di mostrare "Ultimo salvataggio" come
+    // effetto visibile della conferma (specs/05 - feedback.md, stesso
+    // pattern di app/admin/rette/template/actions.ts).
+    updated_at: new Date().toISOString(),
   });
   if (error) {
     return { ok: false, messaggio: 'Impossibile salvare i costi.', dettaglio: error.message };

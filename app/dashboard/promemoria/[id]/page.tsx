@@ -5,6 +5,7 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
+import { formattaDataOraItaliana } from '@/lib/date';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { aggiornaPromemoria, eliminaPromemoria } from '../../actions';
 
@@ -18,7 +19,7 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
   const [{ data: promemoria }, sezioni] = await Promise.all([
     supabase
       .from('promemoria')
-      .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id')
+      .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id, updated_at')
       .eq('id', params.id)
       .maybeSingle(),
     sezioniAttiveVisibili(supabase, user.id, ruolo),
@@ -68,6 +69,11 @@ export default async function PromemoriaDettaglioPage({ params }: { params: { id
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modifiche
           </PulsanteInvio>
+          {promemoria.updated_at && (
+            <p className="text-xs text-stone-500">
+              Ultimo salvataggio: {formattaDataOraItaliana(promemoria.updated_at).replace('_', ' alle ')}
+            </p>
+          )}
         </FormConEsito>
 
         <ConfermaAzione

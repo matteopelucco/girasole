@@ -4,6 +4,7 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { CampiPasswordConferma } from '@/components/CampiPasswordConferma';
 import { REGOLA_PASSWORD } from '@/lib/password';
 import { requireAdmin } from '@/lib/auth';
+import { formattaDataOraItaliana } from '@/lib/date';
 import {
   creaUtente,
   aggiornaUtente,
@@ -29,7 +30,7 @@ export default async function MaestrePage() {
     supabase
       .from('profili')
       .select(
-        'id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro, profilo_orario_id'
+        'id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro, profilo_orario_id, updated_at'
       )
       .order('cognome'),
     supabase.from('sezioni').select('id, nome').order('nome'),
@@ -213,6 +214,11 @@ export default async function MaestrePage() {
                   <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
                     Aggiorna
                   </PulsanteInvio>
+                  {p.updated_at && (
+                    <p className="w-full text-xs text-stone-500">
+                      Ultimo salvataggio: {formattaDataOraItaliana(p.updated_at).replace('_', ' alle ')}
+                    </p>
+                  )}
                 </FormConEsito>
                 <FormConEsito
                   action={impostaPassword}
