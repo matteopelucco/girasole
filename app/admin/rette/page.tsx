@@ -131,12 +131,10 @@ function RigaComunicazione({
       </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costi_extra))}</td>
       <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
-      <td className="px-2 py-1.5 text-right">
-        <div>{formattaImporto(Number(comunicazione.credito_debito))}</div>
-        {comunicazione.nota_credito_debito && (
-          <div className="text-left text-xs text-stone-500">{comunicazione.nota_credito_debito}</div>
-        )}
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.credito_debito))}
       </td>
+      <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.nota_credito_debito ?? ''}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
         <div className="flex flex-wrap items-center gap-2">
@@ -203,6 +201,9 @@ const INTESTAZIONE_COLONNE = (
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Credito/Debito
+      </th>
+      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+        Nota cred./deb.
       </th>
       <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
         Totale
@@ -302,12 +303,10 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
-        Giorni di apertura stimati questo mese: {giorniApertura}. Costo pasti, conguaglio pasti, pre-asilo,
-        post-asilo, costi extra e relative note sono modificabili per una correzione ad-hoc (retta, marca da
-        bollo e credito/debito no — si cambiano dalla scheda del bambino); il totale mostrato per i bambini da
-        comunicare resta la stima calcolata al caricamento della pagina, non si aggiorna mentre modifichi i
-        campi — quello realmente comunicato è la somma dei valori presenti nel form al momento
-        dell&apos;invio.
+        Giorni di apertura stimati questo mese: {giorniApertura}. Ogni voce di costo è modificabile per una
+        correzione ad-hoc; il totale mostrato per i bambini da comunicare resta la stima calcolata al caricamento
+        della pagina, non si aggiorna mentre modifichi i campi — quello realmente comunicato è la somma dei valori
+        presenti nel form al momento dell&apos;invio.
       </p>
     );
 
@@ -336,7 +335,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 {bambino.nome} {bambino.cognome}
               </Link>
             </th>
-            <td colSpan={11} className="px-2 py-1.5 text-left text-xs text-amber-700">
+            <td colSpan={12} className="px-2 py-1.5 text-left text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
@@ -438,9 +437,25 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
               className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
             />
           </td>
-          <td className="px-2 py-1.5 text-right">
-            <div>{formattaImporto(riepilogo.creditoDebito)}</div>
-            {creditoDebito?.nota && <div className="text-left text-xs text-stone-500">{creditoDebito.nota}</div>}
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+            <input
+              type="number"
+              step={0.01}
+              defaultValue={riepilogo.creditoDebito}
+              name={`credito_debito_${bambino.id}`}
+              aria-label={`Credito/Debito per ${nomeCompleto}`}
+              className={classeCampoImporto}
+            />
+          </td>
+          <td className="px-2 py-1.5 text-left">
+            <input
+              type="text"
+              defaultValue={creditoDebito?.nota ?? ''}
+              name={`nota_credito_debito_${bambino.id}`}
+              placeholder="Nota (opzionale)"
+              aria-label={`Nota credito/debito per ${nomeCompleto}`}
+              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
+            />
           </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
@@ -454,8 +469,6 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 mese={meseVisualizzato}
                 rettaMensile={riepilogo.rettaMensile}
                 marcaDaBollo={riepilogo.marcaDaBollo}
-                creditoDebito={riepilogo.creditoDebito}
-                notaCreditoDebito={creditoDebito?.nota ?? null}
                 oggettoTemplate={oggettoTemplate}
                 corpoTemplate={corpoTemplate}
                 formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}

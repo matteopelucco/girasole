@@ -7,20 +7,20 @@ import { formattaMeseItaliano } from '@/lib/date';
 
 // Suffisso del name di ciascun campo importo MODIFICABILE della riga
 // (vedi app/admin/rette/page.tsx) → placeholder corrispondente nel
-// template (specs/56, `{{...}}`). Retta, marca da bollo e credito/debito
-// non sono qui: non sono campi del form (non modificabili da questa
-// tabella — retta si cambia sulla scheda del bambino, la marca da bollo
-// non è modificabile da nessuna parte essendo un importo fisso per
-// legge, il credito/debito si corregge dalla scheda del bambino,
-// specs/58), arrivano come prop fisse (rettaMensile/marcaDaBollo/
-// creditoDebito sotto). Condiviso da apriAnteprima sotto: un solo punto
-// che elenca le voci modificabili, non ripetuto due volte.
+// template (specs/56, `{{...}}`). Retta e marca da bollo non sono qui:
+// non sono campi del form (non modificabili da questa tabella — retta
+// si cambia sulla scheda del bambino, la marca da bollo non è
+// modificabile da nessuna parte, è un importo fisso per legge), arrivano
+// come prop fisse (rettaMensile/marcaDaBollo sotto). Condiviso da
+// apriAnteprima sotto: un solo punto che elenca le voci modificabili,
+// non ripetuto due volte.
 const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
   ['costo_pasti', 'costo_pasti'],
   ['conguaglio_pasti', 'conguaglio_pasti'],
   ['pre_asilo', 'costo_pre_asilo'],
   ['post_asilo', 'costo_post_asilo'],
   ['costi_extra', 'costi_extra'],
+  ['credito_debito', 'credito_debito'],
 ];
 
 // Pulsante "Invia comunicazione" per un solo bambino, con anteprima
@@ -56,8 +56,6 @@ export function InvioSingoloRetta({
   mese,
   rettaMensile,
   marcaDaBollo,
-  creditoDebito,
-  notaCreditoDebito,
   oggettoTemplate,
   corpoTemplate,
   formAction,
@@ -69,8 +67,6 @@ export function InvioSingoloRetta({
   mese: string;
   rettaMensile: number;
   marcaDaBollo: number;
-  creditoDebito: number;
-  notaCreditoDebito: string | null;
   oggettoTemplate: string;
   corpoTemplate: string;
   formAction: (formData: FormData) => void | Promise<void>;
@@ -88,10 +84,8 @@ export function InvioSingoloRetta({
       mese: formattaMeseItaliano(mese),
       retta_mensile: formattaImporto(rettaMensile),
       marca_da_bollo: formattaImporto(marcaDaBollo),
-      credito_debito: formattaImporto(creditoDebito),
-      nota_credito_debito: notaCreditoDebito ?? '',
     };
-    let totale = rettaMensile + marcaDaBollo + creditoDebito;
+    let totale = rettaMensile + marcaDaBollo;
     for (const [suffisso, placeholder] of CAMPI_IMPORTO) {
       const campo = riga.querySelector<HTMLInputElement>(`[name="${suffisso}_${bambinoId}"]`);
       const valore = campo ? Number(campo.value) || 0 : 0;
@@ -102,6 +96,9 @@ export function InvioSingoloRetta({
 
     const campoNota = riga.querySelector<HTMLInputElement>(`[name="note_extra_${bambinoId}"]`);
     valori.note_costi_extra = campoNota?.value ?? '';
+
+    const campoNotaCreditoDebito = riga.querySelector<HTMLInputElement>(`[name="nota_credito_debito_${bambinoId}"]`);
+    valori.nota_credito_debito = campoNotaCreditoDebito?.value ?? '';
 
     setAnteprima({
       oggetto: sostituisciPlaceholder(oggettoTemplate, valori),

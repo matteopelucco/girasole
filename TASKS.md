@@ -2584,58 +2584,6 @@ i crediti/debiti del bambino, con un link di cortesia alla sua scheda.
       questo momento (DB di test offline) — da eseguire in locale/CI
       appena disponibile.
 
-## Rette: importo e nota del credito/debito non più modificabili, unica cella
-Richiesta dell'utente: nella tabella "Rette" l'importo di addebito/
-accredito (credito/debito, specs/58) e la sua nota non devono essere
-modificabili da lì (si corregge dalla scheda del bambino), e
-visivamente devono condividere un'unica cella invece di due colonne
-separate, per ridurre l'occupazione orizzontale di una tabella già
-densa.
-- [x] `specs/58 - crediti-debiti-bambino.md`: scenari "il credito/debito
-      compare nella tabella di revisione del mese di competenza"/"un
-      bambino senza nessun credito/debito da conteggiare questo mese"
-      riscritti (sola lettura, unica colonna); Regola sulla tabella
-      "Rette" aggiornata di conseguenza (il valore comunicato è sempre
-      letto da `crediti_debiti_bambini` al momento dell'invio, non più
-      dal form).
-- [x] `specs/56 - comunicazione-retta-mensile.md`: scenario "vedere la
-      tabella di revisione..." aggiornato (credito/debito di sola
-      lettura, unica colonna con la sua nota).
-- [x] `app/admin/rette/page.tsx`: colonne "Credito/Debito"/"Nota
-      cred./deb." unificate in una sola intestazione "Credito/Debito";
-      rimossi i due `<input>` (riga "da inviare" e già inviata), ora
-      testo di sola lettura (importo sopra, nota sotto in corpo
-      minore); `colSpan` dell'avviso "Costi o email non configurati"
-      corretto da 12 a 11 (una colonna in meno); sottotitolo della
-      pagina aggiornato per non elencare più credito/debito tra le voci
-      modificabili.
-- [x] `app/admin/rette/actions.ts`: `riepilogoDalForm` non legge più
-      `credito_debito_*` dal form, lo riceve come parametro; sia
-      `inviaComunicazioniRetta` sia `inviaComunicazioneRettaSingola` ora
-      interrogano `crediti_debiti_bambini` (stesso filtro già usato in
-      `page.tsx`: mese corrente, `applicato_il is null`) per importo e
-      nota, invece di fidarsi di `nota_credito_debito_*` dal form (che
-      non esiste più come campo).
-- [x] `components/InvioSingoloRetta.tsx`: `credito_debito` rimosso da
-      `CAMPI_IMPORTO` (non più letto dal DOM della riga); nuove prop
-      fisse `creditoDebito`/`notaCreditoDebito` per calcolare
-      l'anteprima coerente con quanto verrà davvero inviato.
-- [x] `app/admin/bambini/[id]/page.tsx`: testo esplicativo della
-      sezione "Crediti e debiti" aggiornato (non più "resterà
-      modificabile" nella comunicazione).
-- [x] `e2e/58-crediti-debiti-bambino.spec.ts`: nuovo test — credito/
-      debito spostato sul mese corrente, verificato che importo e nota
-      compaiano nella stessa riga di "Rette" senza alcun campo
-      `<input>` per "Credito/Debito"/"Nota credito/debito" (a
-      differenza di "Costi extra", ancora modificabile), più controllo
-      di accessibilità. Colma anche una lacuna di copertura pre-
-      esistente: lo scenario "il credito/debito compare nella tabella
-      di revisione" non aveva ancora un test e2e dedicato.
-      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
-      (312 test) e `npx jscpd` puliti. Suite e2e non eseguibile in
-      questo momento (DB di test e2e temporaneamente offline) — da
-      eseguire in locale/CI appena disponibile.
-
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

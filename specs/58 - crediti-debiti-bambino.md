@@ -63,21 +63,19 @@ conteggiare"
 Dato che un bambino ha un credito/debito "da conteggiare" con mese di
 competenza uguale al mese corrente
 Quando apro "Rette" (specs/56)
-Allora vedo, sulla riga di quel bambino, una singola colonna
-"Credito/Debito" con l'importo (negativo se credito, positivo se
-debito) e, sotto, in corpo più piccolo, la nota scritta sulla scheda —
-testo di sola lettura, a differenza delle altre voci di quella riga
-(specs/56, "modificare manualmente una voce di costo prima
-dell'invio"): per correggerlo bisogna intervenire sulla scheda del
-bambino (sopra), non da questa tabella
+Allora vedo, sulla riga di quel bambino, una colonna "Credito/Debito"
+precompilata con l'importo (negativo se credito, positivo se debito) e
+una colonna "Nota cred./deb." con la nota scritta sulla scheda —
+entrambe modificabili come le altre voci di quella riga (specs/56,
+"modificare manualmente una voce di costo prima dell'invio")
 E il totale calcolato per quella riga lo include
 
 ## Scenario: un bambino senza nessun credito/debito da conteggiare questo mese
 Dato che un bambino non ha nessun credito/debito "da conteggiare" con
 mese di competenza uguale al mese corrente
 Quando guardo la sua riga in "Rette"
-Allora la colonna "Credito/Debito" mostra "0,00" e nessuna nota, di
-sola lettura come quando invece un credito/debito c'è
+Allora la colonna "Credito/Debito" è precompilata a zero e la nota è
+vuota, esattamente come un costo extra non compilato
 
 ## Scenario: inviare la comunicazione applica il credito/debito
 Dato che ho controllato (ed eventualmente corretto) l'importo del
@@ -136,20 +134,15 @@ non c'è nessun credito/debito quel mese) — stesso pattern di
   rilevata su un bonifico (specs/59). È solo un suggerimento: il campo
   resta un mese libero (`<input type="month">`), l'admin può scegliere
   qualunque mese dal corrente in poi.
-- Nella tabella "Rette" (specs/56), l'importo e la nota del
-  credito/debito "da conteggiare" per quel bambino e quel mese (zero/
-  vuoto se non c'è) condividono un'unica colonna "Credito/Debito"
-  (importo, nota sotto in corpo più piccolo), per non allargare
-  ulteriormente una tabella già densa di colonne — a differenza di
-  "Costi extra"/"Nota" questa voce NON è modificabile da questa
-  tabella: per correggerla bisogna intervenire sulla scheda del bambino
-  (modificare/eliminare il credito/debito "da conteggiare" e
-  aggiungerne uno nuovo, vedi sopra) prima di inviare la comunicazione.
-  Il valore effettivamente comunicato è sempre quello letto da
-  `crediti_debiti_bambini` al momento dell'invio (non arriva più dal
-  form, che non lo contiene). Il totale della riga include comunque
-  questa voce (retta + costo pasti + conguaglio pasti + marca da bollo
-  + costo pre-asilo + costo post-asilo + costi extra + credito/debito).
+- Nella tabella "Rette" (specs/56), le colonne aggiuntive
+  "Credito/Debito" e "Nota cred./deb." si comportano esattamente come
+  "Costi extra"/"Nota" (specs/56): precompilate dal credito/debito "da
+  conteggiare" per quel bambino e quel mese (zero/vuoto se non c'è),
+  modificabili in pagina, senza salvataggio separato — il valore
+  effettivamente comunicato è quello presente nel form al momento
+  dell'invio, non ricalcolato. Il totale della riga include questa
+  voce (retta + costo pasti + conguaglio pasti + marca da bollo + costo
+  pre-asilo + costo post-asilo + costi extra + credito/debito).
 - "Applicare" un credito/debito (all'invio) e "liberarlo" (all'annullo)
   sono le uniche due transizioni possibili su `applicato_il`, sempre
   effettuate dal server insieme, nella stessa azione, all'inserimento o

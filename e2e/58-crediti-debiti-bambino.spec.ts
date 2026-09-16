@@ -4,7 +4,7 @@
 // crediti_debiti_bambini sul progetto Supabase di test (stesso pattern
 // di 55-costi-bambino.spec.ts).
 import { test, expect } from '@playwright/test';
-import { dataOggiRoma, formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('58 — Crediti e debiti di un bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -107,44 +107,6 @@ test.describe('58 — Crediti e debiti di un bambino', () => {
 
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Secondo, stesso mese', { exact: false })).toHaveCount(0);
-  });
-
-  test('il credito/debito "da conteggiare" questo mese compare in "Rette" in un\'unica cella, di sola lettura', async ({
-    page,
-  }) => {
-    const cognome = await creaBambinoDiProva(page);
-
-    // Costi minimi per comparire come riga "da inviare" in "Rette"
-    // (specs/56): senza email/prezzo configurati il bambino mostra solo
-    // l'avviso "Costi o email non configurati".
-    const email = `e2e-creddeb-rette-${Date.now()}@example.com`;
-    await page.getByLabel('Prezzo retta mensile (€)').fill('100');
-    await page.getByLabel('Prezzo buono pasto (€)').fill('0');
-    await page.getByLabel('Email promemoria retta').fill(email);
-    await page.getByRole('button', { name: 'Salva costi' }).click();
-    await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('100', { timeout: 20_000 });
-
-    // Il mese di competenza è precompilato sul mese successivo
-    // (specs/58): lo sposto sul mese corrente perché compaia subito in
-    // "Rette" (specs/56, mese corrente).
-    await page.getByLabel('Mese di competenza').fill(dataOggiRoma().slice(0, 7));
-    await page.getByLabel('Tipo').selectOption('debito');
-    await page.getByLabel('Importo (€)').fill('30');
-    await page.getByLabel('Nota').fill('Correzione di prova per Rette');
-    await page.getByRole('button', { name: 'Aggiungi credito/debito' }).click();
-    await expect(page.getByText('Debito di 30,00', { exact: false })).toBeVisible({ timeout: 20_000 });
-
-    await page.goto('/admin/rette');
-    const riga = page.locator('tr', { hasText: cognome });
-    // Importo e nota condivisi in un'unica colonna "Credito/Debito".
-    await expect(riga).toContainText('30,00');
-    await expect(riga).toContainText('Correzione di prova per Rette');
-    // Di sola lettura: nessun campo per modificare importo o nota, a
-    // differenza di "Costi extra"/"Nota costi extra" sulla stessa riga.
-    await expect(riga.getByLabel(new RegExp(`Credito/Debito per.*${cognome}`))).toHaveCount(0);
-    await expect(riga.getByLabel(new RegExp(`Nota credito/debito per.*${cognome}`))).toHaveCount(0);
-    await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
-    await nessunaViolazioneA11yGrave(page);
   });
 
   test('il placeholder {{credito_debito}} è disponibile nel modello email', async ({ page }) => {
