@@ -22,13 +22,13 @@ Dato che sono autenticato come admin
 Quando apro "Rette" dal menu
 Allora vedo il nome del mese corrente in intestazione, e una riga per
 ciascun bambino attivo con: nome e cognome (con l'email a cui verrà
-inviata la comunicazione subito sotto, tra parentesi), retta mensile e
-marca da bollo (testo, in quest'ordine), costo pasti proiettato,
+inviata la comunicazione subito sotto, tra parentesi), retta mensile,
+marca da bollo e costo pasti proiettato (testo, in quest'ordine),
 eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
-post-asilo (questi ultimi tre modificabili), un campo "Costi extra" (con
-una nota facoltativa) da compilare, un eventuale credito/debito "da
-conteggiare" questo mese (specs/58, con la sua nota, anch'esso
-modificabile), e il totale calcolato
+post-asilo (questi tre modificabili), un campo "Costi extra" (con una
+nota facoltativa) da compilare, un eventuale credito/debito "da
+conteggiare" questo mese con la sua nota (specs/58, di sola lettura,
+importo e nota condivisi in un'unica colonna), e il totale calcolato
 
 ## Scenario: i bambini sono raggruppati per sezione
 Dato che sono sulla tabella di revisione (mese corrente o un mese
@@ -53,31 +53,36 @@ invio
 ## Scenario: modificare manualmente una voce di costo prima dell'invio
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
-Quando modifico il valore di costo pasti, conguaglio pasti, pre-asilo o
-post-asilo — non solo i già modificabili costi extra/nota — rispetto a
-quello proposto, e premo "Invia comunicazioni"
+Quando modifico il valore di conguaglio pasti, pre-asilo o post-asilo —
+non solo i già modificabili costi extra/nota — rispetto a quello
+proposto, e premo "Invia comunicazioni"
 Allora l'email inviata e il log della comunicazione registrano il
 valore che ho scritto io, non quello ricalcolato automaticamente —
 utile per una correzione o uno sconto una tantum che non deriva da
 nessun calcolo
 
-## Scenario: retta e marca da bollo non sono modificabili dalla tabella
+## Scenario: retta, marca da bollo, costo pasti e credito/debito non sono modificabili dalla tabella
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
-Quando guardo le colonne "Retta" e "Marca da bollo"
+Quando guardo le colonne "Retta", "Marca da bollo", "Pasti mese
+corrente" e "Credito/Debito"
 Allora le vedo come testo, non come campi compilabili: per cambiare il
 prezzo della retta si va sulla scheda del bambino (specs/55); la marca
 da bollo non è modificabile da nessuna parte, è un importo fisso per
-legge
+legge; il costo pasti resta la proiezione automatica sui giorni di
+apertura (vedi sotto), non pensata per una correzione ad-hoc da qui —
+per un aggiustamento puntuale (es. un pasto non contabilizzato) c'è
+"Costi extra"; il credito/debito si corregge dalla scheda del bambino
+(specs/58)
 
 ## Scenario: il costo pasti del mese corrente è proiettato sui giorni di apertura
 Dato che il mese corrente ha un certo numero di giorni feriali di
 apertura (weekend e giorni di chiusura registrati esclusi, vedi
 [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
-Quando guardo la colonna "Costo pasti" di un bambino in tabella
+Quando guardo la colonna "Pasti mese corrente" di un bambino in tabella
 Allora l'importo mostrato è (giorni di apertura del mese corrente) ×
 (prezzo del suo buono pasto) — una stima, dato che il mese corrente non
-è ancora trascorso
+è ancora trascorso, di sola lettura come retta e marca da bollo
 
 ## Scenario: il conguaglio pasti riflette le assenze del mese precedente
 Dato che nel mese precedente il bambino risulta assente o malato in
@@ -253,14 +258,28 @@ Allora vengo reindirizzato alla dashboard
   da qui (per cambiarla si va sulla scheda del bambino) — serve a
   controllare a colpo d'occhio a chi arriverà ciascuna comunicazione
   prima di premere "Invia comunicazioni".
-- Ordine delle colonne dei costi: retta, marca da bollo, costo pasti,
-  conguaglio pasti, pre-asilo, post-asilo, costi extra, nota, totale,
-  stato — marca da bollo subito dopo retta (entrambe testo, non
-  modificabili) invece che dopo conguaglio pasti, per tenere vicine le
-  due voci non modificabili.
-- Costo pasti, conguaglio pasti, pre-asilo e post-asilo di un bambino
-  da comunicare (oltre ai già modificabili costi extra/nota) sono campi
-  compilabili, precompilati con il valore calcolato automaticamente ma
+- Ordine delle colonne dei costi: retta, marca da bollo, costo pasti
+  (intestazione "Pasti mese corrente", per distinguerlo a colpo
+  d'occhio dal conguaglio del mese precedente subito dopo), conguaglio
+  pasti, pre-asilo, post-asilo, costi extra, nota, credito/debito,
+  totale, stato — retta, marca da bollo e costo pasti consecutive in
+  testa (tutte e tre testo, non modificabili), per tenere vicine le
+  voci non modificabili invece di sparpagliarle tra quelle compilabili.
+  Le intestazioni di colonna vanno a capo su più righe quando il testo
+  non ci sta in larghezza (nessun taglio con ellissi): a fianco di
+  colonne strette come "Totale"/"Stato" tiene bilanciata anche
+  un'intestazione lunga come "Conguaglio pasti mese precedente", invece
+  di farle allargare la colonna a dismisura per stare su una riga sola.
+- Gli importi modificabili (conguaglio pasti, pre-asilo, post-asilo,
+  costi extra) e la retta mostrano il simbolo "€" accanto al valore, in
+  chiaro (per i campi compilabili, fuori dal campo, mai dentro il
+  valore digitato): marca da bollo, costo pasti, credito/debito e
+  totale restano invece senza simbolo esplicito, per non appesantire
+  ulteriormente una tabella già densa di colonne — un dettaglio solo
+  visivo, il valore numerico e ciò che viene comunicato non cambiano.
+- Conguaglio pasti, pre-asilo e post-asilo di un bambino da comunicare
+  (oltre ai già modificabili costi extra/nota) sono campi compilabili,
+  precompilati con il valore calcolato automaticamente ma
   sovrascrivibili per applicare una correzione ad-hoc che non deriva da
   nessun calcolo (es. uno sconto una tantum, la correzione di un
   errore) — coerente con specs/01 - ux.md, non serve toccare i
@@ -268,22 +287,29 @@ Allora vengo reindirizzato alla dashboard
   valido solo questo mese. Conguaglio pasti resta l'unica voce che può
   essere negativa (è per natura un credito, mai un addebito); le altre
   restano vincolate a un numero non negativo, come ovunque nell'app.
-- Retta e marca da bollo restano invece testo, non modificabili da
-  questa tabella: la retta si cambia solo sulla scheda del bambino
-  (specs/55, ha senso solo come cambio permanente, non un aggiustamento
-  di un mese); la marca da bollo non è modificabile da nessuna parte,
-  essendo un importo fisso per legge.
-- Le modifiche a costo pasti/conguaglio pasti/pre-asilo/post-asilo non
-  hanno un salvataggio separato per riga: restano solo nel form finché
-  non si preme "Invia comunicazioni". A quel punto il server usa
-  esattamente i valori presenti nel form in quel momento per queste
-  quattro voci (non li ricalcola dai dati vivi di presenze), mentre
-  retta e marca da bollo restano sempre quelli letti da
-  `costi_bambini` in quel momento (mai dal form, che non li contiene) —
-  la persistenza avviene quindi come parte dell'invio stesso, non
-  prima: se non si preme "Invia comunicazioni" le modifiche non
-  lasciano traccia (specs/05 - feedback.md, coerente con "l'effetto è
-  la conferma" per il resto dell'app).
+- Retta, marca da bollo, costo pasti e credito/debito (specs/58)
+  restano invece testo, non modificabili da questa tabella: la retta si
+  cambia solo sulla scheda del bambino (specs/55, ha senso solo come
+  cambio permanente, non un aggiustamento di un mese); la marca da
+  bollo non è modificabile da nessuna parte, essendo un importo fisso
+  per legge; il costo pasti è la proiezione automatica (giorni di
+  apertura del mese corrente × prezzo buono pasto, vedi sopra), non
+  pensata per una correzione ad-hoc da qui — un pasto in più/meno da
+  conteggiare passa da "Costi extra"; il credito/debito si corregge
+  dalla scheda del bambino (specs/58).
+- Le modifiche a conguaglio pasti/pre-asilo/post-asilo non hanno un
+  salvataggio separato per riga: restano solo nel form finché non si
+  preme "Invia comunicazioni". A quel punto il server usa esattamente i
+  valori presenti nel form in quel momento per queste tre voci (non li
+  ricalcola dai dati vivi di presenze), mentre retta, marca da bollo e
+  costo pasti restano sempre quelli calcolati/letti dal server in quel
+  momento (mai dal form, che non li contiene: retta e marca da bollo da
+  `costi_bambini`, il costo pasti dagli stessi giorni di apertura e
+  prezzo buono pasto mostrati in pagina) — la persistenza avviene
+  quindi come parte dell'invio stesso, non prima: se non si preme
+  "Invia comunicazioni" le modifiche non lasciano traccia (specs/05 -
+  feedback.md, coerente con "l'effetto è la conferma" per il resto
+  dell'app).
 - Il totale mostrato in tabella per un bambino da comunicare resta una
   stima calcolata al caricamento della pagina (come già per i costi
   extra): non si aggiorna dal vivo mentre si modificano gli altri

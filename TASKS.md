@@ -2584,6 +2584,106 @@ i crediti/debiti del bambino, con un link di cortesia alla sua scheda.
       questo momento (DB di test offline) — da eseguire in locale/CI
       appena disponibile.
 
+## Rette: costo pasti e credito/debito non più modificabili dalla tabella
+Richiesta dell'utente: nella tabella "Rette" gli importi "Retta",
+"Marca da bollo", "Costo pasti" e "Credito/Debito" (con la sua nota)
+non devono essere modificabili; conguaglio pasti, pre-asilo, post-asilo
+e costi extra (con nota) restano invece compilabili come già erano.
+Visivamente, importo e nota del credito/debito condividono un'unica
+cella per ridurre l'occupazione orizzontale della tabella. Un primo
+tentativo (commit `bc7e1b1`) aveva reso di sola lettura anche
+conguaglio pasti/pre-asilo/post-asilo/costi extra per errore — annullato
+con `git revert` e rifatto qui secondo l'elenco corretto.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: scenario "retta e
+      marca da bollo non sono modificabili dalla tabella" esteso a
+      "retta, marca da bollo, costo pasti e credito/debito..."; scenario
+      "modificare manualmente una voce di costo" non cita più costo
+      pasti tra le voci sovrascrivibili; scenario "vedere la tabella di
+      revisione..." e Regole aggiornati di conseguenza (ordine colonne,
+      quali voci sono compilabili, come vengono persistite retta/marca
+      da bollo/costo pasti/credito-debito al momento dell'invio).
+- [x] `specs/58 - crediti-debiti-bambino.md`: scenari sulla colonna
+      "Credito/Debito" in "Rette" riscritti (sola lettura, unica
+      colonna con importo e nota); Regola corrispondente aggiornata (il
+      valore comunicato è sempre letto da `crediti_debiti_bambini` al
+      momento dell'invio, non dal form).
+- [x] `app/admin/rette/page.tsx`: colonna "Costo pasti" da `<input>` a
+      testo; colonne "Credito/Debito"/"Nota cred./deb." unificate in una
+      sola intestazione "Credito/Debito" (importo sopra, nota sotto in
+      corpo minore, sia nella riga "da inviare" sia in quella già
+      inviata); `colSpan` dell'avviso "Costi o email non configurati"
+      corretto da 12 a 11; sottotitolo aggiornato per elencare solo le
+      voci davvero ancora modificabili.
+- [x] `app/admin/rette/actions.ts`: nuova `giorniAperturaMeseCorrente`
+      (stesso calcolo di `page.tsx`: chiusure registrate + giorni feriali
+      del mese) e `costoPastiProiettato` (pura, giorni × prezzo buono
+      pasto) — il costo pasti non è più letto dal form ma
+      ricalcolato qui, una sola query di chiusure condivisa da tutti i
+      bambini dello stesso invio (non una per bambino). `riepilogoDalForm`
+      riceve ora `costoPasti`/`creditoDebito` come parametri invece di
+      leggerli dal form; sia l'invio massivo sia quello singolo
+      interrogano `crediti_debiti_bambini` (mese corrente, `applicato_il
+      is null`) per importo e nota del credito/debito, invece di
+      fidarsi di `credito_debito_*`/`nota_credito_debito_*` dal form
+      (campi che non esistono più).
+- [x] `components/InvioSingoloRetta.tsx`: `costo_pasti` e
+      `credito_debito` rimossi da `CAMPI_IMPORTO` (non più letti dal DOM
+      della riga); nuove prop fisse `costoPasti`/`creditoDebito`/
+      `notaCreditoDebito` per calcolare l'anteprima coerente con quanto
+      verrà davvero inviato.
+- [x] `app/admin/bambini/[id]/page.tsx`: testo esplicativo della
+      sezione "Crediti e debiti" aggiornato (non più "resterà
+      modificabile" nella comunicazione).
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: test "il costo
+      pasti mostrato è proporzionale ai giorni di apertura" aggiornato
+      (confronta il testo formattato invece del `value` di un input,
+      ormai assente); test "Retta e Marca da bollo non sono campi
+      modificabili" esteso e rinominato per includere Costo pasti e
+      Credito/Debito, con controllo che Costi extra resti invece
+      modificabile.
+- [x] `e2e/58-crediti-debiti-bambino.spec.ts`: nuovo test — credito/
+      debito spostato sul mese corrente, verificato che importo e nota
+      compaiano nella stessa riga di "Rette" senza alcun `<input>` per
+      "Credito/Debito"/"Nota credito/debito", più controllo di
+      accessibilità. Colma anche una lacuna di copertura pre-esistente
+      (lo scenario non aveva ancora un test e2e dedicato).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test) e `npx jscpd` puliti. Suite e2e sospesa su richiesta
+      dell'utente (DB di test e2e temporaneamente non disponibile) — da
+      eseguire in locale/CI appena disponibile.
+
+**Rifinitura visiva successiva, stesso rilascio** — richiesta
+dell'utente dopo aver visto la tabella: intestazioni più equilibrate,
+simbolo "€" su alcuni importi, rinomina di una colonna, nota
+credito/debito allineata a sinistra.
+- [x] `specs/56 - comunicazione-retta-mensile.md`: colonna "Costo
+      pasti" rinominata "Pasti mese corrente" negli scenari che la
+      citano; nuove Regole su intestazioni a capo su più righe e sul
+      simbolo "€" (retta e i quattro campi ancora modificabili, fuori
+      dal campo).
+- [x] `app/admin/rette/page.tsx`: intestazione "Costo pasti" →
+      "Pasti mese corrente"; tutte le intestazioni (tranne "Bambino",
+      lasciata invariata su richiesta) con `max-w-[6.5rem]` per andare a
+      capo su più righe invece di allargare la colonna; Retta con "€"
+      accanto al valore (riga "da inviare" e già inviata); nuovo
+      componente `CampoImportoConEuro` (input + "€" fuori dal campo,
+      allineato a destra) condiviso da conguaglio pasti/pre-asilo/
+      post-asilo/costi extra invece di ripetere lo stesso markup quattro
+      volte (CLAUDE.md, jscpd — jscpd segnalava correttamente la
+      duplicazione prima di questa estrazione). La nota del
+      credito/debito era già allineata a sinistra nella cella
+      (`text-left` già presente): nessuna modifica necessaria lì, solo
+      verificata.
+- [x] `e2e/56-comunicazione-retta-mensile.spec.ts`: intestazione attesa
+      "Costo pasti" → "Pasti mese corrente"; nuovo test "gli importi in
+      euro mostrano il simbolo €" (retta + i quattro campi
+      modificabili).
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test) e `npx jscpd` puliti (il refactor in
+      `CampoImportoConEuro` è nato proprio da un nuovo clone segnalato
+      da jscpd sulle quattro coppie input+"€"). Suite e2e sospesa, come
+      sopra.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

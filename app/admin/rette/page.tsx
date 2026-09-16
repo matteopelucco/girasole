@@ -66,6 +66,40 @@ function raggruppaPerSezione<T>(
   return gruppi;
 }
 
+// Campo importo modificabile con il simbolo "€" a fianco, fuori dal
+// campo compilabile (richiesta dell'utente): condiviso da conguaglio
+// pasti/pre-asilo/post-asilo/costi extra, le uniche voci ancora
+// modificabili in tabella (specs/56) — evita di ripetere quattro volte
+// lo stesso markup input+simbolo (CLAUDE.md, jscpd).
+function CampoImportoConEuro({
+  name,
+  ariaLabel,
+  defaultValue,
+  min,
+  className,
+}: {
+  name: string;
+  ariaLabel: string;
+  defaultValue: number;
+  min?: number;
+  className: string;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      <input
+        type="number"
+        min={min}
+        step={0.01}
+        defaultValue={defaultValue}
+        name={name}
+        aria-label={ariaLabel}
+        className={className}
+      />
+      <span className="text-xs text-stone-500">€</span>
+    </div>
+  );
+}
+
 type ComunicazioneRettaRiga = {
   id: string;
   email_destinatario: string;
@@ -117,24 +151,30 @@ function RigaComunicazione({
         </Link>
         <div className="text-xs text-stone-500">({comunicazione.email_destinatario})</div>
       </th>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.retta_mensile))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.retta_mensile))} €
+      </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
-        {formattaImporto(Number(comunicazione.conguaglio_pasti))}
+        {formattaImporto(Number(comunicazione.conguaglio_pasti))} €
       </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
-        {formattaImporto(Number(comunicazione.costo_pre_asilo))}
+        {formattaImporto(Number(comunicazione.costo_pre_asilo))} €
       </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
-        {formattaImporto(Number(comunicazione.costo_post_asilo))}
+        {formattaImporto(Number(comunicazione.costo_post_asilo))} €
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costi_extra))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.costi_extra))} €
+      </td>
       <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
-        {formattaImporto(Number(comunicazione.credito_debito))}
+      <td className="px-2 py-1.5 text-right">
+        <div>{formattaImporto(Number(comunicazione.credito_debito))}</div>
+        {comunicazione.nota_credito_debito && (
+          <div className="text-left text-xs text-stone-500">{comunicazione.nota_credito_debito}</div>
+        )}
       </td>
-      <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.nota_credito_debito ?? ''}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
       <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
         <div className="flex flex-wrap items-center gap-2">
@@ -175,40 +215,37 @@ const INTESTAZIONE_COLONNE = (
       <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
         Bambino
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Retta
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Marca da bollo
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
-        Costo pasti
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+        Pasti mese corrente
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Conguaglio pasti mese precedente
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Pre-asilo
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Post-asilo
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Costi extra
       </th>
-      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-left font-medium text-stone-700">
         Nota costi extra
       </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Credito/Debito
       </th>
-      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
-        Nota cred./deb.
-      </th>
-      <th scope="col" className="px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
         Totale
       </th>
-      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-left font-medium text-stone-700">
         Stato
       </th>
     </tr>
@@ -303,10 +340,12 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
 
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
-        Giorni di apertura stimati questo mese: {giorniApertura}. Ogni voce di costo è modificabile per una
-        correzione ad-hoc; il totale mostrato per i bambini da comunicare resta la stima calcolata al caricamento
-        della pagina, non si aggiorna mentre modifichi i campi — quello realmente comunicato è la somma dei valori
-        presenti nel form al momento dell&apos;invio.
+        Giorni di apertura stimati questo mese: {giorniApertura}. Conguaglio pasti, pre-asilo, post-asilo, costi
+        extra e relative note sono modificabili per una correzione ad-hoc (retta, marca da bollo, costo pasti e
+        credito/debito no — questi ultimi due si cambiano dalla scheda del bambino); il totale mostrato per i
+        bambini da comunicare resta la stima calcolata al caricamento della pagina, non si aggiorna mentre
+        modifichi i campi — quello realmente comunicato è la somma dei valori presenti nel form al momento
+        dell&apos;invio.
       </p>
     );
 
@@ -335,7 +374,7 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 {bambino.nome} {bambino.cognome}
               </Link>
             </th>
-            <td colSpan={12} className="px-2 py-1.5 text-left text-xs text-amber-700">
+            <td colSpan={11} className="px-2 py-1.5 text-left text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
@@ -372,59 +411,41 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             </Link>
             <div className="text-xs text-stone-500">({costiBambino.email_promemoria})</div>
           </th>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)} €</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.costoPasti)}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              defaultValue={riepilogo.costoPasti}
-              name={`costo_pasti_${bambino.id}`}
-              aria-label={`Costo pasti per ${nomeCompleto}`}
-              className={classeCampoImporto}
-            />
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
-              step={0.01}
+            <CampoImportoConEuro
               defaultValue={riepilogo.conguaglioPasti}
               name={`conguaglio_pasti_${bambino.id}`}
-              aria-label={`Conguaglio pasti mese precedente per ${nomeCompleto}`}
+              ariaLabel={`Conguaglio pasti mese precedente per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
           </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
+            <CampoImportoConEuro
               min={0}
-              step={0.01}
               defaultValue={riepilogo.costoPreAsilo}
               name={`pre_asilo_${bambino.id}`}
-              aria-label={`Pre-asilo per ${nomeCompleto}`}
+              ariaLabel={`Pre-asilo per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
           </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
+            <CampoImportoConEuro
               min={0}
-              step={0.01}
               defaultValue={riepilogo.costoPostAsilo}
               name={`post_asilo_${bambino.id}`}
-              aria-label={`Post-asilo per ${nomeCompleto}`}
+              ariaLabel={`Post-asilo per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
           </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
+            <CampoImportoConEuro
               min={0}
-              step={0.01}
               defaultValue={0}
               name={`costi_extra_${bambino.id}`}
-              aria-label={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
+              ariaLabel={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
               className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500"
             />
           </td>
@@ -437,25 +458,9 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
               className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
             />
           </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
-            <input
-              type="number"
-              step={0.01}
-              defaultValue={riepilogo.creditoDebito}
-              name={`credito_debito_${bambino.id}`}
-              aria-label={`Credito/Debito per ${nomeCompleto}`}
-              className={classeCampoImporto}
-            />
-          </td>
-          <td className="px-2 py-1.5 text-left">
-            <input
-              type="text"
-              defaultValue={creditoDebito?.nota ?? ''}
-              name={`nota_credito_debito_${bambino.id}`}
-              placeholder="Nota (opzionale)"
-              aria-label={`Nota credito/debito per ${nomeCompleto}`}
-              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
-            />
+          <td className="px-2 py-1.5 text-right">
+            <div>{formattaImporto(riepilogo.creditoDebito)}</div>
+            {creditoDebito?.nota && <div className="text-left text-xs text-stone-500">{creditoDebito.nota}</div>}
           </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
@@ -469,6 +474,9 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
                 mese={meseVisualizzato}
                 rettaMensile={riepilogo.rettaMensile}
                 marcaDaBollo={riepilogo.marcaDaBollo}
+                costoPasti={riepilogo.costoPasti}
+                creditoDebito={riepilogo.creditoDebito}
+                notaCreditoDebito={creditoDebito?.nota ?? null}
                 oggettoTemplate={oggettoTemplate}
                 corpoTemplate={corpoTemplate}
                 formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}

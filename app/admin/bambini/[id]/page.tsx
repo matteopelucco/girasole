@@ -269,7 +269,8 @@ export default async function BambinoDettaglioPage({ params }: { params: { id: s
           <h2 className="text-base font-medium">Crediti e debiti</h2>
           <p className="text-xs text-stone-600">
             Un credito o debito verso l&apos;asilo non derivante dal calcolo automatico della retta: verrà
-            proposto (e resterà modificabile) nella comunicazione del mese di competenza scelto.
+            proposto in sola lettura nella comunicazione del mese di competenza scelto — per correggerlo prima
+            dell&apos;invio, modifica o elimina la riga qui sotto.
           </p>
 
           {creditiDebiti && creditiDebiti.length > 0 && (

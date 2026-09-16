@@ -65,7 +65,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     // può ripetere lo stesso nome colonna, .first() basta a verificare
     // che la colonna esista.
     await expect(page.getByRole('columnheader', { name: 'Retta' }).first()).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Costo pasti' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Pasti mese corrente' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Conguaglio pasti mese precedente' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Marca da bollo' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Pre-asilo' }).first()).toBeVisible();
@@ -177,13 +177,17 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const giorniApertura = Number(testoIntestazione?.match(/(\d+)/)?.[1]);
     expect(giorniApertura).toBeGreaterThan(0);
 
-    // Il campo è ora modificabile (specs/56, "modificare manualmente una
-    // voce di costo prima dell'invio"): il valore proposto è nel campo
-    // stesso, non più testo semplice — confronto il value dell'input
-    // (formato numerico semplice, non la formattazione italiana con la
-    // virgola usata solo per il testo statico).
+    // Testo di sola lettura (specs/56, "retta, marca da bollo, costo
+    // pasti e credito/debito non sono modificabili dalla tabella"):
+    // confronto l'importo formattato in euro, come già per Retta/Marca
+    // da bollo.
+    const importoAtteso = (giorniApertura * 5).toLocaleString('it-IT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveValue(String(giorniApertura * 5));
+    await expect(riga).toContainText(importoAtteso);
+    await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveCount(0);
   });
 
   test('un bambino senza presenze registrate il mese precedente ha conguaglio pasti zero', async ({ page }) => {
@@ -399,7 +403,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaInviata).toContainText('222,00');
   });
 
-  test('Retta e Marca da bollo non sono campi modificabili in tabella', async ({ page }) => {
+  test('Retta, Marca da bollo, Costo pasti e Credito/Debito non sono campi modificabili in tabella', async ({
+    page,
+  }) => {
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-non-modificabile-${Date.now()}@example.com`,
       prezzoMensile: '200',
@@ -410,9 +416,30 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const riga = page.locator('tr', { hasText: cognome });
     await expect(riga.getByLabel(new RegExp(`Retta per.*${cognome}`))).toHaveCount(0);
     await expect(riga.getByLabel(new RegExp(`Marca da bollo per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Credito/Debito per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`Nota credito/debito per.*${cognome}`))).toHaveCount(0);
     // Restano comunque visibili come testo, non spariscono dalla riga.
     await expect(riga).toContainText('200,00');
     await expect(riga).toContainText('2,00');
+    // Le voci ancora modificabili restano tali sulla stessa riga.
+    await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toBeVisible();
+  });
+
+  test('gli importi in euro mostrano il simbolo €', async ({ page }) => {
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-simbolo-euro-${Date.now()}@example.com`,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    // Retta: testo, simbolo accanto al valore.
+    await expect(riga).toContainText('200,00 €');
+    // Conguaglio pasti/Pre-asilo/Post-asilo/Costi extra: simbolo fuori
+    // dal campo compilabile, uno per ciascuno dei quattro campi.
+    await expect(riga.getByText('€', { exact: true })).toHaveCount(4);
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
