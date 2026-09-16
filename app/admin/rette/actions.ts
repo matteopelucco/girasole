@@ -37,27 +37,29 @@ function importoConSegno(valore: FormDataEntryValue | null): number {
 // direttamente dai campi del form, MAI ricalcolati qui da presenze —
 // l'admin può averli sovrascritti con una correzione ad-hoc prima di
 // premere "Invia comunicazioni", ed è esattamente quel valore che deve
-// finire nell'email e nel log. Retta e marca da bollo restano invece
-// SEMPRE quelli di `costi_bambini` passati da chi chiama: non sono
-// modificabili da questa tabella (retta si cambia solo sulla scheda del
-// bambino, la marca da bollo non è modificabile da nessuna parte, è un
-// importo fisso per legge — specs/56) e infatti non arrivano nel form.
-// Funzione pura sulla FormData già ricevuta, nessun I/O: la
-// "persistenza" delle eventuali modifiche avviene subito dopo, quando
-// il chiamante scrive la riga in comunicazioni_retta (specs/56, "le
-// modifiche non hanno un salvataggio separato").
+// finire nell'email e nel log. Retta, marca da bollo e credito/debito
+// restano invece SEMPRE quelli letti dal chiamante (costi_bambini /
+// crediti_debiti_bambini): non sono modificabili da questa tabella
+// (retta si cambia solo sulla scheda del bambino, la marca da bollo non
+// è modificabile da nessuna parte essendo un importo fisso per legge,
+// il credito/debito si corregge dalla scheda del bambino — specs/56,
+// specs/58) e infatti non arrivano nel form. Funzione pura sulla
+// FormData già ricevuta, nessun I/O: la "persistenza" delle eventuali
+// modifiche avviene subito dopo, quando il chiamante scrive la riga in
+// comunicazioni_retta (specs/56, "le modifiche non hanno un salvataggio
+// separato").
 function riepilogoDalForm(
   formData: FormData,
   bambinoId: string,
   rettaMensile: number,
-  marcaDaBollo: number
+  marcaDaBollo: number,
+  creditoDebito: number
 ): RiepilogoRetta {
   const costoPasti = importoEuro(formData.get(`costo_pasti_${bambinoId}`));
   const conguaglioPasti = importoConSegno(formData.get(`conguaglio_pasti_${bambinoId}`));
   const costoPreAsilo = importoEuro(formData.get(`pre_asilo_${bambinoId}`));
   const costoPostAsilo = importoEuro(formData.get(`post_asilo_${bambinoId}`));
   const costiExtra = importoEuro(formData.get(`costi_extra_${bambinoId}`));
-  const creditoDebito = importoConSegno(formData.get(`credito_debito_${bambinoId}`));
   const totale =
     Math.round(
       (rettaMensile +
@@ -207,17 +209,29 @@ export async function inviaComunicazioniRetta(
   const bambinoIds = (bambini ?? []).map((b) => b.id);
   if (!bambinoIds.length) return { ok: false, messaggio: 'Nessun bambino attivo.' };
 
-  const [{ data: costi }, { data: giaInviate }, { data: template }] = await Promise.all([
+  const [{ data: costi }, { data: giaInviate }, { data: template }, { data: creditiDebiti }] = await Promise.all([
     supabase
       .from('costi_bambini')
       .select('bambino_id, email_promemoria, prezzo_mensile, prezzo_marca_da_bollo')
       .in('bambino_id', bambinoIds),
     supabase.from('comunicazioni_retta').select('bambino_id').eq('mese', meseCorrente).in('bambino_id', bambinoIds),
     supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
+    // specs/58: il credito/debito "da conteggiare" non è più un campo
+    // del form (non modificabile in tabella) — il valore effettivamente
+    // comunicato è sempre quello letto qui, mai quello del client.
+    supabase
+      .from('crediti_debiti_bambini')
+      .select('bambino_id, importo, nota')
+      .in('bambino_id', bambinoIds)
+      .eq('mese_competenza', meseCorrente)
+      .is('applicato_il', null),
   ]);
 
   const costiPerBambino = new Map((costi ?? []).map((c) => [c.bambino_id, c]));
   const giaInviateSet = new Set((giaInviate ?? []).map((r) => r.bambino_id));
+  const creditoDebitoPerBambino = new Map(
+    (creditiDebiti ?? []).map((c) => [c.bambino_id, { importo: Number(c.importo), nota: c.nota }])
+  );
 
   const inviataDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
   const inviataDa = { id: user.id, nome: inviataDaNome };
@@ -235,12 +249,14 @@ export async function inviaComunicazioniRetta(
     }
 
     const noteExtra = ((formData.get(`note_extra_${bambino.id}`) as string) || '').trim() || null;
-    const notaCreditoDebito = ((formData.get(`nota_credito_debito_${bambino.id}`) as string) || '').trim() || null;
+    const creditoDebito = creditoDebitoPerBambino.get(bambino.id);
+    const notaCreditoDebito = creditoDebito?.nota ?? null;
     const riepilogo = riepilogoDalForm(
       formData,
       bambino.id,
       Number(costiBambino.prezzo_mensile),
-      Number(costiBambino.prezzo_marca_da_bollo)
+      Number(costiBambino.prezzo_marca_da_bollo),
+      creditoDebito?.importo ?? 0
     );
 
     const riuscito = await inviaEPersistiComunicazione(
@@ -295,28 +311,44 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
 
   const meseCorrente = meseDaData(oggi());
 
-  const [{ data: bambino }, { data: costiBambino }, { data: giaInviata }, { data: template }] = await Promise.all([
-    supabase.from('bambini').select('id, nome, cognome').eq('id', bambinoId).eq('attiva', true).maybeSingle(),
-    supabase
-      .from('costi_bambini')
-      .select('email_promemoria, prezzo_mensile, prezzo_marca_da_bollo')
-      .eq('bambino_id', bambinoId)
-      .maybeSingle(),
-    supabase.from('comunicazioni_retta').select('bambino_id').eq('mese', meseCorrente).eq('bambino_id', bambinoId).maybeSingle(),
-    supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
-  ]);
+  const [{ data: bambino }, { data: costiBambino }, { data: giaInviata }, { data: template }, { data: creditoDebito }] =
+    await Promise.all([
+      supabase.from('bambini').select('id, nome, cognome').eq('id', bambinoId).eq('attiva', true).maybeSingle(),
+      supabase
+        .from('costi_bambini')
+        .select('email_promemoria, prezzo_mensile, prezzo_marca_da_bollo')
+        .eq('bambino_id', bambinoId)
+        .maybeSingle(),
+      supabase
+        .from('comunicazioni_retta')
+        .select('bambino_id')
+        .eq('mese', meseCorrente)
+        .eq('bambino_id', bambinoId)
+        .maybeSingle(),
+      supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
+      // specs/58: stesso motivo di inviaComunicazioniRetta sopra — il
+      // credito/debito non è più un campo del form.
+      supabase
+        .from('crediti_debiti_bambini')
+        .select('importo, nota')
+        .eq('bambino_id', bambinoId)
+        .eq('mese_competenza', meseCorrente)
+        .is('applicato_il', null)
+        .maybeSingle(),
+    ]);
 
   if (!bambino || giaInviata || !costiBambino?.email_promemoria) {
     return;
   }
 
   const noteExtra = ((formData.get(`note_extra_${bambinoId}`) as string) || '').trim() || null;
-  const notaCreditoDebito = ((formData.get(`nota_credito_debito_${bambinoId}`) as string) || '').trim() || null;
+  const notaCreditoDebito = creditoDebito?.nota ?? null;
   const riepilogo = riepilogoDalForm(
     formData,
     bambinoId,
     Number(costiBambino.prezzo_mensile),
-    Number(costiBambino.prezzo_marca_da_bollo)
+    Number(costiBambino.prezzo_marca_da_bollo),
+    creditoDebito ? Number(creditoDebito.importo) : 0
   );
   const inviataDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
 

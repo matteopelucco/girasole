@@ -27,8 +27,8 @@ marca da bollo (testo, in quest'ordine), costo pasti proiettato,
 eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
 post-asilo (questi ultimi tre modificabili), un campo "Costi extra" (con
 una nota facoltativa) da compilare, un eventuale credito/debito "da
-conteggiare" questo mese (specs/58, con la sua nota, anch'esso
-modificabile), e il totale calcolato
+conteggiare" questo mese con la sua nota (specs/58, di sola lettura,
+importo e nota condivisi in un'unica colonna), e il totale calcolato
 
 ## Scenario: i bambini sono raggruppati per sezione
 Dato che sono sulla tabella di revisione (mese corrente o un mese
