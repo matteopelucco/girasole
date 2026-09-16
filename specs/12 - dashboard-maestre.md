@@ -24,41 +24,42 @@ odierna, la scelta di un'altra data avviene dentro Presenze/Pasti (vedi
 [13 - segna-presenza.md](13%20-%20segna-presenza.md) e
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
-## Scenario: da Presenze si arriva alle classi e poi ai bambini
+## Scenario: da Presenze si arriva direttamente ai bambini, raggruppati per classe
 Dato che sono sulla dashboard
 Quando tappo su "Presenze"
-Allora vedo l'elenco delle classi attive a cui sono assegnata (tutte le
-classi attive se sono admin), per la data odierna, con un selettore di
-data per consultare/segnare un'altra data
-E selezionando una classe vedo l'elenco dei bambini di quella classe, per
-consultare/segnare la presenza di ciascuno (dettagli in
-[13 - segna-presenza.md](13%20-%20segna-presenza.md))
+Allora vedo, in un'unica schermata, un selettore di data (per
+consultare/segnare un'altra data) e l'elenco dei bambini di tutte le mie
+classi assegnate (tutte le classi attive se sono admin) per la data
+odierna, raggruppati visivamente per sezione — un titolo con il nome
+della sezione sopra i suoi bambini, ordinati per cognome — per
+consultare/segnare la presenza di ciascuno senza dover prima scegliere
+una classe (dettagli in [13 - segna-presenza.md](13%20-%20segna-presenza.md))
+E i bambini senza sezione assegnata (possibile solo per l'admin) sono in
+un gruppo a parte, intitolato "Senza sezione"
 
-## Scenario: da Pasti si arriva alle classi e poi ai bambini
+## Scenario: da Pasti si arriva direttamente ai bambini, raggruppati per classe
 Dato che sono sulla dashboard
 Quando tappo su "Pasti"
-Allora vedo lo stesso elenco di classi, per la data odierna, con un
-selettore di data per consultare/segnare un'altra data
-E selezionando una classe vedo l'elenco dei bambini di quella classe, per
-consultare/segnare il pasto di ciascuno (dettagli in
+Allora vedo la stessa schermata di Presenze — selettore di data, bambini
+di tutte le classi visibili raggruppati per sezione, in ordine di
+cognome — ma per consultare/segnare il pasto di ciascuno (dettagli in
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
-## Scenario: riepilogo aggregato di tutte le classi nell'elenco classi
-Dato che sono sull'elenco classi di Presenze o di Pasti, per una data,
-prima ancora di aver selezionato una classe
+## Scenario: riepilogo aggregato di tutte le classi in cima alla pagina
+Dato che sono su Presenze o su Pasti, per una data
 Quando guardo la pagina
 Allora vedo in cima, sotto il selettore data, una card con titolo
 "Presenze giornaliere" (in Presenze) o "Pasti giornalieri" (in Pasti) —
-senza il suffisso "- Sezione ..." che invece compare dentro una singola
-classe, essendo la somma di tutte — con lo stesso tipo di specchietto
-mostrato dentro una classe, ma con la somma di **tutte** le classi
-visibili (tutte le mie sezioni assegnate se sono maestra o assistente,
-tutte le classi attive se sono admin): in Presenze "Presenti: X/Y" (X =
-somma dei bambini presenti di tutte le classi, Y = totale bambini di
-tutte le classi), "Pre-asilo: P" e "Post-asilo: Q" (somma su tutte le
-classi); in Pasti "Pasti: X/Y" (X = somma dei pasti "sì" segnati oggi in
-tutte le classi, Y = totale bambini di tutte le classi, **senza
-escludere** chi risulta assente o malato)
+senza il suffisso "- Sezione ..." che invece compare sopra ciascun
+gruppo di bambini di una sezione, essendo la somma di tutte — con lo
+stesso tipo di specchietto mostrato per ciascuna sezione, ma con la
+somma di **tutte** le classi visibili (tutte le mie sezioni assegnate se
+sono maestra o assistente, tutte le classi attive se sono admin): in
+Presenze "Presenti: X/Y" (X = somma dei bambini presenti di tutte le
+classi, Y = totale bambini di tutte le classi), "Pre-asilo: P" e
+"Post-asilo: Q" (somma su tutte le classi); in Pasti "Pasti: X/Y" (X =
+somma dei pasti "sì" segnati oggi in tutte le classi, Y = totale bambini
+di tutte le classi, **senza escludere** chi risulta assente o malato)
 E se non c'è ancora nessun bambino in nessuna classe visibile, non vedo
 alcuno specchietto (solo il messaggio che non ci sono classi/bambini)
 
@@ -124,6 +125,6 @@ successiva, e nessun dato di altri bambini
   "Pasti: X/Y" dentro una singola classe (vedi
   [14 - segna-pasto.md](14%20-%20segna-pasto.md)), che invece esclude dal
   denominatore chi risulta assente o malato. Scelta esplicita, non un
-  refuso: questo specchietto è pensato come vista d'insieme rapida prima
-  di entrare in una classe, non come conteggio operativo di "quanti pasti
-  restano da segnare".
+  refuso: questo specchietto è pensato come vista d'insieme rapida su
+  tutte le classi, non come conteggio operativo di "quanti pasti restano
+  da segnare".

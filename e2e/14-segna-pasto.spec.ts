@@ -5,15 +5,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
-// Apre "Pasti" per la data indicata e seleziona la prima classe
-// dell'elenco (flusso calendario → Pasti → classe, specs/12).
-async function apriPrimaClassePasti(page: Page, data: string): Promise<boolean> {
+// Apre "Pasti" per la data indicata (specs/12: i bambini di tutte le
+// classi visibili compaiono già raggruppati per sezione nella stessa
+// pagina, niente più click su una classe per raggiungerli).
+async function apriPasti(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/pasti?data=${data}`);
-  const primaClasse = page.locator('a.bg-emerald-50').first();
-  if ((await primaClasse.count()) === 0) return false;
-  await primaClasse.click();
-  await page.waitForURL(/\/dashboard\/pasti\/.+/);
-  return true;
+  const primaRiga = page.locator('li').first();
+  return (await primaRiga.count()) > 0;
 }
 
 test.describe('14 — Segna pasto', () => {
@@ -22,18 +20,21 @@ test.describe('14 — Segna pasto', () => {
 
     test.beforeEach(async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
-      const haClassi = await apriPrimaClassePasti(page, dataOggiRoma());
-      test.skip(!haClassi, 'nessuna classe attiva per questo account');
+      const haBambini = await apriPasti(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
     });
 
-    test('da Pasti si vede l\'elenco bambini della classe con lo stato pasto', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /^Pasti —/ })).toBeVisible();
+    test('da Pasti si vede l\'elenco bambini con lo stato pasto', async ({ page }) => {
+      await expect(page.getByRole('heading', { name: 'Pasti', exact: true })).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
 
     test('riepilogo pasti della classe', async ({ page }) => {
-      await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
-      await expect(page.getByRole('heading', { name: /^Pasti giornalieri - Sezione /i })).toBeVisible();
+      // Il riepilogo aggregato (in cima) e quello per sezione condividono
+      // lo stesso formato di testo: .first() basta a verificare che
+      // compaia almeno una volta.
+      await expect(page.getByText(/^Pasti: \d+\/\d+$/).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: /^Pasti giornalieri - Sezione /i }).first()).toBeVisible();
     });
 
     test('le allergie sono visibili accanto al nome, indipendentemente dallo stato pasto', async ({
@@ -50,7 +51,7 @@ test.describe('14 — Segna pasto', () => {
 
     test('segnare che un bambino ha mangiato', async ({ page }) => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
       const bottoneSi = primaRiga.getByRole('button', { name: 'Sì' });
       await bottoneSi.click();
@@ -59,7 +60,7 @@ test.describe('14 — Segna pasto', () => {
 
     test('salvare una nota senza cambiare lo stato', async ({ page }) => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
       await primaRiga.getByRole('button', { name: 'Sì' }).click();
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
@@ -78,7 +79,7 @@ test.describe('14 — Segna pasto', () => {
       const primaRiga = page
         .locator('li', { has: page.getByRole('button', { name: 'No', exact: true }) })
         .first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
       const bottoneNo = primaRiga.getByRole('button', { name: 'No', exact: true });
       await bottoneNo.click();
@@ -94,7 +95,7 @@ test.describe('14 — Segna pasto', () => {
       page,
     }) => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
       const bottoneSi = primaRiga.getByRole('button', { name: 'Sì' });
       await expect(bottoneSi).toBeEnabled();
@@ -103,8 +104,8 @@ test.describe('14 — Segna pasto', () => {
     });
 
     test('non posso modificare il pasto di una data diversa da oggi: sola lettura', async ({ page }) => {
-      const haClassi = await apriPrimaClassePasti(page, dataIeriRoma());
-      test.skip(!haClassi, 'nessuna classe attiva per questo account');
+      const haBambini = await apriPasti(page, dataIeriRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sì' })).toHaveCount(0);
@@ -115,23 +116,18 @@ test.describe('14 — Segna pasto', () => {
     // altrimenti condizionerebbe i test precedenti (un bambino assente
     // non ha più pulsanti Sì/No in questa pagina).
     test('un bambino assente non è selezionabile per il pasto', async ({ page }) => {
-      await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
-      const primaClassePresenze = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClassePresenze.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClassePresenze.click();
-      await page.waitForURL(/\/dashboard\/presenze\/.+/);
-
+      const data = dataOggiRoma();
+      await page.goto(`/dashboard/presenze?data=${data}`);
       const primaRigaPresenza = page
         .locator('li', { has: page.getByRole('button', { name: 'Assente' }) })
         .first();
-      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino segnabile');
       const nomeBambino = (await primaRigaPresenza.locator('span.font-medium').first().textContent())?.trim();
 
       await primaRigaPresenza.getByRole('button', { name: 'Assente' }).click();
       await expect(primaRigaPresenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
 
-      const sezioneId = new URL(page.url()).pathname.split('/').pop();
-      await page.goto(`/dashboard/pasti/${sezioneId}?data=${dataOggiRoma()}`);
+      await page.goto(`/dashboard/pasti?data=${data}`);
       const rigaPasto = page.locator('li', { hasText: nomeBambino ?? '' }).first();
       await expect(rigaPasto.getByText('🚫 Assente')).toBeVisible();
       await expect(rigaPasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
@@ -142,23 +138,18 @@ test.describe('14 — Segna pasto', () => {
     // test sull'assente sopra: un bambino malato non ha più pulsanti
     // Sì/No in questa pagina, il che condizionerebbe i test precedenti.
     test('un bambino malato non è selezionabile per il pasto', async ({ page }) => {
-      await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
-      const primaClassePresenze = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClassePresenze.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClassePresenze.click();
-      await page.waitForURL(/\/dashboard\/presenze\/.+/);
-
+      const data = dataOggiRoma();
+      await page.goto(`/dashboard/presenze?data=${data}`);
       const primaRigaPresenza = page
         .locator('li', { has: page.getByRole('button', { name: 'Malattia' }) })
         .first();
-      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino in questa classe');
+      test.skip((await primaRigaPresenza.count()) === 0, 'nessun bambino segnabile');
       const nomeBambino = (await primaRigaPresenza.locator('span.font-medium').first().textContent())?.trim();
 
       await primaRigaPresenza.getByRole('button', { name: 'Malattia' }).click();
       await expect(primaRigaPresenza.getByRole('button', { name: 'Malattia' })).toHaveClass(/bg-rose-600/);
 
-      const sezioneId = new URL(page.url()).pathname.split('/').pop();
-      await page.goto(`/dashboard/pasti/${sezioneId}?data=${dataOggiRoma()}`);
+      await page.goto(`/dashboard/pasti?data=${data}`);
       const rigaPasto = page.locator('li', { hasText: nomeBambino ?? '' }).first();
       await expect(rigaPasto.getByText('🤒 Malattia')).toBeVisible();
       await expect(rigaPasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);

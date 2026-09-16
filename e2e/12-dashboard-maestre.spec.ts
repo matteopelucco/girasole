@@ -27,7 +27,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('da Presenze si arriva alle classi e poi ai bambini', async ({ page }) => {
+    test('da Presenze si arriva direttamente ai bambini, raggruppati per classe', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
@@ -35,50 +35,58 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
       await linkPresenze.click();
       await page.waitForURL(/\/dashboard\/presenze\?/);
-      await expect(page.getByRole('heading', { name: 'Presenze' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Presenze', exact: true })).toBeVisible();
 
-      const primaClasse = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClasse.click();
-      await page.waitForURL(/\/dashboard\/presenze\/.+/);
-      await expect(page.getByRole('heading', { name: /^Presenze —/ })).toBeVisible();
+      // Niente più un elenco di classi da selezionare: i bambini (se ce
+      // ne sono) sono già nella stessa pagina, raggruppati per sezione.
+      const primaRiga = page.locator('li').first();
+      if ((await primaRiga.count()) > 0) {
+        await expect(page.getByRole('heading', { name: /^Presenze giornaliere - Sezione /i }).first()).toBeVisible();
+      }
 
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('riepilogo aggregato di tutte le classi nell\'elenco classi di Presenze', async ({ page }) => {
+    test('riepilogo aggregato di tutte le classi compare prima dei gruppi per sezione, in Presenze', async ({
+      page,
+    }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard/presenze');
-      const riepilogo = page.getByText(/^Presenti: \d+\/\d+$/);
+      const riepilogo = page.getByText(/^Presenti: \d+\/\d+$/).first();
       test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
 
+      // Il riepilogo aggregato (senza suffisso "- Sezione") ha lo stesso
+      // titolo "Presenze giornaliere" di quello per sezione (che invece
+      // lo ha) — distinguo con `exact`.
       await expect(page.getByRole('heading', { name: 'Presenze giornaliere', exact: true })).toBeVisible();
       await expect(riepilogo).toBeVisible();
-      await expect(page.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
-      await expect(page.getByText(/^Post-asilo: \d+$/)).toBeVisible();
+      await expect(page.getByText(/^Pre-asilo: \d+$/).first()).toBeVisible();
+      await expect(page.getByText(/^Post-asilo: \d+$/).first()).toBeVisible();
 
-      // Compare prima dell'elenco classi, non dopo (specs/12).
-      const elenco = page.locator('a.bg-emerald-50').first();
-      if ((await elenco.count()) > 0) {
-        const yPosRiepilogo = await riepilogo.first().evaluate((el) => el.getBoundingClientRect().top);
-        const yPosElenco = await elenco.evaluate((el) => el.getBoundingClientRect().top);
+      // Compare prima dell'elenco bambini raggruppato, non dopo (specs/12).
+      const primaRiga = page.locator('li').first();
+      if ((await primaRiga.count()) > 0) {
+        const yPosRiepilogo = await riepilogo.evaluate((el) => el.getBoundingClientRect().top);
+        const yPosElenco = await primaRiga.evaluate((el) => el.getBoundingClientRect().top);
         expect(yPosRiepilogo).toBeLessThan(yPosElenco);
       }
     });
 
-    test('riepilogo aggregato di tutte le classi nell\'elenco classi di Pasti', async ({ page }) => {
+    test('riepilogo aggregato di tutte le classi compare prima dei gruppi per sezione, in Pasti', async ({
+      page,
+    }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard/pasti');
-      const riepilogo = page.getByText(/^Pasti: \d+\/\d+$/);
+      const riepilogo = page.getByText(/^Pasti: \d+\/\d+$/).first();
       test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
 
       await expect(page.getByRole('heading', { name: 'Pasti giornalieri', exact: true })).toBeVisible();
       await expect(riepilogo).toBeVisible();
     });
 
-    test('da Pasti si arriva alle classi e poi ai bambini', async ({ page }) => {
+    test('da Pasti si arriva direttamente ai bambini, raggruppati per classe', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
@@ -86,13 +94,12 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip((await linkPasti.count()) === 0, 'nessuna sezione assegnata a questo account');
       await linkPasti.click();
       await page.waitForURL(/\/dashboard\/pasti\?/);
-      await expect(page.getByRole('heading', { name: 'Pasti' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Pasti', exact: true })).toBeVisible();
 
-      const primaClasse = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClasse.click();
-      await page.waitForURL(/\/dashboard\/pasti\/.+/);
-      await expect(page.getByRole('heading', { name: /^Pasti —/ })).toBeVisible();
+      const primaRiga = page.locator('li').first();
+      if ((await primaRiga.count()) > 0) {
+        await expect(page.getByRole('heading', { name: /^Pasti giornalieri - Sezione /i }).first()).toBeVisible();
+      }
 
       await nessunaViolazioneA11yGrave(page);
     });

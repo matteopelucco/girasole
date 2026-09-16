@@ -55,18 +55,61 @@ export function sezioniComplete(
   return sezioniPerRuolo(supabase, userId, ruolo, false);
 }
 
-// Una singola classe per id, o null se non esiste (o non è visibile per
-// via della RLS) — usata dalle pagine "elenco bambini della classe" per
-// Presenze e Pasti prima di caricarne i bambini.
-export async function sezionePerId(
-  supabase: SupabaseClient,
-  sezioneId: string
-): Promise<SezioneAttiva | null> {
-  const { data } = await supabase.from('sezioni').select('id, nome').eq('id', sezioneId).maybeSingle();
-  return data;
+export type BambinoBase = { id: string; nome: string; cognome: string; sezione_id: string | null };
+
+// Raggruppa un elenco per sezione (specs/12 - dashboard-maestre.md,
+// specs/56 - comunicazione-retta-mensile.md): un gruppo per ciascuna
+// sezione che ha almeno un elemento (ordine alfabetico, stesso di
+// `sezioni`), più "Senza sezione" in coda se non vuoto — mai un gruppo
+// vuoto in mezzo, non aggiunge valore in una pagina già densa. Funzione
+// pura, generica sul tipo di elemento (bambini di Presenze/Pasti/Rette,
+// coppie {bambino, comunicazione} di Rette hanno forme diverse ma lo
+// stesso bisogno di raggruppamento — CLAUDE.md, jscpd: condivisa da
+// app/dashboard/presenze/page.tsx, app/dashboard/pasti/page.tsx e
+// app/admin/rette/page.tsx invece di essere ridefinita in ciascuno).
+export function raggruppaPerSezione<T>(
+  elementi: T[],
+  sezioneIdDi: (elemento: T) => string | null,
+  sezioni: SezioneAttiva[]
+): { titolo: string; elementi: T[] }[] {
+  const perSezione = new Map<string, T[]>();
+  const senzaSezione: T[] = [];
+
+  for (const elemento of elementi) {
+    const sezioneId = sezioneIdDi(elemento);
+    if (!sezioneId) {
+      senzaSezione.push(elemento);
+      continue;
+    }
+    const lista = perSezione.get(sezioneId) ?? [];
+    lista.push(elemento);
+    perSezione.set(sezioneId, lista);
+  }
+
+  const gruppi = sezioni
+    .map((sezione) => ({ titolo: sezione.nome, elementi: perSezione.get(sezione.id) ?? [] }))
+    .filter((gruppo) => gruppo.elementi.length > 0);
+
+  if (senzaSezione.length) {
+    gruppi.push({ titolo: 'Senza sezione', elementi: senzaSezione });
+  }
+
+  return gruppi;
 }
 
-export type BambinoBase = { id: string; nome: string; cognome: string; sezione_id: string | null };
+// Messaggio da mostrare quando l'utente non ha nessuna sezione visibile
+// (Presenze/Pasti, specs/12 - dashboard-maestre.md): invito a chiedere
+// un'assegnazione per maestra/assistente, semplice presa d'atto per
+// l'admin (che vede sempre tutte le sezioni attive — se non ce ne sono,
+// nessuna è stata ancora creata). Funzione pura, nessun I/O: stesso
+// testo ripetuto identico in app/dashboard/presenze/page.tsx e
+// app/dashboard/pasti/page.tsx prima di questa estrazione (CLAUDE.md,
+// jscpd).
+export function messaggioSezioniVuote(ruolo: string | null | undefined): string {
+  return ruolo === 'maestra' || ruolo === 'assistente'
+    ? 'Non hai ancora nessuna sezione assegnata: chiedi all’admin di assegnartene una.'
+    : 'Nessuna classe attiva ancora creata.';
+}
 
 // Bambini attivi rilevanti per l'utente corrente: tutti per l'admin,
 // solo quelli delle sezioni indicate (già filtrate per ruolo da

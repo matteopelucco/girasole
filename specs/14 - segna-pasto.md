@@ -9,23 +9,23 @@ accesso al registro pasti, né in lettura né in scrittura (vedi
 ## Obiettivo
 Registrare in pochi tap se un bambino ha mangiato a pranzo, con particolare
 attenzione a rendere visibili le eventuali allergie/intolleranze prima di
-segnare il pasto, seguendo il flusso calendario → Pasti → classe →
-bambini descritto in
+segnare il pasto, seguendo il flusso calendario → Pasti → bambini
+(raggruppati per classe nella stessa schermata, senza un click
+intermedio per scegliere la classe) descritto in
 [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
-## Scenario: da Pasti si arriva alla classe e poi ai bambini
+## Scenario: da Pasti si arriva direttamente ai bambini
 Dato che ho aperto "Pasti" dalla dashboard per una data
-Quando seleziono una classe
-Allora vedo l'elenco dei bambini di quella classe con lo stato pasto di
-quella data, se già segnato
+Allora vedo l'elenco dei bambini di tutte le mie classi, raggruppati per
+sezione, con lo stato pasto di quella data, se già segnato
 
 ## Scenario: riepilogo pasti della classe
-Dato che ho aperto l'elenco bambini di una classe, per una data
-Allora vedo in cima, in una card con titolo "Pasti giornalieri - Sezione
-{nome classe}", un riepilogo "Pasti: X/Y", dove X è il numero di
-bambini segnati "sì" per quella data e Y il numero di bambini della
-classe che non risultano "assente" né "malattia" quel giorno (i soli per
-cui ha senso segnare il pasto)
+Dato che sono su "Pasti" per una data
+Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
+titolo "Pasti giornalieri - Sezione {nome classe}", con un riepilogo
+"Pasti: X/Y", dove X è il numero di bambini segnati "sì" per quella data
+e Y il numero di bambini della classe che non risultano "assente" né
+"malattia" quel giorno (i soli per cui ha senso segnare il pasto)
 
 ## Scenario: le allergie sono visibili prima di segnare il pasto
 Dato che un bambino ha `note_allergie` compilato (es. "Allergia alle
@@ -118,6 +118,7 @@ alcun dato pasto
 - Se il bambino risulta "malattia" per la data visualizzata, l'etichetta
   malattia appare anche in questo elenco, accanto al nome (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
-- L'elenco bambini di una classe mostra solo i bambini attivi, stessa
-  regola di [13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+- L'elenco bambini mostra solo i bambini attivi, raggruppati per sezione
+  (stessa regola e stesso raggruppamento di
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md)) e
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md).

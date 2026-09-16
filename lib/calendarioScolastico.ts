@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isWeekend } from '@/lib/date';
+import { puoScrivereData } from '@/lib/auth';
 
 export type GiornoChiusura = { id: string; dataInizio: string; dataFine: string; nota: string | null };
 
@@ -87,4 +88,27 @@ export async function assicuraGiornoApribile(supabase: SupabaseClient, data: str
   if (isGiornoChiuso(data, chiusura ? [chiusura] : [])) {
     throw new Error('Impossibile registrare: è un giorno di chiusura scolastica.');
   }
+}
+
+// Se la pagina Presenze/Pasti è scrivibile per questo ruolo e questa
+// data, e l'eventuale messaggio da mostrare se è un giorno di chiusura
+// scolastica (specs/53): combina la chiusura del giorno (fa I/O) con la
+// regola "sola data odierna per maestra/assistente" (lib/auth.ts,
+// puoScrivereData) — stesso calcolo ripetuto identico in
+// app/dashboard/presenze/page.tsx e app/dashboard/pasti/page.tsx prima
+// di questa estrazione (CLAUDE.md, jscpd).
+export async function editabilitaGiorno(
+  supabase: SupabaseClient,
+  data: string,
+  ruolo: string | null | undefined
+): Promise<{ editable: boolean; messaggioChiuso: string | null }> {
+  const chiusura = await chiusuraPerData(supabase, data);
+  const chiusure = chiusura ? [chiusura] : [];
+  return {
+    // Un giorno di chiusura scolastica non è scrivibile da nessuno,
+    // admin incluso — a differenza della regola "sola data odierna"
+    // sotto, che esenta l'admin.
+    editable: puoScrivereData(ruolo, data) && !isGiornoChiuso(data, chiusure),
+    messaggioChiuso: messaggioChiusura(data, chiusure),
+  };
 }

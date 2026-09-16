@@ -31,14 +31,13 @@ async function upsertPresenza(
 
 // segnaPresenza/segnaPreAsilo/segnaPostAsilo/salvaNotaPresenza sono
 // legate a bottoni diversi dentro allo stesso form (vedi
-// app/dashboard/presenze/[sezioneId]/page.tsx): niente useFormState, il
-// feedback "ko" (specs/05 - feedback.md) passa dal sollevare l'errore,
+// app/dashboard/presenze/page.tsx): niente useFormState, il feedback
+// "ko" (specs/05 - feedback.md) passa dal sollevare l'errore,
 // intercettato da app/error.tsx.
 async function applicaAzionePresenza(
   bambinoId: string,
   azione: AzionePresenza,
   rigaAttuale: RigaPresenza | null,
-  sezioneId: string,
   data: string,
   formData: FormData
 ) {
@@ -50,41 +49,28 @@ async function applicaAzionePresenza(
   const prossima = prossimaPresenza(rigaAttuale, azione);
   await upsertPresenza(supabase, user.id, bambinoId, data, prossima, note);
 
-  revalidatePath(`/dashboard/presenze/${sezioneId}`);
+  revalidatePath('/dashboard/presenze');
 }
 
 export async function segnaPresenza(
   bambinoId: string,
   stato: 'presente' | 'assente' | 'malattia',
-  sezioneId: string,
   data: string,
   formData: FormData
 ) {
-  await applicaAzionePresenza(bambinoId, stato, null, sezioneId, data, formData);
+  await applicaAzionePresenza(bambinoId, stato, null, data, formData);
 }
 
 // Pre-asilo/post-asilo (specs/13 - segna-presenza.md): toggle che
 // dipendono dallo stato attuale (per sapere se attivare o disattivare,
 // e per non perdere l'altro indicatore) — richiede la riga attuale,
 // passata dalla pagina che l'ha già caricata.
-export async function segnaPreAsilo(
-  bambinoId: string,
-  rigaAttuale: RigaPresenza | null,
-  sezioneId: string,
-  data: string,
-  formData: FormData
-) {
-  await applicaAzionePresenza(bambinoId, 'pre_asilo', rigaAttuale, sezioneId, data, formData);
+export async function segnaPreAsilo(bambinoId: string, rigaAttuale: RigaPresenza | null, data: string, formData: FormData) {
+  await applicaAzionePresenza(bambinoId, 'pre_asilo', rigaAttuale, data, formData);
 }
 
-export async function segnaPostAsilo(
-  bambinoId: string,
-  rigaAttuale: RigaPresenza | null,
-  sezioneId: string,
-  data: string,
-  formData: FormData
-) {
-  await applicaAzionePresenza(bambinoId, 'post_asilo', rigaAttuale, sezioneId, data, formData);
+export async function segnaPostAsilo(bambinoId: string, rigaAttuale: RigaPresenza | null, data: string, formData: FormData) {
+  await applicaAzionePresenza(bambinoId, 'post_asilo', rigaAttuale, data, formData);
 }
 
 // Salva la nota senza richiedere di ripremere lo stato già segnato
@@ -96,7 +82,6 @@ export async function segnaPostAsilo(
 // caso.
 export async function salvaNotaPresenza(
   bambinoId: string,
-  sezioneId: string,
   data: string,
   rigaAttuale: RigaPresenza | null,
   formData: FormData
@@ -112,5 +97,5 @@ export async function salvaNotaPresenza(
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
   await upsertPresenza(supabase, user.id, bambinoId, data, rigaAttuale, note);
 
-  revalidatePath(`/dashboard/presenze/${sezioneId}`);
+  revalidatePath('/dashboard/presenze');
 }

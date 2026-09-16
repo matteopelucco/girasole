@@ -270,13 +270,13 @@ Allora vengo reindirizzato alla dashboard
   colonne strette come "Totale"/"Stato" tiene bilanciata anche
   un'intestazione lunga come "Conguaglio pasti mese precedente", invece
   di farle allargare la colonna a dismisura per stare su una riga sola.
-- Gli importi modificabili (conguaglio pasti, pre-asilo, post-asilo,
-  costi extra) e la retta mostrano il simbolo "€" accanto al valore, in
-  chiaro (per i campi compilabili, fuori dal campo, mai dentro il
-  valore digitato): marca da bollo, costo pasti, credito/debito e
-  totale restano invece senza simbolo esplicito, per non appesantire
-  ulteriormente una tabella già densa di colonne — un dettaglio solo
-  visivo, il valore numerico e ciò che viene comunicato non cambiano.
+- Ogni importo in euro della tabella mostra il simbolo "€" accanto al
+  valore (per i campi ancora compilabili — conguaglio pasti, pre-asilo,
+  post-asilo, costi extra — fuori dal campo, mai dentro il valore
+  digitato): retta, marca da bollo, costo pasti, credito/debito e
+  totale lo mostrano allo stesso modo, da testo semplice — un dettaglio
+  solo visivo, il valore numerico e ciò che viene comunicato non
+  cambiano.
 - Conguaglio pasti, pre-asilo e post-asilo di un bambino da comunicare
   (oltre ai già modificabili costi extra/nota) sono campi compilabili,
   precompilati con il valore calcolato automaticamente ma

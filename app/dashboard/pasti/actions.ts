@@ -43,13 +43,7 @@ async function upsertPasto(
   if (error) throw new Error(`Impossibile salvare il pasto: ${error.message}`);
 }
 
-export async function segnaPasto(
-  bambinoId: string,
-  mangiato: StatoPasto,
-  sezioneId: string,
-  data: string,
-  formData: FormData
-) {
+export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: string, formData: FormData) {
   const { supabase, user, profilo } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
   assicuraScrivibile(profilo?.ruolo, data);
@@ -59,7 +53,7 @@ export async function segnaPasto(
   const note = (formData.get('nota_pasto') as string)?.trim() || null;
   await upsertPasto(supabase, user.id, bambinoId, data, mangiato, note);
 
-  revalidatePath(`/dashboard/pasti/${sezioneId}`);
+  revalidatePath('/dashboard/pasti');
 }
 
 // Salva la nota senza richiedere di ripremere lo stato già segnato
@@ -67,7 +61,6 @@ export async function segnaPasto(
 // app/dashboard/presenze/actions.ts:salvaNotaPresenza).
 export async function salvaNotaPasto(
   bambinoId: string,
-  sezioneId: string,
   data: string,
   mangiatoAttuale: StatoPasto | null,
   formData: FormData
@@ -85,7 +78,7 @@ export async function salvaNotaPasto(
   const note = (formData.get('nota_pasto') as string)?.trim() || null;
   await upsertPasto(supabase, user.id, bambinoId, data, mangiatoAttuale, note);
 
-  revalidatePath(`/dashboard/pasti/${sezioneId}`);
+  revalidatePath('/dashboard/pasti');
 }
 
 // Comunica a Rojac il totale dei pasti dell'INTERO asilo per una data
@@ -156,6 +149,5 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
   }
 
   revalidatePath('/dashboard/pasti');
-  revalidatePath('/dashboard/pasti/[sezioneId]', 'page');
   return { ok: true };
 }

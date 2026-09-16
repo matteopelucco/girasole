@@ -9,8 +9,9 @@ in questo file (vedi la matrice permessi in
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino
 — compresa un'eventuale presenza a pre-asilo e/o post-asilo — con una
-nota libera opzionale, seguendo il flusso calendario → Presenze → classe
-→ bambini descritto in
+nota libera opzionale, seguendo il flusso calendario → Presenze →
+bambini (raggruppati per classe nella stessa schermata, senza un click
+intermedio per scegliere la classe) descritto in
 [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
 ## Presenza ordinaria, pre-asilo e post-asilo
@@ -40,18 +41,18 @@ un po' più lunga il testo resta leggibile senza scorrimento laterale) e
 il pulsante "Salva nota".
 
 ## Scenario: riepilogo presenze della classe
-Dato che ho aperto l'elenco bambini di una classe, per una data
-Allora vedo in cima, in una card con titolo "Presenze giornaliere -
-Sezione {nome classe}", un riepilogo "Presenti: X/Y", dove X è il numero
-di bambini segnati "presente" per quella data e Y il totale dei bambini
-attivi della classe
+Dato che sono su "Presenze" per una data
+Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
+titolo "Presenze giornaliere - Sezione {nome classe}", con un riepilogo
+"Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
+quella data e Y il totale dei bambini attivi della classe
 E accanto vedo altri due riepiloghi, "Pre-asilo: P" e "Post-asilo: Q",
 dove P e Q sono rispettivamente il numero di bambini con pre-asilo e con
 post-asilo attivi per quella data
 
 ## Scenario: segnare un bambino presente
-Dato che ho aperto "Presenze" per la data odierna e selezionato una mia
-classe, e vedo l'elenco dei suoi bambini
+Dato che ho aperto "Presenze" per la data odierna e vedo l'elenco dei
+bambini delle mie classi
 Quando premo il pulsante "Presente" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa "presente"
 E il pulsante "Presente" resta evidenziato come stato corrente
@@ -80,8 +81,7 @@ disattivati (non ha senso un pre/post-asilo su un bambino malato o
 assente per quel giorno)
 
 ## Scenario: segnare un bambino presente al pre-asilo
-Dato che ho aperto "Presenze" per la data odierna e selezionato una mia
-classe
+Dato che ho aperto "Presenze" per la data odierna
 Quando premo il pulsante "Pre-asilo" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa (o resta)
 "presente"
@@ -122,7 +122,7 @@ pre-asilo e post-asilo vengono disattivati
 ## Scenario: la maestra o l'assistente non può modificare una data diversa da oggi
 Dato che sono autenticata come maestra o assistente e ho aperto Presenze
 per una data diversa da oggi (passata o futura)
-Quando guardo l'elenco bambini di una mia classe
+Quando guardo l'elenco bambini delle mie classi
 Allora vedo lo stato eventualmente già registrato (incluso pre/post-asilo)
 ma senza pulsanti per modificarlo: è in sola lettura
 
@@ -172,10 +172,18 @@ attivi e posso modificare lo stato di quella data
   **tranne** un giorno di chiusura scolastica (vedi
   [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)):
   quel blocco non fa eccezioni di ruolo.
-- L'elenco bambini di una classe mostra solo i bambini attivi
-  (`bambini.attiva = true`): un bambino disattivato dall'admin non
-  compare più qui, pur restando collegate le sue presenze passate (vedi
+- L'elenco bambini mostra solo i bambini attivi (`bambini.attiva = true`):
+  un bambino disattivato dall'admin non compare più qui, pur restando
+  collegate le sue presenze passate (vedi
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
+- I bambini sono raggruppati per sezione, ordinati per cognome dentro
+  ciascun gruppo (stesso pattern di raggruppamento di
+  [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)):
+  una sezione senza bambini attivi non compare (niente titolo con sotto
+  un elenco vuoto). Solo l'admin può vedere bambini senza sezione
+  assegnata (maestra/assistente vedono solo le loro sezioni, quindi mai
+  un bambino "senza sezione" per definizione): in quel caso compaiono in
+  un gruppo a parte, intitolato "Senza sezione".
 - L'invio automatico via email della scheda giornaliera (e dei report
   settimanale/mensile) è descritto in
   [52 - report-email-automatico.md](52%20-%20report-email-automatico.md),

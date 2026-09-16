@@ -435,8 +435,11 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    // Retta: testo, simbolo accanto al valore.
-    await expect(riga).toContainText('200,00 €');
+    // Ogni importo mostra il simbolo, testo semplice o campo compilabile.
+    await expect(riga).toContainText('200,00 €'); // Retta
+    await expect(riga).toContainText('2,00 €'); // Marca da bollo
+    await expect(riga).toContainText('0,00 €'); // Pasti mese corrente, Credito/Debito (prezzoBuonoPasto 0)
+    await expect(riga).toContainText('202,00 €'); // Totale (200 retta + 2 marca da bollo)
     // Conguaglio pasti/Pre-asilo/Post-asilo/Costi extra: simbolo fuori
     // dal campo compilabile, uno per ciascuno dei quattro campi.
     await expect(riga.getByText('€', { exact: true })).toHaveCount(4);

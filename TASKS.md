@@ -2684,6 +2684,87 @@ credito/debito allineata a sinistra.
       da jscpd sulle quattro coppie input+"€"). Suite e2e sospesa, come
       sopra.
 
+**Correzione immediata, stesso rilascio**: l'utente ha segnalato con
+screenshot che mancava il simbolo "€" su Marca da bollo, Pasti mese
+corrente, Credito/Debito e Totale — non era una scelta voluta, solo
+un'estensione incompleta della richiesta precedente. Aggiunto "€" anche
+a questi quattro (`app/admin/rette/page.tsx`, riga "da inviare" e già
+inviata), aggiornata la Regola di specs/56 che elencava esplicitamente
+quali colonne NE erano escluse, e ampliato il test e2e "gli importi in
+euro mostrano il simbolo €" per coprirli tutti.
+
+## Presenze/Pasti: navigazione a 2 livelli, bambini raggruppati per sezione
+Richiesta dell'utente: "Presenze"/"Pasti" avevano 3 livelli di
+navigazione (dashboard → elenco classi → elenco bambini di una classe),
+2 click per arrivare ai bambini quando ne basta uno. Portati a 2 livelli
+(dashboard → elenco bambini di tutte le classi visibili, raggruppati
+visivamente per sezione, stesso pattern di "Rette" — specs/56), senza
+toccare le regole di visibilità per ruolo né la logica di
+lettura/scrittura di presenze/pasti, solo la navigazione per arrivarci.
+- [x] `specs/12 - dashboard-maestre.md`: scenari "da Presenze/Pasti si
+      arriva alle classi e poi ai bambini" riscritti (arrivo diretto,
+      raggruppamento per sezione, gruppo "Senza sezione" per l'admin);
+      scenario "riepilogo aggregato" aggiornato (compare sopra i gruppi
+      per sezione, non più sopra un elenco di link classe).
+- [x] `specs/13 - segna-presenza.md` e `specs/14 - segna-pasto.md`:
+      riferimenti a "selezionare una classe" rimossi dagli scenari
+      (l'elenco bambini è già nella pagina); nuova Regola sul
+      raggruppamento per sezione e sul gruppo "Senza sezione" (solo
+      admin, mai per maestra/assistente che vedono solo le proprie
+      sezioni per costruzione).
+- [x] `components/PaginaAttivitaGiornaliera.tsx` (nuovo): involucro
+      condiviso da Presenze/Pasti (header, selettore data, riepilogo
+      aggregato, riepilogo extra opzionale per la comunicazione pasti a
+      Rojac, banner di sola lettura/chiusura scolastica) — sostituisce
+      `PaginaClassi`/`ElencoClassi`/`PaginaClasseAttivita` (rimossi,
+      erano usati solo dalle pagine ora accorpate).
+- [x] `app/dashboard/presenze/page.tsx` e `app/dashboard/pasti/page.tsx`:
+      riscritte da zero, accorpando la vecchia pagina "elenco classi"
+      (livello 2) e "elenco bambini di una classe" (livello 3, ex
+      `[sezioneId]/page.tsx`, ora rimossa): una sola query bulk per
+      presenze/pasti/allergie su tutti i bambini visibili (`.in(
+      'bambino_id', idBambini)`) invece di una query per classe visitata;
+      raggruppamento con `raggruppaPerSezione` (vedi sotto), una card
+      "Presenze/Pasti giornaliere - Sezione X" sopra l'elenco bambini di
+      ciascun gruppo (stesso testo/calcolo di prima, solo non più su una
+      pagina a parte). Pasti mantiene lo stesso ordine verticale di
+      prima (riepilogo aggregato, poi il riquadro comunicazione Rojac,
+      poi i gruppi).
+- [x] `lib/sezioni.ts`: `raggruppaPerSezione` (spostata qui da
+      `app/admin/rette/page.tsx`, ora esportata e riusata da tre pagine
+      invece di essere ridefinita — CLAUDE.md, jscpd) e nuova
+      `messaggioSezioniVuote`; rimossa `sezionePerId` (non più usata,
+      serviva solo alle pagine `[sezioneId]` eliminate).
+- [x] `lib/calendarioScolastico.ts`: nuova `editabilitaGiorno` (combina
+      la chiusura del giorno con `puoScrivereData`, lib/auth.ts) — lo
+      stesso calcolo era ripetuto identico in Presenze e Pasti prima di
+      questa estrazione, jscpd lo segnalava come clone dopo la prima
+      stesura delle due pagine.
+- [x] `app/dashboard/presenze/actions.ts` e `app/dashboard/pasti/actions.ts`:
+      `sezioneId` rimosso dalla firma di tutte le azioni (serviva solo a
+      un `revalidatePath` per-classe che non ha più senso con un'unica
+      pagina); `revalidatePath('/dashboard/presenze')`/
+      `('/dashboard/pasti')` al posto del percorso con `[sezioneId]`.
+- [x] `app/admin/rette/page.tsx`: importa `raggruppaPerSezione` da
+      `lib/sezioni.ts` invece della propria copia locale (nessun cambio
+      di comportamento, solo la stessa funzione condivisa).
+- [x] `e2e/12-dashboard-maestre.spec.ts`, `e2e/13-segna-presenza.spec.ts`,
+      `e2e/14-segna-pasto.spec.ts`: riscritti per il nuovo flusso — via
+      il click sul link `a.bg-emerald-50` di una classe e l'attesa
+      dell'URL `/dashboard/{presenze,pasti}/{sezioneId}`; i test
+      verificano ora direttamente l'elenco bambini raggruppato, con
+      `.first()` dove riepilogo aggregato e riepilogo per sezione
+      condividono lo stesso testo (più corrispondenze possibili quando
+      un account ha più di una sezione). I cross-check tra Presenze e
+      Pasti (tag malattia/assente) navigano ora con `?data=` soltanto,
+      senza più bisogno di estrarre un `sezioneId` dall'URL.
+      Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test) e `npx jscpd` puliti. Suite e2e sospesa su richiesta
+      dell'utente (DB di test e2e temporaneamente non disponibile) — da
+      eseguire in locale/CI appena disponibile, con particolare
+      attenzione a questi tre file dato il refactor non banale dei
+      locator.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

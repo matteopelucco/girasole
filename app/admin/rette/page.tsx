@@ -15,6 +15,7 @@ import {
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
+import { raggruppaPerSezione } from '@/lib/sezioni';
 import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
 import {
@@ -27,44 +28,6 @@ import {
 } from './actions';
 
 export const dynamic = 'force-dynamic';
-
-// Raggruppa un elenco per sezione (specs/56, "raggruppare per classe,
-// con il nome della classe come titolo della tabella"): un gruppo per
-// ciascuna sezione che ha almeno un elemento (ordine alfabetico, stesso
-// di `sezioni`), più "Senza sezione" in coda se non vuoto — mai un
-// gruppo vuoto in mezzo, non aggiunge valore in una pagina già densa.
-// Funzione pura, generica sul tipo di elemento (bambini "da inviare" e
-// coppie {bambino, comunicazione} già inviate hanno forme diverse ma lo
-// stesso bisogno di raggruppamento — CLAUDE.md, jscpd).
-function raggruppaPerSezione<T>(
-  elementi: T[],
-  sezioneIdDi: (elemento: T) => string | null,
-  sezioni: { id: string; nome: string }[]
-): { titolo: string; elementi: T[] }[] {
-  const perSezione = new Map<string, T[]>();
-  const senzaSezione: T[] = [];
-
-  for (const elemento of elementi) {
-    const sezioneId = sezioneIdDi(elemento);
-    if (!sezioneId) {
-      senzaSezione.push(elemento);
-      continue;
-    }
-    const lista = perSezione.get(sezioneId) ?? [];
-    lista.push(elemento);
-    perSezione.set(sezioneId, lista);
-  }
-
-  const gruppi = sezioni
-    .map((sezione) => ({ titolo: sezione.nome, elementi: perSezione.get(sezione.id) ?? [] }))
-    .filter((gruppo) => gruppo.elementi.length > 0);
-
-  if (senzaSezione.length) {
-    gruppi.push({ titolo: 'Senza sezione', elementi: senzaSezione });
-  }
-
-  return gruppi;
-}
 
 // Campo importo modificabile con il simbolo "€" a fianco, fuori dal
 // campo compilabile (richiesta dell'utente): condiviso da conguaglio
@@ -154,8 +117,12 @@ function RigaComunicazione({
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.retta_mensile))} €
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.marca_da_bollo))}</td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(Number(comunicazione.costo_pasti))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.marca_da_bollo))} €
+      </td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+        {formattaImporto(Number(comunicazione.costo_pasti))} €
+      </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-right">
         {formattaImporto(Number(comunicazione.conguaglio_pasti))} €
       </td>
@@ -170,12 +137,14 @@ function RigaComunicazione({
       </td>
       <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
       <td className="px-2 py-1.5 text-right">
-        <div>{formattaImporto(Number(comunicazione.credito_debito))}</div>
+        <div>{formattaImporto(Number(comunicazione.credito_debito))} €</div>
         {comunicazione.nota_credito_debito && (
           <div className="text-left text-xs text-stone-500">{comunicazione.nota_credito_debito}</div>
         )}
       </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(Number(comunicazione.totale))}</td>
+      <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">
+        {formattaImporto(Number(comunicazione.totale))} €
+      </td>
       <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-emerald-800">Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}</span>
@@ -412,8 +381,8 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             <div className="text-xs text-stone-500">({costiBambino.email_promemoria})</div>
           </th>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)} €</td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)}</td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.costoPasti)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)} €</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.costoPasti)} €</td>
           <td className="whitespace-nowrap px-2 py-1.5 text-right">
             <CampoImportoConEuro
               defaultValue={riepilogo.conguaglioPasti}
@@ -459,10 +428,12 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
             />
           </td>
           <td className="px-2 py-1.5 text-right">
-            <div>{formattaImporto(riepilogo.creditoDebito)}</div>
+            <div>{formattaImporto(riepilogo.creditoDebito)} €</div>
             {creditoDebito?.nota && <div className="text-left text-xs text-stone-500">{creditoDebito.nota}</div>}
           </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">{formattaImporto(riepilogo.totale)}</td>
+          <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">
+            {formattaImporto(riepilogo.totale)} €
+          </td>
           <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-stone-500">Da inviare</span>
