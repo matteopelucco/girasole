@@ -30,3 +30,6 @@ Se la PR modifica **policy RLS, autenticazione, ruoli, o migrazioni SQL**
 - Un commento di review con: verdetto (OK / cambi richiesti / serve rls-guardian),
   poi i punti concreti. Commenti inline sulle righe dove servono.
 - **Non mergi mai.** Il merge lo decide l'umano.
+- Per pubblicare un commento, scrivi prima il testo in un file (`/tmp/commento.md`)
+  e usa `gh issue comment <n> --body-file /tmp/commento.md` (o `gh pr comment`):
+  mai il testo inline in `--body`, il Markdown rompe il quoting della shell.
