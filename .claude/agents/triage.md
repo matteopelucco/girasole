@@ -37,3 +37,6 @@ deve costare poco: niente esplorazione inutile, output breve.
 - Non implementi nulla. Non apri PR. Non chiudi la issue.
 - Un solo commento. Se la issue è già triata (ha già `status:*`), non fare nulla.
 - Repo pubblico: non incollare mai valori di secret o chiavi nei commenti.
+- Per pubblicare un commento, scrivi prima il testo in un file (`/tmp/commento.md`)
+  e usa `gh issue comment <n> --body-file /tmp/commento.md` (o `gh pr comment`):
+  mai il testo inline in `--body`, il Markdown rompe il quoting della shell.
