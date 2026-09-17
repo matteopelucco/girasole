@@ -1,0 +1,75 @@
+name: Claude Board
+
+# UNICA action economica del setup ibrido:
+#   - issue aperta  -> TRIAGE con Haiku (label + tier + ready/needs-info)
+#   - PR aperta      -> REVIEW veloce con Sonnet (l'implementazione la lanci
+#                       tu in locale con /next-task, non qui)
+#
+# Il lavoro pesante (implementazione, review RLS profonda) resta locale in
+# Claude Code Desktop: quella parte non deve girare da sola sul cloud.
+#
+# Prerequisiti:
+#   1) secret ANTHROPIC_API_KEY nel repo (Settings → Secrets → Actions)
+#      Modo rapido: in Claude Code -> /install-github-app (crea app + secret)
+#   2) label create con scripts/setup-board-labels.sh
+#   3) i file .claude/agents/*.md committati nel repo
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened, ready_for_review]
+
+# Non sprecare run: se arrivano eventi ravvicinati sullo stesso oggetto,
+# tieni solo l'ultimo.
+concurrency:
+  group: claude-board-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  # -------------------------------------------------------------------------
+  triage:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8            # guardrail costo: sessione breve
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Haiku: gira spessissimo, deve costare poco.
+          # --max-turns limita l'esplorazione (altro guardrail costo).
+          claude_args: "--model claude-haiku-4-5 --max-turns 12"
+          prompt: |
+            Agisci come l'agente di TRIAGE definito in .claude/agents/triage.md.
+            Oggetto: issue #${{ github.event.issue.number }} di questo repo.
+            Segui quel file alla lettera. Sii conciso: un solo commento di triage.
+
+  # -------------------------------------------------------------------------
+  review:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    # ^ fork-safety: le PR da fork non hanno accesso ai secret (0 crediti spesi).
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # serve il diff completo per una review sensata
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Sonnet: buon rapporto qualità/costo per la review standard.
+          # Se la PR tocca RLS/auth/migrazioni, l'agente NON approva e chiede
+          # la review locale di rls-guardian (Opus): vedi .claude/agents/reviewer.md
+          claude_args: "--model claude-sonnet-5 --max-turns 15"
+          prompt: |
+            Agisci come l'agente di REVIEW definito in .claude/agents/reviewer.md.
+            Oggetto: PR #${{ github.event.pull_request.number }} di questo repo.
+            Review concisa e azionabile. NON mergiare mai.
