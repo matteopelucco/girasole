@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { PaginaAttivitaGiornaliera } from '@/components/PaginaAttivitaGiornaliera';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { EtichettaAssente } from '@/components/EtichettaAssente';
@@ -13,7 +14,7 @@ import { sezioniEBambiniVisibili, raggruppaPerSezione, messaggioSezioniVuote } f
 import { classePulsanteStato } from '@/lib/classiStato';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { formattaDataOraItaliana } from '@/lib/date';
-import { contaPastiSiOggiTuttoAsilo, contaBambiniSenzaPresenzaOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
+import { contaPastiSiOggiTuttoAsilo, bambiniSenzaPresenzaOggiTuttoAsilo, TELEFONO_ROJAC } from '@/lib/pastiRojac';
 import { segnaPasto, salvaNotaPasto, comunicaPastiRojac } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -105,14 +106,27 @@ export default async function PastiPage({ searchParams }: { searchParams: { data
       </CardRiepilogo>
     );
   } else if (puoScrivereData(ruolo, data)) {
-    const numeroSenzaPresenza = await contaBambiniSenzaPresenzaOggiTuttoAsilo(data);
-    if (numeroSenzaPresenza > 0) {
+    const bambiniSenzaPresenza = await bambiniSenzaPresenzaOggiTuttoAsilo(data);
+    if (bambiniSenzaPresenza.length > 0) {
       extra = (
         <CardRiepilogo titolo="Comunicazione pasti a Rojac">
-          <p className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
-            Non puoi ancora comunicare i pasti: {numeroSenzaPresenza}{' '}
-            {numeroSenzaPresenza === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza segnata per oggi.
-          </p>
+          <div className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
+            <p>
+              Non puoi ancora comunicare i pasti: {bambiniSenzaPresenza.length}{' '}
+              {bambiniSenzaPresenza.length === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza
+              segnata per oggi.
+            </p>
+            <ul aria-label="Bambini senza presenza" className="mt-2 list-disc space-y-1 pl-5">
+              {bambiniSenzaPresenza.map((b) => (
+                <li key={b.id}>
+                  {b.nome} {b.cognome}
+                </li>
+              ))}
+            </ul>
+            <Link href={`/dashboard/presenze?data=${data}`} className="mt-2 inline-block font-medium underline">
+              Vai alle presenze
+            </Link>
+          </div>
         </CardRiepilogo>
       );
     } else {

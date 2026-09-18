@@ -46,6 +46,11 @@ dell'asilo, non ha ancora una presenza segnata per oggi
 Allora al posto del pulsante "Conferma pasti" vedo un messaggio che mi
 avvisa che non è ancora possibile comunicare i pasti, con il numero di
 bambini a cui manca la presenza
+E vedo l'elenco con nome e cognome di ciascun bambino a cui manca la
+presenza, anche se appartiene a una classe non assegnata a me
+E vedo un link "Vai alle presenze" che mi porta alla schermata
+Presenze per la stessa data, come scorciatoia per segnarle senza dover
+prima cercare la pagina
 E non è possibile aprire il riquadro di conferma: nessun pulsante
 "Conferma pasti" è presente nella pagina
 E quando tutte le presenze mancanti vengono segnate (in una qualunque
@@ -135,12 +140,17 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   disallinearsi dal conteggio reale non appena quella presenza verrà
   segnata. Se ne manca anche solo una, il pulsante "Conferma pasti" non
   compare affatto (sostituito da un messaggio con il numero di bambini
-  a cui manca la presenza): non è un errore mostrato dopo aver aperto
-  il riquadro di conferma, il pulsante stesso non è disponibile finché
-  la condizione non è soddisfatta. Applicato anche a livello di
-  database (trigger su `pasti_comunicati`, stesso principio dei
-  trigger già in uso per le altre regole pasti — vedi sotto), non solo
-  in UI.
+  a cui manca la presenza, il loro elenco nome e cognome, e un link
+  "Vai alle presenze" verso la schermata Presenze della stessa data):
+  non è un errore mostrato dopo aver aperto il riquadro di conferma, il
+  pulsante stesso non è disponibile finché la condizione non è
+  soddisfatta. L'elenco include anche bambini di classi non assegnate a
+  chi guarda (lo stesso dato, calcolato bypassando la RLS, che già oggi
+  determina il conteggio — vedi sotto): serve a far capire *chi*
+  manca, non solo *quanti*, senza dover chiedere in giro. Applicato
+  anche a livello di database (trigger su `pasti_comunicati`, stesso
+  principio dei trigger già in uso per le altre regole pasti — vedi
+  sotto), non solo in UI.
 - Una sola comunicazione per data, per l'intero asilo: applicato anche
   a livello di database (vincolo di unicità su `data`, non più su
   classe+data).

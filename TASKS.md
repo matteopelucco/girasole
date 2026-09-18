@@ -2869,6 +2869,42 @@ bundle di `components/VerificaBonifico.tsx` (`'use client'`), tramite
   pre-push hook non lo rileva, va verificato con `npm run build` prima
   di un push che tocca `lib/`.
 
+## Blocco comunicazione pasti: elenco bambini senza presenza + link alle presenze
+Segnalato dall'utente: le maestre vedono il blocco alla conferma pasti e
+il numero di bambini senza presenza, ma non sanno *quali*, e devono
+cercare da sole la schermata Presenze per sistemarle.
+- [x] `specs/16 - comunicazione-pasti-rojac.md`: scenario "la
+      comunicazione è bloccata se manca la presenza di qualche bambino"
+      esteso — il messaggio di blocco mostra anche l'elenco nome e
+      cognome dei bambini mancanti (incluse classi non assegnate a chi
+      guarda) e un link "Vai alle presenze" verso `/dashboard/presenze`
+      sulla stessa data. Nuova frase in "Regole" a corredo.
+- [x] `lib/pastiRojac.ts`: `contaBambiniSenzaPresenzaOggiTuttoAsilo(data)`
+      rinominata/sostituita da `bambiniSenzaPresenzaOggiTuttoAsilo(data)`,
+      che restituisce l'elenco `{id, nome, cognome}` invece del solo
+      conteggio (il conteggio resta disponibile come `.length` per chi
+      ne ha bisogno, `app/dashboard/pasti/actions.ts:comunicaPastiRojac`
+      incluso) — stesso pattern service_role key, nessun I/O testabile in
+      unità (CLAUDE.md), coperta da e2e.
+- [x] `app/dashboard/pasti/page.tsx`: il messaggio di blocco mostra ora
+      l'elenco (`<ul aria-label="Bambini senza presenza">`) e un link
+      `Link` verso `/dashboard/presenze?data=...` — stessa route già
+      usata dalle card della dashboard (`lib/dashboardSezioni.ts`), non
+      la vecchia route per-sezione `/dashboard/presenze/[id]` (rimossa
+      dal refactor "Presenze/Pasti: navigazione a 2 livelli" ma rimasta,
+      per un bug preesistente non toccato qui, nel link dell'allarme
+      10:00 in `app/dashboard/page.tsx` e in alcuni `a.bg-emerald-50` di
+      vecchi test e2e — da sistemare separatamente).
+- [x] `e2e/16-comunicazione-pasti-rojac.spec.ts`: il test del messaggio
+      di blocco verifica ora anche che il numero di nomi elencati
+      corrisponda al numero citato nel messaggio, e che il link "Vai
+      alle presenze" porti a `/dashboard/presenze`.
+- [x] Verificato `npx tsc --noEmit`, `npx next lint`, `npx vitest run`
+      (312 test), `npx jscpd` e `npm run build` puliti. Suite e2e non
+      eseguibile in questa sessione (nessun progetto Supabase di test
+      configurato in `.env.local`): da verificare manualmente in locale
+      prima del prossimo rilascio, come da CLAUDE.md.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

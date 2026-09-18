@@ -38,26 +38,38 @@ export async function contaPastiSiOggiTuttoAsilo(data: string): Promise<number> 
   return count ?? 0;
 }
 
-// Numero di bambini attivi, in TUTTO l'asilo, senza ancora una presenza
-// segnata per la data data (specs/16: la comunicazione pasti è bloccata
-// finché anche un solo bambino ne è privo, qualunque sia lo stato che
-// gli manca). Stessa ragione della funzione sopra per l'uso della
-// service_role key: il blocco riguarda l'intero asilo, non solo le
-// classi visibili a chi chiama. Nessun I/O testabile in unità
-// (CLAUDE.md): coperta da e2e.
-export async function contaBambiniSenzaPresenzaOggiTuttoAsilo(data: string): Promise<number> {
+export type BambinoSenzaPresenza = { id: string; nome: string; cognome: string };
+
+// Bambini attivi, in TUTTO l'asilo, senza ancora una presenza segnata
+// per la data data (specs/16: la comunicazione pasti è bloccata finché
+// anche un solo bambino ne è privo, qualunque sia lo stato che gli
+// manca — e il messaggio di blocco elenca chi manca, con un link di
+// scorciatoia alla schermata Presenze). Stessa ragione delle funzioni
+// sopra per l'uso della service_role key: il blocco riguarda l'intero
+// asilo, non solo le classi visibili a chi chiama, quindi anche
+// l'elenco include bambini di classi altrui. Nessun I/O testabile in
+// unità (CLAUDE.md): coperta da e2e.
+export async function bambiniSenzaPresenzaOggiTuttoAsilo(data: string): Promise<BambinoSenzaPresenza[]> {
   const supabase = createAdminClient();
 
-  const idBambini = await idBambiniAttivi(supabase);
-  if (!idBambini.length) return 0;
+  const { data: bambiniAttivi, error } = await supabase
+    .from('bambini')
+    .select('id, nome, cognome')
+    .eq('attiva', true)
+    .order('cognome');
+  if (error) throw new Error(`lettura bambini: ${error.message}`);
+  if (!bambiniAttivi?.length) return [];
 
-  const { data: presenze, error } = await supabase
+  const { data: presenze, error: erroreLetturaPresenze } = await supabase
     .from('presenze')
     .select('bambino_id')
     .eq('data', data)
-    .in('bambino_id', idBambini);
-  if (error) throw new Error(`lettura presenze: ${error.message}`);
+    .in(
+      'bambino_id',
+      bambiniAttivi.map((b) => b.id)
+    );
+  if (erroreLetturaPresenze) throw new Error(`lettura presenze: ${erroreLetturaPresenze.message}`);
 
   const idConPresenza = new Set((presenze ?? []).map((p) => p.bambino_id));
-  return idBambini.filter((id) => !idConPresenza.has(id)).length;
+  return bambiniAttivi.filter((b) => !idConPresenza.has(b.id));
 }

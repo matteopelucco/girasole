@@ -33,7 +33,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
     });
 
-    test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio', async ({
+    test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio con l\'elenco dei bambini e un link alle presenze', async ({
       page,
     }) => {
       const messaggioBloccato = page.getByText('Non puoi ancora comunicare i pasti', { exact: false });
@@ -44,6 +44,19 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
 
       await expect(messaggioBloccato).toBeVisible();
       await expect(page.getByRole('button', { name: 'Conferma pasti' })).toHaveCount(0);
+
+      // Il numero citato nel messaggio deve corrispondere al numero di
+      // nomi elencati subito sotto (specs/16, "vedo l'elenco con nome e
+      // cognome di ciascun bambino a cui manca la presenza").
+      const testoMessaggio = (await messaggioBloccato.textContent()) ?? '';
+      const numeroAtteso = Number(testoMessaggio.match(/(\d+)/)?.[1] ?? 0);
+      const elencoBambini = page.getByRole('list', { name: 'Bambini senza presenza' }).getByRole('listitem');
+      await expect(elencoBambini).toHaveCount(numeroAtteso);
+
+      const linkPresenze = page.getByRole('link', { name: 'Vai alle presenze' });
+      await expect(linkPresenze).toBeVisible();
+      await linkPresenze.click();
+      await page.waitForURL(/\/dashboard\/presenze/);
 
       await nessunaViolazioneA11yGrave(page);
     });
