@@ -2905,6 +2905,30 @@ cercare da sole la schermata Presenze per sistemarle.
       configurato in `.env.local`): da verificare manualmente in locale
       prima del prossimo rilascio, come da CLAUDE.md.
 
+## A12 · Workflow CI unificato su PR, con `next build` (2026-09-18)
+Issue #16 del programma di attività (`docs/programma-attivita.md`).
+- [x] `.github/workflows/ci.yml`: un solo job `verifica` su ogni PR
+      verso `main`, sei passi in sequenza: tsc → lint → jscpd → vitest →
+      `next build` → e2e (Playwright). Sostituisce `analisi-statica.yml`
+      e `playwright.yml`, rimossi. Un solo check da rendere obbligatorio
+      nella protezione di `main` (A10), dipendenze installate una volta.
+- [x] `next build` in CI chiude il buco di v0.39.0/v0.40.0 (vedi
+      "Bugfix: due deploy Vercel di fila falliti" sopra): verificato in
+      locale che reintrodurre l'import di `lib/auth.ts` dentro
+      `lib/calendarioScolastico.ts` fa fallire `npm run build` con
+      "You're importing a component that needs next/headers", mentre
+      tsc/lint/vitest/jscpd restano verdi.
+- [x] `concurrency` per PR (un push nuovo annulla il run precedente),
+      `permissions: contents: read`, report Playwright caricato come
+      artifact anche in caso di fallimento (come prima).
+- [x] CLAUDE.md aggiornato (sezione "Repo pubblico"): cita `ci.yml`
+      invece di `playwright.yml`.
+- Nota: la e2e in CI continua a girare contro `next dev` (come in
+  locale, vedi `playwright.config.ts`), non contro la build appena
+  prodotta — farla girare su `next start` sarebbe più fedele alla
+  produzione e più veloce, ma cambia le condizioni dei test: da
+  valutare a parte, non in questa attività.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
