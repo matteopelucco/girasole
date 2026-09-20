@@ -2968,6 +2968,47 @@ Issue #14 del programma di attività (`docs/programma-attivita.md`).
 - [x] `docs/programma-attivita.md`: voce A10 segnata `[FATTO 2026-09-20]`
       con il dettaglio della configurazione risultante.
 
+## A11 · Pulizia dei 18 branch claude/* orfani (2026-09-20)
+Issue #15 del programma di attività (`docs/programma-attivita.md`).
+- [x] Azione distruttiva eseguita manualmente da Matteo (repository
+      owner), fuori dal perimetro di scrittura dell'agente: cancellazione
+      via `git push origin --delete` dei 18 branch remoti `claude/*`
+      elencati sotto, ognuno verificato prima con
+      `git log main..origin/<branch>` — zero commit non mergiati in
+      `main` per tutti e 18, quindi nessun lavoro perso.
+- [x] Elenco dei 18 branch eliminati (7 con PR già mergiata, 11 senza PR):
+      - `claude/allarmi-mezzogiorno-ore-lavoro` (PR #7, merged)
+      - `claude/cron-report-presenze-error-rc2pgj` (nessuna PR, contenuto
+        già in `main`)
+      - `claude/dashboard-reminder-system-kshw1z` (nessuna PR)
+      - `claude/fix-vincolo-ore-lavoro-futuro` (PR #9, merged)
+      - `claude/girasole-grant-check-dl09h3` (nessuna PR)
+      - `claude/homepage-remove-calendar-text-o7wudq` (nessuna PR)
+      - `claude/hours-management-profile-tm26f3` (nessuna PR)
+      - `claude/magical-albattani-a0eauj` (nessuna PR)
+      - `claude/maine-menu-ui-evolution-g4ecgz` (nessuna PR)
+      - `claude/meal-communication-child-presence-jmkzby` (nessuna PR)
+      - `claude/ore-di-lavoro-abilitazione` (PR #3, merged)
+      - `claude/ore-lavoro-giorni-chiusi` (PR #6, merged)
+      - `claude/ore-lavoro-navigazione-settimane` (PR #8, merged)
+      - `claude/profili-orari` (PR #4, merged)
+      - `claude/report-ore-lavoro` (PR #5, merged)
+      - `claude/report-tabellare-pdf-amnirm` (PR #2, merged)
+      - `claude/school-closure-days-v1edtr` (PR #1, merged)
+      - `claude/version-bump-0-6-3au6dg` (nessuna PR)
+- [x] Verificato dopo la cancellazione: `git fetch --prune` +
+      `git branch -r` mostra solo `main` e i branch di lavoro/PR aperti
+      (`chore/issue-14-branch-protetto`, `chore/issue-16-ci-unificato`) —
+      criterio "Fatto quando" di A11 soddisfatto.
+- [x] Nota residua, non bloccante e fuori scope di questa attività (che
+      riguardava solo i branch `claude/*`): resta anche il branch
+      `chore/issue-16-ci-unificato`, residuo della PR #49 già mergiata; e
+      "Automatically delete head branches" (Settings → General) non è
+      ancora attivo, come già segnalato dall'implementer di A10 — a
+      questi rimedi, una volta attivi, il problema non si ripresenterà.
+- [x] `docs/programma-attivita.md`: voce A11 segnata `[FATTO 2026-09-20]`
+      con l'elenco e le note residue.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

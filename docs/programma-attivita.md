@@ -87,10 +87,19 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Dipende da**: A12 (i check da rendere obbligatori devono esistere) · **Sforzo** S ·
   **Tier** — · **Ambiente** PC/cloud · **Rischio prod** nessuno
 
-### A11 · Pulizia dei branch `claude/*` orfani
+### A11 · Pulizia dei branch `claude/*` orfani [FATTO 2026-09-20]
 - **Obiettivo**: i 18 branch remoti `claude/*` già mergiati o abbandonati sono eliminati.
 - **Perché**: rumore; alcuni contengono lavoro mai mergiato da verificare prima di cancellare.
 - **Fatto quando**: `git branch -r` mostra solo `main` (e branch di PR aperte).
+- **Fatto**: 18 branch `claude/*` eliminati da origin da Matteo (repository
+  owner), dopo verifica preventiva per ciascuno (`git log main..origin/<branch>`)
+  che non contenesse commit non mergiati in `main` — sette con PR già mergiata
+  (#1–#9), undici senza PR ma con contenuto già confluito in `main` o mai
+  utile. `git branch -r` dopo `git fetch --prune` mostra ora solo `main` e i
+  branch di PR/lavoro aperti. Restano da fare a mano da Matteo (fuori dal
+  perimetro di questa attività): attivare "Automatically delete head branches"
+  in Settings → General (già segnalato in A10) ed eventualmente ripulire
+  `chore/issue-16-ci-unificato`, residuo della PR #49 già mergiata.
 - **Dipende da**: — · **Sforzo** S · **Tier** haiku · **Ambiente** cloud · **Rischio prod** nessuno
 
 ### A12 · Workflow CI unificato su PR (con `next build`)
