@@ -1,0 +1,101 @@
+name: CI
+
+# Unico workflow di verifica su ogni pull request verso main (A12,
+# docs/programma-attivita.md). Sostituisce i vecchi analisi-statica.yml e
+# playwright.yml: un solo job sequenziale, così c'è un solo check da
+# rendere obbligatorio nella protezione di main (A10) e le dipendenze si
+# installano una volta sola.
+#
+# Ordine dei passi, dal più veloce/economico al più lento:
+#   1. tsc      — type-check
+#   2. lint     — ESLint (next lint)
+#   3. jscpd    — codice duplicato
+#   4. vitest   — unit test (nessun I/O, nessun secret)
+#   5. next build — la build di produzione, lo stesso bundler di Vercel:
+#      è l'unico passo che intercetta un import lato server (next/headers)
+#      trascinato in un componente client — il buco esatto di v0.39/v0.40,
+#      che tsc/lint/vitest non vedono (vedi TASKS.md, "due deploy Vercel
+#      di fila falliti").
+#   6. e2e      — Playwright contro un progetto Supabase di TEST (mai la
+#      produzione): i secret sono "Repository secrets" di GitHub, mai
+#      hardcoded qui. Un ruolo E2E_* mancante fa solo saltare (test.skip)
+#      i test che lo richiedono.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Se arrivano più push ravvicinati sulla stessa PR, tieni solo l'ultimo run.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: 1. Type-check (tsc)
+        run: npx tsc --noEmit
+
+      - name: 2. Lint (ESLint)
+        run: npm run lint
+
+      - name: 3. Codice duplicato (jscpd)
+        run: npm run check:dup
+
+      - name: 4. Unit test (Vitest)
+        run: npm run test:unit
+
+      - name: 5. Build di produzione (next build)
+        run: npm run build
+        env:
+          # Le NEXT_PUBLIC_* vengono inlinate nel bundle client in fase di
+          # build (come su Vercel): sono le chiavi del progetto di test.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+
+      - name: Installa Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: 6. Test end-to-end (Playwright)
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
+          E2E_MAESTRA_PASSWORD: ${{ secrets.E2E_MAESTRA_PASSWORD }}
+          E2E_ASSISTENTE_EMAIL: ${{ secrets.E2E_ASSISTENTE_EMAIL }}
+          E2E_ASSISTENTE_PASSWORD: ${{ secrets.E2E_ASSISTENTE_PASSWORD }}
+          E2E_GENITORE_EMAIL: ${{ secrets.E2E_GENITORE_EMAIL }}
+          E2E_GENITORE_PASSWORD: ${{ secrets.E2E_GENITORE_PASSWORD }}
+          E2E_MAESTRA_SENZA_SEZIONE_EMAIL: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_EMAIL }}
+          E2E_MAESTRA_SENZA_SEZIONE_PASSWORD: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD }}
+          E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
+
+      - name: Carica il report HTML di Playwright (anche se i test falliscono)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

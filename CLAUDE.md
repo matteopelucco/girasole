@@ -192,13 +192,15 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
 - Le pull request di collaboratori esterni vanno revisionate prima del
   merge su `main`: un push su `main` fa deploy automatico in produzione
   su Vercel.
-- Unit test (Vitest) ed e2e (Playwright) girano entrambi automaticamente
-  su ogni PR via GitHub Actions (`.github/workflows/playwright.yml`,
-  gratuito su repo pubblici) — gli unit test prima, non richiedono
-  secret e falliscono in secondi; la suite e2e usa le variabili
-  configurate come "Repository secrets" in GitHub — mai hardcoded nel
-  workflow. Anche in CI devono puntare a un progetto Supabase di test,
-  mai a quello di produzione.
+- Su ogni PR gira un unico workflow GitHub Actions
+  (`.github/workflows/ci.yml`, gratuito su repo pubblici) con sei passi
+  in sequenza: tsc → lint → jscpd → vitest → **`next build`** → e2e.
+  I primi quattro non richiedono secret e falliscono in secondi; la
+  build di produzione è l'unico passo che intercetta un import lato
+  server trascinato in un componente client (il pre-push hook non lo
+  vede); la suite e2e usa le variabili configurate come "Repository
+  secrets" in GitHub — mai hardcoded nel workflow. Anche in CI devono
+  puntare a un progetto Supabase di test, mai a quello di produzione.
 
   ## Versioning
   - Prima di ogni push su git effettuare un bump di versione
