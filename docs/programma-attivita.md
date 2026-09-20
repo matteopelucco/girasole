@@ -62,7 +62,7 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 
 ## Fase 1 — Fondamenta (una sessione; solo configurazione, zero rischio prod)
 
-### A10 · `main` protetto: solo PR, check obbligatori
+### A10 · `main` protetto: solo PR, check obbligatori [FATTO 2026-09-20]
 - **Obiettivo**: nessun push diretto su `main`; merge solo con check verdi;
   "delete branch on merge" attivo.
 - **Perché**: la CI esistente scatta solo su PR, ma 116 commit su 130 sono arrivati
@@ -70,6 +70,20 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   che rende sicuro lavorare dal telefono.
 - **Fatto quando**: un push diretto su `main` viene rifiutato; una PR con check rossi
   non è mergeabile.
+- **Fatto**: un GitHub ruleset (id 23738749, target `main`, `enforcement: active`)
+  applicato manualmente da Matteo (repository owner) blocca cancellazione branch
+  (`deletion`), force-push (`non_fast_forward`) e push diretto (`pull_request`,
+  0 approvazioni richieste, merge/squash/rebase ammessi); la regola
+  `required_status_checks` rende obbligatorio il context `CI / verifica` (il job
+  unico di `.github/workflows/ci.yml` introdotto in A12). Il ruolo repository
+  "Admin" ha `bypass_actors` con `bypass_mode: always`: finché il DB Supabase di
+  test resta in pausa prolungata e lo step e2e è strutturalmente rosso (vedi
+  CLAUDE.md, sezione "Repo pubblico", e la nota interna sul CI e2e rotto per
+  credenziali/DB in pausa), solo Matteo può comunque mergiare una PR con quello
+  step rosso; chiunque altro deve avere il check verde. La casella "Automatically
+  delete head branches" del repository resta invece da attivare a mano in
+  Settings → General (non è coperta dal ruleset ed è fuori dal perimetro di
+  scrittura di questa attività, che non tocca configurazione repo via API).
 - **Dipende da**: A12 (i check da rendere obbligatori devono esistere) · **Sforzo** S ·
   **Tier** — · **Ambiente** PC/cloud · **Rischio prod** nessuno
 
