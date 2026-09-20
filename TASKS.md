@@ -2929,6 +2929,45 @@ Issue #16 del programma di attività (`docs/programma-attivita.md`).
   produzione e più veloce, ma cambia le condizioni dei test: da
   valutare a parte, non in questa attività.
 
+## A10 · `main` protetto: solo PR, check obbligatori (2026-09-20)
+Issue #14 del programma di attività (`docs/programma-attivita.md`).
+- [x] Non branch protection "classica" (quella legacy, per-branch) ma un
+      **GitHub ruleset** (id 23738749, `target: branch`, condizione
+      `~DEFAULT_BRANCH`, `enforcement: active`), applicato manualmente da
+      Matteo (repository owner) tramite l'interfaccia GitHub — fuori dal
+      perimetro di questa attività, che si è limitata a documentare e
+      verificare la configurazione risultante.
+- [x] Regole attive sul ruleset: `deletion` (niente cancellazione branch),
+      `non_fast_forward` (niente force-push), `pull_request` (niente push
+      diretto su `main`, serve una PR; 0 approvazioni richieste; merge
+      methods merge/squash/rebase ammessi), `required_status_checks` con
+      unico context obbligatorio `"CI / verifica"` (il job del workflow
+      unificato introdotto in A12, PR #49).
+- [x] `bypass_actors`: il ruolo repository "Admin" (actor_id 5) ha
+      `bypass_mode: "always"` — cioè Matteo, come admin, può sempre
+      mergiare anche con lo step e2e rosso. Il motivo: l'ultimo step della
+      CI (e2e Playwright) è **strutturalmente rosso** finché il progetto
+      Supabase di test resta in pausa prolungata (credenziali/DB non
+      raggiungibili, non una regressione — vedi CLAUDE.md sezione "Repo
+      pubblico" e la nota interna sull'argomento), quindi senza un bypass
+      nessuna PR sarebbe mergeabile nemmeno da Matteo. Chiunque altro
+      collabori al repo, senza ruolo Admin, deve invece avere il check
+      verde per poter mergiare.
+- [x] Verificato via `gh api repos/matteopelucco/girasole/rulesets/23738749`
+      (sola lettura) che la configurazione corrisponde esattamente a
+      quanto sopra, senza modificarla: rinominare il ruleset (il nome è
+      rimasto "TEMP: bypass PR (since e2e are structural red)", da un
+      esperimento precedente) e attivare "Automatically delete head
+      branches" nelle impostazioni del repository sono entrambe modifiche
+      di configurazione via API bloccate dal sistema di permessi
+      dell'agente in questa sessione (azioni di tipo "Security
+      Weaken"/"Permission Grant"): restano da fare a mano da Matteo,
+      opzionali e a basso rischio, non bloccanti per il criterio "Fatto
+      quando" di A10 (push diretto rifiutato, PR con check rossi non
+      mergeabile — entrambi già veri).
+- [x] `docs/programma-attivita.md`: voce A10 segnata `[FATTO 2026-09-20]`
+      con il dettaglio della configurazione risultante.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
