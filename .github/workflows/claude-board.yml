@@ -4,6 +4,8 @@ name: Claude Board
 #   - issue aperta  -> TRIAGE con Haiku (label + tier + ready/needs-info)
 #   - PR aperta      -> REVIEW veloce con Sonnet (l'implementazione la lanci
 #                       tu in locale con /next-task, non qui)
+#   - issue chiusa "completed" -> label status:* sostituita da status:done
+#                       (nessun modello Claude, solo `gh issue edit`: costo zero)
 #
 # Il lavoro pesante (implementazione, review RLS profonda) resta locale in
 # Claude Code Desktop: quella parte non deve girare da sola sul cloud.
@@ -16,7 +18,7 @@ name: Claude Board
 
 on:
   issues:
-    types: [opened]
+    types: [opened, closed]
   pull_request:
     types: [opened, ready_for_review]
 
@@ -35,7 +37,7 @@ permissions:
 jobs:
   # -------------------------------------------------------------------------
   triage:
-    if: github.event_name == 'issues'
+    if: github.event_name == 'issues' && github.event.action == 'opened'
     runs-on: ubuntu-latest
     timeout-minutes: 8            # guardrail costo: sessione breve
     steps:
@@ -71,10 +73,51 @@ jobs:
           # Sonnet: buon rapporto qualità/costo per la review standard.
           # Se la PR tocca RLS/auth/migrazioni, l'agente NON approva e chiede
           # la review locale di rls-guardian (Opus): vedi .claude/agents/reviewer.md
+          #
+          # Storia di --allowedTools / --max-turns (issue #20): la versione
+          # precedente limitava i tool a soli "gh pr/issue *" senza Read/Grep/
+          # Glob, mentre reviewer.md richiede di leggere CLAUDE.md, gli scenari
+          # in specs/ e i file toccati per giudicare aderenza e qualità. Senza
+          # quei tool ogni tentativo di lettura veniva negato (visto nei log:
+          # permission_denials_count 11-13 su run reali), l'agente girava a
+          # vuoto riprovando strade alternative e finiva comunque con esito
+          # "success" ma dopo 22-24 turni — superando il tetto di 15 e facendo
+          # fallire il job (l'action tratta lo sforamento di --max-turns come
+          # errore anche a compito riuscito), senza mai pubblicare un commento
+          # di review (PR #52, #53). Non mancava "gh issue view" per leggere la
+          # checklist della issue collegata: aggiunta anche quella.
           claude_args: >-
-            --model claude-sonnet-5 --max-turns 15
-            --allowedTools "Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh issue edit:*),mcp__github_inline_comment__create_inline_comment"
+            --model claude-sonnet-5 --max-turns 30
+            --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(gh issue edit:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             Agisci come l'agente di REVIEW definito in .claude/agents/reviewer.md.
             Oggetto: PR #${{ github.event.pull_request.number }} di questo repo.
             Review concisa e azionabile. NON mergiare mai.
+
+  # -------------------------------------------------------------------------
+  # Nessun modello Claude: solo `gh issue edit` con il token di default del
+  # workflow. Non scatta su "not planned" (issue chiuse senza essere risolte),
+  # solo quando GitHub la marca "completed".
+  chiusura-issue:
+    if: >
+      github.event_name == 'issues' && github.event.action == 'closed' &&
+      github.event.issue.state_reason == 'completed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Sostituisce le label status:* con status:done
+        run: |
+          set -eu
+          numero="${{ github.event.issue.number }}"
+          etichette_status=$(gh issue view "$numero" --json labels -q '.labels[].name' | grep '^status:' || true)
+          for etichetta in $etichette_status; do
+            if [ "$etichetta" != "status:done" ]; then
+              gh issue edit "$numero" --remove-label "$etichetta"
+            fi
+          done
+          gh issue edit "$numero" --add-label status:done
