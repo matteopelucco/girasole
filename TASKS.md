@@ -3049,6 +3049,54 @@ Issue #17 del programma di attività (`docs/programma-attivita.md`).
 - [x] `lib/versione.ts` + `package.json`/`package-lock.json` → v0.42.0.
 - [x] `docs/programma-attivita.md`: voce A13 segnata `[FATTO 2026-09-23]`.
 
+## A14 · Versione da una sola fonte (2026-09-23)
+Issue #18 del programma di attività (`docs/programma-attivita.md`).
+- [x] `next.config.mjs`: legge `package.json` con `readFileSync` (non
+      `process.env.npm_package_version`, che dipende da come Vercel invoca
+      il comando di build — non affidabile) e calcola SHA/timestamp di
+      build una sola volta al caricamento del file, iniettandoli in
+      `process.env` tramite l'opzione `env` (sostituzione letterale nel
+      bundle a build-time, server e client, senza bisogno di prefisso
+      `NEXT_PUBLIC_` visto che il footer è reso solo server-side).
+      Preferito a uno script `prebuild`/file generato perché
+      `next.config.mjs` viene comunque caricato ad ogni `next build`/`next
+      dev`, indipendentemente da come il comando è invocato — a differenza
+      di un hook npm `prebuild`, che dipende dal fatto che il build command
+      passi davvero da `npm run build`.
+- [x] SHA del commit: `VERCEL_GIT_COMMIT_SHA` su Vercel (disponibile a
+      build-time senza il toggle "Automatically expose System Environment
+      Variables" — quel toggle serve solo alle varianti `NEXT_PUBLIC_*`
+      per uso lato client), fallback a `git rev-parse HEAD` in locale, poi
+      a un placeholder esplicito (`sviluppo-locale`) se anche git fallisce.
+- [x] `lib/versione.ts`: non più costanti scritte a mano. `VERSIONE_APP`/
+      `DATA_BUILD` derivano da `process.env` (valorizzato da
+      `next.config.mjs`), con fallback locali per i rari casi in cui il
+      modulo è caricato fuori dalla build di Next.js (es. `tsc`/`vitest`).
+      Estratta `formattaDataBuild` (pura: SHA + timestamp ISO → stringa
+      del footer, con troncamento a 7 cifre solo se lo SHA è esadecimale
+      — un placeholder come "sviluppo-locale" non va troncato alla cieca),
+      testata in `lib/versione.test.ts` (cambio ora legale/solare,
+      troncamento SHA lungo/corto/non esadecimale).
+- [x] `CLAUDE.md`, sezione "## Versioning": aggiornata — il bump manuale
+      resta necessario solo per `package.json`/`package-lock.json`
+      (alimenta `VERSIONE_APP`), non più per `lib/versione.ts` a mano
+      (`DATA_BUILD` è derivato).
+- [x] Verificato in locale (`npm run build` + `grep` sull'output di
+      `.next/server`) che versione e SHA abbreviato del commit HEAD
+      finiscono letteralmente nel bundle server. **Resta da confermare su
+      una preview Vercel reale** (non riproducibile in locale) che
+      `VERCEL_GIT_COMMIT_SHA` sia davvero popolato in quell'ambiente — vedi
+      nota nella PR e in `docs/programma-attivita.md`.
+- [x] `npx tsc --noEmit`, `npm run analyze` (lint + 317 unit test + jscpd,
+      nessun clone nuovo) puliti.
+- [x] `package.json`/`package-lock.json` → v0.42.1 (bump manuale ancora
+      necessario per QUESTA PR, dato che il nuovo meccanismo non è ancora
+      in vigore finché non è mergiata — non serve invece toccare
+      `lib/versione.ts` a mano, la modifica al file è già la feature).
+- [x] `docs/programma-attivita.md`: voce A14 segnata
+      `[implementato 2026-09-23, verifica su preview Vercel reale ancora
+      da fare]`.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
