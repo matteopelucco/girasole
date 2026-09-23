@@ -266,6 +266,14 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Dipende da**: A21 (fatta, won't-do: prod e test già allineate su 51/51
   migration al 2026-09-23) · **Sforzo** S · **Tier** haiku · **Ambiente** cloud ·
   **Rischio prod** nessuno
+- **Implementato 2026-09-24, in attesa del secret di A23 per la verifica
+  finale**: `CLAUDE.md` (sezioni "Convenzioni" e "Repo pubblico") e
+  `README.md` non citano più il SQL Editor come modo ammesso per applicare
+  migration; entrambi rimandano a `supabase db push --project-ref <ref>`
+  in locale e al reset di CI per il test. Il criterio "Fatto quando" è
+  soddisfatto per la parte documentale; la parte "una migration nuova
+  arriva in test tramite il reset di CI" dipende dal secret ancora mancante
+  di A23 (vedi sotto) — non ri-verificabile finché quello non c'è.
 
 ### A23 · CI: DB di test pulito per ogni run (reset + migration + seed) prima della e2e
 - **Obiettivo**: ogni run e2e parte da uno schema pulito con seed noto.
@@ -286,6 +294,27 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   PR è presente nel DB di test prima che la e2e parta, senza intervento manuale.
 - **Dipende da**: A20 (fatta), A12 (fatta) · **Sforzo** L · **Tier** sonnet ·
   **Ambiente** CI · **Rischio prod** nessuno
+- **Implementato 2026-09-24, in attesa del secret per la verifica finale**:
+  `.github/workflows/ci.yml` ha un nuovo step 6 (`supabase db reset
+  --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}`, prima della e2e,
+  ora step 7) che installa il CLI con `npm install -g supabase` (stesso
+  metodo di A20, nessuna dipendenza Docker: `db reset --project-ref`
+  opera da remoto via Management API, verificato con `supabase db reset
+  --help` in locale — Docker serve solo per lo sviluppo locale con
+  `supabase start`/`db diff`, non usato qui). Il project-ref
+  (`aehukkmiwgddsilodxzz`, non un segreto: già visibile nell'URL pubblico
+  del progetto) è una **repository variable** `SUPABASE_TEST_PROJECT_REF`
+  (`gh variable set`, non un secret) per non hardcodarlo nel YAML. Il
+  passo richiede il repository secret `SUPABASE_ACCESS_TOKEN` (token di
+  accesso personale Supabase, letto automaticamente dal CLI, nessun login
+  interattivo): **non esiste ancora nei secret del repo** (verificato con
+  `gh secret list` il 2026-09-24) e non può essere creato da un agente —
+  è un token vero, riservato a Matteo, da generare su
+  https://supabase.com/dashboard/account/tokens e aggiungere con
+  `gh secret set SUPABASE_ACCESS_TOKEN`. Finché manca, lo step 6 fallisce
+  in ogni PR: il criterio "Fatto quando" (due run consecutivi della e2e
+  con lo stesso risultato) **non è verificabile fino a quel momento** —
+  il primo run reale su una PR successiva al merge sarà la prova.
 
 ### A24 · Account-ruolo di test e secret `E2E_*` completi
 - **Obiettivo**: admin, maestra, assistente, genitore (+ i due opzionali) esistono nel

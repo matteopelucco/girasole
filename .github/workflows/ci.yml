@@ -16,10 +16,21 @@ name: CI
 #      trascinato in un componente client — il buco esatto di v0.39/v0.40,
 #      che tsc/lint/vitest non vedono (vedi TASKS.md, "due deploy Vercel
 #      di fila falliti").
-#   6. e2e      — Playwright contro un progetto Supabase di TEST (mai la
-#      produzione): i secret sono "Repository secrets" di GitHub, mai
-#      hardcoded qui. Un ruolo E2E_* mancante fa solo saltare (test.skip)
-#      i test che lo richiedono.
+#   6. reset DB di test (A23) — `supabase db reset --project-ref <ref>`
+#      via Supabase CLI: riapplica tutte le migration da zero sul progetto
+#      di test condiviso (`girasole_dev`, non isolato dalla CI) e poi
+#      lancia `supabase/seed.sql` in automatico, così ogni run e2e parte
+#      da uno schema/seed noti invece che da qualunque cosa sia rimasta
+#      da run precedenti o da sessioni locali di Matteo (che ha accettato
+#      esplicitamente questo compromesso — vedi CLAUDE.md e
+#      docs/programma-attivita.md, voce A23). Richiede il secret
+#      `SUPABASE_ACCESS_TOKEN` (repository secret, non ancora configurato
+#      al momento in cui questo step è stato introdotto — senza, questo
+#      passo fallisce: vedi la PR che lo introduce per le istruzioni).
+#   7. e2e      — Playwright contro il DB di test appena resettato al passo
+#      6 (mai la produzione): i secret sono "Repository secrets" di
+#      GitHub, mai hardcoded qui. Un ruolo E2E_* mancante fa solo saltare
+#      (test.skip) i test che lo richiedono.
 
 on:
   pull_request:
@@ -69,10 +80,25 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
 
+      - name: 6. Reset del DB di test (Supabase CLI, A23)
+        run: |
+          npm install -g supabase
+          supabase db reset --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}
+        env:
+          # Token di accesso personale Supabase (Management API), non la
+          # password del database: letto automaticamente dal CLI, nessun
+          # login interattivo. NON è ancora configurato come repository
+          # secret al momento in cui questo step viene introdotto: senza,
+          # questo comando fallisce con un errore di autenticazione. Va
+          # creato da Matteo (unico che può generarlo dal proprio account
+          # Supabase) — vedi la descrizione della PR che introduce questo
+          # step per l'istruzione esatta.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Installa Chromium (Playwright)
         run: npx playwright install --with-deps chromium
 
-      - name: 6. Test end-to-end (Playwright)
+      - name: 7. Test end-to-end (Playwright)
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

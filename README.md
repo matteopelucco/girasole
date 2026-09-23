@@ -10,9 +10,12 @@ Next.js 14 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Verc
 1. `npm install`
 2. Copia `.env.example` in `.env.local` e compilalo con le chiavi del tuo
    progetto Supabase (Project Settings → API).
-3. Applica lo schema: apri il SQL Editor di Supabase, incolla ed esegui in
-   ordine i file di `supabase/migrations/` (`0001_init.sql`,
-   `0002_admin_e_maestre.sql`, `0003_password_recovery.sql`).
+3. Applica lo schema con il [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
+   (`npm install -g supabase`), mai più a mano dal SQL Editor:
+   `supabase db push --project-ref <ref-del-tuo-progetto>` applica in
+   ordine tutte le migration di `supabase/migrations/`, in modo esplicito
+   e incrementale (nessun `supabase link` permanente su cui contare a
+   occhi chiusi).
 4. `npm run dev` e apri http://localhost:3000
 
 Vedi `specs/` per i requisiti di questa fase (un file per scenario) e

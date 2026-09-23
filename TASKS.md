@@ -3195,6 +3195,39 @@ oggetto della prossima attività A21) per entrambi i progetti, A20 è
 completa. Se fallisce con un errore di permessi o di rete, il link non è
 riuscito — non procedere con A21 finché entrambi rispondono.
 
+## A22/A23 · `db push` come unico canale + reset del DB di test in CI (2026-09-24)
+- [x] A22 (#24): `CLAUDE.md` (sezioni "Convenzioni" e "Repo pubblico") e
+      `README.md` non citano più il SQL Editor come modo ammesso per
+      applicare una migration. Procedura documentata: in locale
+      `supabase db push --project-ref <ref-test>` (esplicito, incrementale,
+      mai un `supabase link` implicito); in test il reset completo di A23;
+      in produzione `supabase db push --project-ref <ref-produzione>`
+      esplicito, solo Matteo, dopo il merge — nessuna automazione
+      CI/agente verso la produzione.
+- [x] A23 (#25): `.github/workflows/ci.yml` ha un nuovo step 6, prima
+      della e2e (ora step 7), che installa il Supabase CLI
+      (`npm install -g supabase`, stesso metodo di A20) e lancia
+      `supabase db reset --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}`:
+      riapplica tutte le migration da zero sul progetto di test condiviso
+      (`girasole_dev`) e lancia `supabase/seed.sql` in automatico (nessun
+      `--no-seed`). Verificato con `supabase db reset --help` in locale
+      che `--project-ref` è supportato direttamente (nessun `supabase link`
+      necessario) e che non serve Docker (quello serve solo per lo
+      sviluppo locale con `supabase start`/`db diff`).
+- [x] Il project-ref di test (`aehukkmiwgddsilodxzz`) è una **repository
+      variable** `SUPABASE_TEST_PROJECT_REF` (non un secret: già visibile
+      nell'URL pubblico del progetto), impostata con `gh variable set`.
+- [ ] **Blocco per la verifica finale di A23**: lo step 6 richiede il
+      repository secret `SUPABASE_ACCESS_TOKEN` (token di accesso
+      personale Supabase, letto automaticamente dal CLI). Verificato con
+      `gh secret list` il 2026-09-24: non esiste ancora. Un agente non
+      può crearlo (è un token vero, riservato a Matteo). **Da fare da
+      parte tua**: genera un token su
+      https://supabase.com/dashboard/account/tokens e aggiungilo con
+      `gh secret set SUPABASE_ACCESS_TOKEN`. Finché manca, lo step 6
+      fallisce su ogni PR — il primo run reale dopo aver aggiunto il
+      secret sarà la prova che il meccanismo funziona davvero.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
