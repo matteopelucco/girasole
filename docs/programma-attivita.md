@@ -201,11 +201,30 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 
 ## Fase 2 — Rete di sicurezza (si tocca il DB di test, mai la prod)
 
-### A20 · Supabase CLI: init e link a test e prod
+### A20 · Supabase CLI: init e link a test e prod [parziale 2026-09-23, login/link restano da fare a mano]
 - **Obiettivo**: `supabase/config.toml` nel repo; `supabase link` funzionante verso il
   progetto di test e verso quello di prod (due profili).
 - **Perché**: 51 migration applicate a mano via SQL Editor su due DB, senza tracciamento.
 - **Fatto quando**: `supabase migration list` risponde per entrambi i progetti.
+- **Risultato**: Supabase CLI installato con `npm install -g supabase` (il pacchetto npm
+  `supabase` è oggi un wrapper ufficiale supportato su tutte le piattaforme incluso
+  Windows — non è più vero, se mai lo è stato, che vada evitato: nessun postinstall
+  blocca l'uso globale, il binario è scaricato correttamente e `supabase --version`
+  risponde `2.117.0`). `supabase init` eseguito nella root del repo **senza** `--force`:
+  ha generato solo `supabase/config.toml` e `supabase/.gitignore` (quest'ultimo ignora
+  `.branches` e `.temp`, entrambi cache locale del CLI, non `supabase/migrations/`,
+  `supabase/seed.sql` o `supabase/helper.sql`, già esistenti e non toccati — verificato
+  con `git status` prima e dopo). `config.toml` controllato riga per riga: nessun
+  segreto, solo default (porte locali, riferimenti `env(...)` per eventuali chiavi, mai
+  valori in chiaro); `project_id = "girasole"` è solo un'etichetta locale, non
+  un identificatore reale di un progetto Supabase. **Non eseguiti** (come da issue):
+  `supabase login` e `supabase link` — richiedono un token personale o un login
+  interattivo via browser, più il project-ref di entrambi i progetti (test e
+  produzione), che l'agente non ha e non deve indovinare. Restano due comandi manuali
+  per Matteo, vedi `TASKS.md` (voce A20) per il procedimento esatto passo-passo. Il
+  criterio "Fatto quando" (`supabase migration list` risponde per entrambi i progetti)
+  **non è verificato da questa attività**: si verifica solo dopo che Matteo ha fatto
+  login e link con le sue credenziali.
 - **Dipende da**: — · **Sforzo** M · **Tier** sonnet · **Ambiente** PC · **Rischio prod** nessuno (sola lettura)
 
 ### A21 · Riconciliazione una tantum dello stato migration

@@ -3131,6 +3131,70 @@ Issue #21 del programma di attività (`docs/programma-attivita.md`).
 - [x] `docs/programma-attivita.md`: voce A17 segnata `[documentato
       2026-09-23, validazione dal vivo ancora da fare]`.
 
+## A20 · Supabase CLI: init e link a test e prod (2026-09-23)
+Issue #22 del programma di attività (`docs/programma-attivita.md`), prima
+voce della **Fase 2 — Rete di sicurezza**.
+- [x] Supabase CLI installato in locale con `npm install -g supabase`
+      (pacchetto npm ufficiale, wrapper supportato anche su Windows/Git
+      Bash — non serve Scoop né un binario scaricato a mano).
+      `supabase --version` → `2.117.0`.
+- [x] `supabase init` eseguito nella root del repo **senza** `--force`: ha
+      generato solo `supabase/config.toml` e `supabase/.gitignore` (che
+      ignora `supabase/.branches` e `supabase/.temp`, cache locale del
+      CLI). Non ha toccato `supabase/migrations/` (51 file esistenti),
+      `supabase/seed.sql` né `supabase/helper.sql` — verificato con `git
+      status` prima e dopo.
+- [x] `supabase/config.toml` controllato riga per riga prima di
+      committare: solo valori di default (porte locali, riferimenti
+      `env(...)` per eventuali chiavi future), nessun segreto in chiaro.
+      `project_id = "girasole"` è un'etichetta locale del CLI, non un
+      identificatore di un progetto Supabase reale.
+- [ ] **Non eseguiti** `supabase login` e `supabase link`, di proposito:
+      richiedono un token personale Supabase o un login interattivo via
+      browser, più il project-ref di due progetti reali (test e
+      produzione) che l'agente non ha e non deve indovinare — in
+      particolare il project-ref di produzione è un identificatore reale
+      del sistema in uso, non va mai improvvisato né chiesto in chiaro in
+      un file di questo repo pubblico o in un commento GitHub.
+
+### Prossimo passo manuale (solo Matteo, in locale)
+Il criterio "Fatto quando" di A20 (`supabase migration list` risponde per
+entrambi i progetti) si verifica **solo** dopo questi comandi, lanciati da
+Matteo con le sue credenziali:
+
+```
+supabase login
+```
+Apre un flusso OAuth nel browser (oppure, in alternativa, esporta
+`SUPABASE_ACCESS_TOKEN` con un personal access token creato da
+https://supabase.com/dashboard/account/tokens — mai commesso a git, solo
+in `.env.local` o nell'ambiente di shell).
+
+```
+supabase link --project-ref <ref-progetto-test>
+supabase migration list
+```
+Poi, separatamente (i profili `link` non sono cumulativi: un link
+sostituisce il precedente per la working directory):
+```
+supabase link --project-ref <ref-progetto-produzione>
+supabase migration list
+```
+
+Il project-ref di ciascun progetto si trova nella Supabase Dashboard →
+progetto → **Settings → General → "Reference ID"** (stringa di 20
+caratteri alfanumerici, es. `abcdefghijklmnopqrst`). Non è un segreto (è
+già visibile nell'URL della dashboard), ma non va comunque indovinato:
+va copiato dalla dashboard del progetto giusto (test o produzione — occhio
+a non invertirli).
+
+`supabase migration list` confronta le migration presenti in
+`supabase/migrations/` con la tabella `supabase_migrations.schema_migrations`
+sul progetto collegato: se risponde con un elenco (anche con differenze,
+oggetto della prossima attività A21) per entrambi i progetti, A20 è
+completa. Se fallisce con un errore di permessi o di rete, il link non è
+riuscito — non procedere con A21 finché entrambi rispondono.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
