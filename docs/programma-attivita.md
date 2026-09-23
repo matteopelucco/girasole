@@ -133,13 +133,32 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   coperto dal secondo, se passa da un modulo `lib/*`). Dettagli in TASKS.md.
 - **Dipende da**: — · **Sforzo** S · **Tier** sonnet · **Ambiente** cloud · **Rischio prod** nessuno
 
-### A14 · Versione da una sola fonte
+### A14 · Versione da una sola fonte [implementato 2026-09-23, verifica su preview Vercel reale ancora da fare]
 - **Obiettivo**: `VERSIONE_APP` letta da `npm_package_version`, `DATA_BUILD` da
   `VERCEL_GIT_COMMIT_SHA` + timestamp di build; niente più bump manuale in `lib/versione.ts`.
 - **Perché**: due punti da tenere allineati a mano (package.json + versione.ts) e una
   data scritta a mano: drift garantito.
 - **Fatto quando**: il footer mostra versione e SHA corretti su una preview Vercel senza
   toccare `versione.ts`.
+- **Risultato**: `VERSIONE_APP`/`DATA_BUILD` (`lib/versione.ts`) non sono più costanti
+  scritte a mano ma derivate in `next.config.mjs` (letto ad ogni `next build`/`next dev`,
+  indipendentemente da come il comando è invocato — a differenza di uno script
+  `prebuild` legato a un hook npm) e iniettate in `process.env` tramite l'opzione
+  `env`, che le sostituisce nel bundle a build-time (server e client, anche senza
+  prefisso `NEXT_PUBLIC_`, qui non necessario perché il footer è reso solo
+  server-side). `VERSIONE_APP` legge `package.json` (non `process.env.npm_package_version`:
+  non affidabile perché dipende da come Vercel invoca il build). `DATA_BUILD` combina lo
+  SHA del commit (`VERCEL_GIT_COMMIT_SHA`, già disponibile su Vercel a build-time senza
+  bisogno del toggle "Automatically expose System Environment Variables" — quel toggle
+  serve solo alle varianti `NEXT_PUBLIC_*` per uso lato client; fallback locale a `git
+  rev-parse HEAD`, poi a un placeholder se anche git fallisce) con il timestamp di build
+  (fuso Europe/Rome), tramite `formattaDataBuild` — pura, testata in
+  `lib/versione.test.ts` (bisestili non c'entrano ma cambi ora legale/solare e
+  abbreviazione dello SHA sì). Verificato in locale (`npm run build`) che i valori
+  finiscono letteralmente nel bundle server (`grep` sull'output di `.next/server`),
+  ma **resta da confermare su una preview Vercel reale** che
+  `VERCEL_GIT_COMMIT_SHA` sia effettivamente popolato in quell'ambiente — nessun modo di
+  verificarlo prima di un deploy vero.
 - **Dipende da**: — · **Sforzo** S · **Tier** sonnet · **Ambiente** cloud · **Rischio prod** basso
 
 ### A15 · `next build` nel pre-push hook (opzionale)

@@ -203,5 +203,17 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   puntare a un progetto Supabase di test, mai a quello di produzione.
 
   ## Versioning
-  - Prima di ogni push su git effettuare un bump di versione
-  - Tracciare sempre la data di push (corrisponde alla data di build)
+  - `VERSIONE_APP` e `DATA_BUILD` (`lib/versione.ts`, mostrate nel footer)
+    sono derivate automaticamente a build-time in `next.config.mjs`, non
+    più scritte a mano: `VERSIONE_APP` legge `package.json`, `DATA_BUILD`
+    combina lo SHA del commit (`VERCEL_GIT_COMMIT_SHA` su Vercel, `git
+    rev-parse HEAD` in locale) con il timestamp di build. Non toccare
+    `lib/versione.ts` a mano ad ogni rilascio: resta un file di logica
+    pura (`formattaDataBuild`, testata in `lib/versione.test.ts`), non
+    più costanti da aggiornare.
+  - Prima di ogni push su git effettuare comunque un bump di versione in
+    `package.json`/`package-lock.json` (`npm version patch|minor|major`
+    o a mano nei due file, tenendoli coerenti) — è l'unica fonte che
+    alimenta `VERSIONE_APP`, quindi resta manuale.
+  - La data di build non va più tracciata a mano: `DATA_BUILD` la deriva
+    da sé ad ogni `next build`/`next dev` (vedi `next.config.mjs`).
