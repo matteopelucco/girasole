@@ -16,7 +16,9 @@ name: CI
 #      trascinato in un componente client — il buco esatto di v0.39/v0.40,
 #      che tsc/lint/vitest non vedono (vedi TASKS.md, "due deploy Vercel
 #      di fila falliti").
-#   6. reset DB di test (A23) — `supabase db reset --linked --project-ref <ref>`
+#   6. reset DB di test (A23) — `supabase db reset --linked --project-ref <ref> --yes`
+#      (--yes salta la conferma interattiva "Do you want to reset the remote
+#      database?", che in CI non ha nessuno a rispondere)
 #      via Supabase CLI: riapplica tutte le migration da zero sul progetto
 #      di test condiviso (`girasole_dev`, non isolato dalla CI) e poi
 #      lancia `supabase/seed.sql` in automatico, così ogni run e2e parte
@@ -83,7 +85,7 @@ jobs:
       - name: 6. Reset del DB di test (Supabase CLI, A23)
         run: |
           npm install -g supabase
-          supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}
+          supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
         env:
           # Token di accesso personale Supabase (Management API), non la
           # password del database: letto automaticamente dal CLI, nessun
