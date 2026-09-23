@@ -3217,16 +3217,30 @@ riuscito — non procedere con A21 finché entrambi rispondono.
 - [x] Il project-ref di test (`aehukkmiwgddsilodxzz`) è una **repository
       variable** `SUPABASE_TEST_PROJECT_REF` (non un secret: già visibile
       nell'URL pubblico del progetto), impostata con `gh variable set`.
-- [ ] **Blocco per la verifica finale di A23**: lo step 6 richiede il
-      repository secret `SUPABASE_ACCESS_TOKEN` (token di accesso
-      personale Supabase, letto automaticamente dal CLI). Verificato con
-      `gh secret list` il 2026-09-24: non esiste ancora. Un agente non
-      può crearlo (è un token vero, riservato a Matteo). **Da fare da
-      parte tua**: genera un token su
-      https://supabase.com/dashboard/account/tokens e aggiungilo con
-      `gh secret set SUPABASE_ACCESS_TOKEN`. Finché manca, lo step 6
-      fallisce su ogni PR — il primo run reale dopo aver aggiunto il
-      secret sarà la prova che il meccanismo funziona davvero.
+- [x] Il secret `SUPABASE_ACCESS_TOKEN` è stato creato da Matteo e
+      aggiunto il 2026-09-24. Il primo run reale ha rivelato due comandi
+      da correggere rispetto a quanto documentato sopra (scoperti leggendo
+      i log dei run falliti, non dalla sola documentazione del CLI):
+      `db reset` richiede `--linked` insieme a `--project-ref` (a
+      differenza di `migration list`/`repair`, dove basta `--project-ref`
+      da solo), e serve `--yes` per saltare la conferma interattiva "Do
+      you want to reset the remote database?" che in CI non ha nessuno
+      stdin a rispondere. Comando finale: `supabase db reset --linked
+      --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes`.
+      **Verificato dal vivo**: run
+      https://github.com/matteopelucco/girasole/actions/runs/35929260153,
+      step verde per la prima volta. A22 e A23 sono considerate fatte.
+- [ ] **Scoperta collegata, non blocca la chiusura di A22/A23 ma apre
+      A24**: con lo step di reset verde, la e2e (step successivo) fallisce
+      comunque con `errore=credenziali` su tutti i login — causa diversa
+      da quella nota prima (DB di test in pausa): `app/login/actions.ts`
+      mostra che quell'errore scatta solo se `signInWithPassword` fallisce
+      davvero. Ipotesi più probabile: `supabase db reset` ripristina anche
+      gli utenti di Auth, non solo lo schema `public` — cancellando gli
+      account `E2E_*` creati a mano nella dashboard Authentication, mai
+      gestiti da una migration o dal seed. Dettagliato in A24
+      (`docs/programma-attivita.md`): va costruito uno step che li
+      ricrei via Admin API (`service_role key`) dopo ogni reset.
 
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi

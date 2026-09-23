@@ -237,7 +237,7 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Dipende da**: A20 · **Sforzo** L · **Tier** **opus** · **Ambiente** PC · **Rischio prod** **medio**
   (tocca la prod: farlo in orario di non uso, con backup prima)
 
-### A22 · `db push` come unico canale; aggiornare CLAUDE.md e README
+### A22 · `db push` come unico canale; aggiornare CLAUDE.md e README [FATTO 2026-09-24]
 - **Obiettivo**: il SQL Editor non è più un modo ammesso per applicare migration;
   la procedura è documentata e l'agente la conosce.
 - **Perché**: chiudere per sempre la classe di incidenti "applica da parte tua" (è
@@ -266,16 +266,14 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Dipende da**: A21 (fatta, won't-do: prod e test già allineate su 51/51
   migration al 2026-09-23) · **Sforzo** S · **Tier** haiku · **Ambiente** cloud ·
   **Rischio prod** nessuno
-- **Implementato 2026-09-24, in attesa del secret di A23 per la verifica
-  finale**: `CLAUDE.md` (sezioni "Convenzioni" e "Repo pubblico") e
-  `README.md` non citano più il SQL Editor come modo ammesso per applicare
-  migration; entrambi rimandano a `supabase db push --project-ref <ref>`
-  in locale e al reset di CI per il test. Il criterio "Fatto quando" è
-  soddisfatto per la parte documentale; la parte "una migration nuova
-  arriva in test tramite il reset di CI" dipende dal secret ancora mancante
-  di A23 (vedi sotto) — non ri-verificabile finché quello non c'è.
+- **[FATTO 2026-09-24]**: `CLAUDE.md` (sezioni "Convenzioni" e "Repo
+  pubblico") e `README.md` non citano più il SQL Editor come modo ammesso
+  per applicare migration; entrambi rimandano a `supabase db push
+  --project-ref <ref>` in locale e al reset di CI (A23) per il test. Il
+  meccanismo di A23 è verificato funzionante in CI (vedi sotto): il
+  criterio "Fatto quando" è soddisfatto.
 
-### A23 · CI: DB di test pulito per ogni run (reset + migration + seed) prima della e2e
+### A23 · CI: DB di test pulito per ogni run (reset + migration + seed) prima della e2e [FATTO 2026-09-24, e2e ancora rossa per A24]
 - **Obiettivo**: ogni run e2e parte da uno schema pulito con seed noto.
 - **Perché**: il DB di test condiviso e mutabile è la causa dei 145 `test.skip` e
   dell'impossibilità di testare le azioni irreversibili.
@@ -294,35 +292,66 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   PR è presente nel DB di test prima che la e2e parta, senza intervento manuale.
 - **Dipende da**: A20 (fatta), A12 (fatta) · **Sforzo** L · **Tier** sonnet ·
   **Ambiente** CI · **Rischio prod** nessuno
-- **Implementato 2026-09-24, in attesa del secret per la verifica finale**:
-  `.github/workflows/ci.yml` ha un nuovo step 6 (`supabase db reset
-  --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}`, prima della e2e,
-  ora step 7) che installa il CLI con `npm install -g supabase` (stesso
-  metodo di A20, nessuna dipendenza Docker: `db reset --project-ref`
-  opera da remoto via Management API, verificato con `supabase db reset
-  --help` in locale — Docker serve solo per lo sviluppo locale con
-  `supabase start`/`db diff`, non usato qui). Il project-ref
-  (`aehukkmiwgddsilodxzz`, non un segreto: già visibile nell'URL pubblico
-  del progetto) è una **repository variable** `SUPABASE_TEST_PROJECT_REF`
-  (`gh variable set`, non un secret) per non hardcodarlo nel YAML. Il
-  passo richiede il repository secret `SUPABASE_ACCESS_TOKEN` (token di
-  accesso personale Supabase, letto automaticamente dal CLI, nessun login
-  interattivo): **non esiste ancora nei secret del repo** (verificato con
-  `gh secret list` il 2026-09-24) e non può essere creato da un agente —
-  è un token vero, riservato a Matteo, da generare su
-  https://supabase.com/dashboard/account/tokens e aggiungere con
-  `gh secret set SUPABASE_ACCESS_TOKEN`. Finché manca, lo step 6 fallisce
-  in ogni PR: il criterio "Fatto quando" (due run consecutivi della e2e
-  con lo stesso risultato) **non è verificabile fino a quel momento** —
-  il primo run reale su una PR successiva al merge sarà la prova.
+- **[FATTO 2026-09-24]**: `.github/workflows/ci.yml` ha un nuovo step
+  (`supabase db reset --linked --project-ref ${{
+  vars.SUPABASE_TEST_PROJECT_REF }} --yes`, prima della e2e) che installa
+  il CLI con `npm install -g supabase` (stesso metodo di A20, nessuna
+  dipendenza Docker: `db reset --project-ref` opera da remoto via
+  Management API — Docker serve solo per lo sviluppo locale con `supabase
+  start`/`db diff`, non usato qui). Il project-ref (`aehukkmiwgddsilodxzz`,
+  non un segreto: già visibile nell'URL pubblico del progetto) è una
+  **repository variable** `SUPABASE_TEST_PROJECT_REF` (`gh variable set`,
+  non un secret). Il passo richiede il repository secret
+  `SUPABASE_ACCESS_TOKEN` (token di accesso personale Supabase): creato da
+  Matteo e aggiunto il 2026-09-24. Il comando reale richiedeva due
+  correzioni non previste inizialmente, trovate leggendo i log dei run
+  falliti: `--project-ref` da solo non basta per `db reset` (serve insieme
+  a `--linked`, a differenza di `migration list`/`repair` dove basta da
+  solo); e serve `--yes` per saltare la conferma interattiva "Do you want
+  to reset the remote database?", che in CI non ha nessuno stdin a
+  rispondere. **Verificato dal vivo**: il run
+  https://github.com/matteopelucco/girasole/actions/runs/35929260153 mostra
+  lo step verde per la prima volta.
+  - **Scoperta importante, non risolta qui**: con lo step verde, la e2e
+    (step successivo) fallisce comunque, ma per un motivo diverso da prima
+    (non più il DB di test in pausa): tutti i login e2e restituiscono
+    `errore=credenziali` — verificato in `app/login/actions.ts` che
+    quell'errore scatta solo se `supabase.auth.signInWithPassword` fallisce
+    davvero, non per un problema a valle (profilo/RLS). Ipotesi più
+    probabile: `supabase db reset` riporta il progetto a uno stato pulito
+    che include anche gli utenti di Auth, non solo lo schema `public`
+    coperto dalle migration — quindi cancella anche gli account
+    `E2E_ADMIN`/`E2E_MAESTRA`/ecc., creati a mano nella dashboard
+    Authentication e mai gestiti da una migration o dal seed. Questo è
+    esattamente il problema di cui si occupa **A24** (sotto): il criterio
+    "due run consecutivi della e2e danno lo stesso risultato" di A23 resta
+    formalmente da chiudere una volta che A24 farà ricreare gli account di
+    test automaticamente dopo ogni reset — non è un difetto del meccanismo
+    di reset in sé, che fa esattamente ciò che doveva fare.
 
 ### A24 · Account-ruolo di test e secret `E2E_*` completi
 - **Obiettivo**: admin, maestra, assistente, genitore (+ i due opzionali) esistono nel
   progetto di test e i loro secret sono in GitHub.
 - **Perché**: molti skip dipendono da un ruolo non configurato; un bug RLS (0030) è
   passato perché i test giravano solo come admin.
-- **Fatto quando**: `auth.setup.ts` non salta nessun ruolo in CI.
-- **Dipende da**: A23 (idealmente creati dal seed) · **Sforzo** S · **Tier** haiku · **Ambiente** PC · **Rischio prod** nessuno
+- **Scoperto in A23 (2026-09-24)**: non è più solo "creare gli account una
+  volta" — il reset di A23 (`supabase db reset`) gira ad ogni PR e riporta il
+  progetto di test a uno stato pulito che sembra includere anche gli utenti
+  di Auth, non solo lo schema `public`. Gli account `E2E_*`, creati a mano
+  nella dashboard Authentication, spariscono ad ogni reset (verificato: la
+  e2e su PR #59 fallisce con `errore=credenziali`, cioè
+  `signInWithPassword` stesso rifiuta il login, non un problema a valle).
+  Quindi A24 non può limitarsi a "creare gli account": deve **ricrearli
+  automaticamente dopo ogni reset di CI**, verosimilmente con uno script
+  che usa la `service_role key` (Admin API di Supabase) per ricreare
+  admin/maestra/assistente/genitore con email e password fisse (quelle già
+  nei secret `E2E_*` esistenti), da eseguire come step CI subito dopo il
+  reset di A23 e prima della e2e.
+- **Fatto quando**: `auth.setup.ts` non salta nessun ruolo in CI; due run
+  consecutivi di CI (ognuno con reset completo) danno lo stesso esito di
+  login per tutti i ruoli.
+- **Dipende da**: A23 (fatta 2026-09-24) · **Sforzo** S · **Tier** haiku ·
+  **Ambiente** PC/CI · **Rischio prod** nessuno
 
 ### A25 · Rendere testabili le azioni irreversibili, ridurre gli skip
 - **Obiettivo**: comunicazione Rojac, conferma settimana, decisione straordinario ecc.
