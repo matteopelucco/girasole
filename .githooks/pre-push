@@ -1,12 +1,13 @@
 #!/bin/sh
 # Analisi statica prima di ogni push: type-check, ESLint, unit test
-# (Vitest), codice duplicato (jscpd). Attivato in automatico da "npm
-# install" (script "prepare" in package.json, che imposta
-# core.hooksPath su questa cartella — vedi CLAUDE.md). Volutamente non
-# lancia la suite e2e (richiede un server dev attivo, credenziali reali
-# e minuti, non secondi: resta un passo manuale, vedi CLAUDE.md). I
-# unit test invece non toccano rete/DB/browser, girano in secondi:
-# nessuna ragione per escluderli da questo hook.
+# (Vitest), codice duplicato (jscpd), build di produzione (next build,
+# A15). Attivato in automatico da "npm install" (script "prepare" in
+# package.json, che imposta core.hooksPath su questa cartella — vedi
+# CLAUDE.md). Volutamente non lancia la suite e2e (richiede un server
+# dev attivo, credenziali reali e minuti, non secondi: resta un passo
+# manuale, vedi CLAUDE.md). I unit test invece non toccano rete/DB/
+# browser, girano in secondi: nessuna ragione per escluderli da questo
+# hook.
 set -e
 
 echo "── Type-check (tsc) ──────────────────────────────"
@@ -21,4 +22,43 @@ npx vitest run
 echo "── Codice duplicato (jscpd) ──────────────────────"
 npx jscpd
 
+# La build di produzione (next build, stesso bundler di Vercel) è
+# l'unico passo di questo hook che intercetta un import lato server
+# trascinato in un componente client (vedi CLAUDE.md, CI A12). È anche
+# il più lento (tipicamente decine di secondi): saltabile con
+# SKIP_BUILD_PRE_PUSH=1 git push quando serve un push veloce (il resto
+# dell'hook gira comunque). Di default è ATTIVA, per bloccare in locale
+# un push con build rotta.
+echo "── Build di produzione (next build) ──────────────"
+if [ -n "$SKIP_BUILD_PRE_PUSH" ]; then
+  echo "⏭  Saltata (SKIP_BUILD_PRE_PUSH impostata)."
+else
+  # La build richiede le NEXT_PUBLIC_* lette da .env.local (inlinate nel
+  # bundle client, come su Vercel/CI — vedi .env.example). Se mancano non
+  # è una regressione di codice ma un .env.local locale incompleto: avvisa
+  # e prosegui invece di bloccare il push per un problema di
+  # configurazione della macchina, non del codice.
+  env_locale_incompleto=""
+  if [ ! -f .env.local ]; then
+    env_locale_incompleto="1"
+  else
+    for var in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_TURNSTILE_SITE_KEY; do
+      valore=$(grep -E "^${var}=" .env.local | tail -1 | cut -d'=' -f2-)
+      if [ -z "$valore" ]; then
+        env_locale_incompleto="1"
+      fi
+    done
+  fi
+
+  if [ -n "$env_locale_incompleto" ]; then
+    echo "⚠  .env.local assente o incompleta (manca una fra NEXT_PUBLIC_SUPABASE_URL,"
+    echo "   NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_TURNSTILE_SITE_KEY — vedi"
+    echo "   .env.example): build saltata, non è una regressione di codice. La build"
+    echo "   reale gira comunque in CI (A12) prima del merge su main."
+  else
+    npx next build
+  fi
+fi
+
 echo "✔ Analisi statica superata."
+echo "(Per saltare la build al prossimo push: SKIP_BUILD_PRE_PUSH=1 git push)"
