@@ -111,12 +111,26 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   client component fallisce in build.
 - **Dipende da**: — · **Sforzo** M · **Tier** sonnet · **Ambiente** cloud · **Rischio prod** nessuno
 
-### A13 · Regola ESLint sul confine client/server
+### A13 · Regola ESLint sul confine client/server [FATTO 2026-09-23]
 - **Obiettivo**: `no-restricted-imports`: un modulo `'use client'` non può importare
   `lib/auth` né `lib/supabase/server` (direttamente o via `lib/*` che li importano).
 - **Perché**: la "nota per il futuro" in TASKS.md (v0.40.1) descrive un bug che nessuno
   strumento intercetta: deve diventare un errore di lint.
 - **Fatto quando**: reintrodurre l'import di v0.39 fa fallire `npm run lint`.
+- **Risultato**: due `overrides` in `.eslintrc.json` con `no-restricted-imports`
+  (built-in, nessuna dipendenza nuova). Il primo copre l'import diretto da un
+  Client Component (individuato per posizione — `components/**/*.tsx`,
+  `app/**/error.tsx`/`global-error.tsx` — non per la direttiva `'use client'`,
+  che ESLint non legge senza un plugin nuovo). Il secondo vieta a qualunque
+  altro modulo `lib/*.ts` (tranne `lib/auth.ts` stesso e i `*.test.ts`) di
+  importare `lib/auth`/`lib/supabase/server`, risolvendo il caso transitivo
+  alla radice invece di inseguire ogni possibile catena di import — verificato
+  reintroducendo (e poi ripristinando) esattamente la catena del bug storico
+  v0.39/v0.40 (`VerificaBonifico.tsx` → `comunicazioneRetta.ts` →
+  `calendarioScolastico.ts` → `auth.ts`). Limite noto: copre solo import via
+  alias `@/lib/...` (unica convenzione in uso) e un Client Component creato
+  fuori da `components/**` sfuggirebbe al primo override (ma resterebbe comunque
+  coperto dal secondo, se passa da un modulo `lib/*`). Dettagli in TASKS.md.
 - **Dipende da**: — · **Sforzo** S · **Tier** sonnet · **Ambiente** cloud · **Rischio prod** nessuno
 
 ### A14 · Versione da una sola fonte

@@ -3009,6 +3009,46 @@ Issue #15 del programma di attività (`docs/programma-attivita.md`).
 - [x] `docs/programma-attivita.md`: voce A11 segnata `[FATTO 2026-09-20]`
       con l'elenco e le note residue.
 
+## A13 · Regola ESLint sul confine client/server (2026-09-23)
+Issue #17 del programma di attività (`docs/programma-attivita.md`).
+- [x] `.eslintrc.json`: due `overrides` con `no-restricted-imports` (built-in,
+      nessuna dipendenza nuova):
+      1. `components/**/*.tsx` + `app/**/error.tsx` + `app/**/global-error.tsx`
+         (i Client Component del repo, individuati per posizione — Next.js
+         non espone un modo per farlo per contenuto/direttiva in ESLint senza
+         un plugin nuovo) non possono importare `@/lib/auth` né
+         `@/lib/supabase/server` direttamente.
+      2. `lib/**/*.ts` (esclusi `lib/auth.ts` stesso e i `*.test.ts`, che
+         girano solo sotto Vitest/Node) non possono importare `@/lib/auth` né
+         `@/lib/supabase/server`: risolve il caso transitivo (`no-restricted-
+         imports` vede solo gli import del file lintato, non l'intero grafo)
+         vietando alla radice a qualunque altro modulo `lib/*` di acquisire
+         quella dipendenza — così un Client Component non può più
+         raggiungerla di riflesso tramite un `lib/*` "sicuro per il client",
+         indipendentemente da quali moduli lib importi oggi o in futuro.
+- [x] Verificato manualmente (poi ripristinato, nessun diff residuo) che
+      reintrodurre l'import storico di v0.39/v0.40 fa fallire `npm run lint`
+      in entrambe le forme: import diretto (`@/lib/auth` dentro
+      `components/VerificaBonifico.tsx`) e import transitivo esatto del bug
+      originale (`@/lib/auth` dentro `lib/calendarioScolastico.ts`, da cui
+      passava `VerificaBonifico.tsx` → `lib/comunicazioneRetta.ts` →
+      `lib/calendarioScolastico.ts` → `lib/auth.ts`).
+- [x] Limite noto, documentato invece che forzato: il primo override
+      individua i Client Component per posizione (`components/**`,
+      `app/**/error.tsx`), non per la direttiva `'use client'` — vero oggi
+      (nessun file fuori da lì ha quella direttiva, tranne `app/error.tsx`/
+      `global-error.tsx` per vincolo Next.js) ma un Client Component creato
+      altrove (es. direttamente sotto `app/**`) non sarebbe coperto da quel
+      blocco. Il secondo override (root cause su `lib/**`) resta comunque
+      efficace in quel caso, perché non dipende da dove vive il Client
+      Component. Inoltre `no-restricted-imports` confronta lo specificatore
+      letterale: solo import via alias `@/lib/...` sono coperti (l'unica
+      convenzione in uso nel repo fuori dai test, verificato).
+- [x] Verificato `npx tsc --noEmit`, `npm run analyze` (lint + 312 unit test
+      + jscpd) e `npm run build` puliti dopo il ripristino.
+- [x] `lib/versione.ts` + `package.json`/`package-lock.json` → v0.42.0.
+- [x] `docs/programma-attivita.md`: voce A13 segnata `[FATTO 2026-09-23]`.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
