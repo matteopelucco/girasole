@@ -45,14 +45,26 @@ Contesto operativo per Claude Code su questo progetto.
   da `npm install` tramite lo script `prepare` in `package.json`, che
   imposta `core.hooksPath`) lancia type-check (`tsc --noEmit`), ESLint
   (`next lint`, configurato in `.eslintrc.json` con `next/core-web-vitals`),
-  gli unit test Vitest (`npx vitest run` — vedi sotto) e la ricerca di
-  codice duplicato (`jscpd`, configurato in `.jscpd.json`) prima di ogni
-  `git push`. Il push viene bloccato se uno dei quattro fallisce. A
-  differenza della suite e2e, gli unit test non richiedono un server dev
-  né credenziali (nessun I/O), quindi girano bene dentro un hook che deve
-  restare veloce.
+  gli unit test Vitest (`npx vitest run` — vedi sotto), la ricerca di
+  codice duplicato (`jscpd`, configurato in `.jscpd.json`) e la build di
+  produzione (`next build`, A15) prima di ogni `git push`. Il push viene
+  bloccato se uno dei cinque fallisce. A differenza della suite e2e, gli
+  unit test non richiedono un server dev né credenziali (nessun I/O),
+  quindi girano bene dentro un hook che deve restare veloce.
+- La build (`next build`) è l'unico passo dell'hook che intercetta un
+  import lato server trascinato in un componente client (lo stesso buco
+  che in CI, A12, viene preso al passo 5) — per questo di default è
+  ATTIVA. È anche il passo più lento (tipicamente decine di secondi in
+  locale): saltabile con `SKIP_BUILD_PRE_PUSH=1 git push` quando serve un
+  push veloce (gli altri quattro controlli girano comunque). Richiede le
+  stesse `NEXT_PUBLIC_*` di `.env.local` usate da `npm run dev` (vedi
+  `.env.example`): se `.env.local` manca o ne è priva, l'hook avvisa e
+  salta la build invece di bloccare il push — non è una regressione di
+  codice ma una macchina locale non configurata, e la build reale gira
+  comunque in CI prima del merge.
 - Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
-  unit test + duplicati; per il type-check separato, `npx tsc --noEmit`).
+  unit test + duplicati; per il type-check separato, `npx tsc --noEmit`;
+  per la build, `npm run build`).
 - Se `jscpd` segnala una duplicazione reale (stessa logica ripetuta,
   non solo forma simile), il modo giusto per risolverla è estrarre una
   funzione condivisa (vedi `lib/auth.ts`, `requireAdmin`/`requireProfilo`/
@@ -197,10 +209,12 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   in sequenza: tsc → lint → jscpd → vitest → **`next build`** → e2e.
   I primi quattro non richiedono secret e falliscono in secondi; la
   build di produzione è l'unico passo che intercetta un import lato
-  server trascinato in un componente client (il pre-push hook non lo
-  vede); la suite e2e usa le variabili configurate come "Repository
-  secrets" in GitHub — mai hardcoded nel workflow. Anche in CI devono
-  puntare a un progetto Supabase di test, mai a quello di produzione.
+  server trascinato in un componente client (dalla A15 lo intercetta
+  anche il pre-push hook in locale, salvo skip esplicito o `.env.local`
+  incompleta — vedi sopra); la suite e2e usa le variabili configurate
+  come "Repository secrets" in GitHub — mai hardcoded nel workflow.
+  Anche in CI devono puntare a un progetto Supabase di test, mai a
+  quello di produzione.
 
   ## Versioning
   - `VERSIONE_APP` e `DATA_BUILD` (`lib/versione.ts`, mostrate nel footer)
