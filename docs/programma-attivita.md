@@ -240,18 +240,52 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 ### A22 · `db push` come unico canale; aggiornare CLAUDE.md e README
 - **Obiettivo**: il SQL Editor non è più un modo ammesso per applicare migration;
   la procedura è documentata e l'agente la conosce.
-- **Perché**: chiudere per sempre la classe di incidenti "applica da parte tua".
-- **Fatto quando**: CLAUDE.md non cita più il SQL Editor; una migration nuova arriva in
-  test via CI (A23) e in prod via `db push` dopo il merge.
-- **Dipende da**: A21 · **Sforzo** S · **Tier** haiku · **Ambiente** cloud · **Rischio prod** nessuno
+- **Perché**: chiudere per sempre la classe di incidenti "applica da parte tua" (è
+  la causa diretta della riconciliazione fatta in A21: 51 migration mai tracciate
+  dal CLI perché applicate a mano).
+- **Decisione (2026-09-24)**: il DB di test (`girasole_dev`) è lo stesso, condiviso,
+  sia per la CI sia per lo sviluppo locale di Matteo — non un secondo progetto
+  isolato. Di conseguenza:
+  - **In locale**, una migration nuova si applica con
+    `supabase db push --project-ref <ref-test>` (mai più SQL Editor), esplicito e
+    incrementale — sicuro perché ogni migration è idempotente o già applicata.
+  - **In test (CI)**, l'applicazione non è un `db push` incrementale ma il reset
+    completo di A23 (`supabase db reset --project-ref <ref-test>`, che riapplica
+    tutte le migration da zero e poi il seed): dato che gira ad ogni PR e il DB è
+    condiviso con lo sviluppo locale, Matteo ha accettato esplicitamente che i
+    propri dati di test locali vengano ricreati da zero ad ogni run di CI (usa il
+    locale raramente). Vedi A23 per il meccanismo.
+  - **In produzione**, resta manuale e deliberato: **mai** un `supabase link`
+    permanente verso il ref di produzione (il collegamento di default resta
+    sempre il test); Matteo lancia lui, dopo il merge,
+    `supabase db push --project-ref <ref-produzione>` esplicito sul comando.
+    Nessun automatismo CI/agente verso la produzione.
+- **Fatto quando**: CLAUDE.md non cita più il SQL Editor; una migration nuova arriva
+  in test tramite il reset di CI (A23) e in prod via `db push` esplicito dopo il
+  merge.
+- **Dipende da**: A21 (fatta, won't-do: prod e test già allineate su 51/51
+  migration al 2026-09-23) · **Sforzo** S · **Tier** haiku · **Ambiente** cloud ·
+  **Rischio prod** nessuno
 
 ### A23 · CI: DB di test pulito per ogni run (reset + migration + seed) prima della e2e
 - **Obiettivo**: ogni run e2e parte da uno schema pulito con seed noto.
 - **Perché**: il DB di test condiviso e mutabile è la causa dei 145 `test.skip` e
   dell'impossibilità di testare le azioni irreversibili.
+- **Decisione (2026-09-24)**: niente secondo progetto Supabase isolato per la CI
+  (scartata l'idea delle "preview branch" o di un progetto dedicato). Il
+  meccanismo è `supabase db reset --project-ref <ref-test>` (comando verificato:
+  resetta lo schema del progetto linkato riapplicando tutte le migration da
+  zero, poi lancia `supabase/seed.sql` in automatico salvo `--no-seed`), da
+  lanciare in CI prima della suite e2e, ad ogni run su ogni PR. Matteo accetta
+  che questo cancelli e ricrei i suoi eventuali dati di test locali ad ogni
+  esecuzione, dato che testa in locale raramente — se in futuro questo diventa
+  un problema pratico, rivalutare l'isolamento (progetto/branch dedicato) a
+  parte, non silenziosamente.
 - **Fatto quando**: due run consecutivi della e2e danno lo stesso risultato; il seed
-  crea sezioni/bambini/utenti di test riproducibili.
-- **Dipende da**: A20, A12 · **Sforzo** L · **Tier** sonnet · **Ambiente** CI · **Rischio prod** nessuno
+  crea sezioni/bambini/utenti di test riproducibili; una migration nuova aperta in
+  PR è presente nel DB di test prima che la e2e parta, senza intervento manuale.
+- **Dipende da**: A20 (fatta), A12 (fatta) · **Sforzo** L · **Tier** sonnet ·
+  **Ambiente** CI · **Rischio prod** nessuno
 
 ### A24 · Account-ruolo di test e secret `E2E_*` completi
 - **Obiettivo**: admin, maestra, assistente, genitore (+ i due opzionali) esistono nel
