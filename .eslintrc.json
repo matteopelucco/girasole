@@ -1,4 +1,79 @@
 {
   "extends": ["next/core-web-vitals"],
-  "ignorePatterns": ["playwright-report/**", "test-results/**"]
+  "ignorePatterns": ["playwright-report/**", "test-results/**"],
+  "overrides": [
+    {
+      // Confine client/server (A13, issue #17): lib/auth.ts fa query Supabase
+      // lato server e usa redirect()/next/headers (tramite
+      // lib/supabase/server.ts) — importarlo da un Client Component rompe
+      // `next build` ("You're importing a component that needs
+      // next/headers"), bug reale in v0.39.0/v0.40.0 (vedi CHANGELOG,
+      // "Bugfix: due deploy Vercel di fila falliti"). `no-restricted-imports`
+      // vede solo gli import scritti nel file lintato, non l'intero grafo:
+      // qui copriamo l'import DIRETTO da un Client Component. Il caso
+      // transitivo di allora (VerificaBonifico → comunicazioneRetta →
+      // calendarioScolastico → auth) è coperto dal secondo override sotto,
+      // che vieta a qualunque altro modulo lib/*.ts di importare auth.ts —
+      // così un Client Component non può più raggiungerlo nemmeno di
+      // riflesso, qualunque modulo lib/* attraversi.
+      //
+      // "files" individua i Client Component per posizione, non per
+      // contenuto (no-restricted-imports non legge la direttiva 'use
+      // client'): components/**/*.tsx è oggi l'unica cartella con
+      // componenti client del repo (verificato per #17: nessuno dei file
+      // che importano lib/auth vive lì); app/**/error.tsx e
+      // app/**/global-error.tsx sono client per vincolo di Next.js. Se in
+      // futuro un Client Component nascesse altrove (es. direttamente sotto
+      // app/**), questo override non lo coprirebbe: vedi nota nella PR.
+      "files": ["components/**/*.tsx", "app/**/error.tsx", "app/**/global-error.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/lib/auth",
+                "message": "lib/auth.ts fa query Supabase lato server e usa redirect(): non importabile da un Client Component. Passa il dato (es. ruolo/profilo) come prop da un Server Component."
+              },
+              {
+                "name": "@/lib/supabase/server",
+                "message": "lib/supabase/server.ts usa next/headers: importarlo da un Client Component rompe `next build` (bug storico v0.39.0/v0.40.0). Usa lib/supabase/client.ts oppure passa i dati come prop da un Server Component."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // Stesso obiettivo del blocco sopra, versione "root cause": nessun
+      // altro modulo lib/*.ts (a parte lib/auth.ts stesso) può importare
+      // lib/auth o lib/supabase/server. Così un modulo lib/* che oggi è
+      // "sicuro per il client" (es. lib/calendarioScolastico.ts,
+      // lib/comunicazioneRetta.ts) non può acquisire quella dipendenza in
+      // futuro senza far fallire subito il lint, invece di scoprirlo solo a
+      // `next build` — indipendentemente da quali Client Component lo
+      // importino oggi o domani. lib/auth.test.ts è escluso insieme a tutti
+      // i *.test.ts: girano solo sotto Vitest (Node), mai nel bundle
+      // browser.
+      "files": ["lib/**/*.ts"],
+      "excludedFiles": ["lib/auth.ts", "lib/**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/lib/auth",
+                "message": "Solo lib/auth.ts stesso può importare sé stesso; nessun altro modulo lib/* deve dipendere da lib/auth.ts, altrimenti rischia di trascinare next/headers in un Client Component che lo importa transitivamente."
+              },
+              {
+                "name": "@/lib/supabase/server",
+                "message": "lib/supabase/server.ts usa next/headers ed è pensato per essere importato solo da lib/auth.ts: nessun altro modulo lib/* deve importarlo direttamente."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
