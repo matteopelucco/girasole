@@ -20,7 +20,15 @@ Contesto operativo per Claude Code su questo progetto.
   comodamente dentro il free tier di Vercel e Supabase.
 - Ogni nuova tabella o modifica allo schema va in `supabase/migrations/` come
   nuovo file numerato, mai modificata a mano dalla dashboard Supabase in
-  produzione.
+  produzione. **Anche l'applicazione di una migration non passa più dal SQL
+  Editor** (A22): in locale si usa `supabase db push --project-ref <ref-test>`
+  (esplicito e incrementale, mai un `supabase link` implicito su cui contare
+  a occhi chiusi); in test l'applicazione avviene tramite il reset completo
+  di CI (A23, `supabase db reset --project-ref <ref-test>`, prima della
+  suite e2e — vedi sotto); in produzione resta manuale e deliberato, solo
+  Matteo, con `supabase db push --project-ref <ref-produzione>` esplicito
+  sul singolo comando dopo il merge — mai un link permanente verso il ref
+  di produzione, mai un'automazione CI/agente verso la produzione.
 - Le policy RLS sono la difesa primaria dei dati, non un dettaglio: ogni nuova
   query deve rispettare i confini di ruolo (admin / maestra / genitore)
   descritti in `specs/`. Se una feature richiede una nuova policy, scrivila
@@ -205,16 +213,30 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   merge su `main`: un push su `main` fa deploy automatico in produzione
   su Vercel.
 - Su ogni PR gira un unico workflow GitHub Actions
-  (`.github/workflows/ci.yml`, gratuito su repo pubblici) con sei passi
-  in sequenza: tsc → lint → jscpd → vitest → **`next build`** → e2e.
-  I primi quattro non richiedono secret e falliscono in secondi; la
-  build di produzione è l'unico passo che intercetta un import lato
-  server trascinato in un componente client (dalla A15 lo intercetta
-  anche il pre-push hook in locale, salvo skip esplicito o `.env.local`
-  incompleta — vedi sopra); la suite e2e usa le variabili configurate
-  come "Repository secrets" in GitHub — mai hardcoded nel workflow.
-  Anche in CI devono puntare a un progetto Supabase di test, mai a
-  quello di produzione.
+  (`.github/workflows/ci.yml`, gratuito su repo pubblici) con sette passi
+  in sequenza: tsc → lint → jscpd → vitest → **`next build`** → reset del
+  DB di test → e2e. I primi quattro non richiedono secret e falliscono in
+  secondi; la build di produzione è l'unico passo che intercetta un
+  import lato server trascinato in un componente client (dalla A15 lo
+  intercetta anche il pre-push hook in locale, salvo skip esplicito o
+  `.env.local` incompleta — vedi sopra); la suite e2e usa le variabili
+  configurate come "Repository secrets" in GitHub — mai hardcoded nel
+  workflow. Anche in CI devono puntare a un progetto Supabase di test,
+  mai a quello di produzione.
+- **Il reset del DB di test prima della e2e (A23)** usa il Supabase CLI
+  (`supabase db reset --project-ref <ref-test>`, ref letto dalla
+  repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret): riapplica
+  tutte le migration da zero e poi lancia `supabase/seed.sql`, così ogni
+  run parte da schema e seed noti. Il DB di test (`girasole_dev`) è
+  condiviso tra CI e sviluppo locale di Matteo, non un progetto isolato:
+  Matteo ha accettato esplicitamente che questo step cancelli e ricrei
+  anche i suoi eventuali dati inseriti a mano in locale ad ogni run di CI
+  (vedi `docs/programma-attivita.md`, voci A22/A23). Richiede il
+  repository secret `SUPABASE_ACCESS_TOKEN` (token di accesso personale
+  Supabase, non la password del database): se manca, questo passo fallisce
+  — va creato da Matteo su
+  https://supabase.com/dashboard/account/tokens e aggiunto con
+  `gh secret set SUPABASE_ACCESS_TOKEN`.
 
   ## Versioning
   - `VERSIONE_APP` e `DATA_BUILD` (`lib/versione.ts`, mostrate nel footer)
