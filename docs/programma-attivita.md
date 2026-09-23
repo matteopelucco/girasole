@@ -173,12 +173,28 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Fatto quando**: un'issue nuova riceve triage + label; una PR riceve la review.
 - **Dipende da**: A03, A10 · **Sforzo** S · **Tier** — · **Ambiente** CI · **Rischio prod** nessuno
 
-### A17 · Documentare il flusso remoto (telefono)
+### A17 · Documentare il flusso remoto (telefono) [documentato 2026-09-23, validazione dal vivo ancora da fare]
 - **Obiettivo**: `docs/flusso-remoto.md`: issue → sessione cloud → draft PR → CI (build,
   migration su test, e2e) → review agente → merge dal telefono.
 - **Perché**: le sessioni cloud non raggiungono il DB; il flusso deve delegare alla CI
   ciò che la sandbox non può fare, altrimenti dal telefono si torna a spedire alla cieca.
 - **Fatto quando**: un'attività piccola è stata portata da issue a merge interamente da telefono.
+- **Risultato**: `docs/flusso-remoto.md` descrive i sei passi (issue → sessione cloud →
+  cosa non può fare la sandbox → draft PR → CI/`claude-board.yml` → review e merge dal
+  telefono) con i pezzi già esistenti nel repo dopo A10/A12/A16, più i limiti noti.
+  Limite segnalato esplicitamente (nessuna invenzione): il meccanismo tecnico per
+  avviare da telefono una sessione cloud di Claude Code agganciata a un'issue non è
+  documentato da nessuna parte in questo repository — `claude-board.yml` copre solo
+  triage e review, non implementazione (il commento in cima al file lo dice
+  esplicitamente); dipende dalla funzionalità nativa del prodotto Claude Code, non da
+  un'automazione repo-specifica. Altro limite documentato: una migration su test prima
+  del merge non è automatizzata (dipende da A20/A21/A23, non ancora fatte), quindi il
+  flusso è oggi sicuro solo per attività che non richiedono modifiche allo schema DB
+  verificabili prima del merge. **Il criterio "Fatto quando" non è verificato da questa
+  attività**: richiede un test dal vivo, solo da telefono, che solo Matteo può eseguire
+  (issue → sessione cloud → PR → CI → review → merge, davvero dal telefono). Finché
+  quel test non è fatto, A17 resta aperta in sostanza anche se la parte documentale è
+  completa.
 - **Dipende da**: A10, A12, A16 · **Sforzo** S · **Tier** haiku · **Ambiente** cloud · **Rischio prod** nessuno
 
 ---

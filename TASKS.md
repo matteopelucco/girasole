@@ -3097,6 +3097,40 @@ Issue #18 del programma di attività (`docs/programma-attivita.md`).
       `[implementato 2026-09-23, verifica su preview Vercel reale ancora
       da fare]`.
 
+## A17 · Documentare il flusso remoto (telefono) (2026-09-23)
+Issue #21 del programma di attività (`docs/programma-attivita.md`).
+- [x] `docs/flusso-remoto.md`: descrive i sei passi del flusso oggi
+      disponibile con i pezzi già esistenti nel repo — apertura issue con
+      triage automatico (`.claude/agents/triage.md`), avvio di una sessione
+      cloud sull'issue, cosa non può fare la sandbox (niente I/O verso
+      Supabase: RLS/e2e/migration restano delegate alla CI), apertura della
+      draft PR con `Closes #n` (`.claude/agents/implementer.md`), i sei
+      step di `ci.yml` più il job `review` di `claude-board.yml` (A16),
+      merge dal telefono con il vincolo del ruleset di A10 (bypass Admin
+      solo per lo step e2e strutturalmente rosso finché il DB di test resta
+      in pausa).
+- [x] Limite segnalato esplicitamente, non inventato: il meccanismo tecnico
+      per avviare da telefono una sessione cloud di Claude Code agganciata
+      a un'issue specifica **non è documentato da nessuna parte in questo
+      repository** — cercato in `docs/`, `CLAUDE.md`, `.claude/`, trovato
+      solo che `claude-board.yml` copre triage/review (non
+      implementazione) e che `TASKS.md`/`SETUP-BOARD.md` menzionano come
+      idea futura, non ancora fatta, un secondo step in cloud con
+      assegnazione a `@claude`. Dipende dalla funzionalità nativa del
+      prodotto Claude Code, non da un'automazione repo-specifica.
+- [x] Altro limite documentato: una migration su test prima del merge non è
+      automatizzata (dipende da A20/A21/A23, non ancora fatte) — il flusso
+      "dal telefono" è quindi sicuro oggi solo per attività che non
+      richiedono modifiche allo schema DB verificabili prima del merge.
+- [ ] **Il criterio "Fatto quando" di A17/#21 non è verificato da questa
+      attività**: richiede un test dal vivo, interamente da telefono, che
+      solo Matteo può eseguire (issue → sessione cloud → draft PR → CI →
+      review → merge). La parte documentale è pronta per la review, ma A17
+      resta sostanzialmente aperta finché quel test non è fatto — la issue
+      #21 va in `status:review`, non `status:done`.
+- [x] `docs/programma-attivita.md`: voce A17 segnata `[documentato
+      2026-09-23, validazione dal vivo ancora da fare]`.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
