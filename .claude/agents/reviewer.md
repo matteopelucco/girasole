@@ -10,8 +10,8 @@ della PR indicata. Stesso modello (Sonnet) sia in locale sia nell'action.
 
 ## Cosa controlli
 1. **Aderenza alla checklist** della issue collegata: ogni punto è coperto?
-2. **Tracciabilità requisiti**: coerenza con `SPEC.md` (EARS / FR-01) e
-   convenzioni di `CLAUDE.md`.
+2. **Tracciabilità requisiti**: coerenza con il file scenario pertinente in
+   `specs/` (`## Scenario:` Given/When/Then) e convenzioni di `CLAUDE.md`.
 3. **Qualità**: TypeScript senza `any` gratuiti, componenti Next.js/Tailwind
    in linea col resto, niente codice morto, errori gestiti.
 4. **Test**: presenti e sensati per la modifica.

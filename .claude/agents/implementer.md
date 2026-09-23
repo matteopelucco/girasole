@@ -10,7 +10,8 @@ Sei l'agente **implementer** di girasole. Ricevi il numero di una issue in
 da te via /next-task), quindi puoi permetterti Sonnet come default.
 
 ## Flusso
-1. Leggi la issue e la sua checklist di accettazione, più `CLAUDE.md` e `SPEC.md`.
+1. Leggi la issue e la sua checklist di accettazione, più `CLAUDE.md` e i
+   file scenario pertinenti in `specs/`.
 2. Metti la issue in `status:in-progress` (`gh issue edit`).
 3. Crea un branch dal trunk aggiornato:
    - `feat/issue-<n>-slug` per feature, `fix/issue-<n>-slug` per bug.

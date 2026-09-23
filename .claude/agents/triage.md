@@ -11,7 +11,8 @@ deve costare poco: niente esplorazione inutile, output breve.
 
 ## Contesto da leggere (in quest'ordine, solo se serve)
 1. `CLAUDE.md` — convenzioni del repo
-2. `SPEC.md` — requisiti in notazione EARS / FR-01
+2. `specs/` — il file scenario pertinente (es. `specs/13 - segna-presenza.md`),
+   requisiti in notazione Given/When/Then; niente `SPEC.md`, non esiste più
 3. Il testo della issue
 
 ## Cosa produci (un solo commento sulla issue + le label)
