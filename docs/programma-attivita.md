@@ -329,7 +329,7 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
     test automaticamente dopo ogni reset — non è un difetto del meccanismo
     di reset in sé, che fa esattamente ciò che doveva fare.
 
-### A24 · Account-ruolo di test e secret `E2E_*` completi
+### A24 · Account-ruolo di test e secret `E2E_*` completi [FATTO 2026-09-24, verifica dal vivo in CI ancora da fare]
 - **Obiettivo**: admin, maestra, assistente, genitore (+ i due opzionali) esistono nel
   progetto di test e i loro secret sono in GitHub.
 - **Perché**: molti skip dipendono da un ruolo non configurato; un bug RLS (0030) è
@@ -350,6 +350,40 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
 - **Fatto quando**: `auth.setup.ts` non salta nessun ruolo in CI; due run
   consecutivi di CI (ognuno con reset completo) danno lo stesso esito di
   login per tutti i ruoli.
+- **Risultato**: `scripts/crea-utenti-e2e.mjs` (nessuna dipendenza nuova:
+  usa `@supabase/supabase-js`, già presente) gira come nuovo step 7 di
+  `.github/workflows/ci.yml`, subito dopo il reset (step 6) e prima della
+  e2e (step 8, rinumerata). Con la `service_role key`, per ognuno dei
+  quattro ruoli obbligatori (`E2E_ADMIN`/`E2E_MAESTRA`/`E2E_ASSISTENTE`/
+  `E2E_GENITORE`, secret già presenti in GitHub) e dei due opzionali
+  (`E2E_MAESTRA_SENZA_SEZIONE`, `E2E_UTENTE_DA_PROMUOVERE`, secret non
+  ancora creati — lo step li salta con un log, non un errore, stesso
+  principio di tolleranza di `hasCredenziali()`) crea l'utente via
+  `auth.admin.createUser` con `user_metadata` (nome, cognome, telefono,
+  ruolo): il trigger `handle_new_user`
+  (`supabase/migrations/0005_utenti_gestiti_da_app.sql`) crea da sé la
+  riga `profili` con il ruolo giusto, senza bisogno di scrivere
+  direttamente su `profili` né di nuovi `GRANT` per `service_role` (che
+  oggi ha solo `select` su `profili` — vedi
+  `0034_grant_service_role_profili.sql` — e nessun grant su
+  `maestre_sezioni`: **nessuna migration toccata da questa attività**,
+  deliberatamente, per restare fuori dal perimetro "RLS/migrazioni" senza
+  coinvolgere l'agente rls-guardian). Se l'utente esiste già (percorso
+  solo per riavvii locali senza reset di mezzo: in CI, dopo A23,
+  `auth.users` è sempre vuota) lo script fa fallback su
+  `updateUserById` per restare idempotente. Se uno dei quattro ruoli
+  obbligatori non può essere creato, lo step fallisce forte (`exit 1`),
+  così la e2e non parte a leggere `errore=credenziali` in modo silenzioso.
+  **Scope deliberatamente minimo**: lo script non assegna sezioni
+  (`maestre_sezioni`) a maestra/assistente — non serve al criterio "Fatto
+  quando" (login, non piena copertura dati) e avrebbe richiesto un nuovo
+  `GRANT` per `service_role`. Gli scenari che oggi si auto-saltano con
+  "nessuna sezione assegnata a questo account" restano quindi saltati:
+  ridurli è il lavoro di **A25**, che dipende esplicitamente da questa
+  attività. **Non verificato dal vivo**: nessuna credenziale Supabase di
+  test disponibile in questo ambiente per eseguire lo script contro il
+  progetto reale — va confermato con un run CI reale (due run consecutivi
+  con lo stesso esito di login, come da criterio) dopo il merge.
 - **Dipende da**: A23 (fatta 2026-09-24) · **Sforzo** S · **Tier** haiku ·
   **Ambiente** PC/CI · **Rischio prod** nessuno
 

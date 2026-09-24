@@ -3230,7 +3230,7 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       **Verificato dal vivo**: run
       https://github.com/matteopelucco/girasole/actions/runs/35929260153,
       step verde per la prima volta. A22 e A23 sono considerate fatte.
-- [ ] **Scoperta collegata, non blocca la chiusura di A22/A23 ma apre
+- [x] **Scoperta collegata, non blocca la chiusura di A22/A23 ma apre
       A24**: con lo step di reset verde, la e2e (step successivo) fallisce
       comunque con `errore=credenziali` su tutti i login — causa diversa
       da quella nota prima (DB di test in pausa): `app/login/actions.ts`
@@ -3240,7 +3240,35 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       account `E2E_*` creati a mano nella dashboard Authentication, mai
       gestiti da una migration o dal seed. Dettagliato in A24
       (`docs/programma-attivita.md`): va costruito uno step che li
-      ricrei via Admin API (`service_role key`) dopo ogni reset.
+      ricrei via Admin API (`service_role key`) dopo ogni reset. Risolta
+      da A24, vedi sotto.
+
+## A24 · Account-ruolo di test ricreati ad ogni reset CI (2026-09-24)
+- [x] (#26) `scripts/crea-utenti-e2e.mjs`, nuovo step 7 di
+      `.github/workflows/ci.yml` (tra il reset di A23 e la e2e): per ogni
+      ruolo con secret `E2E_<RUOLO>_EMAIL`/`_PASSWORD` configurato,
+      crea/aggiorna l'utente via `auth.admin.createUser`
+      (`service_role key`) con `user_metadata` (nome, cognome, telefono,
+      ruolo) — il trigger `handle_new_user` crea da sé la riga `profili`
+      con il ruolo giusto, senza bisogno di GRANT aggiuntivi su
+      `profili`/`maestre_sezioni` per `service_role` e senza toccare
+      nessuna migration.
+- [x] Copre i quattro ruoli obbligatori (admin, maestra, assistente,
+      genitore — secret già presenti in GitHub) e i due opzionali
+      (`E2E_MAESTRA_SENZA_SEZIONE`, `E2E_UTENTE_DA_PROMUOVERE` — secret
+      ancora da creare, lo step li salta con un log se mancano, non
+      fallisce). Se uno dei quattro obbligatori non può essere creato lo
+      step fallisce (`exit 1`).
+- [ ] **Scope volutamente escluso**: nessuna assegnazione di sezione
+      (`maestre_sezioni`) a maestra/assistente — non richiesta dal
+      criterio "Fatto quando" (login, non copertura dati) e avrebbe
+      richiesto un nuovo GRANT per `service_role`. Gli scenari che si
+      auto-saltano con "nessuna sezione assegnata a questo account"
+      restano saltati: è lavoro di A25.
+- [ ] **Non verificabile in locale in questa sessione** (nessuna
+      credenziale Supabase di test nell'ambiente dell'agente): il
+      criterio "due run consecutivi di CI danno lo stesso esito di
+      login" va confermato con un run CI reale dopo il merge.
 
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi

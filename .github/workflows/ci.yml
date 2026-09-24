@@ -29,10 +29,17 @@ name: CI
 #      `SUPABASE_ACCESS_TOKEN` (repository secret, non ancora configurato
 #      al momento in cui questo step è stato introdotto — senza, questo
 #      passo fallisce: vedi la PR che lo introduce per le istruzioni).
-#   7. e2e      — Playwright contro il DB di test appena resettato al passo
-#      6 (mai la produzione): i secret sono "Repository secrets" di
-#      GitHub, mai hardcoded qui. Un ruolo E2E_* mancante fa solo saltare
-#      (test.skip) i test che lo richiedono.
+#   7. account di test E2E_* (A24) — il reset del passo 6 azzera anche
+#      `auth.users`, non solo lo schema `public`: `scripts/crea-utenti-e2e.mjs`
+#      li ricrea con la Admin API di Supabase (service_role key), stesse
+#      email/password dei secret `E2E_<RUOLO>_EMAIL`/`_PASSWORD` letti da
+#      `e2e/auth.setup.ts`. Un ruolo il cui secret non è configurato viene
+#      solo saltato (log); admin/maestra/assistente/genitore falliscono
+#      forte lo step se non possono essere creati.
+#   8. e2e      — Playwright contro il DB di test appena resettato/riseedato
+#      con gli account ai passi 6-7 (mai la produzione): i secret sono
+#      "Repository secrets" di GitHub, mai hardcoded qui. Un ruolo E2E_*
+#      mancante fa solo saltare (test.skip) i test che lo richiedono.
 
 on:
   pull_request:
@@ -97,10 +104,27 @@ jobs:
           # step per l'istruzione esatta.
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)
+        run: node scripts/crea-utenti-e2e.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
+          E2E_MAESTRA_PASSWORD: ${{ secrets.E2E_MAESTRA_PASSWORD }}
+          E2E_ASSISTENTE_EMAIL: ${{ secrets.E2E_ASSISTENTE_EMAIL }}
+          E2E_ASSISTENTE_PASSWORD: ${{ secrets.E2E_ASSISTENTE_PASSWORD }}
+          E2E_GENITORE_EMAIL: ${{ secrets.E2E_GENITORE_EMAIL }}
+          E2E_GENITORE_PASSWORD: ${{ secrets.E2E_GENITORE_PASSWORD }}
+          E2E_MAESTRA_SENZA_SEZIONE_EMAIL: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_EMAIL }}
+          E2E_MAESTRA_SENZA_SEZIONE_PASSWORD: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD }}
+          E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
+
       - name: Installa Chromium (Playwright)
         run: npx playwright install --with-deps chromium
 
-      - name: 7. Test end-to-end (Playwright)
+      - name: 8. Test end-to-end (Playwright)
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
