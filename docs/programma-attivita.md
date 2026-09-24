@@ -384,6 +384,16 @@ Lo script `scripts/censisci-attivita.sh` le crea tutte in un colpo.
   test disponibile in questo ambiente per eseguire lo script contro il
   progetto reale — va confermato con un run CI reale (due run consecutivi
   con lo stesso esito di login, come da criterio) dopo il merge.
+- **Hotfix post-merge (2026-09-24)**: il primo run CI reale sulla PR #67
+  falliva già allo step 7 con `Error: Node.js detected but native WebSocket
+  not found` — `@supabase/supabase-js` inizializza sempre anche un client
+  realtime, che su Node richiede il `WebSocket` nativo (disponibile solo da
+  Node 22 in poi), mentre `ci.yml` usava `node-version: 20`. La PR è stata
+  mergiata comunque prima di vedere l'esito di quel run; corretto subito
+  dopo bump a `node-version: 22` in `.github/workflows/ci.yml` (nessuna
+  nuova dipendenza, nessuna migration). La "verifica dal vivo in CI" del
+  criterio "Fatto quando" resta da confermare sul run successivo a questo
+  hotfix.
 - **Dipende da**: A23 (fatta 2026-09-24) · **Sforzo** S · **Tier** haiku ·
   **Ambiente** PC/CI · **Rischio prod** nessuno
 
