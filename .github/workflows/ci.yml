@@ -60,9 +60,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 22, non 20: lo step 7 (crea-utenti-e2e.mjs) usa @supabase/supabase-js,
+      # che inizializza sempre anche un client realtime — su Node richiede il
+      # WebSocket nativo, disponibile solo da Node 22 in poi (su 20 lo step
+      # falliva subito con "Node.js detected but native WebSocket not found").
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Installa le dipendenze
