@@ -1,0 +1,40 @@
+# Dependabot (nativo GitHub, gratuito, nessuna dipendenza npm aggiuntiva).
+# A35 di docs/programma-attivita.md: bump automatici via PR, raggruppati,
+# con il workflow CI unico (.github/workflows/ci.yml, introdotto in A12) come
+# gate obbligatorio prima del merge su main (protetto da A10).
+#
+# Cadenza settimanale su entrambi gli ecosistemi: il progetto è piccolo e in
+# free tier, una PR al giorno per dipendenza sarebbe rumore inutile sulla
+# board. I bump npm sono raggruppati in due gruppi (minor/patch vs major):
+# i minor/patch di solito passano la CI senza intervento, i major spesso
+# richiedono una verifica manuale più attenta (breaking change) — separarli
+# evita che un major "blocchi" in una singola PR anche i patch/minor innocui.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(dipendenze)"
+    groups:
+      dipendenze-minori:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      dipendenze-major:
+        applies-to: version-updates
+        update-types:
+          - "major"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(dipendenze-actions)"
