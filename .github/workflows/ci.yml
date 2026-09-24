@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 22, non 20: lo step 7 (crea-utenti-e2e.mjs) usa @supabase/supabase-js,
       # che inizializza sempre anche un client realtime — su Node richiede il
