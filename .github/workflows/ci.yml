@@ -64,7 +64,7 @@ jobs:
       # che inizializza sempre anche un client realtime — su Node richiede il
       # WebSocket nativo, disponibile solo da Node 22 in poi (su 20 lo step
       # falliva subito con "Node.js detected but native WebSocket not found").
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
