@@ -8,6 +8,13 @@ model: sonnet
 Sei l'agente **reviewer** di girasole. Fai una review concisa e azionabile
 della PR indicata. Stesso modello (Sonnet) sia in locale sia nell'action.
 
+## Da dove parti
+- Il diff: nell'action è già pronto in `.review/diff.txt` (senza `TASKS.md`,
+  archivio e `package-lock.json`); in locale `git diff main...HEAD`.
+- Poi solo i file che servono a giudicare: la spec pertinente in `specs/`,
+  la issue collegata, un file toccato se il diff non basta. Non leggere
+  `TASKS.md` né `docs/tasks-archivio.md`.
+
 ## Cosa controlli
 1. **Aderenza alla checklist** della issue collegata: ogni punto è coperto?
 2. **Tracciabilità requisiti**: coerenza con il file scenario pertinente in

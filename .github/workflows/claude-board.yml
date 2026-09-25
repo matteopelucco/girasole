@@ -47,9 +47,13 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Haiku: gira spessissimo, deve costare poco.
           # --max-turns limita l'esplorazione (altro guardrail costo).
+          # Read/Grep/Glob/Write: triage.md chiede di leggere CLAUDE.md e
+          # specs/ e di scrivere il commento in un file prima di pubblicarlo.
+          # Senza, ogni tentativo veniva negato e il job finiva i turni a
+          # vuoto (issue #77: 8 tentativi negati, $0,10, nessun commento).
           claude_args: >-
             --model claude-haiku-4-5 --max-turns 12
-            --allowedTools "Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label list:*)"
+            --allowedTools "Read,Grep,Glob,Write,Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label list:*)"
           prompt: |
             Agisci come l'agente di TRIAGE definito in .claude/agents/triage.md.
             Oggetto: issue #${{ github.event.issue.number }} di questo repo.
@@ -60,17 +64,39 @@ jobs:
     if: >
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.draft == false &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-review')
     # ^ fork-safety: le PR da fork non hanno accesso ai secret (0 crediti spesi).
     # ^ niente review per Dependabot (issue #68, causa 3): claude-code-action
     #   rifiuta gli attori bot, e su un bump di dipendenze la review
     #   qualitativa vale poco — il gate reale è il job `verifica` di ci.yml.
+    # ^ draft: niente review finché la PR è in bozza; parte una volta sola,
+    #   quando la PR viene segnata pronta (o aperta direttamente non-draft).
+    # ^ skip-review: etichetta per le PR banali (solo versione, solo docs).
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # serve il diff completo per una review sensata
+      # Il diff si prepara qui, gratis, invece di farlo esplorare al modello
+      # turno dopo turno. Esclusi i file enormi o generati che non servono
+      # alla review e costano token: TASKS.md, l'archivio, il lockfile.
+      - name: Prepara il diff della PR
+        run: |
+          set -eu
+          mkdir -p .review
+          escludi=(':(exclude)TASKS.md' ':(exclude)docs/tasks-archivio.md' ':(exclude)package-lock.json')
+          base="origin/${{ github.base_ref }}"
+          {
+            echo "# File modificati"
+            git diff --stat "$base"...HEAD
+            echo
+            echo "# Diff (senza TASKS.md, archivio e package-lock.json)"
+            git diff "$base"...HEAD -- . "${escludi[@]}"
+          } > .review/diff.txt
+          wc -c .review/diff.txt
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -90,13 +116,21 @@ jobs:
           # errore anche a compito riuscito), senza mai pubblicare un commento
           # di review (PR #52, #53). Non mancava "gh issue view" per leggere la
           # checklist della issue collegata: aggiunta anche quella.
+          #
+          # Issue #77 / costi: con 30 turni la review della #76 è costata
+          # $0,99 senza pubblicare nulla (16 tentativi negati: git diff e
+          # scrittura del commento su file non erano permessi). Ora il diff
+          # è già in .review/diff.txt, Write è permesso e il tetto scende a 15.
           claude_args: >-
-            --model claude-sonnet-5 --max-turns 30
-            --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(gh issue edit:*),mcp__github_inline_comment__create_inline_comment"
+            --model claude-sonnet-5 --max-turns 15
+            --allowedTools "Read,Grep,Glob,Write,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(gh issue edit:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             Agisci come l'agente di REVIEW definito in .claude/agents/reviewer.md.
             Oggetto: PR #${{ github.event.pull_request.number }} di questo repo.
-            Review concisa e azionabile. NON mergiare mai.
+            Il diff è già pronto in .review/diff.txt: leggi quello, non
+            ricostruirlo. Apri altri file solo se il diff non basta a
+            giudicare (la spec pertinente, un file toccato per contesto).
+            Review concisa e azionabile, un solo commento. NON mergiare mai.
 
   # -------------------------------------------------------------------------
   # Nessun modello Claude: solo `gh issue edit` con il token di default del
