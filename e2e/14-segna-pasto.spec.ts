@@ -66,7 +66,14 @@ test.describe('14 — Segna pasto', () => {
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
       await primaRiga.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
+      // Il campo mostra già il testo digitato: prima di ricaricare aspetto
+      // che la Server Action (POST sulla pagina) abbia risposto, altrimenti
+      // il reload può arrivare prima del salvataggio (issue #70).
+      const salvataggio = page.waitForResponse(
+        (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/dashboard/pasti'
+      );
       await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
+      await salvataggio;
 
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 

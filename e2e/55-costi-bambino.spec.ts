@@ -142,7 +142,12 @@ test.describe('55 — Costi bambino', () => {
     await page.getByLabel('Email promemoria retta').fill(email);
     await page.getByRole('button', { name: 'Salva costi' }).click();
 
-    await expect(page.getByLabel('Email promemoria retta')).toHaveValue(email, { timeout: 20_000 });
+    // Il campo mostra già il testo digitato: la conferma del salvataggio è
+    // "Ultimo salvataggio" nel form dei costi (specs/05); senza aspettarla il
+    // reload poteva arrivare prima della Server Action (issue #70).
+    const formCosti = page.locator('form', { has: page.getByRole('button', { name: 'Salva costi' }) });
+    await expect(formCosti.getByText('Ultimo salvataggio:', { exact: false })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel('Email promemoria retta')).toHaveValue(email);
     await page.reload();
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue(email);
   });

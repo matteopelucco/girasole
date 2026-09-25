@@ -34,6 +34,11 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    // Senza questi limiti un click/fill/goto su qualcosa che non arriva mai
+    // aspetta fino al timeout del test, e il report dice solo "Test timeout"
+    // senza il passo bloccato (19-monte-ore, issue #70).
+    actionTimeout: 20_000,
+    navigationTimeout: 30_000,
     screenshot: 'only-on-failure',
   },
 
