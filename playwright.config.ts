@@ -17,6 +17,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // In CI la suite si ferma dopo 15 fallimenti: con molti test in timeout
+  // (60s + retry) il job arrivava al proprio limite di 25 minuti e veniva
+  // cancellato prima che il reporter HTML scrivesse playwright-report/ —
+  // quindi niente artifact né screenshot per capire cosa vedeva il test
+  // (issue #70). Fermandosi prima, la CI resta rossa ma il report c'è.
+  maxFailures: process.env.CI ? 15 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: process.env.CI ? [['html', { open: 'never' }], ['github']] : 'list',
 
