@@ -244,6 +244,11 @@ _(dettagli in archivio)_
 _(dettagli in archivio)_
 - [ ] Da confermare con la CI: suite e2e verde fino in fondo.
 
+## #80 · Dependabot: vitest 4 → 5 (rimandato, 2026-09-25)
+- [ ] Rimandato: vitest 5 richiede `@types/node` ^22 o ≥24 (ora ^20),
+      quindi `npm ci` fallisce. Riprendere alzando `@types/node` e
+      verificando `vitest.config.ts` contro i breaking change di v5.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

@@ -106,7 +106,10 @@ jobs:
 
       - name: Dependabot — passi 6-8 saltati (nessun secret sensibile)
         if: github.actor == 'dependabot[bot]'
-        run: echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
+        # Blocco "|": in uno scalare YAML non quotato " #68" apre un commento
+        # e tronca il comando lasciando la virgoletta aperta (bash: EOF).
+        run: |
+          echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
 
       - name: 6. Reset del DB di test (Supabase CLI, A23)
         if: github.actor != 'dependabot[bot]'
