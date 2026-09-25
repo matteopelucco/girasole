@@ -81,6 +81,15 @@ export function rigaSezione(page: Page, nomeSezione: string) {
     .filter({ hasNot: page.locator('select[name="sezione_id"]') });
 }
 
+// Il nome di un anno scolastico compare anche come <option> nel select
+// "Anno scolastico" del form di creazione sezione (specs/04, specs/50):
+// mi limito al <li> dell'elenco "Anni scolastici" (nessun altro <li> in
+// pagina ha questo testo, a differenza delle sezioni — vedi rigaSezione
+// sopra — quindi qui basta il tag).
+export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
+  return page.locator('li').filter({ hasText: nomeAnno });
+}
+
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
   const prefisso = `E2E_${ruolo.toUpperCase()}`;
   const email = process.env[`${prefisso}_EMAIL`];

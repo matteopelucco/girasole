@@ -228,7 +228,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.context().clearCookies();
     await page.goto('/login');
     await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Password').fill('PasswordNuova!2');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordNuova!2');
     await page.getByRole('button', { name: 'Accedi' }).click();
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 

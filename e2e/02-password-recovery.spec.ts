@@ -11,7 +11,7 @@ test.describe('02 — Password recovery', () => {
   }) => {
     await page.goto('/login');
     await page.getByLabel('Email').fill('prova@esempio.it');
-    await page.getByLabel('Password').fill('sbagliata');
+    await page.getByLabel('Password', { exact: true }).fill('sbagliata');
     await page.getByRole('button', { name: 'Accedi' }).click();
 
     const link = page.getByRole('link', { name: 'Non ricordi la password?' });

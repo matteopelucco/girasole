@@ -8,6 +8,7 @@ import {
   formCreaBambino,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
+  rigaAnnoScolastico,
   rigaSezione,
   statoAutenticazione,
 } from './helpers';
@@ -37,9 +38,12 @@ test.describe('04 — Tipi di dato ed entità', () => {
     // DB su anni_scolastici (bug reale già capitato — vedi
     // supabase/migrations/0008) mostra qui il banner d'errore invece
     // che l'anno in lista, con un messaggio più diagnostico di un
-    // semplice timeout su getByText(nomeAnno).
+    // semplice timeout su getByText(nomeAnno). Uso rigaAnnoScolastico
+    // (non getByText semplice) perché nomeAnno compare anche come
+    // <option> nel select "Anno scolastico" del form Sezioni appena
+    // sotto (strict mode violation altrimenti).
     const banner = page.getByRole('alert');
-    const annoInElenco = page.getByText(nomeAnno);
+    const annoInElenco = rigaAnnoScolastico(page, nomeAnno);
     await expect(banner.or(annoInElenco)).toBeVisible({ timeout: 20_000 });
     await expect(banner, 'la creazione ha mostrato un errore').toHaveCount(0);
     await expect(annoInElenco).toBeVisible();

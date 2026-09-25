@@ -14,7 +14,13 @@
 // error.tsx di Next.js) è una convenzione framework, non codice
 // applicativo su misura.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  rigaAnnoScolastico,
+  rigaSezione,
+  statoAutenticazione,
+} from './helpers';
 
 test.describe('05 — Feedback sulle azioni', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -49,8 +55,11 @@ test.describe('05 — Feedback sulle azioni', () => {
     // Aspetto che la richiesta rallentata dalla route (1.5s) sia
     // arrivata a destinazione prima di rimuovere l'intercettazione:
     // altrimenti route.continue() rischia di essere chiamato su una
-    // route già gestita da page.unroute().
-    await expect(page.getByText(nome)).toBeVisible({ timeout: 20_000 });
+    // route già gestita da page.unroute(). Uso rigaSezione (non
+    // getByText semplice) perché nome compare anche come <option> nel
+    // form Bambini e come <h3> nel gruppo classi (strict mode
+    // violation altrimenti — vedi commento su rigaSezione in helpers.ts).
+    await expect(rigaSezione(page, nome)).toBeVisible({ timeout: 20_000 });
     await page.unroute('**/admin');
     // Terminata l'azione, il pulsante torna disponibile.
     await expect(page.locator('button[aria-busy="true"]')).toHaveCount(0);
@@ -62,7 +71,10 @@ test.describe('05 — Feedback sulle azioni', () => {
     await page.getByPlaceholder('Nome anno scolastico (es. 2026/2027)').fill(nome);
     await page.getByRole('button', { name: 'Crea' }).first().click();
 
-    await expect(page.getByText(nome)).toBeVisible({ timeout: 20_000 });
+    // rigaAnnoScolastico (non getByText semplice) perché nome compare
+    // anche come <option> nel select "Anno scolastico" del form
+    // Sezioni (strict mode violation altrimenti).
+    await expect(rigaAnnoScolastico(page, nome)).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
     await nessunaViolazioneA11yGrave(page);
   });
@@ -120,7 +132,10 @@ test.describe('05 — Feedback sulle azioni', () => {
     await page.goto('/admin');
     await page.getByPlaceholder('Nome anno scolastico (es. 2026/2027)').fill(nome);
     await page.getByRole('button', { name: 'Crea' }).first().click();
-    await expect(page.getByText(nome)).toBeVisible({ timeout: 20_000 });
+    // rigaAnnoScolastico (non getByText semplice) perché nome compare
+    // anche come <option> nel select "Anno scolastico" del form
+    // Sezioni (strict mode violation altrimenti).
+    await expect(rigaAnnoScolastico(page, nome)).toBeVisible({ timeout: 20_000 });
 
     // Ripeto lo stesso nome: viola il vincolo di unicità su
     // anni_scolastici.nome (supabase/migrations/0006_data_types.sql) —
