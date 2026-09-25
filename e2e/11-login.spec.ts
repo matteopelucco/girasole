@@ -61,4 +61,30 @@ test.describe('11 — Login', () => {
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test('il logout chiude solo la sessione corrente', async ({ browser }) => {
+    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+    // Due contesti = due dispositivi, ciascuno con la propria sessione
+    // dello stesso account (login separati, nessuno storageState condiviso).
+    const dispositivoA = await browser.newContext();
+    const dispositivoB = await browser.newContext();
+    try {
+      const pageA = await dispositivoA.newPage();
+      const pageB = await dispositivoB.newPage();
+      await loginCome(pageA, 'admin');
+      await loginCome(pageB, 'admin');
+
+      await pageA.getByRole('button', { name: 'Esci' }).click();
+      await expect(pageA).toHaveURL(/\/login/);
+
+      // L'altro dispositivo resta autenticato: niente redirect a /login.
+      await pageB.goto('/dashboard');
+      await expect(pageB).toHaveURL('/dashboard');
+      await expect(pageB.getByRole('button', { name: 'Esci' })).toBeVisible();
+    } finally {
+      await dispositivoA.close();
+      await dispositivoB.close();
+    }
+  });
 });

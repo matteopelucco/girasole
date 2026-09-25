@@ -3270,6 +3270,20 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       criterio "due run consecutivi di CI danno lo stesso esito di
       login" va confermato con un run CI reale dopo il merge.
 
+## #70 · e2e: logout limitato alla sessione corrente (2026-09-25)
+- [x] Causa trovata nel run CI della #72: il test "accesso con
+      credenziali valide e logout" (`e2e/11-login.spec.ts`) premeva
+      "Esci" come admin e `signOut()` (scope `global` di default) revocava
+      anche la sessione admin condivisa dagli altri test → redirect a
+      `/login` a metà suite, locator "non trovati" su `/admin`, timeout
+      del job a 25 min.
+- [x] Decisione di Matteo: "Esci" chiude solo la sessione del dispositivo
+      corrente (`signOut({ scope: 'local' })` in `app/actions.ts`); il
+      logout dopo il reset password resta globale di proposito.
+- [x] `specs/11 - login.md`: nuovo scenario "il logout chiude solo la
+      sessione corrente" + regola; test e2e corrispondente.
+- [ ] Da confermare con un run CI completo (step 8 fino in fondo).
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

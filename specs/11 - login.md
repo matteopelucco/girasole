@@ -53,9 +53,25 @@ Dato che sono autenticata
 Quando premo "Esci" nell'intestazione
 Allora la sessione viene chiusa e torno alla pagina di login
 
+## Scenario: il logout chiude solo la sessione corrente
+Dato che sono autenticata con lo stesso account su due dispositivi (o
+browser) diversi
+Quando premo "Esci" su uno dei due
+Allora su quel dispositivo torno alla pagina di login
+E sull'altro dispositivo resto autenticata e posso continuare a usare
+l'app senza rifare l'accesso
+
 ## Regole
 - Autenticazione via Supabase Auth (email/password), nessun altro
   provider in questa fase.
+- "Esci" chiude **solo la sessione del dispositivo corrente**
+  (`signOut({ scope: 'local' })`), non tutte le sessioni dell'account: è
+  il comportamento atteso da chi usa l'app sia da smartphone sia da PC, e
+  un `signOut()` globale revocava anche la sessione condivisa dai test e2e
+  dello stesso account (issue #70). Fa eccezione il cambio password dopo
+  il recupero ([02 - password-recovery.md](02%20-%20password-recovery.md)):
+  lì il logout resta globale di proposito, perché chi reimposta la
+  password deve poter chiudere anche eventuali sessioni aperte altrove.
 - Non esiste una pagina di auto-registrazione: i nuovi account li crea
   un admin direttamente dall'app, in `/admin/maestre` (email, password,
   nome, cognome, telefono, ruolo) — vedi
