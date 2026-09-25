@@ -242,7 +242,6 @@ _(dettagli in archivio)_
 
 ## #70 · e2e: logout limitato alla sessione corrente (2026-09-25)  
 _(dettagli in archivio)_
-- [ ] Da confermare con un run CI completo (step 8 fino in fondo).
 - [ ] Da confermare con la CI: suite e2e verde fino in fondo.
 
 ## Backlog — Fase 2/3

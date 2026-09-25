@@ -3287,7 +3287,7 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       logout dopo il reset password resta globale di proposito.
 - [x] `specs/11 - login.md`: nuovo scenario "il logout chiude solo la
       sessione corrente" + regola; test e2e corrispondente.
-- [ ] Da confermare con un run CI completo (step 8 fino in fondo).
+- [x] Confermato con un run CI completo: 200 passati, 0 flaky (#76, commit 874e845).
 - [x] `maxFailures: 15` in CI: la suite si ferma prima del timeout del job
       e il report Playwright viene sempre caricato come artifact.
 - [x] Locator dei link "Presenze"/"Pasti"/"Ore di lavoro" con

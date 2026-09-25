@@ -64,9 +64,13 @@ jobs:
     if: >
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]' &&
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-review')
     # ^ fork-safety: le PR da fork non hanno accesso ai secret (0 crediti spesi).
+    # ^ niente review per Dependabot (issue #68, causa 3): claude-code-action
+    #   rifiuta gli attori bot, e su un bump di dipendenze la review
+    #   qualitativa vale poco — il gate reale è il job `verifica` di ci.yml.
     # ^ draft: niente review finché la PR è in bozza; parte una volta sola,
     #   quando la PR viene segnata pronta (o aperta direttamente non-draft).
     # ^ skip-review: etichetta per le PR banali (solo versione, solo docs).
