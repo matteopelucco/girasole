@@ -3301,6 +3301,11 @@ riuscito — non procedere con A21 finché entrambi rispondono.
 - [x] Barra di caricamento (specs/01): non compariva mai sui `<Link>` di
       Next.js (il loro handler chiama `preventDefault()` prima del listener
       sul document); ora il listener è in fase di cattura.
+- [x] 13/14 "salvare una nota": attesa separata per il salvataggio dello
+      stato e per quello della nota (la risposta dello stato veniva
+      scambiata per quella della nota e il reload annullava la nota).
+- [x] 19: saldo letto con `expect.poll` fino al valore atteso, invece di
+      aspettare una voce dello storico già presente.
 - [x] `scripts/crea-utenti-e2e.mjs` assegna E2E_MAESTRA ed E2E_ASSISTENTE
       alla sezione del seed: senza sezione non vedevano bambini né la card
       Presenze, e i test passavano o no a seconda dell'ordine.

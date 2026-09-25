@@ -62,12 +62,13 @@ test.describe('14 — Segna pasto', () => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
-      await primaRiga.getByRole('button', { name: 'Sì' }).click();
+      // Aspetto la fine di ciascun salvataggio: altrimenti la risposta
+      // dello stato ancora in volo verrebbe scambiata per quella della
+      // nota, e il reload annullerebbe il salvataggio della nota (#70).
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Sì' }));
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
       await primaRiga.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
-      // Il campo mostra già il testo digitato: prima di ricaricare aspetto
-      // la fine della Server Action (issue #70).
       await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Salva nota' }));
 
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);

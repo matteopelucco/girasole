@@ -4,7 +4,7 @@
 // Supabase puntato da NEXT_PUBLIC_SUPABASE_URL (di test in locale, quello
 // configurato nei secret in CI) — mai contro un progetto di produzione.
 import { test, expect, type Page } from '@playwright/test';
-import { dataIeriRoma, dataOggiRoma, hasCredenziali, statoAutenticazione } from './helpers';
+import { clickEAttendiAzione, dataIeriRoma, dataOggiRoma, hasCredenziali, statoAutenticazione } from './helpers';
 
 // Apre "Presenze" per la data indicata (specs/12: i bambini di tutte le
 // classi visibili compaiono già raggruppati per sezione nella stessa
@@ -77,12 +77,15 @@ test.describe('13 — Segna presenza', () => {
       test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
       // Serve uno stato già segnato: "Salva nota" richiede un record di
-      // presenza esistente (la colonna stato non è nullable).
-      await primaRiga.getByRole('button', { name: 'Presente' }).click();
+      // presenza esistente (la colonna stato non è nullable). Aspetto la
+      // fine di ciascun salvataggio: altrimenti la risposta dello stato
+      // ancora in volo verrebbe scambiata per quella della nota, e il
+      // reload annullerebbe il salvataggio della nota (issue #70).
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Presente' }));
       await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
       await primaRiga.getByPlaceholder('Nota (opzionale)').fill('entra alle 9:03');
-      await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Salva nota' }));
 
       // Lo stato non cambia: resta "presente".
       await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
