@@ -26,13 +26,17 @@ test.describe('01 — UX/UI', () => {
   test.describe('dashboard maestra (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
-    test('dashboard è usabile a larghezza mobile: calendario e azioni a un tap', async ({ page }) => {
+    test('dashboard è usabile a larghezza mobile: azioni a un tap', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
 
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
-      await expect(page.getByLabel('Data')).toBeVisible();
+      // Niente selettore di data in dashboard (specs/12): Presenze e Pasti
+      // sono raggiungibili con un solo tap sulla rispettiva scheda.
+      await expect(page.getByLabel('Data')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -41,25 +45,20 @@ test.describe('01 — UX/UI', () => {
   test.describe('flusso Presenze (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
-    test('elenco classi ed elenco bambini restano usabili a larghezza mobile', async ({ page }) => {
+    test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
+      // Navigazione a 2 livelli (specs/12, v0.39.0): la pagina mostra
+      // direttamente i bambini raggruppati per sezione, senza un elenco
+      // classi intermedio da cliccare.
       await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
-      await nessunaViolazioneA11yGrave(page);
 
-      const primaClasse = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClasse.click();
-      await page.waitForURL(/\/dashboard\/presenze\/.+/);
-
-      expect(await nessunOverflowOrizzontale(page)).toBe(false);
       // Gli stati si impostano con un bottone diretto, non con menu a
       // tendina o form multi-step (vedi 01 - ux.md).
       const primoBottone = page.getByRole('button', { name: 'Presente' }).first();
-      if (await primoBottone.count()) {
-        await expect(primoBottone).toBeVisible();
-      }
+      test.skip((await primoBottone.count()) === 0, 'nessun bambino visibile per questo account');
+      await expect(primoBottone).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -118,7 +117,10 @@ test.describe('01 — UX/UI', () => {
       await expect(sidebar).toBeInViewport();
       await nessunaViolazioneA11yGrave(page);
 
-      await page.getByRole('button', { name: 'Chiudi il menu' }).click();
+      // "Chiudi il menu" è lo sfondo scuro dietro il drawer (largo 256px):
+      // un tap al centro dello schermo cadrebbe sulla sidebar stessa,
+      // quindi tocco lo sfondo alla sua destra.
+      await page.getByRole('button', { name: 'Chiudi il menu' }).click({ position: { x: 330, y: 400 } });
       await expect(sidebar).not.toBeInViewport();
     });
   });
@@ -159,18 +161,14 @@ test.describe('01 — UX/UI', () => {
   test.describe('flusso Pasti (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
-    test('elenco classi ed elenco bambini restano usabili a larghezza mobile', async ({ page }) => {
+    test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
-
-      const primaClasse = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
-      await primaClasse.click();
-      await page.waitForURL(/\/dashboard\/pasti\/.+/);
-
-      expect(await nessunOverflowOrizzontale(page)).toBe(false);
+      const primoBottone = page.getByRole('button', { name: 'Sì' }).first();
+      test.skip((await primoBottone.count()) === 0, 'nessun bambino visibile per questo account');
+      await expect(primoBottone).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
   });

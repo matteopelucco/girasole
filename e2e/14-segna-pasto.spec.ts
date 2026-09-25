@@ -10,7 +10,7 @@ import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave,
 // pagina, niente più click su una classe per raggiungerli).
 async function apriPasti(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/pasti?data=${data}`);
-  const primaRiga = page.locator('li').first();
+  const primaRiga = page.locator('main li').first();
   return (await primaRiga.count()) > 0;
 }
 

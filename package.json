@@ -1,6 +1,6 @@
 {
   "name": "girasole",
-  "version": "0.42.18",
+  "version": "0.42.20",
   "private": true,
   "scripts": {
     "dev": "next dev",

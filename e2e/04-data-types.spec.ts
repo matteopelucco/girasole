@@ -136,10 +136,13 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Indirizzo di residenza (opzionale)').fill('Via Test 1, Torino');
     await page.getByPlaceholder('Note (opzionale)').first().fill('Nota utente E2E');
     await page.getByPlaceholder('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByPlaceholder('Conferma password').fill('PasswordE2E!1');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
-    await expect(page.getByText('Utente creato con successo.')).toBeVisible({ timeout: 20_000 });
+    // Nessun banner di successo (specs/05, "l'effetto è la conferma"):
+    // la riga del nuovo utente nell'elenco è la conferma.
     const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
     await expect(riga.locator('input[name="indirizzo_residenza"]')).toHaveValue('Via Test 1, Torino');
     await expect(riga.locator('input[name="note"]')).toHaveValue('Nota utente E2E');
 

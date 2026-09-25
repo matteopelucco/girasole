@@ -12,7 +12,7 @@ import { dataIeriRoma, dataOggiRoma, hasCredenziali, statoAutenticazione } from 
 // false se l'account non ha nessun bambino visibile (test si salta).
 async function apriPresenze(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/presenze?data=${data}`);
-  const primaRiga = page.locator('li').first();
+  const primaRiga = page.locator('main li').first();
   return (await primaRiga.count()) > 0;
 }
 

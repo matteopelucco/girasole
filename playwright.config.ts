@@ -12,7 +12,8 @@ loadEnvConfig(process.cwd());
 
 // File e2e che modificano flag degli account di test condivisi (vedi il
 // progetto 'chromium-stato-condiviso' sotto).
-const FILE_STATO_CONDIVISO = /(17-ore-di-lavoro|18-report-ore-lavoro|19-monte-ore)\.spec\.ts/;
+const FILE_STATO_CONDIVISO =
+  /(17-ore-di-lavoro|18-report-ore-lavoro|19-monte-ore|53-calendario-scolastico)\.spec\.ts/;
 
 export default defineConfig({
   testDir: './e2e',
@@ -53,7 +54,8 @@ export default defineConfig({
       // 17/18/19 abilitano e disabilitano "Ore di lavoro" sugli stessi
       // account condivisi (admin, maestra): in parallelo tra loro un test
       // abilita mentre un altro verifica che l'account NON sia abilitato
-      // (issue #70). Un solo worker per questi file, in sequenza.
+      // (issue #70). 53 crea ed elimina giorni di chiusura, che valgono
+      // per tutto l'asilo. Un solo worker per questi file, in sequenza.
       name: 'chromium-stato-condiviso',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],

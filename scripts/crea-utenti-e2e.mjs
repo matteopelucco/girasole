@@ -32,13 +32,21 @@ import { createClient } from '@supabase/supabase-js';
 // account opzionali usati da singoli scenari e2e (specs/03, specs/12).
 const RUOLI = [
   { prefisso: 'E2E_ADMIN', ruolo: 'admin', nome: 'Admin', cognome: 'Test', obbligatorio: true },
-  { prefisso: 'E2E_MAESTRA', ruolo: 'maestra', nome: 'Maestra', cognome: 'Test', obbligatorio: true },
+  {
+    prefisso: 'E2E_MAESTRA',
+    ruolo: 'maestra',
+    nome: 'Maestra',
+    cognome: 'Test',
+    obbligatorio: true,
+    sezioneFixture: true,
+  },
   {
     prefisso: 'E2E_ASSISTENTE',
     ruolo: 'assistente',
     nome: 'Assistente',
     cognome: 'Test',
     obbligatorio: true,
+    sezioneFixture: true,
   },
   { prefisso: 'E2E_GENITORE', ruolo: 'genitore', nome: 'Genitore', cognome: 'Test', obbligatorio: true },
   {
@@ -63,6 +71,14 @@ const RUOLI = [
     passwordNonRichiesta: true,
   },
 ];
+
+// Sezione "Girasoli" creata da supabase/seed.sql. Maestra e assistente
+// di test vi vengono assegnate ad ogni reset (issue #70): senza una
+// sezione non vedono bambini né la card Presenze in dashboard, e i test
+// e2e che li usano (01, 06, 13, 14, 16…) passavano o fallivano a seconda
+// che un altro test avesse già fatto l'assegnazione da /admin/maestre.
+// E2E_MAESTRA_SENZA_SEZIONE resta invece deliberatamente senza.
+const SEZIONE_FIXTURE_ID = '00000000-0000-0000-0000-000000000001';
 
 function passwordCasuale() {
   return `Aa1!${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
@@ -138,7 +154,7 @@ async function main() {
     }
 
     try {
-      const { creato } = await creaOAggiornaUtente(admin, {
+      const { utente, creato } = await creaOAggiornaUtente(admin, {
         email,
         password,
         nome: config.nome,
@@ -148,6 +164,14 @@ async function main() {
       console.log(
         `[crea-utenti-e2e] ${config.prefisso} (${email}) ${creato ? 'creato' : 'aggiornato'}, ruolo "${config.ruolo}".`
       );
+
+      if (config.sezioneFixture) {
+        const { error } = await admin
+          .from('maestre_sezioni')
+          .upsert({ maestra_id: utente.id, sezione_id: SEZIONE_FIXTURE_ID }, { ignoreDuplicates: true });
+        if (error) throw error;
+        console.log(`[crea-utenti-e2e] ${config.prefisso} assegnato alla sezione fixture ${SEZIONE_FIXTURE_ID}.`);
+      }
     } catch (err) {
       const messaggio = err instanceof Error ? err.message : String(err);
       console.error(`[crea-utenti-e2e] ERRORE su ${config.prefisso} (${email}): ${messaggio}`);

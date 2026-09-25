@@ -40,7 +40,8 @@ E vedo due pulsanti, "Conferma" e "Annulla"
 
 ## Scenario: la comunicazione è bloccata se manca la presenza di qualche bambino
 Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
-la data odierna (elenco classi), i pasti di oggi non sono ancora stati
+la data odierna (tutti i bambini, raggruppati per sezione), i pasti di
+oggi non sono ancora stati
 comunicati e almeno un bambino attivo, di una qualunque classe
 dell'asilo, non ha ancora una presenza segnata per oggi
 Allora al posto del pulsante "Conferma pasti" vedo un messaggio che mi
@@ -102,7 +103,7 @@ scrivere su qualunque data")
 
 ## Scenario: la comunicazione è irreversibile e una tantum
 Dato che i pasti di oggi sono già stati comunicati a Rojac
-Quando riapro "Pasti" (l'elenco classi) in un altro momento della stessa
+Quando riapro "Pasti" in un altro momento della stessa
 giornata, anche ricaricando la pagina
 Allora il pulsante "Conferma pasti" non ricompare più: non è possibile
 comunicare due volte nello stesso giorno, né annullare una

@@ -3291,12 +3291,23 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       Rojac", "Vai su Ore di lavoro per confermarla".
 - [x] 17/18/19 (flag "Ore di lavoro" sugli account condivisi) in un
       progetto Playwright a parte con un solo worker.
-- [ ] Test che cliccano "la prima classe" (`a.bg-emerald-50`: 01, 06, 16,
-      53, 57) obsoleti dal v0.39.0 (navigazione a 2 livelli, niente più
-      elenco classi): ora il locator prende il link attivo della sidebar.
-      Da riscrivere contro la navigazione attuale.
-- [ ] Bug app: il banner di allarme presenze linka
-      `/dashboard/presenze/<sezione>`, route che non esiste più (404).
+- [x] Test che cliccavano "la prima classe" (`a.bg-emerald-50`: 01, 06, 16,
+      53, 57, e la route per sezione in 50) riscritti sulla navigazione a 2
+      livelli (v0.39.0).
+- [x] Banner allarme presenze → `/dashboard/presenze?data=<oggi>` (prima
+      linkava una route inesistente, 404); specs/07 aggiornata.
+- [x] `alertApp(page)` in e2e/helpers.ts: esclude l'annunciatore di route di
+      Next.js (`#__next-route-announcer__`, role="alert" vuoto).
+- [x] `scripts/crea-utenti-e2e.mjs` assegna E2E_MAESTRA ed E2E_ASSISTENTE
+      alla sezione del seed: senza sezione non vedevano bambini né la card
+      Presenze, e i test passavano o no a seconda dell'ordine.
+- [x] specs/12: tolta la contraddizione sul selettore di data in dashboard
+      per l'assistente (la dashboard non ne ha, per nessun ruolo).
+- [x] Test singoli allineati: 01 drawer (tap sullo sfondo), 03 cleanup con
+      nuovo login admin e password "debole" ≥ 8 caratteri, 04 senza banner
+      di successo e con conferma password, 05 "Ultimo salvataggio" del solo
+      form costi, 53 senza assumere un elenco chiusure vuoto e in sequenza.
+- [ ] Da confermare con la CI: suite e2e verde fino in fondo.
 
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi

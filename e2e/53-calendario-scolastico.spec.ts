@@ -16,22 +16,17 @@ import {
   alertApp,
 } from './helpers';
 
-async function apriPrimaClassePresenze(page: Page, data: string): Promise<boolean> {
+// Navigazione a 2 livelli (specs/12, v0.39.0): Presenze e Pasti mostrano
+// direttamente i bambini di tutte le sezioni visibili, senza una pagina
+// per singola classe. Ritorna se l'account vede almeno un bambino.
+async function apriPresenze(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/presenze?data=${data}`);
-  const primaClasse = page.locator('a.bg-emerald-50').first();
-  if ((await primaClasse.count()) === 0) return false;
-  await primaClasse.click();
-  await page.waitForURL(/\/dashboard\/presenze\/.+/);
-  return true;
+  return (await page.locator('main li').count()) > 0;
 }
 
-async function apriPrimaClassePasti(page: Page, data: string): Promise<boolean> {
+async function apriPasti(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/pasti?data=${data}`);
-  const primaClasse = page.locator('a.bg-emerald-50').first();
-  if ((await primaClasse.count()) === 0) return false;
-  await primaClasse.click();
-  await page.waitForURL(/\/dashboard\/pasti\/.+/);
-  return true;
+  return (await page.locator('main li').count()) > 0;
 }
 
 test.describe('53 — Calendario scolastico', () => {
@@ -97,12 +92,17 @@ test.describe('53 — Calendario scolastico', () => {
       const fine = dataFraGiorni(315);
 
       await page.goto('/admin/calendario');
+      // L'elenco può già contenere chiusure di altri test sul DB di test
+      // condiviso: verifico che non ne sia stata aggiunta nessuna, non che
+      // sia vuoto.
+      const righe = page.locator('a[href^="/admin/calendario/"]');
+      const righePrima = await righe.count();
       await page.getByLabel('Data di inizio').fill(inizio);
       await page.getByLabel('Data di fine').fill(fine);
       await page.getByRole('button', { name: 'Aggiungi giorno di chiusura' }).click();
 
       await expect(alertApp(page)).toContainText('non può precedere');
-      await expect(page.getByText('Nessun giorno di chiusura ancora inserito.')).toBeVisible();
+      await expect(righe).toHaveCount(righePrima);
     });
 
     test('modificare un giorno di chiusura', async ({ page }) => {
@@ -179,14 +179,14 @@ test.describe('53 — Calendario scolastico', () => {
       await expect(page.getByText(nota, { exact: false })).toBeVisible({ timeout: 20_000 });
 
       try {
-        const haClassiPresenze = await apriPrimaClassePresenze(page, giorno);
+        const haClassiPresenze = await apriPresenze(page, giorno);
         if (haClassiPresenze) {
           await expect(page.getByText(nota, { exact: false })).toBeVisible();
           await expect(page.getByRole('button', { name: 'Presente' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Assente' })).toHaveCount(0);
         }
 
-        const haClassiPasti = await apriPrimaClassePasti(page, giorno);
+        const haClassiPasti = await apriPasti(page, giorno);
         if (haClassiPasti) {
           await expect(page.getByText(nota, { exact: false })).toBeVisible();
           await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
@@ -203,7 +203,7 @@ test.describe('53 — Calendario scolastico', () => {
 
     test('un sabato è chiusura implicita anche senza un giorno registrato', async ({ page }) => {
       const sabato = dataProssimoSabato();
-      const haClassi = await apriPrimaClassePresenze(page, sabato);
+      const haClassi = await apriPresenze(page, sabato);
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toBeVisible();
@@ -220,7 +220,7 @@ test.describe('53 — Calendario scolastico', () => {
 
     test('un sabato mostra la chiusura anche alla maestra, senza pulsanti', async ({ page }) => {
       const sabato = dataProssimoSabato();
-      const haClassi = await apriPrimaClassePresenze(page, sabato);
+      const haClassi = await apriPresenze(page, sabato);
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toBeVisible();
@@ -229,7 +229,7 @@ test.describe('53 — Calendario scolastico', () => {
     });
 
     test('un giorno feriale resta scrivibile (nessun falso positivo di chiusura)', async ({ page }) => {
-      const haClassi = await apriPrimaClassePresenze(page, dataProssimoGiornoFeriale());
+      const haClassi = await apriPresenze(page, dataProssimoGiornoFeriale());
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toHaveCount(0);

@@ -5,7 +5,7 @@
 // 50-amministrazione_base.spec.ts. Ogni utente creato viene eliminato
 // dallo stesso test per non accumulare account fittizi nel progetto.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('03 — Utenti e ruoli', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -187,8 +187,9 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByPlaceholder('Cognome').first().fill('E2E');
     await page.getByPlaceholder('Email').fill(email);
     await page.getByPlaceholder('Telefono').first().fill('3331234567');
-    await page.getByLabel('Password', { exact: true }).fill('debole');
-    await page.getByLabel('Conferma password').fill('debole');
+    // Almeno 8 caratteri (minLength): vedi il test sull'impostazione.
+    await page.getByLabel('Password', { exact: true }).fill('debolissima');
+    await page.getByLabel('Conferma password').fill('debolissima');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
     await expect(page.getByText(/lettera minuscola|maiuscola|carattere speciale/i)).toBeVisible({
@@ -232,8 +233,11 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByRole('button', { name: 'Accedi' }).click();
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 
-    // Torno come admin per pulire l'utente creato dal test.
+    // Torno come admin per pulire l'utente creato dal test: i cookie
+    // della sessione admin sono stati cancellati sopra, serve un nuovo
+    // login (altrimenti /admin/maestre rimanda a /login).
     await page.context().clearCookies();
+    await loginCome(page, 'admin');
     await page.goto('/admin/maestre');
     const rigaFinale = page.getByText(email, { exact: false }).locator('..');
     await rigaFinale.getByRole('button', { name: 'Elimina utente' }).click();
@@ -283,8 +287,10 @@ test.describe('03 — Utenti e ruoli', () => {
     const riga = page.getByText(email, { exact: false }).locator('..');
     await expect(riga).toBeVisible({ timeout: 20_000 });
 
-    await riga.getByLabel('Nuova password', { exact: true }).fill('debole');
-    await riga.getByLabel('Conferma nuova password').fill('debole');
+    // Almeno 8 caratteri (minLength del campo): più corta, il browser
+    // bloccherebbe l'invio e la regola del server non comparirebbe mai.
+    await riga.getByLabel('Nuova password', { exact: true }).fill('debolissima');
+    await riga.getByLabel('Conferma nuova password').fill('debolissima');
     await riga.getByRole('button', { name: 'Imposta password' }).click();
     await expect(riga.getByText(/lettera minuscola|maiuscola|carattere speciale/i)).toBeVisible({
       timeout: 20_000,

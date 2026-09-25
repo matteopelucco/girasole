@@ -67,7 +67,8 @@ alcuno specchietto (solo il messaggio che non ci sono classi/bambini)
 Dato che sono autenticata come assistente (con almeno una sezione
 assegnata)
 Quando apro la dashboard
-Allora vedo il selettore di data e il pulsante/scheda "Presenze", con lo
+Allora vedo il pulsante/scheda "Presenze" (senza selettore di data, come
+per la maestra), con lo
 stesso comportamento di una maestra (vedi
 [13 - segna-presenza.md](13%20-%20segna-presenza.md))
 E NON vedo il pulsante/scheda "Pasti": il registro pasti non è

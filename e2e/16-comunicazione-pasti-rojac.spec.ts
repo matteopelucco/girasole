@@ -87,20 +87,14 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
       await expect(banner).toBeVisible();
 
-      const classi = page.locator('a.bg-emerald-50');
-      const numeroClassi = await classi.count();
-      test.skip(numeroClassi === 0, 'nessuna classe per questo account');
-
-      for (let i = 0; i < numeroClassi; i++) {
-        await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
-        await page.locator('a.bg-emerald-50').nth(i).click();
-        await page.waitForURL(/\/dashboard\/pasti\/.+/);
-
-        await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
-        await expect(page.getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
-      }
+      // Navigazione a 2 livelli (specs/12): tutte le classi della maestra
+      // sono nella stessa pagina, quindi il blocco si verifica una volta
+      // sola su tutti i bambini visibili.
+      test.skip((await page.locator('main li').count()) === 0, 'nessun bambino per questo account');
+      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false }).first()).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -117,12 +111,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
       await expect(banner).toBeVisible();
 
-      const primaClasse = page.locator('a.bg-emerald-50').first();
-      test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva');
-      await primaClasse.click();
-      await page.waitForURL(/\/dashboard\/pasti\/.+/);
-
-      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false })).toBeVisible();
+      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false }).first()).toBeVisible();
       const primoSi = page.getByRole('button', { name: 'Sì', exact: true }).first();
       test.skip((await primoSi.count()) === 0, 'nessun bambino in questa classe');
       await expect(primoSi).toBeEnabled();
