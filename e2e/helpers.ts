@@ -105,12 +105,43 @@ export function alertApp(page: Page) {
 // questa attesa un page.reload() subito dopo poteva arrivare prima che
 // l'azione avesse scritto sul DB (issue #70). Le Server Action si
 // riconoscono dall'header Next-Action della richiesta POST.
+//
+// Si aspetta la risposta, non response.finished(): con il server di
+// produzione la risposta di una Server Action resta aperta (stream RSC) e
+// finished() non si risolveva mai.
 export async function clickEAttendiAzione(page: Page, bottone: Locator): Promise<void> {
   const risposta = page.waitForResponse(
     (r) => r.request().method() === 'POST' && r.request().headers()['next-action'] !== undefined
   );
   await bottone.click();
-  await (await risposta).finished();
+  await risposta;
+}
+
+// Diagnostica temporanea (issue #70): registra le Server Action inviate
+// dalla pagina (stato HTTP e header rilevanti della risposta) e gli errori
+// del browser, da allegare al messaggio di un'asserzione che fallisce.
+// Serve a capire perché, con il server di produzione, alcuni salvataggi
+// non risultano dopo un reload.
+export function registraDiagnosticaAzioni(page: Page): string[] {
+  const righe: string[] = [];
+  page.on('response', (r) => {
+    const req = r.request();
+    if (req.method() !== 'POST' || req.headers()['next-action'] === undefined) return;
+    const h = r.headers();
+    righe.push(
+      `azione ${req.headers()['next-action']?.slice(0, 8)} → ${r.status()} ` +
+        `ct=${h['content-type'] ?? '-'} revalidated=${h['x-action-revalidated'] ?? '-'} ` +
+        `redirect=${h['x-action-redirect'] ?? '-'} url=${new URL(r.url()).pathname}`
+    );
+  });
+  page.on('requestfailed', (req) => {
+    if (req.headers()['next-action'] !== undefined) righe.push(`azione FALLITA: ${req.failure()?.errorText}`);
+  });
+  page.on('console', (m) => {
+    if (m.type() === 'error' || m.type() === 'warning') righe.push(`console.${m.type()}: ${m.text().slice(0, 300)}`);
+  });
+  page.on('pageerror', (e) => righe.push(`pageerror: ${e.message.slice(0, 300)}`));
+  return righe;
 }
 
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
