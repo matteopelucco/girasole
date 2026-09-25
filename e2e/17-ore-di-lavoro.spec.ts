@@ -21,7 +21,7 @@ test.describe('17 — Ore di lavoro', () => {
       page,
     }) => {
       await page.goto('/dashboard');
-      await expect(page.getByRole('link', { name: 'Ore di lavoro' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Ore di lavoro', exact: true })).toHaveCount(0);
 
       await page.goto('/dashboard/ore-lavoro');
       await page.waitForURL('/dashboard', { timeout: 20_000 });
@@ -47,7 +47,7 @@ test.describe('17 — Ore di lavoro', () => {
         await expect(page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Ore di lavoro')).toBeChecked();
 
         await page.goto('/dashboard');
-        const link = page.getByRole('link', { name: 'Ore di lavoro' });
+        const link = page.getByRole('link', { name: 'Ore di lavoro', exact: true });
         await expect(link).toBeVisible();
         await expect(link).toContainText('🕒');
 
@@ -69,7 +69,7 @@ test.describe('17 — Ore di lavoro', () => {
         ).not.toBeChecked();
 
         await page.goto('/dashboard');
-        await expect(page.getByRole('link', { name: 'Ore di lavoro' })).toHaveCount(0);
+        await expect(page.getByRole('link', { name: 'Ore di lavoro', exact: true })).toHaveCount(0);
         await page.goto('/dashboard/ore-lavoro');
         await page.waitForURL('/dashboard', { timeout: 20_000 });
       } finally {
@@ -116,7 +116,7 @@ test.describe('17 — Ore di lavoro', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      await expect(page.getByRole('link', { name: 'Ore di lavoro' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Ore di lavoro', exact: true })).toHaveCount(0);
     });
   });
 });

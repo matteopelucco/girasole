@@ -3283,6 +3283,20 @@ riuscito — non procedere con A21 finché entrambi rispondono.
 - [x] `specs/11 - login.md`: nuovo scenario "il logout chiude solo la
       sessione corrente" + regola; test e2e corrispondente.
 - [ ] Da confermare con un run CI completo (step 8 fino in fondo).
+- [x] `maxFailures: 15` in CI: la suite si ferma prima del timeout del job
+      e il report Playwright viene sempre caricato come artifact.
+- [x] Locator dei link "Presenze"/"Pasti"/"Ore di lavoro" con
+      `exact: true`: dopo le 10:00 la dashboard mostra i banner di allarme
+      (specs/07) con link come "Presenze — Girasoli", "Comunicare i pasti a
+      Rojac", "Vai su Ore di lavoro per confermarla".
+- [x] 17/18/19 (flag "Ore di lavoro" sugli account condivisi) in un
+      progetto Playwright a parte con un solo worker.
+- [ ] Test che cliccano "la prima classe" (`a.bg-emerald-50`: 01, 06, 16,
+      53, 57) obsoleti dal v0.39.0 (navigazione a 2 livelli, niente più
+      elenco classi): ora il locator prende il link attivo della sidebar.
+      Da riscrivere contro la navigazione attuale.
+- [ ] Bug app: il banner di allarme presenze linka
+      `/dashboard/presenze/<sezione>`, route che non esiste più (404).
 
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi

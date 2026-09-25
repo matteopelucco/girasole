@@ -87,7 +87,7 @@ test.describe('01 — UX/UI', () => {
         await route.continue();
       });
 
-      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
 
       await linkPresenze.click();

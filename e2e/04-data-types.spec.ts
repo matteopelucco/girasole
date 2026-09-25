@@ -134,7 +134,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.getByPlaceholder('Telefono').first().fill('3331234567');
     await page.getByPlaceholder('Indirizzo di residenza (opzionale)').fill('Via Test 1, Torino');
     await page.getByPlaceholder('Note (opzionale)').first().fill('Nota utente E2E');
-    await page.getByPlaceholder('Password').fill('PasswordE2E!1');
+    await page.getByPlaceholder('Password', { exact: true }).fill('PasswordE2E!1');
     await page.getByRole('button', { name: 'Crea utente' }).click();
 
     await expect(page.getByText('Utente creato con successo.')).toBeVisible({ timeout: 20_000 });

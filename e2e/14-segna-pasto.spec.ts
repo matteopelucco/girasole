@@ -168,8 +168,8 @@ test.describe('14 — Segna pasto', () => {
       page,
     }) => {
       await page.goto('/dashboard');
-      await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
 
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
       await page.waitForURL('/dashboard');
