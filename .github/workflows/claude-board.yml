@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8            # guardrail costo: sessione breve
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # serve il diff completo per una review sensata
       - uses: anthropics/claude-code-action@v1
