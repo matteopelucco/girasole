@@ -20,6 +20,7 @@ import {
   rigaAnnoScolastico,
   rigaSezione,
   statoAutenticazione,
+  alertApp,
 } from './helpers';
 
 test.describe('05 — Feedback sulle azioni', () => {
@@ -75,7 +76,7 @@ test.describe('05 — Feedback sulle azioni', () => {
     // anche come <option> nel select "Anno scolastico" del form
     // Sezioni (strict mode violation altrimenti).
     await expect(rigaAnnoScolastico(page, nome)).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[role="alert"]')).toHaveCount(0);
+    await expect(alertApp(page)).toHaveCount(0);
     await nessunaViolazioneA11yGrave(page);
   });
 
@@ -97,10 +98,14 @@ test.describe('05 — Feedback sulle azioni', () => {
     await link.click();
     await page.waitForURL(/\/admin\/bambini\/.+/);
 
-    await expect(page.getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
+    // La scheda ha due "Ultimo salvataggio" (anagrafica e costi): quello
+    // dell'anagrafica è già valorizzato alla creazione del bambino,
+    // quindi guardo solo quello del form dei costi.
+    const formCosti = page.locator('form', { has: page.getByRole('button', { name: 'Salva costi' }) });
+    await expect(formCosti.getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
     await page.getByRole('button', { name: 'Salva costi' }).click();
 
-    await expect(page.getByText('Ultimo salvataggio:', { exact: false })).toContainText(
+    await expect(formCosti.getByText('Ultimo salvataggio:', { exact: false })).toContainText(
       /\d{2}\/\d{2}\/\d{4} alle \d{2}:\d{2}/,
       { timeout: 20_000 }
     );

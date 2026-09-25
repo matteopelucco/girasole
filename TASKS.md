@@ -3270,6 +3270,56 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       criterio "due run consecutivi di CI danno lo stesso esito di
       login" va confermato con un run CI reale dopo il merge.
 
+## #70 · e2e: logout limitato alla sessione corrente (2026-09-25)
+- [x] Causa trovata nel run CI della #72: il test "accesso con
+      credenziali valide e logout" (`e2e/11-login.spec.ts`) premeva
+      "Esci" come admin e `signOut()` (scope `global` di default) revocava
+      anche la sessione admin condivisa dagli altri test → redirect a
+      `/login` a metà suite, locator "non trovati" su `/admin`, timeout
+      del job a 25 min.
+- [x] Decisione di Matteo: "Esci" chiude solo la sessione del dispositivo
+      corrente (`signOut({ scope: 'local' })` in `app/actions.ts`); il
+      logout dopo il reset password resta globale di proposito.
+- [x] `specs/11 - login.md`: nuovo scenario "il logout chiude solo la
+      sessione corrente" + regola; test e2e corrispondente.
+- [x] Confermato con un run CI completo: 200 passati, 0 flaky (#76, commit 874e845).
+- [x] `maxFailures: 15` in CI: la suite si ferma prima del timeout del job
+      e il report Playwright viene sempre caricato come artifact.
+- [x] Locator dei link "Presenze"/"Pasti"/"Ore di lavoro" con
+      `exact: true`: dopo le 10:00 la dashboard mostra i banner di allarme
+      (specs/07) con link come "Presenze — Girasoli", "Comunicare i pasti a
+      Rojac", "Vai su Ore di lavoro per confermarla".
+- [x] 17/18/19 (flag "Ore di lavoro" sugli account condivisi) in un
+      progetto Playwright a parte con un solo worker.
+- [x] Test che cliccavano "la prima classe" (`a.bg-emerald-50`: 01, 06, 16,
+      53, 57, e la route per sezione in 50) riscritti sulla navigazione a 2
+      livelli (v0.39.0).
+- [x] Banner allarme presenze → `/dashboard/presenze?data=<oggi>` (prima
+      linkava una route inesistente, 404); specs/07 aggiornata.
+- [x] `alertApp(page)` in e2e/helpers.ts: esclude l'annunciatore di route di
+      Next.js (`#__next-route-announcer__`, role="alert" vuoto).
+- [x] Barra di caricamento (specs/01): non compariva mai sui `<Link>` di
+      Next.js (il loro handler chiama `preventDefault()` prima del listener
+      sul document); ora il listener è in fase di cattura.
+- [x] 13/14 "salvare una nota": attesa separata per il salvataggio dello
+      stato e per quello della nota (la risposta dello stato veniva
+      scambiata per quella della nota e il reload annullava la nota).
+- [x] 19: saldo letto con `expect.poll` fino al valore atteso, invece di
+      aspettare una voce dello storico già presente.
+- [x] 53 "modificare un giorno di chiusura" e helper di 56
+      `creaBambinoConCosti`: attesa della Server Action prima di
+      reload/goto (flaky nel run CI verde di a15887a→822bf6f).
+- [x] `scripts/crea-utenti-e2e.mjs` assegna E2E_MAESTRA ed E2E_ASSISTENTE
+      alla sezione del seed: senza sezione non vedevano bambini né la card
+      Presenze, e i test passavano o no a seconda dell'ordine.
+- [x] specs/12: tolta la contraddizione sul selettore di data in dashboard
+      per l'assistente (la dashboard non ne ha, per nessun ruolo).
+- [x] Test singoli allineati: 01 drawer (tap sullo sfondo), 03 cleanup con
+      nuovo login admin e password "debole" ≥ 8 caratteri, 04 senza banner
+      di successo e con conferma password, 05 "Ultimo salvataggio" del solo
+      form costi, 53 senza assumere un elenco chiusure vuoto e in sequenza.
+- [ ] Da confermare con la CI: suite e2e verde fino in fondo.
+
 ## Backlog — Fase 2/3
 - [x] Registrare i bonifici ricevuti, con le opportune note — vedi
       "Crediti/debiti di un bambino e verifica del bonifico retta" sopra

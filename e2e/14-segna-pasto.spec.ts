@@ -3,14 +3,14 @@
 // ATTENZIONE: questi test scrivono davvero in `pasti` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.
 import { test, expect, type Page } from '@playwright/test';
-import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 // Apre "Pasti" per la data indicata (specs/12: i bambini di tutte le
 // classi visibili compaiono già raggruppati per sezione nella stessa
 // pagina, niente più click su una classe per raggiungerli).
 async function apriPasti(page: Page, data: string): Promise<boolean> {
   await page.goto(`/dashboard/pasti?data=${data}`);
-  const primaRiga = page.locator('li').first();
+  const primaRiga = page.locator('main li').first();
   return (await primaRiga.count()) > 0;
 }
 
@@ -62,11 +62,14 @@ test.describe('14 — Segna pasto', () => {
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
 
-      await primaRiga.getByRole('button', { name: 'Sì' }).click();
+      // Aspetto la fine di ciascun salvataggio: altrimenti la risposta
+      // dello stato ancora in volo verrebbe scambiata per quella della
+      // nota, e il reload annullerebbe il salvataggio della nota (#70).
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Sì' }));
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
       await primaRiga.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
-      await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Salva nota' }));
 
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
@@ -168,8 +171,8 @@ test.describe('14 — Segna pasto', () => {
       page,
     }) => {
       await page.goto('/dashboard');
-      await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
 
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
       await page.waitForURL('/dashboard');

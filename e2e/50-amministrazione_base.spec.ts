@@ -11,6 +11,7 @@ import {
   nessunaViolazioneA11yGrave,
   rigaSezione,
   statoAutenticazione,
+  clickEAttendiAzione,
 } from './helpers';
 
 function gruppoClassiAssegnate(page: Page) {
@@ -136,7 +137,7 @@ test.describe('50 — Amministrazione base', () => {
     await page.waitForURL(/\/admin\/bambini\/.+/);
 
     await page.getByPlaceholder('Altre note (opzionale)').fill('Nota aggiornata E2E');
-    await page.getByRole('button', { name: 'Salva modifiche' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
 
     await expect(page.getByPlaceholder('Altre note (opzionale)')).toHaveValue(
       'Nota aggiornata E2E',
@@ -162,7 +163,6 @@ test.describe('50 — Amministrazione base', () => {
     await page.getByLabel('Data di nascita').fill('2020-03-03');
     await page.getByLabel('Sesso').selectOption('M');
     await form.locator('select[name="sezione_id"]').selectOption({ index: 1 });
-    const sezioneId = await form.locator('select[name="sezione_id"]').inputValue();
     await page.getByRole('button', { name: 'Aggiungi bambino' }).click();
 
     const link = page.getByRole('link', { name: new RegExp(cognome) });
@@ -171,8 +171,9 @@ test.describe('50 — Amministrazione base', () => {
     await page.waitForURL(/\/admin\/bambini\/.+/);
 
     // Prima di disattivarlo, il bambino compare in Presenze per la sua
-    // classe (verifico come admin, che vede tutte le classi).
-    await page.goto(`/dashboard/presenze/${sezioneId}?data=${dataOggiRoma()}`);
+    // sezione, nella pagina unica raggruppata per sezione (verifico come
+    // admin, che vede tutte le sezioni).
+    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
     await expect(page.getByText(cognome, { exact: false })).toBeVisible();
 
     // Torno alla scheda di dettaglio tramite l'elenco.
@@ -191,7 +192,7 @@ test.describe('50 — Amministrazione base', () => {
     await expect(gruppoClassiAssegnate(page).locator('li', { hasText: cognome })).toHaveCount(0);
     await expect(gruppoSenzaClasse(page).locator('li', { hasText: cognome })).toBeVisible();
 
-    await page.goto(`/dashboard/presenze/${sezioneId}?data=${dataOggiRoma()}`);
+    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
     await expect(page.getByText(cognome, { exact: false })).toHaveCount(0);
 
     // Riattivo dal dettaglio: torna a comparire tra i bambini assegnati.
@@ -203,7 +204,7 @@ test.describe('50 — Amministrazione base', () => {
       timeout: 20_000,
     });
 
-    await page.goto(`/dashboard/presenze/${sezioneId}?data=${dataOggiRoma()}`);
+    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
     await expect(page.getByText(cognome, { exact: false })).toBeVisible();
   });
 

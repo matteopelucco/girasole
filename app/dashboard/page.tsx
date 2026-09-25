@@ -97,7 +97,7 @@ export default async function DashboardPage({
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {statoPersonale.sezioniPresenzeIncomplete.map((sezione) => (
                 <li key={sezione.id}>
-                  <Link href={`/dashboard/presenze/${sezione.id}?data=${dataOggi}`} className="underline">
+                  <Link href={`/dashboard/presenze?data=${dataOggi}`} className="underline">
                     Presenze — {sezione.nome}
                   </Link>
                 </li>

@@ -29,7 +29,7 @@
 // è invece eliminabile dall'admin — vedi il test dedicato più sotto, che
 // usa proprio l'eliminazione per il proprio cleanup.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
 
 test.describe('19 — Monte ore', () => {
   test.describe('il diretto interessato vede il proprio saldo, in sola lettura', () => {
@@ -83,6 +83,10 @@ test.describe('19 — Monte ore', () => {
     test('elenco con saldo, movimento senza nota rifiutato, movimento manuale registrato e riflesso nel saldo', async ({
       page,
     }) => {
+      // Scenario lungo (abilitazione, più movimenti con salvataggio e
+      // ricarica, ripristino): supera i 60s di default senza essere
+      // bloccato su nessun passo (issue #70).
+      test.slow();
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
@@ -101,61 +105,61 @@ test.describe('19 — Monte ore', () => {
         await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
-        const testoSaldo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-        const saldoIniziale = Number(testoSaldo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+        // Il saldo si aggiorna quando la pagina ricarica i dati dopo la
+        // Server Action, non all'arrivo della sua risposta: lo leggo con
+        // expect.poll, che riprova finché non vale quanto atteso (#70).
+        const leggiSaldo = async () => {
+          const testo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
+          return Number(testo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+        };
+        const saldoIniziale = await leggiSaldo();
         expect(Number.isFinite(saldoIniziale)).toBe(true);
 
         // Scenario: un movimento manuale senza nota viene rifiutato.
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toContainText('nota');
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toContainText('nota');
 
         // Con la nota: accettato, il saldo aumenta di 1.5h e compare
         // nello storico.
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill('Movimento E2E');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
-        await expect(page.getByText('Movimento E2E', { exact: false })).toBeVisible({ timeout: 20_000 });
-
-        const testoSaldoDopo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-        const saldoDopo = Number(testoSaldoDopo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
-        expect(saldoDopo).toBeCloseTo(saldoIniziale + 1.5, 2);
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill('Movimento E2E');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toHaveCount(0);
+        // .first(): un eventuale retry del test trova anche il movimento
+        // registrato dal tentativo precedente.
+        await expect(page.getByText('Movimento E2E', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+        await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5, 2);
 
         // Scenario: il monte ore può risultare negativo, senza alcun
         // blocco — una riduzione ben più grande di qualunque saldo
         // realistico (5000h) porta il saldo sotto zero senza errori.
-        await page.getByLabel('Ore', { exact: true }).fill('5000');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
-        await page.getByLabel('Nota', { exact: true }).fill('Riduzione ampia E2E (per testare il saldo negativo)');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
-
-        const testoSaldoNegativo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-        const saldoNegativo = Number(testoSaldoNegativo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
-        expect(saldoNegativo).toBeLessThan(0);
+        await page.locator('input[name="ore"]').fill('5000');
+        await page.locator('select[name="segno"]').selectOption('riduce');
+        await page.locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toHaveCount(0);
+        await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5 - 5000, 2);
+        expect(await leggiSaldo()).toBeLessThan(0);
 
         // Compensazione (vedi nota in testa al file): due movimenti
         // uguali e opposti (+5000h, poi -1.5h) riportano il saldo
         // esattamente al valore di partenza.
-        await page.getByLabel('Ore', { exact: true }).fill('5000');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E (riduzione ampia)');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await page.locator('input[name="ore"]').fill('5000');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill('Correzione E2E (riduzione ampia)');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toHaveCount(0);
+        await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5, 2);
 
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
-        await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
-        await expect(page.getByText('Correzione E2E', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
-
-        const testoSaldoFinale = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-        const saldoFinale = Number(testoSaldoFinale.match(/(-?\d+(\.\d+)?)h/)?.[1]);
-        expect(saldoFinale).toBeCloseTo(saldoIniziale, 2);
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('riduce');
+        await page.locator('input[name="nota"]').fill('Correzione E2E');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toHaveCount(0);
+        await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale, 2);
       } finally {
         await page.goto('/admin/maestre');
         const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
@@ -168,6 +172,10 @@ test.describe('19 — Monte ore', () => {
     test('un movimento manuale inserito per errore può essere eliminato, i movimenti automatici no', async ({
       page,
     }) => {
+      // Scenario lungo (abilitazione, più movimenti con salvataggio e
+      // ricarica, ripristino): supera i 60s di default senza essere
+      // bloccato su nessun passo (issue #70).
+      test.slow();
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
@@ -186,10 +194,10 @@ test.describe('19 — Monte ore', () => {
         // Scenario: l'admin elimina un movimento manuale inserito per
         // errore.
         const notaMovimento = `Movimento E2E da eliminare ${Date.now()}`;
-        await page.getByLabel('Ore', { exact: true }).fill('2');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill(notaMovimento);
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await page.locator('input[name="ore"]').fill('2');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill(notaMovimento);
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         const rigaMovimento = page.locator('li', { hasText: notaMovimento });
         await expect(rigaMovimento).toBeVisible({ timeout: 20_000 });
 
