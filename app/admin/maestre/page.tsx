@@ -1,5 +1,6 @@
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
+import { EliminaUtente } from '@/components/EliminaUtente';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { CampiPasswordConferma } from '@/components/CampiPasswordConferma';
 import { REGOLA_PASSWORD } from '@/lib/password';
@@ -143,8 +144,11 @@ export default async function MaestrePage() {
 
           <ul className="mt-4 space-y-2">
             {profili?.map((p) => (
-              <li key={p.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
-                <div className="mb-2 text-xs text-stone-600">{p.email}</div>
+              <li
+                key={p.id}
+                className="relative rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
+              >
+                <div className="mb-2 pr-9 text-xs text-stone-600">{p.email}</div>
                 <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
                   <input
@@ -236,12 +240,7 @@ export default async function MaestrePage() {
                     Imposta password
                   </PulsanteInvio>
                 </FormConEsito>
-                <FormConEsito action={eliminaUtente} className="mt-1">
-                  <input type="hidden" name="profilo_id" value={p.id} />
-                  <PulsanteInvio className="text-xs text-red-600 hover:text-red-800">
-                    Elimina utente
-                  </PulsanteInvio>
-                </FormConEsito>
+                <EliminaUtente azione={eliminaUtente} profiloId={p.id} email={p.email} />
               </li>
             ))}
             {!profili?.length && (

@@ -121,8 +121,11 @@ jobs:
           # $0,99 senza pubblicare nulla (16 tentativi negati: git diff e
           # scrittura del commento su file non erano permessi). Ora il diff
           # è già in .review/diff.txt, Write è permesso e il tetto scende a 15.
+          # La prova sulla #81 ($0,37, 1 solo tentativo negato) ha pubblicato
+          # la review al 16° turno ma il job è finito rosso per lo sforamento:
+          # 20 lascia margine a una PR media senza riaprire l'esplorazione.
           claude_args: >-
-            --model claude-sonnet-5 --max-turns 15
+            --model claude-sonnet-5 --max-turns 20
             --allowedTools "Read,Grep,Glob,Write,Bash(git diff:*),Bash(git log:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(gh issue edit:*),mcp__github_inline_comment__create_inline_comment"
           prompt: |
             Agisci come l'agente di REVIEW definito in .claude/agents/reviewer.md.

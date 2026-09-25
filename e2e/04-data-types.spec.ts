@@ -5,6 +5,7 @@
 // nota in 50-amministrazione_base.spec.ts.
 import { test, expect } from '@playwright/test';
 import {
+  eliminaUtenteDaScheda,
   formCreaBambino,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -147,6 +148,6 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await expect(riga.locator('input[name="note"]')).toHaveValue('Nota utente E2E');
 
     // Pulizia: elimino l'utente creato per questo test.
-    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await eliminaUtenteDaScheda(page, riga);
   });
 });

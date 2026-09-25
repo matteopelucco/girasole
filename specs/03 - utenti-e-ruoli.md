@@ -152,12 +152,37 @@ Allora vedo un messaggio d'errore che spiega la regola e la password
 dell'utente non viene cambiata
 
 ## Scenario: admin elimina un utente
-Quando su `/admin/maestre` premo "Elimina utente" su un account
+Dato che sono su `/admin/maestre`
+Quando premo l'icona a forma di cestino rossa "Elimina utente", in alto a
+destra nella scheda di un account
+E nella finestra di conferma spunto "Ne sono consapevole" e premo
+"Procedi con la cancellazione utente"
 Allora l'account non compare più nell'elenco e non può più accedere
 all'app
 
+## Scenario: la cancellazione richiede una conferma consapevole
+Quando su `/admin/maestre` premo l'icona cestino "Elimina utente" di un
+account
+Allora si apre una finestra che avvisa che l'eliminazione è definitiva e
+non si può annullare, e indica l'email dell'account
+E la casella "Ne sono consapevole" non è spuntata
+E il pulsante "Procedi con la cancellazione utente" è disabilitato
+Quando spunto "Ne sono consapevole"
+Allora il pulsante "Procedi con la cancellazione utente" si abilita
+Quando tolgo di nuovo la spunta
+Allora il pulsante torna disabilitato
+
+## Scenario: annullare la cancellazione di un utente
+Dato che ho aperto la finestra di conferma dell'eliminazione di un
+account
+Quando premo "Annulla" (oppure il tasto Esc)
+Allora la finestra si chiude, l'account resta nell'elenco
+E riaprendo la finestra la casella "Ne sono consapevole" è di nuovo non
+spuntata
+
 ## Scenario: l'admin non può eliminare il proprio account
-Quando su `/admin/maestre` provo a eliminare il mio stesso account
+Quando su `/admin/maestre` provo a eliminare il mio stesso account,
+confermando nella finestra di conferma
 Allora vedo un messaggio d'errore e il mio account resta attivo
 
 ## Scenario: accesso negato a chi non è admin
@@ -166,6 +191,12 @@ Quando provo ad aprire `/admin/maestre`
 Allora vengo reindirizzato alla dashboard
 
 ## Regole
+- Eliminazione di un account: l'unico comando nella scheda è l'icona
+  cestino rossa in alto a destra (con etichetta accessibile "Elimina
+  utente"), non un pulsante testuale in fondo alla scheda. La
+  cancellazione vera parte solo dalla finestra di conferma, dopo la spunta
+  esplicita di "Ne sono consapevole": un solo tap non basta mai a
+  eliminare un account.
 - Un utente ha sempre e solo uno dei quattro ruoli (`admin`, `maestra`,
   `assistente`, `genitore`): non è un insieme di permessi combinabili, è
   una colonna singola (`profili.ruolo`).

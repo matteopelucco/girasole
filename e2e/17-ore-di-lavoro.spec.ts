@@ -7,7 +7,7 @@
 // sull'unico account admin si contendano lo stesso flag (fullyParallel:
 // true, stessa cautela già presa in 16-comunicazione-pasti-rojac.spec.ts).
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('17 — Ore di lavoro', () => {
   test.describe('come admin', () => {
@@ -103,8 +103,7 @@ test.describe('17 — Ore di lavoro', () => {
       await expect(riga).toBeVisible({ timeout: 20_000 });
       await expect(riga.getByLabel('Ore di lavoro')).toBeChecked();
 
-      await riga.getByRole('button', { name: 'Elimina utente' }).click();
-      await page.waitForTimeout(1000);
+      await eliminaUtenteDaScheda(page, riga);
       await expect(page.getByText(email, { exact: false })).toHaveCount(0);
     });
   });

@@ -5,7 +5,14 @@
 // 50-amministrazione_base.spec.ts. Ogni utente creato viene eliminato
 // dallo stesso test per non accumulare account fittizi nel progetto.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, loginCome, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  eliminaUtenteDaScheda,
+  finestraEliminaUtente,
+  hasCredenziali,
+  loginCome,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+} from './helpers';
 
 test.describe('03 — Utenti e ruoli', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -44,8 +51,76 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(riga.locator('select[name="ruolo"]')).toHaveValue('maestra');
 
     // Eliminazione: l'account non deve più comparire in elenco.
+    await eliminaUtenteDaScheda(page, riga);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  // Crea un utente usa e getta per i test sulla finestra di conferma
+  // dell'eliminazione e ne restituisce la scheda.
+  async function creaUtenteDiProva(page: import('@playwright/test').Page, email: string) {
+    await page.goto('/admin/maestre');
+    await page.getByPlaceholder('Nome').first().fill('Conferma');
+    await page.getByPlaceholder('Cognome').first().fill('E2E');
+    await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
+    await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
+    await page.getByLabel('Conferma password').fill('PasswordE2E!1');
+    await page.getByRole('button', { name: 'Crea utente' }).click();
+    const riga = page.getByText(email, { exact: false }).locator('..');
+    await expect(riga).toBeVisible({ timeout: 20_000 });
+    return riga;
+  }
+
+  test('la cancellazione richiede una conferma consapevole', async ({ page }) => {
+    const email = `e2e-conferma-${Date.now()}@example.com`;
+    const riga = await creaUtenteDiProva(page, email);
+
+    // Niente più pulsante testuale in fondo alla scheda: solo l'icona.
+    await expect(riga.getByText('Elimina utente', { exact: true })).toHaveCount(0);
     await riga.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+
+    const finestra = finestraEliminaUtente(page);
+    await expect(finestra).toBeVisible();
+    await expect(finestra).toContainText(/definitiv/i);
+    await expect(finestra).toContainText(email);
+    const consapevole = finestra.getByLabel('Ne sono consapevole');
+    const procedi = finestra.getByRole('button', { name: 'Procedi con la cancellazione utente' });
+    await expect(consapevole).not.toBeChecked();
+    await expect(procedi).toBeDisabled();
+    await nessunaViolazioneA11yGrave(page);
+
+    await consapevole.check();
+    await expect(procedi).toBeEnabled();
+    await consapevole.uncheck();
+    await expect(procedi).toBeDisabled();
+
+    // Pulizia, passando dal flusso completo.
+    await finestra.getByRole('button', { name: 'Annulla' }).click();
+    await eliminaUtenteDaScheda(page, riga);
+    await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  test('annullare la cancellazione di un utente', async ({ page }) => {
+    const email = `e2e-annulla-${Date.now()}@example.com`;
+    const riga = await creaUtenteDiProva(page, email);
+    const finestra = finestraEliminaUtente(page);
+
+    // Annulla: la finestra si chiude, l'utente resta.
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await finestra.getByLabel('Ne sono consapevole').check();
+    await finestra.getByRole('button', { name: 'Annulla' }).click();
+    await expect(finestra).toHaveCount(0);
+    await expect(riga).toBeVisible();
+
+    // Esc: stesso effetto, e la spunta non resta memorizzata.
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await expect(finestra.getByLabel('Ne sono consapevole')).not.toBeChecked();
+    await page.keyboard.press('Escape');
+    await expect(finestra).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText(email, { exact: false })).toBeVisible();
+
+    await eliminaUtenteDaScheda(page, page.getByText(email, { exact: false }).locator('..'));
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -77,8 +152,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(page.getByPlaceholder('Telefono').first()).toHaveValue('');
     await expect(formCreazione.getByLabel('Ruolo')).toHaveValue('genitore');
 
-    await riga.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+    await eliminaUtenteDaScheda(page, riga);
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -104,8 +178,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await expect(riga).toBeVisible({ timeout: 20_000 });
     await expect(riga.locator('select[name="ruolo"]')).toHaveValue('assistente');
 
-    await riga.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+    await eliminaUtenteDaScheda(page, riga);
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -240,8 +313,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await loginCome(page, 'admin');
     await page.goto('/admin/maestre');
     const rigaFinale = page.getByText(email, { exact: false }).locator('..');
-    await rigaFinale.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+    await eliminaUtenteDaScheda(page, rigaFinale);
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -267,8 +339,7 @@ test.describe('03 — Utenti e ruoli', () => {
       timeout: 20_000,
     });
 
-    await riga.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+    await eliminaUtenteDaScheda(page, riga);
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -296,8 +367,7 @@ test.describe('03 — Utenti e ruoli', () => {
       timeout: 20_000,
     });
 
-    await riga.getByRole('button', { name: 'Elimina utente' }).click();
-    await page.waitForTimeout(1000);
+    await eliminaUtenteDaScheda(page, riga);
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
   });
 
@@ -352,7 +422,7 @@ test.describe('03 — Utenti e ruoli', () => {
   test("l'admin non può eliminare il proprio account", async ({ page }) => {
     await page.goto('/admin/maestre');
     const rigaPropria = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-    await rigaPropria.getByRole('button', { name: 'Elimina utente' }).click();
+    await eliminaUtenteDaScheda(page, rigaPropria);
 
     await expect(page.getByText('Non puoi eliminare il tuo stesso account.')).toBeVisible({
       timeout: 20_000,

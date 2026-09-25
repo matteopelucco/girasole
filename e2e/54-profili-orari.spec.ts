@@ -7,7 +7,7 @@
 // sull'account admin viene ripristinata a "Nessun profilo orario"
 // (try/finally, stesso pattern di 17-ore-di-lavoro.spec.ts).
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('54 — Profili orari', () => {
   test.describe('come admin', () => {
@@ -184,8 +184,7 @@ test.describe('54 — Profili orari', () => {
         await expect(riga).toBeVisible({ timeout: 20_000 });
         await expect(riga.getByLabel('Profilo orario')).not.toHaveValue('');
 
-        await riga.getByRole('button', { name: 'Elimina utente' }).click();
-        await page.waitForTimeout(1000);
+        await eliminaUtenteDaScheda(page, riga);
         await expect(page.getByText(email, { exact: false })).toHaveCount(0);
       } finally {
         await page.goto('/admin/profili-orari');
