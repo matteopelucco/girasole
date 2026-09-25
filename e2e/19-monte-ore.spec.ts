@@ -136,6 +136,10 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
+        // La risposta della Server Action arriva prima che la pagina si
+        // aggiorni: aspetto il movimento nello storico prima di leggere il
+        // saldo (come per 'Movimento E2E' sopra).
+        await expect(page.getByText('Riduzione ampia E2E', { exact: false })).toBeVisible({ timeout: 20_000 });
 
         const testoSaldoNegativo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
         const saldoNegativo = Number(testoSaldoNegativo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
@@ -149,6 +153,9 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="nota"]').fill('Correzione E2E (riduzione ampia)');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
+        await expect(page.getByText('Correzione E2E (riduzione ampia)', { exact: false })).toBeVisible({
+          timeout: 20_000,
+        });
 
         await page.locator('input[name="ore"]').fill('1.5');
         await page.locator('select[name="segno"]').selectOption('riduce');
