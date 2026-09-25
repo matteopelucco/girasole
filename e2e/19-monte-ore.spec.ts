@@ -83,6 +83,10 @@ test.describe('19 — Monte ore', () => {
     test('elenco con saldo, movimento senza nota rifiutato, movimento manuale registrato e riflesso nel saldo', async ({
       page,
     }) => {
+      // Scenario lungo (abilitazione, più movimenti con salvataggio e
+      // ricarica, ripristino): supera i 60s di default senza essere
+      // bloccato su nessun passo (issue #70).
+      test.slow();
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
@@ -168,6 +172,10 @@ test.describe('19 — Monte ore', () => {
     test('un movimento manuale inserito per errore può essere eliminato, i movimenti automatici no', async ({
       page,
     }) => {
+      // Scenario lungo (abilitazione, più movimenti con salvataggio e
+      // ricarica, ripristino): supera i 60s di default senza essere
+      // bloccato su nessun passo (issue #70).
+      test.slow();
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();

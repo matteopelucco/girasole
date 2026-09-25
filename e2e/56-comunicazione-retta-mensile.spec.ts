@@ -273,7 +273,8 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const popupSenzaNota = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeSenzaNota}`) });
     await expect(popupSenzaNota).toContainText('Nota costo extra: []');
     await expect(popupSenzaNota).not.toContainText('undefined');
-    await expect(popupSenzaNota).not.toContainText('null');
+    // Parola intera: 'null' come sottostringa c'è nel pulsante "Annulla".
+    await expect(popupSenzaNota).not.toContainText(/\bnull\b/);
   });
 
   test('inviare le comunicazioni con un click registra il log e mostra "Inviata"', async ({ page }) => {

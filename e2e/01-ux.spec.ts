@@ -72,19 +72,27 @@ test.describe('01 — UX/UI', () => {
     }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
-      await page.goto('/dashboard');
-      const barra = page.getByRole('status', { name: 'Caricamento in corso' });
-      await expect(barra).toHaveCount(0);
-
       // Rallenta le richieste di navigazione (non gli asset già in
       // cache) quanto basta perché il test possa osservare in modo
       // affidabile la barra, invece di dipendere dalla velocità reale
       // della rete (che la farebbe comparire e sparire troppo in
-      // fretta per un assert deterministico).
-      await page.route('**/dashboard/presenze*', async (route) => {
-        await new Promise((r) => setTimeout(r, 400));
+      // fretta per un assert deterministico). Con il server di produzione
+      // (CI) Next.js fa anche il prefetch dei link: lo annullo, altrimenti
+      // il click userebbe la pagina già scaricata e la navigazione sarebbe
+      // istantanea. Il route va installato prima di aprire la dashboard,
+      // perché il prefetch parte appena i link sono visibili.
+      await page.route('**/dashboard/presenze**', async (route) => {
+        if (route.request().headers()['next-router-prefetch']) {
+          await route.abort();
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 800));
         await route.continue();
       });
+
+      await page.goto('/dashboard');
+      const barra = page.getByRole('status', { name: 'Caricamento in corso' });
+      await expect(barra).toHaveCount(0);
 
       const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
