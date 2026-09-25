@@ -62,6 +62,7 @@ test.describe('03 — Utenti e ruoli', () => {
     await page.getByPlaceholder('Nome').first().fill('Conferma');
     await page.getByPlaceholder('Cognome').first().fill('E2E');
     await page.getByPlaceholder('Email').fill(email);
+    await page.getByPlaceholder('Telefono').first().fill('3331234567');
     await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
     await page.getByLabel('Conferma password').fill('PasswordE2E!1');
     await page.getByRole('button', { name: 'Crea utente' }).click();
