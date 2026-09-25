@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 export type Ruolo = 'admin' | 'maestra' | 'assistente' | 'genitore';
@@ -97,6 +97,20 @@ export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
 // o toHaveCount(0) falliti senza alcun errore visibile — issue #70).
 export function alertApp(page: Page) {
   return page.locator('[role="alert"]:not(#__next-route-announcer__)');
+}
+
+// Click su un bottone che invia una Server Action, attendendo che la
+// risposta sia arrivata per intero (non solo le intestazioni). Il campo
+// di un form mostra già il valore digitato prima del salvataggio: senza
+// questa attesa un page.reload() subito dopo poteva arrivare prima che
+// l'azione avesse scritto sul DB (issue #70). Le Server Action si
+// riconoscono dall'header Next-Action della richiesta POST.
+export async function clickEAttendiAzione(page: Page, bottone: Locator): Promise<void> {
+  const risposta = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.request().headers()['next-action'] !== undefined
+  );
+  await bottone.click();
+  await (await risposta).finished();
 }
 
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {

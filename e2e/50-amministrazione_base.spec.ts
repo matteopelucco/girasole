@@ -11,6 +11,7 @@ import {
   nessunaViolazioneA11yGrave,
   rigaSezione,
   statoAutenticazione,
+  clickEAttendiAzione,
 } from './helpers';
 
 function gruppoClassiAssegnate(page: Page) {
@@ -136,7 +137,7 @@ test.describe('50 — Amministrazione base', () => {
     await page.waitForURL(/\/admin\/bambini\/.+/);
 
     await page.getByPlaceholder('Altre note (opzionale)').fill('Nota aggiornata E2E');
-    await page.getByRole('button', { name: 'Salva modifiche' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
 
     await expect(page.getByPlaceholder('Altre note (opzionale)')).toHaveValue(
       'Nota aggiornata E2E',

@@ -8,7 +8,7 @@
 // comunicazioni_retta: usa un indirizzo di dominio "example.com", mai
 // un indirizzo reale.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 test.describe('56 — Comunicazione retta mensile', () => {
   // "Invia comunicazioni" agisce su TUTTI i bambini attivi idonei del
@@ -240,7 +240,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await page.goto('/admin/rette/template');
     const corpoUnico = `Nota costo extra: [{{note_costi_extra}}] — E2E ${Date.now()}`;
     await page.getByLabel('Corpo').fill(corpoUnico);
-    await page.getByRole('button', { name: 'Salva modello' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modello' }));
     await expect(page.getByLabel('Corpo')).toHaveValue(corpoUnico, { timeout: 20_000 });
 
     const cognomeConNota = await creaBambinoConCosti(page, {

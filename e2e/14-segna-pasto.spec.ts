@@ -3,7 +3,7 @@
 // ATTENZIONE: questi test scrivono davvero in `pasti` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.
 import { test, expect, type Page } from '@playwright/test';
-import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataIeriRoma, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 // Apre "Pasti" per la data indicata (specs/12: i bambini di tutte le
 // classi visibili compaiono già raggruppati per sezione nella stessa
@@ -67,13 +67,8 @@ test.describe('14 — Segna pasto', () => {
 
       await primaRiga.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
       // Il campo mostra già il testo digitato: prima di ricaricare aspetto
-      // che la Server Action (POST sulla pagina) abbia risposto, altrimenti
-      // il reload può arrivare prima del salvataggio (issue #70).
-      const salvataggio = page.waitForResponse(
-        (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/dashboard/pasti'
-      );
-      await primaRiga.getByRole('button', { name: 'Salva nota' }).click();
-      await salvataggio;
+      // la fine della Server Action (issue #70).
+      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Salva nota' }));
 
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 

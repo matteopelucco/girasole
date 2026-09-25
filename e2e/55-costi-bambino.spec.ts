@@ -6,7 +6,7 @@
 // (in questa app i bambini non si eliminano mai, solo disattivano —
 // vedi specs/50), coerente con le altre suite e2e.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
 
 test.describe('55 — Costi bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -76,7 +76,7 @@ test.describe('55 — Costi bambino', () => {
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('220');
     await page.getByLabel('Prezzo marca da bollo (€)').fill('3');
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('220', { timeout: 20_000 });
 
     await page.reload();

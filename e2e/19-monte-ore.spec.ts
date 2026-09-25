@@ -110,16 +110,16 @@ test.describe('19 — Monte ore', () => {
         expect(Number.isFinite(saldoIniziale)).toBe(true);
 
         // Scenario: un movimento manuale senza nota viene rifiutato.
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         await expect(alertApp(page)).toContainText('nota');
 
         // Con la nota: accettato, il saldo aumenta di 1.5h e compare
         // nello storico.
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill('Movimento E2E');
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill('Movimento E2E');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Movimento E2E', { exact: false })).toBeVisible({ timeout: 20_000 });
@@ -131,9 +131,9 @@ test.describe('19 — Monte ore', () => {
         // Scenario: il monte ore può risultare negativo, senza alcun
         // blocco — una riduzione ben più grande di qualunque saldo
         // realistico (5000h) porta il saldo sotto zero senza errori.
-        await page.getByLabel('Ore', { exact: true }).fill('5000');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
-        await page.getByLabel('Nota', { exact: true }).fill('Riduzione ampia E2E (per testare il saldo negativo)');
+        await page.locator('input[name="ore"]').fill('5000');
+        await page.locator('select[name="segno"]').selectOption('riduce');
+        await page.locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         await expect(alertApp(page)).toHaveCount(0);
 
@@ -144,15 +144,15 @@ test.describe('19 — Monte ore', () => {
         // Compensazione (vedi nota in testa al file): due movimenti
         // uguali e opposti (+5000h, poi -1.5h) riportano il saldo
         // esattamente al valore di partenza.
-        await page.getByLabel('Ore', { exact: true }).fill('5000');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E (riduzione ampia)');
+        await page.locator('input[name="ore"]').fill('5000');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill('Correzione E2E (riduzione ampia)');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         await expect(alertApp(page)).toHaveCount(0);
 
-        await page.getByLabel('Ore', { exact: true }).fill('1.5');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
-        await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E');
+        await page.locator('input[name="ore"]').fill('1.5');
+        await page.locator('select[name="segno"]').selectOption('riduce');
+        await page.locator('input[name="nota"]').fill('Correzione E2E');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Correzione E2E', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
@@ -194,9 +194,9 @@ test.describe('19 — Monte ore', () => {
         // Scenario: l'admin elimina un movimento manuale inserito per
         // errore.
         const notaMovimento = `Movimento E2E da eliminare ${Date.now()}`;
-        await page.getByLabel('Ore', { exact: true }).fill('2');
-        await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
-        await page.getByLabel('Nota', { exact: true }).fill(notaMovimento);
+        await page.locator('input[name="ore"]').fill('2');
+        await page.locator('select[name="segno"]').selectOption('aumenta');
+        await page.locator('input[name="nota"]').fill(notaMovimento);
         await page.getByRole('button', { name: 'Registra movimento' }).click();
         const rigaMovimento = page.locator('li', { hasText: notaMovimento });
         await expect(rigaMovimento).toBeVisible({ timeout: 20_000 });
