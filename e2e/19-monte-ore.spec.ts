@@ -29,7 +29,7 @@
 // è invece eliminabile dall'admin — vedi il test dedicato più sotto, che
 // usa proprio l'eliminazione per il proprio cleanup.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
 
 test.describe('19 — Monte ore', () => {
   test.describe('il diretto interessato vede il proprio saldo, in sola lettura', () => {
@@ -112,7 +112,7 @@ test.describe('19 — Monte ore', () => {
         // Scenario: un movimento manuale senza nota viene rifiutato.
         await page.locator('input[name="ore"]').fill('1.5');
         await page.locator('select[name="segno"]').selectOption('aumenta');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toContainText('nota');
 
         // Con la nota: accettato, il saldo aumenta di 1.5h e compare
@@ -120,7 +120,7 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="ore"]').fill('1.5');
         await page.locator('select[name="segno"]').selectOption('aumenta');
         await page.locator('input[name="nota"]').fill('Movimento E2E');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Movimento E2E', { exact: false })).toBeVisible({ timeout: 20_000 });
 
@@ -134,7 +134,7 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="ore"]').fill('5000');
         await page.locator('select[name="segno"]').selectOption('riduce');
         await page.locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
 
         const testoSaldoNegativo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
@@ -147,13 +147,13 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="ore"]').fill('5000');
         await page.locator('select[name="segno"]').selectOption('aumenta');
         await page.locator('input[name="nota"]').fill('Correzione E2E (riduzione ampia)');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
 
         await page.locator('input[name="ore"]').fill('1.5');
         await page.locator('select[name="segno"]').selectOption('riduce');
         await page.locator('input[name="nota"]').fill('Correzione E2E');
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Correzione E2E', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
@@ -197,7 +197,7 @@ test.describe('19 — Monte ore', () => {
         await page.locator('input[name="ore"]').fill('2');
         await page.locator('select[name="segno"]').selectOption('aumenta');
         await page.locator('input[name="nota"]').fill(notaMovimento);
-        await page.getByRole('button', { name: 'Registra movimento' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         const rigaMovimento = page.locator('li', { hasText: notaMovimento });
         await expect(rigaMovimento).toBeVisible({ timeout: 20_000 });
 

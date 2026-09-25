@@ -6,7 +6,7 @@
 // (in questa app i bambini non si eliminano mai, solo disattivano —
 // vedi specs/50), coerente con le altre suite e2e.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione, registraDiagnosticaAzioni } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
 
 test.describe('55 — Costi bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -52,31 +52,26 @@ test.describe('55 — Costi bambino', () => {
   });
 
   test('impostare per la prima volta i costi li salva e restano dopo un ricaricamento', async ({ page }) => {
-    const diagnostica = registraDiagnosticaAzioni(page);
     await creaBambinoDiProva(page);
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('250');
     await page.getByLabel('Prezzo buono pasto (€)').fill('5.5');
     await page.getByLabel('Email promemoria retta').fill('genitore.test@example.com');
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
 
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('250', { timeout: 20_000 });
 
     await page.reload();
-    await expect(
-      page.getByLabel('Prezzo retta mensile (€)'),
-      `diagnostica azioni:\n${diagnostica.join('\n')}`
-    ).toHaveValue('250');
+    await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('250');
     await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('5.5');
     await expect(page.getByLabel('Email promemoria retta')).toHaveValue('genitore.test@example.com');
   });
 
   test('modificare i costi già impostati aggiorna i valori salvati', async ({ page }) => {
-    const diagnostica = registraDiagnosticaAzioni(page);
     await creaBambinoDiProva(page);
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('200');
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('200', { timeout: 20_000 });
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('220');
@@ -85,10 +80,7 @@ test.describe('55 — Costi bambino', () => {
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('220', { timeout: 20_000 });
 
     await page.reload();
-    await expect(
-      page.getByLabel('Prezzo retta mensile (€)'),
-      `diagnostica azioni:\n${diagnostica.join('\n')}`
-    ).toHaveValue('220');
+    await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('220');
     await expect(page.getByLabel('Prezzo marca da bollo (€)')).toHaveValue('3');
   });
 
@@ -99,7 +91,7 @@ test.describe('55 — Costi bambino', () => {
     await page.getByLabel('Prezzo pre-asilo (€)').fill('30');
     await page.getByLabel('Post-asilo richiesto').check();
     await page.getByLabel('Prezzo post-asilo (€)').fill('40');
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
 
     await expect(page.getByLabel('Pre-asilo richiesto')).toBeChecked({ timeout: 20_000 });
 
@@ -115,7 +107,7 @@ test.describe('55 — Costi bambino', () => {
 
     await page.getByLabel('Prezzo retta mensile (€)').fill('180');
     await page.getByLabel('Prezzo buono pasto (€)').fill('5');
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
 
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('180', { timeout: 20_000 });
     await page.reload();
@@ -148,7 +140,7 @@ test.describe('55 — Costi bambino', () => {
     const email = 'genitore1@esempio.it; genitore2@esempio.it';
     await page.getByLabel('Prezzo retta mensile (€)').fill('150');
     await page.getByLabel('Email promemoria retta').fill(email);
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
 
     // Il campo mostra già il testo digitato: la conferma del salvataggio è
     // "Ultimo salvataggio" nel form dei costi (specs/05); senza aspettarla il

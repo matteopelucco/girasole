@@ -534,7 +534,10 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const oggettoUnico = `Promemoria retta E2E ${Date.now()} {{mese}}`;
     await page.getByLabel('Oggetto').fill(oggettoUnico);
-    await page.getByRole('button', { name: 'Salva modello' }).click();
+    // "Ultimo salvataggio" può essere già presente da un salvataggio
+    // precedente del modello (riga unica, condivisa): aspetto la risposta
+    // della Server Action prima di ricaricare (issue #70).
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modello' }));
     await expect(page.getByLabel('Oggetto')).toHaveValue(oggettoUnico, { timeout: 20_000 });
 
     // Unico feedback visibile del salvataggio riuscito (specs/56): il
