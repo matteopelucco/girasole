@@ -32,13 +32,21 @@ import { createClient } from '@supabase/supabase-js';
 // account opzionali usati da singoli scenari e2e (specs/03, specs/12).
 const RUOLI = [
   { prefisso: 'E2E_ADMIN', ruolo: 'admin', nome: 'Admin', cognome: 'Test', obbligatorio: true },
-  { prefisso: 'E2E_MAESTRA', ruolo: 'maestra', nome: 'Maestra', cognome: 'Test', obbligatorio: true },
+  {
+    prefisso: 'E2E_MAESTRA',
+    ruolo: 'maestra',
+    nome: 'Maestra',
+    cognome: 'Test',
+    obbligatorio: true,
+    sezioneFixture: true,
+  },
   {
     prefisso: 'E2E_ASSISTENTE',
     ruolo: 'assistente',
     nome: 'Assistente',
     cognome: 'Test',
     obbligatorio: true,
+    sezioneFixture: true,
   },
   { prefisso: 'E2E_GENITORE', ruolo: 'genitore', nome: 'Genitore', cognome: 'Test', obbligatorio: true },
   {
@@ -63,6 +71,14 @@ const RUOLI = [
     passwordNonRichiesta: true,
   },
 ];
+
+// Sezione "Girasoli" creata da supabase/seed.sql. Maestra e assistente
+// di test vi vengono assegnate ad ogni reset (issue #70): senza una
+// sezione non vedono bambini né la card Presenze in dashboard, e i test
+// e2e che li usano (01, 06, 13, 14, 16…) passavano o fallivano a seconda
+// che un altro test avesse già fatto l'assegnazione da /admin/maestre.
+// E2E_MAESTRA_SENZA_SEZIONE resta invece deliberatamente senza.
+const SEZIONE_FIXTURE_ID = '00000000-0000-0000-0000-000000000001';
 
 function passwordCasuale() {
   return `Aa1!${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
@@ -111,6 +127,44 @@ async function creaOAggiornaUtente(admin, { email, password, nome, cognome, ruol
   return { utente: aggiornamento.data.user, creato: false };
 }
 
+// Gli errori di supabase-js (PostgrestError, AuthError) non sono sempre
+// istanze di Error: String(err) stamperebbe "[object Object]".
+function descriviErrore(err) {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    const { message, code, details, hint } = err;
+    return [code, message, details, hint].filter(Boolean).join(' — ') || JSON.stringify(err);
+  }
+  return String(err);
+}
+
+// L'assegnazione passa da una sessione dell'admin di test (lo stesso
+// percorso di "Assegna" in /admin/maestre, con la RLS e i GRANT del ruolo
+// `authenticated`), non dal client service_role: `service_role` non ha
+// GRANT su public.maestre_sezioni, e aggiungerne uno solo per i test
+// toccherebbe anche lo schema di produzione.
+async function assegnaSezioneFixture(url, apiKey, utenti) {
+  const email = process.env.E2E_ADMIN_EMAIL;
+  const password = process.env.E2E_ADMIN_PASSWORD;
+  if (!email || !password) {
+    throw new Error('E2E_ADMIN_EMAIL/PASSWORD mancanti: impossibile assegnare la sezione fixture.');
+  }
+  const client = createClient(url, apiKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { error: erroreLogin } = await client.auth.signInWithPassword({ email, password });
+  if (erroreLogin) throw erroreLogin;
+
+  for (const { prefisso, id } of utenti) {
+    const { error } = await client
+      .from('maestre_sezioni')
+      .upsert({ maestra_id: id, sezione_id: SEZIONE_FIXTURE_ID }, { onConflict: 'maestra_id,sezione_id' });
+    if (error) throw error;
+    console.log(`[crea-utenti-e2e] ${prefisso} assegnato alla sezione fixture ${SEZIONE_FIXTURE_ID}.`);
+  }
+  await client.auth.signOut({ scope: 'local' });
+}
+
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -126,6 +180,7 @@ async function main() {
   });
 
   let unRuoloObbligatorioFallito = false;
+  const daAssegnare = [];
 
   for (const config of RUOLI) {
     const email = process.env[`${config.prefisso}_EMAIL`];
@@ -138,7 +193,7 @@ async function main() {
     }
 
     try {
-      const { creato } = await creaOAggiornaUtente(admin, {
+      const { utente, creato } = await creaOAggiornaUtente(admin, {
         email,
         password,
         nome: config.nome,
@@ -148,10 +203,21 @@ async function main() {
       console.log(
         `[crea-utenti-e2e] ${config.prefisso} (${email}) ${creato ? 'creato' : 'aggiornato'}, ruolo "${config.ruolo}".`
       );
+
+      if (config.sezioneFixture) daAssegnare.push({ prefisso: config.prefisso, id: utente.id, obbligatorio: config.obbligatorio });
     } catch (err) {
-      const messaggio = err instanceof Error ? err.message : String(err);
+      const messaggio = descriviErrore(err);
       console.error(`[crea-utenti-e2e] ERRORE su ${config.prefisso} (${email}): ${messaggio}`);
       if (config.obbligatorio) unRuoloObbligatorioFallito = true;
+    }
+  }
+
+  if (daAssegnare.length > 0) {
+    try {
+      await assegnaSezioneFixture(url, serviceRoleKey, daAssegnare);
+    } catch (err) {
+      console.error(`[crea-utenti-e2e] ERRORE nell'assegnazione della sezione fixture: ${descriviErrore(err)}`);
+      if (daAssegnare.some((u) => u.obbligatorio)) unRuoloObbligatorioFallito = true;
     }
   }
 

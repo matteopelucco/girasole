@@ -33,10 +33,11 @@ ancora stati comunicati a Rojac (vedi
 [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md))
 Quando apro la dashboard
 Allora vedo un banner di allarme che elenca cosa manca, con un link per
-ciascuna mia sezione che ha ancora presenze da segnare (mi porta
-direttamente a Presenze di quella sezione, per oggi) e, se manca anche
-la comunicazione pasti, un link a Pasti (l'elenco classi, per oggi, dove
-si conferma la comunicazione)
+ciascuna mia sezione che ha ancora presenze da segnare (mi porta a
+Presenze per oggi, `/dashboard/presenze?data=<oggi>`, dove i bambini di
+tutte le mie sezioni sono raggruppati per sezione) e, se manca anche
+la comunicazione pasti, un link a Pasti (per oggi, dove si conferma la
+comunicazione)
 E questo banner riguarda solo le mie sezioni: una maestra di un'altra
 sezione, senza anomalie nelle proprie, non lo vede
 
@@ -134,8 +135,11 @@ Allora non vedo il riepilogo del personale
   sezione visibile all'utente, senza alcuna riga in `presenze` per oggi
   — non conta se il bambino risulta assente/malato (quello è comunque
   "segnato"), solo l'assenza totale di un dato. Il banner elenca le
-  singole sezioni interessate (non solo un riepilogo aggregato), con un
-  link a ciascuna.
+  singole sezioni interessate (non solo un riepilogo aggregato); ogni
+  voce linka a `/dashboard/presenze?data=<oggi>` — dalla v0.39.0 non
+  esiste più una pagina Presenze per singola sezione (navigazione a 2
+  livelli, bambini raggruppati per sezione nella stessa pagina), quindi
+  un link a `/dashboard/presenze/<sezione>` porterebbe a un 404.
 - "Pasti non confermati" = non esiste ancora una riga in
   `pasti_comunicati` per oggi (specs/16): la comunicazione a Rojac è
   un'unica cosa al giorno per l'intero asilo, non per classe. Riguarda

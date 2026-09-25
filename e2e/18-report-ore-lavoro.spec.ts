@@ -20,7 +20,7 @@
 // test.skip) solo se qualcuno l'ha già confermata manualmente questa
 // settimana.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
 
 test.describe('18 — Report ore di lavoro', () => {
   test.describe('come admin', () => {
@@ -132,7 +132,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Straordinario senza motivo: rifiutato, nessuna scrittura.
         await page.getByLabel('Ore straordinarie Lunedì').fill('2');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(page.getByRole('alert')).toContainText('motivo');
+        await expect(alertApp(page)).toContainText('motivo');
 
         // Con il motivo: accettato, il totale della settimana si aggiorna.
         // Il form invia sempre tutti e 7 i giorni in un solo
@@ -146,7 +146,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Ore straordinarie Lunedì').fill('2');
         await page.getByLabel('Motivo straordinario Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText('2h', {
           timeout: 20_000,
         });
@@ -154,7 +154,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Malattia senza codice: rifiutata.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(page.getByRole('alert')).toContainText('codice malattia');
+        await expect(alertApp(page)).toContainText('codice malattia');
 
         // Con il codice: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
@@ -168,7 +168,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Assenza senza nota: rifiutata.
         await page.getByLabel('Stato Mercoledì').selectOption('assenza');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(page.getByRole('alert')).toContainText('nota giustificativa');
+        await expect(alertApp(page)).toContainText('nota giustificativa');
 
         // Con la nota: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Mercoledì').selectOption('assenza');

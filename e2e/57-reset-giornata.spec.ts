@@ -6,7 +6,7 @@
 // da solo alla fine — stesso genere di pulizia automatica delle altre
 // suite che scrivono dati veri.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 const DATA_TEST = '2019-05-15';
 
@@ -36,25 +36,19 @@ test.describe('57 — Reset giornata', () => {
     // Registro una presenza per la prima classe/bambino disponibile,
     // sulla data di test (l'admin può scrivere su qualunque data,
     // specs/13).
+    // Navigazione a 2 livelli (specs/12): i bambini di tutte le sezioni
+    // sono direttamente in pagina, senza aprire una classe.
     await page.goto(`/dashboard/presenze?data=${DATA_TEST}`);
-    const primaClasse = page.locator('a.bg-emerald-50').first();
-    test.skip((await primaClasse.count()) === 0, 'nessuna classe attiva per questo account');
-    await primaClasse.click();
-    await page.waitForURL(/\/dashboard\/presenze\/.+/);
-
     const primaRigaPresenze = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-    test.skip((await primaRigaPresenze.count()) === 0, 'nessun bambino in questa classe');
-    await primaRigaPresenze.getByRole('button', { name: 'Presente' }).click();
-    await page.waitForTimeout(500);
+    test.skip((await primaRigaPresenze.count()) === 0, 'nessun bambino visibile per questo account');
+    // Attendo la risposta della Server Action: con un'attesa fissa il goto
+    // successivo poteva interrompere il salvataggio (issue #70).
+    await clickEAttendiAzione(page, primaRigaPresenze.getByRole('button', { name: 'Presente' }));
 
     // Registro anche un pasto, stessa data.
     await page.goto(`/dashboard/pasti?data=${DATA_TEST}`);
-    const primaClassePasti = page.locator('a.bg-emerald-50').first();
-    await primaClassePasti.click();
-    await page.waitForURL(/\/dashboard\/pasti\/.+/);
     const primaRigaPasti = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-    await primaRigaPasti.getByRole('button', { name: 'Sì' }).click();
-    await page.waitForTimeout(500);
+    await clickEAttendiAzione(page, primaRigaPasti.getByRole('button', { name: 'Sì' }));
 
     await page.goto(`/admin/reset-giornata?data=${DATA_TEST}`);
     await expect(page.getByText(/^[1-9]\d* presenze$/)).toBeVisible();

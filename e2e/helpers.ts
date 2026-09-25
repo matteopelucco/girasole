@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 export type Ruolo = 'admin' | 'maestra' | 'assistente' | 'genitore';
@@ -88,6 +88,33 @@ export function rigaSezione(page: Page, nomeSezione: string) {
 // sopra — quindi qui basta il tag).
 export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
   return page.locator('li').filter({ hasText: nomeAnno });
+}
+
+// Messaggi con role="alert" mostrati dall'app (errori dei form, banner),
+// escluso l'annunciatore di route di Next.js: un <div role="alert"
+// id="__next-route-announcer__"> vuoto che compare dopo una navigazione
+// client-side e che getByRole('alert') conterebbe (strict mode violation
+// o toHaveCount(0) falliti senza alcun errore visibile — issue #70).
+export function alertApp(page: Page) {
+  return page.locator('[role="alert"]:not(#__next-route-announcer__)');
+}
+
+// Click su un bottone che invia una Server Action, attendendo che la
+// risposta sia arrivata per intero (non solo le intestazioni). Il campo
+// di un form mostra già il valore digitato prima del salvataggio: senza
+// questa attesa un page.reload() subito dopo poteva arrivare prima che
+// l'azione avesse scritto sul DB (issue #70). Le Server Action si
+// riconoscono dall'header Next-Action della richiesta POST.
+//
+// Si aspetta la risposta, non response.finished(): con il server di
+// produzione la risposta di una Server Action resta aperta (stream RSC) e
+// finished() non si risolveva mai.
+export async function clickEAttendiAzione(page: Page, bottone: Locator): Promise<void> {
+  const risposta = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.request().headers()['next-action'] !== undefined
+  );
+  await bottone.click();
+  await risposta;
 }
 
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {

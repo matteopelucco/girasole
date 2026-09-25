@@ -24,17 +24,14 @@ function dataOggiFormattata(): string {
   }).format(new Date(Date.UTC(anno, mese - 1, giorno, 12)));
 }
 
-async function apriPrimaClasse(page: Page, sezione: 'presenze' | 'pasti', data: string): Promise<boolean> {
+// Navigazione a 2 livelli (specs/12, v0.39.0): Presenze e Pasti mostrano
+// direttamente i bambini di tutte le sezioni visibili, raggruppati per
+// sezione — non c'è più una pagina per singola classe da aprire.
+async function apriPagina(page: Page, sezione: 'presenze' | 'pasti', data: string): Promise<void> {
   await page.goto(`/dashboard/${sezione}?data=${data}`);
-  const primaClasse = page.locator('a.bg-emerald-50').first();
-  if ((await primaClasse.count()) === 0) return false;
-  await primaClasse.click();
-  await page.waitForURL(new RegExp(`/dashboard/${sezione}/.+`));
-  return true;
 }
 
 let nomeBambino: string | undefined;
-let sezioneId: string | undefined;
 
 test.describe('06 — Controllo di consistenza dei dati', () => {
   test.describe('come maestra, sulla data odierna', () => {
@@ -46,14 +43,12 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
     });
 
     test('nessun warning su un bambino con pasto "sì" coerente', async ({ page }) => {
-      const haClassi = await apriPrimaClasse(page, 'pasti', dataOggiRoma());
-      test.skip(!haClassi, 'nessuna classe attiva per questo account');
+      await apriPagina(page, 'pasti', dataOggiRoma());
 
       const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
       test.skip((await primaRiga.count()) === 0, 'nessun bambino selezionabile per il pasto in questa classe');
 
       nomeBambino = (await primaRiga.locator('span.font-medium').first().textContent())?.trim();
-      sezioneId = new URL(page.url()).pathname.split('/').pop();
 
       await primaRiga.getByRole('button', { name: 'Sì' }).click();
       await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
@@ -65,9 +60,9 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
     test('segnare "assente" sullo stesso bambino crea l\'incoerenza e mostra il warning in Presenze e Pasti', async ({
       page,
     }) => {
-      test.skip(!nomeBambino || !sezioneId, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
 
-      await page.goto(`/dashboard/presenze/${sezioneId}?data=${dataOggiRoma()}`);
+      await apriPagina(page, 'presenze', dataOggiRoma());
       const rigaPresenze = page.locator('li', { hasText: nomeBambino! }).first();
       await rigaPresenze.getByRole('button', { name: 'Assente' }).click();
       await expect(rigaPresenze.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
@@ -75,7 +70,7 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       await expect(rigaPresenze.getByText('Inconsistenza')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
 
-      await page.goto(`/dashboard/pasti/${sezioneId}?data=${dataOggiRoma()}`);
+      await apriPagina(page, 'pasti', dataOggiRoma());
       const rigaPasti = page.locator('li', { hasText: nomeBambino! }).first();
       await expect(rigaPasti.getByText('Bambino assente: il pasto non è applicabile.')).toBeVisible();
       await expect(rigaPasti.getByText('Inconsistenza')).toBeVisible();

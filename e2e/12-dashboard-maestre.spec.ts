@@ -12,8 +12,8 @@ test.describe('12 — Dashboard maestra/admin', () => {
       await page.goto('/dashboard');
       await expect(page.getByLabel('Data')).toHaveCount(0);
 
-      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
-      const linkPasti = page.getByRole('link', { name: 'Pasti' });
+      const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
+      const linkPasti = page.getByRole('link', { name: 'Pasti', exact: true });
       // Una maestra di test senza sezioni assegnate non vede i pulsanti:
       // in quel caso questo scenario non si applica (coperto a parte).
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
@@ -31,7 +31,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
       await linkPresenze.click();
       await page.waitForURL(/\/dashboard\/presenze\?/);
@@ -90,7 +90,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      const linkPasti = page.getByRole('link', { name: 'Pasti' });
+      const linkPasti = page.getByRole('link', { name: 'Pasti', exact: true });
       test.skip((await linkPasti.count()) === 0, 'nessuna sezione assegnata a questo account');
       await linkPasti.click();
       await page.waitForURL(/\/dashboard\/pasti\?/);
@@ -112,11 +112,11 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      const linkPresenze = page.getByRole('link', { name: 'Presenze' });
+      const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
       test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
 
       await expect(linkPresenze).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -139,8 +139,8 @@ test.describe('12 — Dashboard maestra/admin', () => {
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 
     await expect(page.getByText('Non hai ancora nessuna sezione assegnata')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Presenze' })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Pasti' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
   });
 
   test.describe('come admin', () => {
@@ -157,8 +157,8 @@ test.describe('12 — Dashboard maestra/admin', () => {
       // Le pagine di amministrazione restano raggiungibili dal menu laterale.
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Presenze' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);

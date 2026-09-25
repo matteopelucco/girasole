@@ -8,7 +8,7 @@
 // comunicazioni_retta: usa un indirizzo di dominio "example.com", mai
 // un indirizzo reale.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 test.describe('56 — Comunicazione retta mensile', () => {
   // "Invia comunicazioni" agisce su TUTTI i bambini attivi idonei del
@@ -47,7 +47,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
       await page.getByLabel('Prezzo retta mensile (€)').fill(opzioni.prezzoMensile ?? '0');
       await page.getByLabel('Prezzo buono pasto (€)').fill(opzioni.prezzoBuonoPasto ?? '0');
       if (opzioni.email) await page.getByLabel('Email promemoria retta').fill(opzioni.email);
-      await page.getByRole('button', { name: 'Salva costi' }).click();
+      // I campi mostrano già i valori digitati: prima di navigare altrove
+      // aspetto la fine della Server Action, o il goto la annullerebbe (#70).
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
       await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue(
         opzioni.prezzoMensile ?? '0',
         { timeout: 20_000 }
@@ -240,7 +242,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await page.goto('/admin/rette/template');
     const corpoUnico = `Nota costo extra: [{{note_costi_extra}}] — E2E ${Date.now()}`;
     await page.getByLabel('Corpo').fill(corpoUnico);
-    await page.getByRole('button', { name: 'Salva modello' }).click();
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modello' }));
     await expect(page.getByLabel('Corpo')).toHaveValue(corpoUnico, { timeout: 20_000 });
 
     const cognomeConNota = await creaBambinoConCosti(page, {
@@ -273,7 +275,8 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const popupSenzaNota = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeSenzaNota}`) });
     await expect(popupSenzaNota).toContainText('Nota costo extra: []');
     await expect(popupSenzaNota).not.toContainText('undefined');
-    await expect(popupSenzaNota).not.toContainText('null');
+    // Parola intera: 'null' come sottostringa c'è nel pulsante "Annulla".
+    await expect(popupSenzaNota).not.toContainText(/\bnull\b/);
   });
 
   test('inviare le comunicazioni con un click registra il log e mostra "Inviata"', async ({ page }) => {
@@ -533,7 +536,10 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const oggettoUnico = `Promemoria retta E2E ${Date.now()} {{mese}}`;
     await page.getByLabel('Oggetto').fill(oggettoUnico);
-    await page.getByRole('button', { name: 'Salva modello' }).click();
+    // "Ultimo salvataggio" può essere già presente da un salvataggio
+    // precedente del modello (riga unica, condivisa): aspetto la risposta
+    // della Server Action prima di ricaricare (issue #70).
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modello' }));
     await expect(page.getByLabel('Oggetto')).toHaveValue(oggettoUnico, { timeout: 20_000 });
 
     // Unico feedback visibile del salvataggio riuscito (specs/56): il
