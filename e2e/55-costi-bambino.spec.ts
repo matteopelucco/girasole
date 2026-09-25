@@ -6,7 +6,7 @@
 // (in questa app i bambini non si eliminano mai, solo disattivano —
 // vedi specs/50), coerente con le altre suite e2e.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
 
 test.describe('55 — Costi bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -122,7 +122,7 @@ test.describe('55 — Costi bambino', () => {
     await page.getByLabel('Email promemoria retta').fill('non-una-email');
     await page.getByRole('button', { name: 'Salva costi' }).click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
+    await expect(alertApp(page)).toBeVisible({ timeout: 20_000 });
 
     // Nulla è stato salvato: dopo un ricaricamento i campi tornano vuoti
     // (buono pasto/marca da bollo/pre-post-asilo tornano ai loro valori
@@ -154,7 +154,7 @@ test.describe('55 — Costi bambino', () => {
     await page.getByLabel('Email promemoria retta').fill('genitore1@esempio.it; non-una-email');
     await page.getByRole('button', { name: 'Salva costi' }).click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
+    await expect(alertApp(page)).toBeVisible({ timeout: 20_000 });
 
     await page.reload();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');

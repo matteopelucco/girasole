@@ -20,6 +20,7 @@ import {
   rigaAnnoScolastico,
   rigaSezione,
   statoAutenticazione,
+  alertApp,
 } from './helpers';
 
 test.describe('05 — Feedback sulle azioni', () => {
@@ -75,7 +76,7 @@ test.describe('05 — Feedback sulle azioni', () => {
     // anche come <option> nel select "Anno scolastico" del form
     // Sezioni (strict mode violation altrimenti).
     await expect(rigaAnnoScolastico(page, nome)).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('[role="alert"]')).toHaveCount(0);
+    await expect(alertApp(page)).toHaveCount(0);
     await nessunaViolazioneA11yGrave(page);
   });
 

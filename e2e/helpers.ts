@@ -90,6 +90,15 @@ export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
   return page.locator('li').filter({ hasText: nomeAnno });
 }
 
+// Messaggi con role="alert" mostrati dall'app (errori dei form, banner),
+// escluso l'annunciatore di route di Next.js: un <div role="alert"
+// id="__next-route-announcer__"> vuoto che compare dopo una navigazione
+// client-side e che getByRole('alert') conterebbe (strict mode violation
+// o toHaveCount(0) falliti senza alcun errore visibile — issue #70).
+export function alertApp(page: Page) {
+  return page.locator('[role="alert"]:not(#__next-route-announcer__)');
+}
+
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
   const prefisso = `E2E_${ruolo.toUpperCase()}`;
   const email = process.env[`${prefisso}_EMAIL`];

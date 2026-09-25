@@ -13,6 +13,7 @@ import {
   hasCredenziali,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
+  alertApp,
 } from './helpers';
 
 async function apriPrimaClassePresenze(page: Page, data: string): Promise<boolean> {
@@ -100,7 +101,7 @@ test.describe('53 — Calendario scolastico', () => {
       await page.getByLabel('Data di fine').fill(fine);
       await page.getByRole('button', { name: 'Aggiungi giorno di chiusura' }).click();
 
-      await expect(page.getByRole('alert')).toContainText('non può precedere');
+      await expect(alertApp(page)).toContainText('non può precedere');
       await expect(page.getByText('Nessun giorno di chiusura ancora inserito.')).toBeVisible();
     });
 

@@ -4,7 +4,7 @@
 // crediti_debiti_bambini sul progetto Supabase di test (stesso pattern
 // di 55-costi-bambino.spec.ts).
 import { test, expect } from '@playwright/test';
-import { dataOggiRoma, formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataOggiRoma, formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
 
 test.describe('58 — Crediti e debiti di un bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -105,7 +105,7 @@ test.describe('58 — Crediti e debiti di un bambino', () => {
     await page.getByLabel('Nota').fill('Secondo, stesso mese');
     await page.getByRole('button', { name: 'Aggiungi credito/debito' }).click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 20_000 });
+    await expect(alertApp(page)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('Secondo, stesso mese', { exact: false })).toHaveCount(0);
   });
 

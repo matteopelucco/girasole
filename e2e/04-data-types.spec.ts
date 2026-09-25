@@ -11,6 +11,7 @@ import {
   rigaAnnoScolastico,
   rigaSezione,
   statoAutenticazione,
+  alertApp,
 } from './helpers';
 
 test.describe('04 — Tipi di dato ed entità', () => {
@@ -42,7 +43,7 @@ test.describe('04 — Tipi di dato ed entità', () => {
     // (non getByText semplice) perché nomeAnno compare anche come
     // <option> nel select "Anno scolastico" del form Sezioni appena
     // sotto (strict mode violation altrimenti).
-    const banner = page.getByRole('alert');
+    const banner = alertApp(page);
     const annoInElenco = rigaAnnoScolastico(page, nomeAnno);
     await expect(banner.or(annoInElenco)).toBeVisible({ timeout: 20_000 });
     await expect(banner, 'la creazione ha mostrato un errore').toHaveCount(0);

@@ -29,7 +29,7 @@
 // è invece eliminabile dall'admin — vedi il test dedicato più sotto, che
 // usa proprio l'eliminazione per il proprio cleanup.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
 
 test.describe('19 — Monte ore', () => {
   test.describe('il diretto interessato vede il proprio saldo, in sola lettura', () => {
@@ -109,7 +109,7 @@ test.describe('19 — Monte ore', () => {
         await page.getByLabel('Ore', { exact: true }).fill('1.5');
         await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toContainText('nota');
+        await expect(alertApp(page)).toContainText('nota');
 
         // Con la nota: accettato, il saldo aumenta di 1.5h e compare
         // nello storico.
@@ -117,7 +117,7 @@ test.describe('19 — Monte ore', () => {
         await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
         await page.getByLabel('Nota', { exact: true }).fill('Movimento E2E');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Movimento E2E', { exact: false })).toBeVisible({ timeout: 20_000 });
 
         const testoSaldoDopo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
@@ -131,7 +131,7 @@ test.describe('19 — Monte ore', () => {
         await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
         await page.getByLabel('Nota', { exact: true }).fill('Riduzione ampia E2E (per testare il saldo negativo)');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(alertApp(page)).toHaveCount(0);
 
         const testoSaldoNegativo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
         const saldoNegativo = Number(testoSaldoNegativo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
@@ -144,13 +144,13 @@ test.describe('19 — Monte ore', () => {
         await page.getByLabel('Movimento', { exact: true }).selectOption('aumenta');
         await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E (riduzione ampia)');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(alertApp(page)).toHaveCount(0);
 
         await page.getByLabel('Ore', { exact: true }).fill('1.5');
         await page.getByLabel('Movimento', { exact: true }).selectOption('riduce');
         await page.getByLabel('Nota', { exact: true }).fill('Correzione E2E');
         await page.getByRole('button', { name: 'Registra movimento' }).click();
-        await expect(page.getByRole('alert')).toHaveCount(0);
+        await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Correzione E2E', { exact: false }).first()).toBeVisible({ timeout: 20_000 });
 
         const testoSaldoFinale = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
