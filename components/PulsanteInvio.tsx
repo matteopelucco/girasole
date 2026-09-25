@@ -16,6 +16,7 @@ export function PulsanteInvio({
   confermaMessaggio,
   className,
   onClick,
+  disabled,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   testoAttesa?: string;
@@ -41,7 +42,9 @@ export function PulsanteInvio({
     <button
       {...props}
       type="submit"
-      disabled={pending}
+      // Disabilitato mentre l'azione è in corso, oppure quando chi lo usa
+      // lo chiede (es. finché non si spunta una conferma consapevole).
+      disabled={pending || disabled}
       aria-busy={pending}
       onClick={(evento) => {
         if (confermaMessaggio && !window.confirm(confermaMessaggio)) {

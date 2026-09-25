@@ -3346,3 +3346,13 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       `docs/tasks-archivio.md`.
 - [x] `CLAUDE.md` ridotto alle regole operative (15,5 KB → 5 KB); versione
       estesa con le motivazioni in `docs/sviluppo-dettagli.md`.
+
+## /admin/maestre: eliminazione utente con finestra di conferma (2026-09-25)
+- [x] `specs/03`: icona cestino rossa in alto a destra della scheda al posto
+      del pulsante testuale; finestra di conferma con "Ne sono consapevole"
+      (non spuntata) e "Procedi con la cancellazione utente" abilitato solo
+      dopo la spunta; Annulla/Esc chiudono e azzerano la spunta.
+- [x] `components/EliminaUtente.tsx`; `PulsanteInvio` ora rispetta anche un
+      `disabled` passato da fuori.
+- [x] e2e: helper `eliminaUtenteDaScheda` (03, 04, 17, 54) e due test nuovi
+      (conferma consapevole, annulla).

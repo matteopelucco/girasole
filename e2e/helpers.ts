@@ -117,6 +117,26 @@ export async function clickEAttendiAzione(page: Page, bottone: Locator): Promise
   await risposta;
 }
 
+// Elimina l'utente della scheda `riga` su /admin/maestre passando dalla
+// finestra di conferma (specs/03 - utenti-e-ruoli.md): icona cestino,
+// spunta "Ne sono consapevole", "Procedi con la cancellazione utente".
+// Attende la risposta della Server Action, così un reload/goto successivo
+// non la annulla.
+export function finestraEliminaUtente(page: Page): Locator {
+  return page.getByRole('dialog', { name: 'Eliminare definitivamente questo utente?' });
+}
+
+export async function eliminaUtenteDaScheda(page: Page, riga: Locator): Promise<void> {
+  await riga.getByRole('button', { name: 'Elimina utente' }).click();
+  const finestra = finestraEliminaUtente(page);
+  await expect(finestra).toBeVisible();
+  await finestra.getByLabel('Ne sono consapevole').check();
+  await clickEAttendiAzione(
+    page,
+    finestra.getByRole('button', { name: 'Procedi con la cancellazione utente' })
+  );
+}
+
 export function credenziali(ruolo: Ruolo): { email: string; password: string } | null {
   const prefisso = `E2E_${ruolo.toUpperCase()}`;
   const email = process.env[`${prefisso}_EMAIL`];
