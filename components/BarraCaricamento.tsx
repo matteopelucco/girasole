@@ -20,6 +20,11 @@ export function BarraCaricamento() {
   const percorsoAttuale = useRef(`${pathname}?${searchParams.toString()}`);
 
   useEffect(() => {
+    // In fase di cattura: il <Link> di Next.js chiama preventDefault() nel
+    // proprio handler React (per gestire la navigazione lato client), che
+    // in fase di bubbling scatta prima di un listener sul document — con
+    // un listener normale ogni click su un <Link> risulterebbe già
+    // "defaultPrevented" e la barra non comparirebbe mai (issue #70).
     function gestisciClick(evento: MouseEvent) {
       if (evento.defaultPrevented || evento.button !== 0) return;
       if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.altKey) return;
@@ -44,8 +49,8 @@ export function BarraCaricamento() {
       setInCorso(true);
     }
 
-    document.addEventListener('click', gestisciClick);
-    return () => document.removeEventListener('click', gestisciClick);
+    document.addEventListener('click', gestisciClick, true);
+    return () => document.removeEventListener('click', gestisciClick, true);
   }, []);
 
   useEffect(() => {

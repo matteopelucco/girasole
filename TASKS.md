@@ -3298,6 +3298,9 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       linkava una route inesistente, 404); specs/07 aggiornata.
 - [x] `alertApp(page)` in e2e/helpers.ts: esclude l'annunciatore di route di
       Next.js (`#__next-route-announcer__`, role="alert" vuoto).
+- [x] Barra di caricamento (specs/01): non compariva mai sui `<Link>` di
+      Next.js (il loro handler chiama `preventDefault()` prima del listener
+      sul document); ora il listener è in fase di cattura.
 - [x] `scripts/crea-utenti-e2e.mjs` assegna E2E_MAESTRA ed E2E_ASSISTENTE
       alla sezione del seed: senza sezione non vedevano bambini né la card
       Presenze, e i test passavano o no a seconda dell'ordine.
