@@ -3306,6 +3306,9 @@ riuscito — non procedere con A21 finché entrambi rispondono.
       scambiata per quella della nota e il reload annullava la nota).
 - [x] 19: saldo letto con `expect.poll` fino al valore atteso, invece di
       aspettare una voce dello storico già presente.
+- [x] 53 "modificare un giorno di chiusura" e helper di 56
+      `creaBambinoConCosti`: attesa della Server Action prima di
+      reload/goto (flaky nel run CI verde di a15887a→822bf6f).
 - [x] `scripts/crea-utenti-e2e.mjs` assegna E2E_MAESTRA ed E2E_ASSISTENTE
       alla sezione del seed: senza sezione non vedevano bambini né la card
       Presenze, e i test passavano o no a seconda dell'ordine.

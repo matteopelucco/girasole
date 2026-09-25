@@ -14,6 +14,7 @@ import {
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
   alertApp,
+  clickEAttendiAzione,
 } from './helpers';
 
 // Navigazione a 2 livelli (specs/12, v0.39.0): Presenze e Pasti mostrano
@@ -124,7 +125,9 @@ test.describe('53 — Calendario scolastico', () => {
 
       const notaModificata = `${notaIniziale} - aggiornata`;
       await page.getByPlaceholder('Nota (opzionale, es. Vacanze di Natale)').fill(notaModificata);
-      await page.getByRole('button', { name: 'Salva modifiche' }).click();
+      // Il campo mostra già il testo digitato: prima di ricaricare aspetto
+      // la fine della Server Action, o il reload la annullerebbe (#70).
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
 
       await expect(page.getByPlaceholder('Nota (opzionale, es. Vacanze di Natale)')).toHaveValue(
         notaModificata,
