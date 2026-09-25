@@ -34,7 +34,7 @@ test.describe('55 — Costi bambino', () => {
 
   test('sezione Costi presente sulla scheda bambino + accessibilità', async ({ page }) => {
     await creaBambinoDiProva(page);
-    await expect(page.getByRole('heading', { name: 'Costi' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Costi', exact: true })).toBeVisible();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('0');
     await expect(page.getByLabel('Prezzo buono pasto (€)')).toHaveValue('6');
     await expect(page.getByLabel('Pre-asilo richiesto')).not.toBeChecked();

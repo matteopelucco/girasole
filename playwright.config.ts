@@ -68,8 +68,15 @@ export default defineConfig({
   // Riusa un server già avviato in locale (es. `npm run dev` in un altro
   // terminale, come da workflow consigliato); se non c'è, ne avvia uno
   // (anche in CI, dove parte sempre da zero).
+  //
+  // In CI il server è `next start` sulla build di produzione già prodotta
+  // dal passo 5 del workflow (stesse NEXT_PUBLIC_*), non `next dev`: con il
+  // dev server ogni pagina viene compilata alla prima visita e l'idratazione
+  // arriva tardi, così i test cliccavano bottoni di form ancora non idratati
+  // ("A React form was unexpectedly submitted", bottone bloccato in
+  // aria-busy) e fallivano a caso (issue #70). In locale resta `next dev`.
   webServer: {
-    command: 'npm run dev',
+    command: process.env.CI ? 'npm run start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

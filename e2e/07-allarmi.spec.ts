@@ -255,7 +255,10 @@ test.describe('07 — Allarmi', () => {
       const presente = (await riepilogo.count()) > 0;
       test.skip(!presente, 'nessun membro del personale ha allarmi attivi in questo momento');
 
-      const sezione = page.locator('div', { has: riepilogo });
+      // Solo il riquadro del riepilogo (genitore diretto del titolo): con
+      // locator('div', { has }) si prendevano anche tutti i div antenati,
+      // layout e sidebar compresi, con i loro link (issue #70).
+      const sezione = riepilogo.locator('..');
       await expect(sezione.getByRole('link')).toHaveCount(0);
       await nessunaViolazioneA11yGrave(page);
     });
