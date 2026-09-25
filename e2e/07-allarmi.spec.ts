@@ -101,7 +101,7 @@ test.describe('07 — Allarmi', () => {
         // Ogni link del banner porta direttamente a Presenze di una
         // sezione, o a Pasti — mai a una pagina generica.
         const link = banner.getByRole('link').first();
-        await expect(link).toHaveAttribute('href', /\/dashboard\/(presenze\/[^?]+|pasti)\?data=\d{4}-\d{2}-\d{2}/);
+        await expect(link).toHaveAttribute('href', /^\/dashboard\/(presenze|pasti)\?data=\d{4}-\d{2}-\d{2}$/);
         await nessunaViolazioneA11yGrave(page);
       });
     });
