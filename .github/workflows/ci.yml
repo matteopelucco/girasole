@@ -58,13 +58,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 22, non 20: lo step 7 (crea-utenti-e2e.mjs) usa @supabase/supabase-js,
       # che inizializza sempre anche un client realtime — su Node richiede il
       # WebSocket nativo, disponibile solo da Node 22 in poi (su 20 lo step
       # falliva subito con "Node.js detected but native WebSocket not found").
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -150,7 +150,7 @@ jobs:
 
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/
