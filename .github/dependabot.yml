@@ -29,6 +29,32 @@ updates:
         applies-to: version-updates
         update-types:
           - "major"
+    # Major dello stack Next/React/tooling bloccati finché non si chiude
+    # A36 (issue #37, upgrade Next 15/16 + React 19): lì l'adattamento del
+    # codice (cookies()/headers() asincroni, ecc.) si fa a mano e in modo
+    # coordinato. Un bump automatico di questi pacchetti rompe tsc (vedi PR
+    # #66, chiusa, e issue #68 causa 1). Rimuovere questo blocco a #37 chiusa.
+    ignore:
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

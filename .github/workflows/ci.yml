@@ -40,6 +40,17 @@ name: CI
 #      con gli account ai passi 6-7 (mai la produzione): i secret sono
 #      "Repository secrets" di GitHub, mai hardcoded qui. Un ruolo E2E_*
 #      mancante fa solo saltare (test.skip) i test che lo richiedono.
+#
+# PR di Dependabot (issue #68, causa 2): i passi 6-8 NON girano quando
+# l'attore è `dependabot[bot]`. Quelle run vedono solo lo store di secret
+# "Dependabot", dove deliberatamente NON copiamo SUPABASE_ACCESS_TOKEN,
+# SUPABASE_SERVICE_ROLE_KEY né i secret E2E_*: renderli disponibili
+# significherebbe esporli a `npm ci` su dipendenze aggiornate in automatico,
+# prima di qualunque revisione umana (uno script postinstall malevolo
+# potrebbe leggerli). Per queste PR il gate resta 1-5 (tsc, lint, jscpd,
+# vitest, build); quando un bump tocca codice sensibile (es. @supabase/ssr)
+# la e2e si fa girare rifacendo la PR da una branch umana (come #72/#73),
+# dove la CI è completa.
 
 on:
   pull_request:
@@ -93,7 +104,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
 
+      - name: Dependabot — passi 6-8 saltati (nessun secret sensibile)
+        if: github.actor == 'dependabot[bot]'
+        run: echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
+
       - name: 6. Reset del DB di test (Supabase CLI, A23)
+        if: github.actor != 'dependabot[bot]'
         run: |
           npm install -g supabase
           supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
@@ -109,6 +125,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)
+        if: github.actor != 'dependabot[bot]'
         run: node scripts/crea-utenti-e2e.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -126,9 +143,11 @@ jobs:
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
       - name: Installa Chromium (Playwright)
+        if: github.actor != 'dependabot[bot]'
         run: npx playwright install --with-deps chromium
 
       - name: 8. Test end-to-end (Playwright)
+        if: github.actor != 'dependabot[bot]'
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -149,7 +168,7 @@ jobs:
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
-        if: always()
+        if: always() && github.actor != 'dependabot[bot]'
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
