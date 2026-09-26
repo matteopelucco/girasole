@@ -2,7 +2,9 @@
 
 Regole operative, in breve. Le motivazioni e i dettagli (CI, pre-push, reset
 del DB, versioning) sono in [docs/sviluppo-dettagli.md](docs/sviluppo-dettagli.md):
-leggere la sezione pertinente solo quando si tocca quell'argomento.
+leggere la sezione pertinente solo quando si tocca quell'argomento. Il
+"perché" delle scelte deliberate (non i dettagli operativi) è in
+[docs/adr/](docs/adr/README.md).
 
 ## Stack
 Next.js 14 (App Router, Server Actions, Server Components di default),
