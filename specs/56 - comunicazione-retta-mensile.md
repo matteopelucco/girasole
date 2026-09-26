@@ -410,6 +410,7 @@ Allora vengo reindirizzato alla dashboard
   sulle comunicazioni passate (solo la navigazione mese per mese), una
   traccia di chi/quando ha annullato una comunicazione (un mese passato
   mostra solo le comunicazioni tuttora presenti, non quelle annullate),
-  più email/genitori diversi per lo stesso bambino, registrazione dei
-  bonifici ricevuti (resta in [00 - overview.md](00%20-%20overview.md),
-  backlog Fase 2).
+  più email/genitori diversi per lo stesso bambino. Backlog: issue
+  [#94](https://github.com/matteopelucco/girasole/issues/94). La
+  registrazione/verifica dei bonifici ricevuti è invece già coperta da
+  [59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md).

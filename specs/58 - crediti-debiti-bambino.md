@@ -179,4 +179,5 @@ non c'è nessun credito/debito quel mese) — stesso pattern di
   d'archivio/riepilogo di tutti i crediti/debiti (di tutti i bambini o
   di un bambino) indipendente dalla scheda del singolo bambino,
   notifiche al genitore quando viene inserito un credito/debito (lo
-  scopre dalla prossima comunicazione retta).
+  scopre dalla prossima comunicazione retta). Le ultime due voci sono
+  backlog: issue [#95](https://github.com/matteopelucco/girasole/issues/95).

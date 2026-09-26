@@ -286,3 +286,6 @@ momento la decisione presa, non più i pulsanti
   permessi.
 - Un pannello di storico/export dedicato oltre a quanto già mostrato
   nella pagina "Ore di lavoro" e nel PDF mensile.
+
+  Le quattro voci sopra sono backlog: issue
+  [#91](https://github.com/matteopelucco/girasole/issues/91).

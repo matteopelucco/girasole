@@ -218,9 +218,11 @@ Allora non vedo il riepilogo del personale
 
 ## Fuori scope in questa fase
 - Il ruolo Segretaria: quando verrà introdotto, riuserà lo stesso
-  riepilogo read-only già costruito per l'admin.
+  riepilogo read-only già costruito per l'admin. Backlog: issue
+  [#88](https://github.com/matteopelucco/girasole/issues/88).
 - Una vista che riepiloghi un arretrato di più settimane mai confermate
   per uno stesso dipendente (oggi si vede solo la singola settimana di
-  riferimento più recente).
+  riferimento più recente). Backlog: issue
+  [#89](https://github.com/matteopelucco/girasole/issues/89).
 - Altri allarmi (es. un bambino senza presenza per più giorni di fila,
   ore straordinarie anomale): non richiesti in questa fase.

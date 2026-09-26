@@ -351,3 +351,4 @@ principio "parametro non valido ⇒ valore di default" già in uso per
 ## Fuori scope in questa fase
 - "Riaprire" una settimana già confermata (renderla di nuovo
   modificabile dal personale): nessuna azione la offre in questa fase.
+  Backlog: issue [#90](https://github.com/matteopelucco/girasole/issues/90).
