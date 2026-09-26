@@ -219,6 +219,7 @@ Allora vengo reindirizzato alla dashboard
 ## Fuori scope in questa fase
 - La maestra non ha (ancora) un proprio pannello per creare/modificare/
   eliminare account genitore: quella gestione resta riservata all'admin.
+  Backlog: issue [#85](https://github.com/matteopelucco/girasole/issues/85).
 - Rette/pagamenti e portale genitori restano fuori scope come da
   [00 - overview.md](00%20-%20overview.md).
 

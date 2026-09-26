@@ -19,11 +19,15 @@ avvisi/comunicazioni per le famiglie.
 
 ## Fuori scope per questa fase
 - Rette e pagamenti genitori (Fase 2) — iniziata con i costi per
-  bambino (vedi [55 - costi-bambino.md](55%20-%20costi-bambino.md)) e
-  la comunicazione mensile della retta via email (vedi
-  [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)):
-  la registrazione dei bonifici ricevuti resta fuori scope.
-- Portale genitori con interfaccia dedicata (Fase 3).
+  bambino (vedi [55 - costi-bambino.md](55%20-%20costi-bambino.md)), la
+  comunicazione mensile della retta via email (vedi
+  [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md))
+  e la registrazione/verifica dei bonifici ricevuti (vedi
+  [59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md)).
+  Un saldo complessivo aggregato per bambino resta backlog: issue
+  [#84](https://github.com/matteopelucco/girasole/issues/84).
+- Portale genitori con interfaccia dedicata (Fase 3): backlog, issue
+  [#83](https://github.com/matteopelucco/girasole/issues/83).
 
 ## Indice degli scenari
 I requisiti dettagliati sono organizzati per scenario in questa cartella.

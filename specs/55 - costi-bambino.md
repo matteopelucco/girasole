@@ -138,4 +138,5 @@ valido
   vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md), ma non
   collegati al costo mensile fisso di questo requisito),
   storicizzazione dei cambi di prezzo nel tempo (un cambiamento vale da
-  subito, non da un mese futuro).
+  subito, non da un mese futuro). Backlog: issue
+  [#93](https://github.com/matteopelucco/girasole/issues/93).

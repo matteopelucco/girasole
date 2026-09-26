@@ -116,10 +116,13 @@ con lo stesso approccio già usato per il portale genitori (vedi
 - Storico "alunno → classe nel tempo" (tabella
   `bambini_sezioni_storico`): oggi l'admin gestisce solo la classe
   corrente di un alunno (`bambini.sezione_id`), non lo storico
-  multi-anno.
+  multi-anno. Backlog: issue
+  [#86](https://github.com/matteopelucco/girasole/issues/86).
 - Distinzione padre/madre su un genitore (`bambini_genitori.tipo_genitore`,
   con vincolo di al più un padre e una madre per alunno): non esiste
-  ancora una pagina che colleghi genitori e alunni.
+  ancora una pagina che colleghi genitori e alunni. Backlog: issue
+  [#87](https://github.com/matteopelucco/girasole/issues/87).
 - Il filtro "classe non attiva non visibile ai genitori" si applicherà
-  quando verrà costruito il portale genitori (Fase 3): oggi lo staff
+  quando verrà costruito il portale genitori (Fase 3, issue
+  [#83](https://github.com/matteopelucco/girasole/issues/83)): oggi lo staff
   (admin/maestra) vede comunque tutte le classi, attive o no.

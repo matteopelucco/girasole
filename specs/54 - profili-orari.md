@@ -100,3 +100,4 @@ Allora vengo reindirizzato alla dashboard
 - Fuori scope in questa fase: un pannello dedicato allo staff che mostri
   il proprio profilo orario assegnato al di fuori del precaricamento
   nel report ore di lavoro (vedi [18](18%20-%20report-ore-lavoro.md)).
+  Backlog: issue [#92](https://github.com/matteopelucco/girasole/issues/92).

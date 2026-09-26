@@ -249,12 +249,3 @@ _(dettagli in archivio)_
       quindi `npm ci` fallisce. Riprendere alzando `@types/node` e
       verificando `vitest.config.ts` contro i breaking change di v5.
 
-## Backlog — Fase 2/3
-- [x] Registrare i bonifici ricevuti, con le opportune note — vedi
-      "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
-      (`specs/59 - verifica-bonifico-retta.md`)
-- [ ] Stato di pagamento/saldo per bambino — solo parzialmente coperto:
-      crediti/debiti (`specs/58`) e verifica bonifico (`specs/59`) sono
-      per singola comunicazione/mese, non ancora una vista di saldo
-      complessivo aggregato per bambino
-- [ ] Portale genitori (UI dedicata)

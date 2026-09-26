@@ -5,6 +5,46 @@ per non caricarlo in ogni sessione. Le voci ancora aperte sono riportate
 in `TASKS.md`.
 
 
+## A38 · Backlog funzionale residuo come issue (2026-09-26)
+Le voci aperte di backlog funzionale in `TASKS.md` e le note *Fuori scope*
+delle specs sono diventate issue GitHub `type:feature` in triage
+(`status:triage`), così il backlog funzionale non resta più solo annotato
+nei file ma è tracciabile/pianificabile singolarmente. Issue create:
+- #83 Portale genitori: interfaccia dedicata (Fase 3)
+- #84 Saldo di pagamento complessivo per bambino (vista aggregata)
+- #85 Pannello maestra per gestire account genitore
+- #86 Storico "alunno -> classe" nel tempo
+- #87 Collegamento genitori-bambini con distinzione padre/madre
+- #88 Ruolo Segretaria
+- #89 Vista arretrato di più settimane ore di lavoro non confermate
+- #90 Riapertura di una settimana di ore di lavoro già confermata
+- #91 Monte ore: pagamento straordinario, soglie di allarme,
+      compensazione permessi/ferie, storico dedicato
+- #92 Pannello staff per consultare il proprio profilo orario assegnato
+- #93 Costi bambino: giorni effettivi pre/post-asilo e storicizzazione
+      dei prezzi
+- #94 Comunicazione retta: gestione avanzata delle comunicazioni già
+      inviate
+- #95 Crediti/debiti bambino: vista d'archivio aggregata e notifica al
+      genitore
+- #96 Bonifici retta: promemoria, rendicontazione/esportazione, gestione
+      bonifici parziali
+
+Ex voci di `TASKS.md`, sezione "Backlog — Fase 2/3":
+- [x] Registrare i bonifici ricevuti, con le opportune note — vedi
+      "Crediti/debiti di un bambino e verifica del bonifico retta" sopra
+      (`specs/59 - verifica-bonifico-retta.md`)
+- [x] Stato di pagamento/saldo per bambino — diventata #84
+- [x] Portale genitori (UI dedicata) — diventata #83
+
+**Nota**: le numerose voci "Da fare da parte tua" ancora aperte in
+`TASKS.md` (applicare una migration nel SQL Editor, verifiche manuali,
+ecc.) non sono state trasformate in issue: sono promemoria operativi
+legati a interventi già fatti da un agente, non backlog funzionale, e
+molte richiedono un'azione personale di Matteo (accesso a Supabase, test
+dal vivo) più che una feature da pianificare. Restano quindi in
+`TASKS.md` come voci aperte.
+
 ## Database di sviluppo: riattivato, 0031 applicata (2026-09-06)
 Il progetto Supabase di sviluppo/test era stato messo in pausa
 temporaneamente dall'utente; riattivato lo stesso giorno.

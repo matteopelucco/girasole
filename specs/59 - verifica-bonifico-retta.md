@@ -175,3 +175,4 @@ bonifico spesso arriva settimane dopo l'invio
   previsti), rendicontazione/esportazione dei bonifici verificati,
   gestione di bonifici parziali multipli per la stessa comunicazione
   (un solo bonifico per comunicazione, un solo importo ricevuto).
+  Backlog: issue [#96](https://github.com/matteopelucco/girasole/issues/96).
