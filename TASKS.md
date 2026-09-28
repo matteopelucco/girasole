@@ -348,3 +348,9 @@ _(dettagli in archivio)_
 - [x] Codice: nuova `SezioneNota`, `CardBambino` con un unico `<form>`
       (i pulsanti di stato salvano anche la nota, come prima), icone
       piene per Presenza/Pasto/Nota.
+
+## #113 · Presenze e pasti: Rojac nella card del riepilogo, intestazioni di sezione senza card (v0.48.0, 2026-09-28)
+- [x] Specs: `specs/10` (due scenari nuovi), allineati 12, 13, 14, 16.
+- [x] e2e: `e2e/10` (Rojac dentro la card, intestazione di sezione senza
+      bordo/ombra/sfondo), `e2e/14` sul nuovo riassunto.
+- [x] Unit: `vociRiepilogo` e `testoVoceRiepilogo` in `lib/giornata.ts`.
