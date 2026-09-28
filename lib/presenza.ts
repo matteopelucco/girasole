@@ -50,6 +50,9 @@ export function prossimaPresenza(attuale: RigaPresenza | null, azione: AzionePre
 // presenze_blocca_assenza_se_pasto_comunicato
 // (supabase/migrations/0052_presenza_blocca_assenza_se_pasto_comunicato.sql),
 // che resta la difesa reale: stesse condizioni, stessa esenzione admin.
+// Il trigger è AFTER INSERT OR UPDATE: scatta solo su righe che la RLS
+// ha già accettato (sezione propria, data scrivibile), quindi non rivela
+// nulla su bambini o date che chi scrive non potrebbe modificare.
 // - Solo dopo una comunicazione per la data, e solo se il pasto attuale
 //   del bambino è "si" (un pasto "no" o non segnato non è nel conteggio).
 // - Bloccato solo il PASSAGGIO a assente/malattia: se il bambino è già

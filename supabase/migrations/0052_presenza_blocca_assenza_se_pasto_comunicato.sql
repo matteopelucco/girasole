@@ -26,14 +26,29 @@
 -- RLS nasconde all'assistente (pasti: nessun accesso; pasti_comunicati:
 -- select solo admin/maestra). Eseguita con i diritti del chiamante,
 -- per l'assistente le due exists sarebbero sempre false e il blocco non
--- scatterebbe mai. search_path fissato per evitare hijacking; la
--- funzione non restituisce dati, solo accetta o rifiuta la riga.
+-- scatterebbe mai. search_path = public, pg_temp (pg_temp per ultimo);
+-- la funzione non restituisce dati, solo accetta o rifiuta la riga.
 --
--- Upsert (INSERT ... ON CONFLICT DO UPDATE, usato dall'app): in Postgres
--- scatta prima il trigger BEFORE INSERT sulla riga proposta e poi, in
--- caso di conflitto, il BEFORE UPDATE. Per questo nel ramo INSERT lo
--- stato precedente si legge dalla tabella (può esistere già una riga per
--- bambino+data), non si assume "nessuna presenza".
+-- AFTER, non BEFORE (review rls-guardian, B1): su un INSERT i trigger
+-- BEFORE ROW scattano PRIMA del controllo WITH CHECK della RLS, quindi
+-- una funzione SECURITY DEFINER in BEFORE diventava un oracolo: chiunque
+-- conoscesse l'UUID di un bambino di un'altra sezione (o una data
+-- passata) poteva distinguere dal messaggio d'errore "pasto 'sì'
+-- comunicato" da "errore RLS". In AFTER ROW i controlli RLS (USING e
+-- WITH CHECK) sono già passati: una riga che la RLS rifiuta non arriva
+-- mai alle letture privilegiate. Il raise in AFTER annulla comunque
+-- l'intero statement, quindi per l'app la semantica non cambia.
+--
+-- Upsert (INSERT ... ON CONFLICT DO UPDATE, usato dall'app): in AFTER,
+-- senza conflitto scatta AFTER INSERT (nessuna riga precedente), con
+-- conflitto scatta solo AFTER UPDATE con l'OLD reale — nessuna rilettura
+-- della tabella necessaria.
+--
+-- Limiti noti, accettati (specs/16, "Regole"): chi ha il rifiuto deduce
+-- che quel bambino della propria sezione, oggi, ha il pasto "sì"
+-- comunicato (conseguenza diretta del requisito); finestra di
+-- concorrenza di pochi millisecondi tra una comunicazione e un'assenza
+-- segnate nello stesso istante (READ COMMITTED), impatto solo contabile.
 --
 -- In test la applica il reset del DB di CI (supabase db reset); in
 -- produzione la applica Matteo a mano dopo il merge (supabase db push
@@ -43,30 +58,24 @@ create or replace function public.impedisci_assenza_se_pasto_comunicato()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, pg_temp
 as $$
-declare
-  stato_precedente text;
 begin
   if new.stato not in ('assente', 'malattia') then
-    return new;
+    return null;
   end if;
 
   if public.ruolo_corrente() = 'admin' then
-    return new;
+    return null;
   end if;
 
-  if tg_op = 'UPDATE' and old.bambino_id = new.bambino_id and old.data = new.data then
-    stato_precedente := old.stato;
-  else
-    select p.stato into stato_precedente
-    from public.presenze p
-    where p.bambino_id = new.bambino_id
-      and p.data = new.data;
-  end if;
-
-  if stato_precedente in ('assente', 'malattia') then
-    return new;
+  -- Riga già assente/malattia (stesso bambino, stessa data): nota o
+  -- passaggio assente <-> malattia non cambiano il conteggio dei pasti.
+  if tg_op = 'UPDATE'
+     and old.bambino_id = new.bambino_id
+     and old.data = new.data
+     and old.stato in ('assente', 'malattia') then
+    return null;
   end if;
 
   if exists (select 1 from public.pasti_comunicati pc where pc.data = new.data)
@@ -79,16 +88,18 @@ begin
     raise exception 'Impossibile segnare assente o malattia: il pasto di questo bambino è già stato comunicato a Rojac.';
   end if;
 
-  return new;
+  return null;
 end;
 $$;
 
--- Nessun grant/revoke dedicato: una funzione "returns trigger" non è
--- invocabile direttamente (né via SQL né via RPC di PostgREST, che
--- espone solo funzioni non-trigger), quindi la security definer non
--- apre una nuova superficie chiamabile.
+-- Difesa in profondità (review rls-guardian, N2): una funzione "returns
+-- trigger" non è invocabile direttamente, ma in Supabase le default
+-- privileges concedono comunque EXECUTE ad anon/authenticated. Il
+-- privilegio EXECUTE sulla funzione trigger è verificato solo al CREATE
+-- TRIGGER, non a ogni esecuzione: revocarlo non rompe il trigger.
+revoke execute on function public.impedisci_assenza_se_pasto_comunicato() from public, anon, authenticated;
 
 drop trigger if exists presenze_blocca_assenza_se_pasto_comunicato on public.presenze;
 create trigger presenze_blocca_assenza_se_pasto_comunicato
-  before insert or update on public.presenze
-  for each row execute procedure public.impedisci_assenza_se_pasto_comunicato();
+  after insert or update on public.presenze
+  for each row execute function public.impedisci_assenza_se_pasto_comunicato();
