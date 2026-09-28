@@ -315,3 +315,14 @@ _(dettagli in archivio)_
 - [ ] Verifica visiva su un telefono reale (non disponibile in locale
       senza `.env.local`): il layout è coperto dagli e2e, i colori dal
       controllo axe-core.
+
+## #109 · Card bambino: una sola nota, quella della presenza (v0.45.0, 2026-09-28)
+- [x] Specs: `specs/10` (sezione Pasto solo Sì/No, una nota per card),
+      `specs/14` (tolto lo scenario "salvare una nota", regola su
+      `pasti.note` conservata), allineati `specs/16` e `00 - overview`.
+- [x] e2e: `e2e/10` verifica un solo campo nota per card e nessuna nota
+      nella sezione Pasto; tolto il test orfano in `e2e/14`.
+- [x] Codice: tolti campo nota e "Salva nota" da `ColonnaPasto`, rimossa
+      `salvaNotaPasto`; `segnaPasto` non scrive più `note` (l'upsert
+      non la azzera sui record esistenti). Nessuna migration: la colonna
+      `pasti.note` resta con i dati storici, non più mostrata.
