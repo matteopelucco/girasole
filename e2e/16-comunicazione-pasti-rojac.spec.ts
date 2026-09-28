@@ -40,7 +40,7 @@ const SPIEGAZIONE_BLOCCO = 'Pasto già comunicato a Rojac';
 
 // Card dei bambini con pasto (in sola lettura, dopo la comunicazione)
 // uguale a `testoPasto` ("Sì", "No" o "Non ancora segnato") e presenza
-// non ancora "assente"/"malattia" (nessuna etichetta nella colonna Pasto).
+// non ancora "assente"/"malattia" (nessuna etichetta nella sezione Pasto).
 function cardConPasto(page: Page, testoPasto: string): Locator {
   return cardBambini(page)
     .filter({ has: page.getByRole('group', { name: 'Pasto', exact: true }).getByText(testoPasto, { exact: true }) })
@@ -150,7 +150,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       await expect(presenza.getByRole('button', { name: 'Presente' })).toBeEnabled();
       await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toBeEnabled();
       await expect(presenza.getByRole('button', { name: 'Post-asilo' })).toBeEnabled();
-      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toBeEditable();
+      await expect(presenza.getByLabel('Nota (opzionale)')).toBeEditable();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -193,7 +193,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
 
       await apriGiornata(page, dataOggiRoma());
       await saltaSeNonComunicato(page);
-      // Per l'admin la colonna Pasto resta modificabile: il pasto "sì" è
+      // Per l'admin la sezione Pasto resta modificabile: il pasto "sì" è
       // il pulsante "Sì" evidenziato, non un testo in sola lettura.
       const card = cardBambini(page)
         .filter({ has: page.getByRole('group', { name: 'Pasto', exact: true }).locator('button.bg-emerald-700') })

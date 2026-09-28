@@ -110,17 +110,28 @@ export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
 }
 
 // Schermata unica "Presenze e pasti" (specs/10 - presenze-e-pasti.md):
-// una card per bambino (<li id="bambino-<id>">) con una colonna
-// "Presenza" e, per maestra/admin, una colonna "Pasto" (role="group"
-// con aria-label). Le due colonne hanno ciascuna un proprio campo nota e
-// un proprio "Salva nota": i test vanno sempre ristretti alla colonna
-// giusta, altrimenti un getByRole/getByPlaceholder sulla card intera
-// trova due elementi. Il selettore sull'id esclude anche gli altri <li>
+// una card per bambino (<li id="bambino-<id>">) con un'intestazione
+// (<header>, nome del bambino come titolo <h3>) e una sezione
+// "Presenza" e, per maestra/admin, una sezione "Pasto" (role="group"
+// con nome accessibile). Le due sezioni hanno ciascuna un proprio campo
+// "Nota (opzionale)" e un proprio "Salva nota": i test vanno sempre
+// ristretti alla sezione giusta, altrimenti un getByRole/getByLabel
+// sulla card intera trova due elementi. Il selettore sull'id esclude anche gli altri <li>
 // della pagina (es. l'elenco "Bambini senza presenza" del box Rojac).
 export const PERCORSO_GIORNATA = '/dashboard/giornata';
 
 export function cardBambini(page: Page): Locator {
   return page.locator('li[id^="bambino-"]');
+}
+
+// Intestazione della card (sfondo e scritta Femmina/Maschio, issue #106)
+// e nome del bambino, titolo della card.
+export function intestazioneCard(card: Locator): Locator {
+  return card.locator('header');
+}
+
+export function nomeBambinoCard(card: Locator): Locator {
+  return card.getByRole('heading', { level: 3 });
 }
 
 export function colonnaPresenza(contenitore: Page | Locator): Locator {

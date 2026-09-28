@@ -41,7 +41,7 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
-  test.describe('flusso "Presenze e pasti", colonna presenza (mobile)', () => {
+  test.describe('flusso "Presenze e pasti", sezione presenza (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
     test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
-  test.describe('flusso "Presenze e pasti", colonna pasto (mobile)', () => {
+  test.describe('flusso "Presenze e pasti", sezione pasto (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
     test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {

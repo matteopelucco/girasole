@@ -15,7 +15,9 @@ import {
   dataIeriRoma,
   dataOggiRoma,
   hasCredenziali,
+  intestazioneCard,
   nessunaViolazioneA11yGrave,
+  nomeBambinoCard,
   primaCardConPulsante,
   statoAutenticazione,
 } from './helpers';
@@ -83,6 +85,16 @@ async function nessunOverflowOrizzontale(page: Page): Promise<void> {
   ).toBeLessThanOrEqual(esito.larghezza);
 }
 
+// Colori di sfondo dell'intestazione (Tailwind 3: pink-100, sky-100,
+// stone-50), come calcolati dal browser.
+const SFONDO_FEMMINA = 'rgb(252, 231, 243)';
+const SFONDO_MASCHIO = 'rgb(224, 242, 254)';
+const SFONDO_NEUTRO = 'rgb(250, 250, 249)';
+
+async function sfondo(locator: Locator): Promise<string> {
+  return locator.evaluate((el) => getComputedStyle(el).backgroundColor);
+}
+
 async function riquadro(locator: Locator) {
   const box = await locator.boundingBox();
   if (!box) throw new Error('elemento non visibile');
@@ -97,7 +109,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
     });
 
-    test('ogni bambino ha una card con la presenza a sinistra e il pasto a destra', async ({ page }) => {
+    test('ogni bambino ha una card con intestazione, sezione presenza e sezione pasto', async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
       await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
@@ -105,19 +117,21 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       const card = primaCardConPulsante(page, 'Pasto', 'Sì');
       test.skip((await card.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
 
-      await expect(card.locator('span.font-medium').first()).not.toBeEmpty();
+      // Il nome è il titolo della card, dentro l'intestazione.
+      await expect(intestazioneCard(card).getByRole('heading', { level: 3 })).not.toBeEmpty();
       const presenza = colonnaPresenza(card);
       for (const nome of ['Presente', 'Pre-asilo', 'Post-asilo', 'Assente', 'Malattia', 'Salva nota']) {
         await expect(presenza.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
-      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toBeVisible();
+      await expect(presenza.getByLabel('Nota (opzionale)')).toBeVisible();
 
       const pasto = colonnaPasto(card);
       for (const nome of ['Sì', 'No', 'Salva nota']) {
         await expect(pasto.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
-      await expect(pasto.getByPlaceholder('Nota (opzionale)')).toBeVisible();
+      await expect(pasto.getByLabel('Nota (opzionale)')).toBeVisible();
 
+      // Schermo da computer (viewport di default, 1280px): sezioni affiancate.
       const boxPresenza = await riquadro(presenza);
       const boxPasto = await riquadro(pasto);
       expect(boxPasto.x).toBeGreaterThan(boxPresenza.x + boxPresenza.width - 1);
@@ -125,7 +139,61 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('un cambio di presenza si vede subito nella colonna pasto della stessa card', async ({ page }) => {
+    test("l'intestazione mostra il sesso del bambino con icona e colore", async ({ page }) => {
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+
+      // Il seed (supabase/seed.sql) ha nella sezione di test almeno una
+      // femmina, un maschio e un bambino senza sesso: il controllo è sul
+      // legame scritta ↔ colore, non su nomi precisi.
+      const cards = cardBambini(page);
+      const femmina = cards.filter({ has: page.locator('header').getByText('Femmina', { exact: true }) }).first();
+      const maschio = cards.filter({ has: page.locator('header').getByText('Maschio', { exact: true }) }).first();
+      const senzaSesso = cards
+        .filter({ hasNot: page.locator('header').getByText(/^(Femmina|Maschio)$/) })
+        .first();
+
+      test.skip(
+        (await femmina.count()) === 0 || (await maschio.count()) === 0 || (await senzaSesso.count()) === 0,
+        'servono una femmina, un maschio e un bambino senza sesso visibili (seed di test)'
+      );
+
+      expect(await sfondo(intestazioneCard(femmina))).toBe(SFONDO_FEMMINA);
+      await expect(intestazioneCard(femmina).locator('svg')).toHaveCount(1);
+      expect(await sfondo(intestazioneCard(maschio))).toBe(SFONDO_MASCHIO);
+      await expect(intestazioneCard(maschio).locator('svg')).toHaveCount(1);
+      expect(await sfondo(intestazioneCard(senzaSesso))).toBe(SFONDO_NEUTRO);
+      // Nessuna icona del sesso nell'intestazione del bambino senza sesso
+      // (l'eventuale warning di incoerenza è testo, non un'icona SVG).
+      await expect(intestazioneCard(senzaSesso).locator('svg')).toHaveCount(0);
+      await expect(nomeBambinoCard(senzaSesso)).not.toBeEmpty();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('lo stato selezionato è evidenziato con un segno di spunta', async ({ page }) => {
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile oggi');
+      const idCard = await card.getAttribute('id');
+      const presenza = colonnaPresenza(page.locator(`li#${idCard}`));
+
+      const presente = presenza.getByRole('button', { name: 'Presente', exact: true });
+      if ((await presente.getAttribute('aria-pressed')) !== 'true') {
+        await clickEAttendiAzione(page, presente);
+      }
+      await expect(presente).toHaveAttribute('aria-pressed', 'true');
+      await expect(presente).toContainText('✓');
+      for (const nome of ['Assente', 'Malattia']) {
+        const altro = presenza.getByRole('button', { name: nome, exact: true });
+        if (await altro.isEnabled()) await expect(altro).toHaveAttribute('aria-pressed', 'false');
+        await expect(altro).not.toContainText('✓');
+      }
+    });
+
+    test('un cambio di presenza si vede subito nella sezione pasto della stessa card', async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
@@ -167,38 +235,35 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
     });
   });
 
-  test.describe('come maestra, a larghezza mobile (375px)', () => {
+  test.describe('come maestra, su telefono (375px)', () => {
     test.use({ viewport: { width: 375, height: 812 }, storageState: statoAutenticazione('maestra') });
 
-    test('nessuno scorrimento orizzontale, pasto a destra della presenza, pulsanti alti almeno 32px', async ({
-      page,
-    }) => {
+    test("su telefono le sezioni sono una sotto l'altra", async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = cardBambini(page).first();
-      const presenza = colonnaPresenza(card);
-      const pasto = colonnaPasto(card);
-      const boxPresenza = await riquadro(presenza);
-      const boxPasto = await riquadro(pasto);
-      expect(boxPasto.x).toBeGreaterThan(boxPresenza.x + boxPresenza.width - 1);
-      expect(Math.abs(boxPasto.y - boxPresenza.y)).toBeLessThan(4);
+      const boxPresenza = await riquadro(colonnaPresenza(card));
+      const boxPasto = await riquadro(colonnaPasto(card));
+      expect(boxPasto.y).toBeGreaterThanOrEqual(boxPresenza.y + boxPresenza.height - 1);
+      const boxCard = await riquadro(card);
+      expect(boxPasto.y + boxPasto.height).toBeLessThanOrEqual(boxCard.y + boxCard.height + 1);
 
-      const bottonePresente = presenza.getByRole('button', { name: 'Presente' });
+      const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
       if ((await bottonePresente.count()) > 0) {
-        expect((await riquadro(bottonePresente)).height).toBeGreaterThanOrEqual(32);
+        expect((await riquadro(bottonePresente)).height).toBeGreaterThanOrEqual(44);
       }
 
       await nessunaViolazioneA11yGrave(page);
     });
   });
 
-  test.describe('come maestra, sotto i 360px', () => {
+  test.describe('come maestra, schermo molto stretto (340px)', () => {
     test.use({ viewport: { width: 340, height: 740 }, storageState: statoAutenticazione('maestra') });
 
-    test('il pasto va sotto la presenza, nella stessa card, senza scorrimento orizzontale', async ({ page }) => {
+    test("anche su uno schermo molto stretto non c'è scorrimento orizzontale", async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
@@ -213,6 +278,23 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
     });
   });
 
+  test.describe('come maestra, su tablet (768px)', () => {
+    test.use({ viewport: { width: 768, height: 1024 }, storageState: statoAutenticazione('maestra') });
+
+    test('su tablet le sezioni sono affiancate', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      await nessunOverflowOrizzontale(page);
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+
+      const card = cardBambini(page).first();
+      const boxPresenza = await riquadro(colonnaPresenza(card));
+      const boxPasto = await riquadro(colonnaPasto(card));
+      expect(boxPasto.x).toBeGreaterThan(boxPresenza.x + boxPresenza.width - 1);
+      expect(Math.abs(boxPasto.y - boxPresenza.y)).toBeLessThan(4);
+    });
+  });
+
   test.describe('come assistente', () => {
     test.use({ storageState: statoAutenticazione('assistente') });
 
@@ -220,7 +302,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
     });
 
-    test("l'assistente vede solo la colonna presenza, nessun dato pasto", async ({ page }) => {
+    test("l'assistente vede solo la sezione presenza, nessun dato pasto", async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
