@@ -65,26 +65,6 @@ test.describe('14 — Segna pasto', () => {
       await expect(bottoneSi).toHaveClass(/bg-emerald-700/);
     });
 
-    test('salvare una nota senza cambiare lo stato', async ({ page }) => {
-      const card = primaCardConPulsante(page, 'Pasto', 'Sì');
-      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
-      const pasto = colonnaPasto(card);
-
-      // Aspetto la fine di ciascun salvataggio: il reload annullerebbe
-      // il salvataggio della nota (#70).
-      await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'Sì' }));
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-
-      await pasto.getByLabel('Nota (opzionale)').fill('ha finito tutto');
-      await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'Salva nota' }));
-
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-
-      await page.reload();
-      await expect(pasto.getByLabel('Nota (opzionale)')).toHaveValue('ha finito tutto');
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-    });
-
     test('segnare che un bambino non ha mangiato', async ({ page }) => {
       const card = primaCardConPulsante(page, 'Pasto', 'No');
       test.skip((await card.count()) === 0, 'nessun bambino segnabile');

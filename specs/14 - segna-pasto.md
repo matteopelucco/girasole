@@ -43,12 +43,6 @@ stato del pasto e della presenza
 Quando premo "Sì" nella sezione "Pasto" di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "sì"
 
-## Scenario: salvare una nota senza cambiare lo stato
-Dato che un bambino ha già uno stato pasto segnato per oggi
-Quando scrivo o modifico la nota e premo "Salva nota"
-Allora la nota viene salvata restando associata allo stato già segnato
-E la nota resta visibile anche dopo aver ricaricato la pagina
-
 ## Scenario: segnare che un bambino non ha mangiato
 Quando premo "No" nella sezione "Pasto" di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "no"
@@ -88,16 +82,17 @@ sempre senza alcun dato pasto
 ## Regole
 - Stati validi: `si`, `no`. (Lo stato `parziale` è stato rimosso dopo
   un test con un'insegnante: nella pratica un pasto è mangiato o no, un
-  eventuale dettaglio va nella nota libera — vedi
+  eventuale dettaglio va nella nota della presenza — vedi
   `supabase/migrations/0012_pasto_senza_parziale.sql` per la migration
   dei dati storici già segnati "parziale".)
 - Un solo record di pasto per bambino per giorno (upsert su
   `bambino_id, data`).
-- La nota è testo libero, opzionale.
-- Il pulsante "Salva nota" è disponibile solo se per il bambino esiste
-  già uno stato pasto segnato per la data in questione (stesso motivo di
-  [13 - segna-presenza.md](13%20-%20segna-presenza.md): il record
-  richiede sempre uno stato).
+- Il pasto non ha più un campo nota in schermata (issue
+  [#109](https://github.com/matteopelucco/girasole/issues/109)): l'unica
+  nota della card è quella della presenza
+  ([13 - segna-presenza.md](13%20-%20segna-presenza.md)). La colonna
+  `pasti.note` resta nel database con le note già salvate: segnare Sì/No
+  non la tocca (non la azzera), la schermata non la mostra più.
 - Un bambino con presenza "assente" oppure "malattia" per la data in
   questione non può avere un pasto segnato per quella data: vincolo
   imposto anche a livello di database (trigger, vedi

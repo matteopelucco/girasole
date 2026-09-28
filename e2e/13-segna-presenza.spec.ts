@@ -6,8 +6,8 @@
 //
 // La presenza si segna dalla sezione "Presenza" della card di ogni
 // bambino nella schermata unica "Presenze e pasti" (specs/10): ogni
-// interazione è ristretta a quella sezione, perché la sezione "Pasto"
-// della stessa card ha un proprio campo nota e un proprio "Salva nota".
+// interazione è ristretta a quella sezione (l'unica con un campo nota,
+// issue #109), per non confondersi con i pulsanti della sezione "Pasto".
 import { test, expect } from '@playwright/test';
 import {
   apriGiornata,

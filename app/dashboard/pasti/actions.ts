@@ -29,55 +29,22 @@ async function assicuraNonAssente(supabase: SupabaseClient, bambinoId: string, d
   }
 }
 
-async function upsertPasto(
-  supabase: SupabaseClient,
-  userId: string,
-  bambinoId: string,
-  data: string,
-  mangiato: StatoPasto,
-  note: string | null
-) {
+// Il pasto non ha più una nota in schermata (issue #109, specs/14): la
+// colonna `pasti.note` resta nel DB con le note già salvate. Per questo
+// l'upsert non include `note`: sui record esistenti ON CONFLICT
+// aggiorna solo le colonne passate, quindi segnare Sì/No non la azzera.
+export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: string) {
+  const { supabase, user, profilo } = await requireProfilo();
+  assicuraAccessoPasti(profilo?.ruolo);
+  assicuraScrivibile(profilo?.ruolo, data);
+  await assicuraGiornoApribile(supabase, data);
+  await assicuraNonAssente(supabase, bambinoId, data);
+
   const { error } = await supabase.from('pasti').upsert(
-    { bambino_id: bambinoId, data, mangiato, note, inserito_da: userId },
+    { bambino_id: bambinoId, data, mangiato, inserito_da: user.id },
     { onConflict: 'bambino_id,data' }
   );
   if (error) throw new Error(`Impossibile salvare il pasto: ${error.message}`);
-}
-
-export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: string, formData: FormData) {
-  const { supabase, user, profilo } = await requireProfilo();
-  assicuraAccessoPasti(profilo?.ruolo);
-  assicuraScrivibile(profilo?.ruolo, data);
-  await assicuraGiornoApribile(supabase, data);
-  await assicuraNonAssente(supabase, bambinoId, data);
-
-  const note = (formData.get('nota_pasto') as string)?.trim() || null;
-  await upsertPasto(supabase, user.id, bambinoId, data, mangiato, note);
-
-  revalidatePath(PERCORSO_GIORNATA);
-}
-
-// Salva la nota senza richiedere di ripremere lo stato già segnato
-// (specs/14 - segna-pasto.md, stesso motivo di
-// app/dashboard/presenze/actions.ts:salvaNotaPresenza).
-export async function salvaNotaPasto(
-  bambinoId: string,
-  data: string,
-  mangiatoAttuale: StatoPasto | null,
-  formData: FormData
-) {
-  const { supabase, user, profilo } = await requireProfilo();
-  assicuraAccessoPasti(profilo?.ruolo);
-  assicuraScrivibile(profilo?.ruolo, data);
-  await assicuraGiornoApribile(supabase, data);
-
-  if (!mangiatoAttuale) {
-    throw new Error('Segna prima uno stato pasto per poter salvare una nota.');
-  }
-  await assicuraNonAssente(supabase, bambinoId, data);
-
-  const note = (formData.get('nota_pasto') as string)?.trim() || null;
-  await upsertPasto(supabase, user.id, bambinoId, data, mangiatoAttuale, note);
 
   revalidatePath(PERCORSO_GIORNATA);
 }
@@ -97,8 +64,8 @@ export async function salvaNotaPasto(
 // stessa (assicuraAccessoPasti + il controllo data sotto) resta il
 // gate di autorizzazione, dato che qui by-passiamo la RLS di proposito.
 // Segue la firma di useFormState (FormConEsito/ConfermaAzione), a
-// differenza di segnaPasto/salvaNotaPasto sopra che non hanno bisogno
-// del feedback avviato/riuscito/fallita di specs/05.
+// differenza di segnaPasto sopra che non ha bisogno del
+// feedback avviato/riuscito/fallita di specs/05.
 export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { profilo, user } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
