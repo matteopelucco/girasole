@@ -64,7 +64,7 @@ assegnata)
 Quando apro la dashboard
 Allora vedo il pulsante/scheda "Presenze e pasti" (senza selettore di
 data, come per la maestra)
-E aprendolo vedo solo la parte presenze: nessuna colonna pasto, nessun
+E aprendolo vedo solo la parte presenze: nessuna sezione pasto, nessun
 riepilogo pasti, nessun box Rojac (vedi
 [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)) — il registro
 pasti non è accessibile al ruolo assistente (vedi
