@@ -111,7 +111,11 @@ dentro la stessa card, senza scorrimento orizzontale
   permessi (RLS invariata).
 - Per l'assistente la pagina non legge `pasti` né `pasti_comunicati`
   (niente query, non solo niente render): la RLS già glielo impedisce,
-  ma non si fa nemmeno la richiesta.
+  ma non si fa nemmeno la richiesta. Di conseguenza i suoi pulsanti Assente/Malattia non
+  possono essere disabilitati in anticipo dopo la comunicazione a Rojac:
+  è il database a rifiutare, con un messaggio comprensibile (vedi
+  [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md),
+  anche per l'informazione che il rifiuto lascia dedurre).
 - Disposizione: colonne affiancate da 360px di larghezza dello schermo in
   su; sotto, presenza sopra e pasto sotto nella stessa card. Pulsanti
   compatti (etichetta corta) con area di tocco alta almeno 32px.

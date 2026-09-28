@@ -260,6 +260,37 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   Assente/Malattia restano visibili e, se il bambino ha il pasto
   comunicato, è il database a rifiutare la modifica, con lo stesso
   messaggio comprensibile.
+- Il trigger scatta **dopo** i controlli RLS (trigger `AFTER`): valuta
+  solo modifiche che chi scrive è già autorizzato a fare (bambini della
+  propria sezione, data scrivibile). Un tentativo su un bambino di
+  un'altra sezione o su una data non scrivibile riceve sempre il solito
+  rifiuto RLS, qualunque sia il pasto: il blocco non rivela nulla su
+  bambini o date fuori dal proprio perimetro.
+- **Limiti noti, accettati consapevolmente** (review di sicurezza di
+  #101):
+  - *Informazione dedotta dal rifiuto*: una maestra o un'assistente che
+    prova a segnare Assente/Malattia su un bambino della propria
+    sezione, oggi, e riceve il rifiuto, ne deduce che quel bambino ha il
+    pasto "sì" già comunicato. Per l'assistente è un'informazione sul
+    pasto a cui altrimenti non avrebbe accesso
+    ([03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)): è la
+    conseguenza diretta di questo requisito (il database deve rifiutare
+    e l'app deve spiegare perché), limitata ai bambini che può già
+    modificare.
+  - *Concorrenza*: se una maestra segna Assente nello stesso istante in
+    cui un'altra conferma i pasti, il controllo può non vedere ancora la
+    comunicazione in corso (finestra di pochi millisecondi) e il bambino
+    risulta assente pur essendo contato nel totale comunicato. L'impatto
+    è solo contabile (resta visibile col warning di
+    [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)
+    e si gestisce nel confronto con la fattura): chiuderlo del tutto
+    richiederebbe un lock sulla data in entrambe le operazioni, non
+    giustificato oggi.
+  - *Pasto corrente, non fotografia*: il blocco guarda il pasto
+    **attuale** del bambino, non quello al momento della comunicazione
+    (vedi sopra). Nel caso peggiore (l'admin porta un pasto a "sì" dopo
+    la comunicazione) un bambino non incluso nel totale resta bloccato
+    per maestra/assistente: fail-closed, corregge l'admin.
 - L'email di notifica (a info@asilosartorio.it) è un effetto collaterale
   best-effort: se l'invio fallisce (es. servizio email non
   configurato/irraggiungibile), la comunicazione resta comunque

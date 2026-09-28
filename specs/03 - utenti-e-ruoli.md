@@ -59,7 +59,11 @@ Un utente ha uno e un solo ruolo, tra:
   non ha accesso né in lettura né in scrittura (vedi
   [14 - segna-pasto.md](14%20-%20segna-pasto.md)): nella schermata unica
   "Presenze e pasti" vede solo la colonna presenze (vedi
-  [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Vale in particolare
+  [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Unica eccezione, consapevole: dopo la comunicazione dei pasti a Rojac,
+  se prova a segnare Assente/Malattia un bambino della propria sezione e
+  il database lo rifiuta, ne deduce che quel bambino ha il pasto "sì" già
+  comunicato (vedi i limiti noti in
+  [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)). Vale in particolare
   anche per le presenze a pre-asilo/post-asilo (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)). Come la maestra,
   può scrivere solo sulla data odierna (vedi Regole in
