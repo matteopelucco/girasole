@@ -60,44 +60,45 @@ export function titoloRiepilogoSezione(titoloGruppo: string): string {
 }
 
 // Stile dell'intestazione della card bambino in base a `bambini.sesso`
-// (specs/10, issue #106): rosa tenue per le femmine, azzurro tenue per i
-// maschi, neutro se il sesso non è compilato (o ha un valore inatteso).
+// (specs/10, issue #106 e #108): avatar di una bambina su rosa tenue per
+// le femmine, di un bambino su azzurro tenue per i maschi, avatar neutro
+// su grigio se il sesso non è compilato (o ha un valore inatteso).
 // Classi Tailwind letterali: Tailwind genera solo le classi che trova
 // come testo nei file scansionati (lib/** è incluso, vedi
-// tailwind.config.ts). `etichetta` è null quando non c'è sesso: niente
-// icona né scritta, solo lo sfondo neutro.
+// tailwind.config.ts). `nomeAvatar` è il nome accessibile dell'avatar,
+// null per quello neutro (decorativo).
 export type StileSesso = {
   sesso: 'F' | 'M' | null;
-  etichetta: 'Femmina' | 'Maschio' | null;
+  nomeAvatar: 'Bambina' | 'Bambino' | null;
   bordoCard: string;
   sfondoIntestazione: string;
-  testoEtichetta: string;
+  sfondoAvatar: string;
 };
 
 export function stileSesso(sesso: string | null | undefined): StileSesso {
   if (sesso === 'F') {
     return {
       sesso: 'F',
-      etichetta: 'Femmina',
+      nomeAvatar: 'Bambina',
       bordoCard: 'border-pink-200',
       sfondoIntestazione: 'bg-pink-100',
-      testoEtichetta: 'text-pink-800',
+      sfondoAvatar: 'bg-pink-200',
     };
   }
   if (sesso === 'M') {
     return {
       sesso: 'M',
-      etichetta: 'Maschio',
+      nomeAvatar: 'Bambino',
       bordoCard: 'border-sky-200',
       sfondoIntestazione: 'bg-sky-100',
-      testoEtichetta: 'text-sky-800',
+      sfondoAvatar: 'bg-sky-200',
     };
   }
   return {
     sesso: null,
-    etichetta: null,
+    nomeAvatar: null,
     bordoCard: 'border-stone-200',
-    sfondoIntestazione: 'bg-stone-50',
-    testoEtichetta: 'text-stone-600',
+    sfondoIntestazione: 'bg-stone-100',
+    sfondoAvatar: 'bg-stone-200',
   };
 }

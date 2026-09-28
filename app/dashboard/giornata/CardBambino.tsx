@@ -4,13 +4,14 @@ import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { ColonnaPresenza, type PresenzaGiorno } from './ColonnaPresenza';
 import { ColonnaPasto, type PastoGiorno } from './ColonnaPasto';
-import { IconaFemmina, IconaMaschio } from '@/components/icone';
+import { AvatarBambino } from '@/components/AvatarBambino';
 import { stileSesso } from '@/lib/giornata';
 
 // Card di un bambino nella schermata "Presenze e pasti" (specs/10,
-// disegno della issue #106) in tre parti: intestazione (nome come titolo,
-// icona e scritta Femmina/Maschio con sfondo rosa/azzurro tenue — neutro
-// se il sesso non è compilato —, allergie, Assente/Malattia, warning di
+// disegno della issue #106) in tre parti: intestazione (avatar
+// bambina/bambino su sfondo rosa/azzurro tenue — neutro su grigio se il
+// sesso non è compilato, issue #108 —, nome come titolo, allergie,
+// Assente/Malattia, warning di
 // specs/06), sezione "Presenza" e, solo se `conPasti` (maestra/admin),
 // sezione "Pasto". Su telefono le sezioni sono una sotto l'altra; da
 // 640px (`sm`) in su sono affiancate. L'id `bambino-<id>` è l'ancora
@@ -45,7 +46,6 @@ export function CardBambino({
     mangiato: pasto?.mangiato as StatoPasto | undefined,
   });
   const stile = stileSesso(sesso);
-  const IconaSesso = stile.sesso === 'F' ? IconaFemmina : IconaMaschio;
 
   return (
     <li
@@ -58,16 +58,11 @@ export function CardBambino({
       <header
         className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 [overflow-wrap:anywhere] ${stile.sfondoIntestazione}`}
       >
-        <div className="min-w-0">
-          <h3 className="font-heading text-base font-semibold text-stone-900">
+        <div className="flex min-w-0 items-center gap-3">
+          <AvatarBambino sesso={sesso} />
+          <h3 className="min-w-0 font-heading text-base font-semibold text-stone-900">
             {bambino.nome} {bambino.cognome}
           </h3>
-          {stile.etichetta && (
-            <p className={`mt-0.5 flex items-center gap-1 text-xs font-medium ${stile.testoEtichetta}`}>
-              <IconaSesso className="h-3.5 w-3.5" />
-              {stile.etichetta}
-            </p>
-          )}
         </div>
         <div className="flex min-w-0 flex-wrap gap-1">
           {presenza?.stato === 'assente' && <EtichettaAssente />}

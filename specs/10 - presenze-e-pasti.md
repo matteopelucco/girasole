@@ -37,18 +37,24 @@ Dall'alto verso il basso:
 Card bambino (disegno rivisto nella issue
 [#106](https://github.com/matteopelucco/girasole/issues/106), su un
 mockup fornito da Matteo), divisa in tre parti:
-- **Intestazione**: nome e cognome in evidenza (titolo della card) e,
-  se il campo `sesso` del bambino è compilato (gestito dall'admin, vedi
-  [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)),
-  un'icona ♀ con la scritta "Femmina" o ♂ con la scritta "Maschio". Lo
-  sfondo dell'intestazione è **rosa tenue** per le femmine, **azzurro
-  tenue** per i maschi, **neutro** (grigio chiarissimo) se il sesso non
-  è compilato, senza icona. Nell'intestazione restano anche l'etichetta
+- **Intestazione**: a sinistra un avatar illustrato in un cerchio con
+  bordo bianco, a destra nome e cognome in evidenza (titolo della card).
+  L'avatar dipende dal campo `sesso` del bambino (gestito dall'admin,
+  vedi [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)),
+  ed è un'illustrazione generica, non una foto (issue
+  [#108](https://github.com/matteopelucco/girasole/issues/108)): una
+  **bambina** (capelli lunghi, cerchietto) su sfondo rosa per `F`, un
+  **bambino** (capelli corti) su sfondo azzurro per `M`, una **sagoma
+  neutra** grigia se il sesso non è compilato. Niente simboli ♀/♂ né
+  scritte "Femmina"/"Maschio". Lo sfondo dell'intestazione è **rosa
+  tenue** per le femmine, **azzurro tenue** per i maschi, **grigio** se
+  il sesso non è compilato. Nell'intestazione restano anche l'etichetta
   allergie (se `note_allergie` è compilato, per qualunque ruolo),
   l'etichetta "🚫 Assente" o "🤒 Malattia" se il bambino è segnato così
   per la data, e l'eventuale warning di incoerenza
   ([06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)).
-  Nessuna foto o avatar del bambino.
+  Nessuna foto del bambino: l'avatar è lo stesso per tutti i bambini
+  dello stesso sesso.
 - **Sezione "Presenza"** (con icona): pulsanti grandi, due per riga,
   nell'ordine Presente, Pre-asilo, Post-asilo, Assente, Malattia; lo
   stato (o l'indicatore) selezionato è pieno, colorato e con un segno ✓,
@@ -75,16 +81,17 @@ Post-asilo, Assente, Malattia, il campo "Nota (opzionale)" e "Salva nota"
 E vedo, a destra della sezione "Presenza", una sezione "Pasto" con i
 pulsanti Sì e No, il campo "Nota (opzionale)" e "Salva nota"
 
-## Scenario: l'intestazione mostra il sesso del bambino con icona e colore
+## Scenario: l'intestazione mostra l'avatar del bambino in base al sesso
 Dato che ho aperto "Presenze e pasti" e vedo tre bambini, una femmina,
 un maschio e uno con il sesso non compilato
 Quando guardo le loro card
-Allora l'intestazione della femmina ha lo sfondo rosa tenue e la scritta
-"Femmina" con l'icona ♀
-E l'intestazione del maschio ha lo sfondo azzurro tenue e la scritta
-"Maschio" con l'icona ♂
-E l'intestazione del bambino senza sesso ha uno sfondo neutro, senza
-icona né scritta
+Allora l'intestazione della femmina ha lo sfondo rosa tenue e l'avatar
+di una bambina, con nome accessibile "Bambina"
+E l'intestazione del maschio ha lo sfondo azzurro tenue e l'avatar di
+un bambino, con nome accessibile "Bambino"
+E l'intestazione del bambino senza sesso ha lo sfondo grigio e un
+avatar neutro, decorativo
+E in nessuna intestazione compaiono le scritte "Femmina" o "Maschio"
 
 ## Scenario: lo stato selezionato è evidenziato con un segno di spunta
 Dato che un bambino è segnato "presente" per la data visualizzata
@@ -162,10 +169,14 @@ Allora in ogni card la sezione "Pasto" sta a destra della sezione
   sarebbero troppo strette; sostituisce la soglia di 360px della prima
   versione). Pulsanti grandi con area di tocco alta almeno 44px.
 - Colori dell'intestazione: rosa tenue (Tailwind `pink-100`) per `sesso =
-  'F'`, azzurro tenue (`sky-100`) per `'M'`, neutro (`stone-50`) se
-  nullo; testo e icone con contrasto sufficiente (controllo axe-core).
-  Il sesso è indicato anche a parole ("Femmina"/"Maschio"), non solo col
-  colore o con l'icona (specs/01, accessibilità).
+  'F'`, azzurro tenue (`sky-100`) per `'M'`, grigio (`stone-100`) se
+  nullo (o con un valore inatteso); testo con contrasto sufficiente
+  (controllo axe-core).
+- Avatar: SVG inline (nessuna dipendenza né immagine esterna). Per le
+  tecnologie assistive il sesso non è affidato al solo colore: l'avatar
+  ha `role="img"` e nome accessibile "Bambina" o "Bambino" (specs/01,
+  accessibilità); l'avatar neutro è decorativo (`aria-hidden`), perché
+  non aggiunge informazione.
 - I pulsanti di stato espongono `aria-pressed` (premuto/non premuto): il
   segno ✓ è decorativo e non fa parte del nome del pulsante.
 - Ogni card bambino ha un'ancora `#bambino-<id>`, usata come scorciatoia

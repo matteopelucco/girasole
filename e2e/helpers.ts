@@ -124,7 +124,7 @@ export function cardBambini(page: Page): Locator {
   return page.locator('li[id^="bambino-"]');
 }
 
-// Intestazione della card (sfondo e scritta Femmina/Maschio, issue #106)
+// Intestazione della card (sfondo e avatar per sesso, issue #106 e #108)
 // e nome del bambino, titolo della card.
 export function intestazioneCard(card: Locator): Locator {
   return card.locator('header');

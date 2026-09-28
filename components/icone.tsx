@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 
 // Icone lineari (SVG inline, nessuna dipendenza) della card bambino della
 // schermata "Presenze e pasti" (specs/10). Sempre decorative
-// (aria-hidden): il significato è dato dal testo accanto — "Femmina",
-// "Maschio", "Presenza", "Pasto", "Salva nota" — mai dalla sola icona
+// (aria-hidden): il significato è dato dal testo accanto — "Presenza",
+// "Pasto", "Salva nota" — mai dalla sola icona
 // (specs/01, accessibilità).
 type PropsIcona = { className?: string };
 
@@ -22,26 +22,6 @@ function Svg({ className, children }: PropsIcona & { children: ReactNode }) {
     >
       {children}
     </svg>
-  );
-}
-
-// ♀: cerchio con la croce in basso.
-export function IconaFemmina({ className }: PropsIcona) {
-  return (
-    <Svg className={className}>
-      <circle cx="12" cy="9" r="5" />
-      <path d="M12 14v7M9 18h6" />
-    </Svg>
-  );
-}
-
-// ♂: cerchio con la freccia verso l'alto a destra.
-export function IconaMaschio({ className }: PropsIcona) {
-  return (
-    <Svg className={className}>
-      <circle cx="10" cy="14" r="5" />
-      <path d="M14 10l6-6M15 4h5v5" />
-    </Svg>
   );
 }
 

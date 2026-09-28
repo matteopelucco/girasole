@@ -86,10 +86,10 @@ async function nessunOverflowOrizzontale(page: Page): Promise<void> {
 }
 
 // Colori di sfondo dell'intestazione (Tailwind 3: pink-100, sky-100,
-// stone-50), come calcolati dal browser.
+// stone-100), come calcolati dal browser.
 const SFONDO_FEMMINA = 'rgb(252, 231, 243)';
 const SFONDO_MASCHIO = 'rgb(224, 242, 254)';
-const SFONDO_NEUTRO = 'rgb(250, 250, 249)';
+const SFONDO_NEUTRO = 'rgb(245, 245, 244)';
 
 async function sfondo(locator: Locator): Promise<string> {
   return locator.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -139,19 +139,18 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test("l'intestazione mostra il sesso del bambino con icona e colore", async ({ page }) => {
+    test("l'intestazione mostra l'avatar del bambino in base al sesso", async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       // Il seed (supabase/seed.sql) ha nella sezione di test almeno una
       // femmina, un maschio e un bambino senza sesso: il controllo è sul
-      // legame scritta ↔ colore, non su nomi precisi.
+      // legame avatar ↔ colore, non su nomi precisi.
       const cards = cardBambini(page);
-      const femmina = cards.filter({ has: page.locator('header').getByText('Femmina', { exact: true }) }).first();
-      const maschio = cards.filter({ has: page.locator('header').getByText('Maschio', { exact: true }) }).first();
-      const senzaSesso = cards
-        .filter({ hasNot: page.locator('header').getByText(/^(Femmina|Maschio)$/) })
-        .first();
+      const avatar = (nome: string) => page.locator('header').getByRole('img', { name: nome, exact: true });
+      const femmina = cards.filter({ has: avatar('Bambina') }).first();
+      const maschio = cards.filter({ has: avatar('Bambino') }).first();
+      const senzaSesso = cards.filter({ hasNot: avatar('Bambina') }).filter({ hasNot: avatar('Bambino') }).first();
 
       test.skip(
         (await femmina.count()) === 0 || (await maschio.count()) === 0 || (await senzaSesso.count()) === 0,
@@ -159,14 +158,16 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       );
 
       expect(await sfondo(intestazioneCard(femmina))).toBe(SFONDO_FEMMINA);
-      await expect(intestazioneCard(femmina).locator('svg')).toHaveCount(1);
       expect(await sfondo(intestazioneCard(maschio))).toBe(SFONDO_MASCHIO);
-      await expect(intestazioneCard(maschio).locator('svg')).toHaveCount(1);
       expect(await sfondo(intestazioneCard(senzaSesso))).toBe(SFONDO_NEUTRO);
-      // Nessuna icona del sesso nell'intestazione del bambino senza sesso
-      // (l'eventuale warning di incoerenza è testo, non un'icona SVG).
-      await expect(intestazioneCard(senzaSesso).locator('svg')).toHaveCount(0);
+      // Anche il bambino senza sesso ha un avatar (neutro, decorativo):
+      // l'unico SVG dell'intestazione (il warning di incoerenza è testo).
+      await expect(intestazioneCard(senzaSesso).locator('svg')).toHaveCount(1);
+      await expect(intestazioneCard(senzaSesso).getByRole('img')).toHaveCount(0);
       await expect(nomeBambinoCard(senzaSesso)).not.toBeEmpty();
+
+      // Niente più scritte Femmina/Maschio (issue #108).
+      await expect(page.locator('header').getByText(/^(Femmina|Maschio)$/)).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);
     });
