@@ -53,7 +53,34 @@ export function riepilogoGiornata(righe: StatoGiornoBambino[]): RiepilogoGiornat
   };
 }
 
-// Titolo della card riepilogo sopra un gruppo di bambini: "Sezione
+export type VoceRiepilogo = { etichetta: string; numeratore: number; denominatore?: number };
+
+// Voci mostrate per un riepilogo, nell'ordine: gli specchietti della
+// card "Riepilogo giornaliero" e il riassunto testuale dell'intestazione
+// di sezione (specs/10) usano la stessa lista. "Pasti" solo se il ruolo
+// vede i pasti; il denominatore dipende da `aggregato` (vedi
+// RiepilogoGiornata.pastiSi).
+export function vociRiepilogo(
+  r: RiepilogoGiornata,
+  { conPasti, aggregato }: { conPasti: boolean; aggregato: boolean }
+): VoceRiepilogo[] {
+  const voci: VoceRiepilogo[] = [
+    { etichetta: 'Presenti', numeratore: r.presenti, denominatore: r.totale },
+    { etichetta: 'Pre-asilo', numeratore: r.preAsilo },
+    { etichetta: 'Post-asilo', numeratore: r.postAsilo },
+  ];
+  if (conPasti) {
+    voci.push({ etichetta: 'Pasti', numeratore: r.pastiSi, denominatore: aggregato ? r.totale : r.pastiApplicabili });
+  }
+  return voci;
+}
+
+// "Presenti: 8/12", oppure "Pre-asilo: 3" senza denominatore.
+export function testoVoceRiepilogo({ etichetta, numeratore, denominatore }: VoceRiepilogo): string {
+  return denominatore === undefined ? `${etichetta}: ${numeratore}` : `${etichetta}: ${numeratore}/${denominatore}`;
+}
+
+// Titolo dell'intestazione sopra un gruppo di bambini: "Sezione
 // {nome}", senza prefisso per il gruppo "Senza sezione" (solo admin).
 export function titoloRiepilogoSezione(titoloGruppo: string): string {
   return titoloGruppo === 'Senza sezione' ? titoloGruppo : `Sezione ${titoloGruppo}`;

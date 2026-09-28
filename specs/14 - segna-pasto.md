@@ -24,9 +24,9 @@ quella data, se già segnato
 
 ## Scenario: riepilogo pasti della classe
 Dato che sono su "Presenze e pasti" per una data
-Allora vedo, sopra l'elenco bambini di ciascuna classe, nella card con
-titolo "Sezione {nome classe}" (la stessa del riepilogo presenze, vedi
-[13 - segna-presenza.md](13%20-%20segna-presenza.md)), un riepilogo
+Allora vedo, sopra l'elenco bambini di ciascuna classe, nell'intestazione
+"Sezione {nome classe}" (la stessa del riepilogo presenze, vedi
+[13 - segna-presenza.md](13%20-%20segna-presenza.md)), il conteggio
 "Pasti: X/Y", dove X è il numero di bambini segnati "sì" per quella data
 e Y il numero di bambini della classe che non risultano "assente" né
 "malattia" quel giorno (i soli per cui ha senso segnare il pasto)

@@ -1,5 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { percorsoGiornata, riepilogoGiornata, stileSesso, titoloRiepilogoSezione } from './giornata';
+import {
+  percorsoGiornata,
+  riepilogoGiornata,
+  stileSesso,
+  testoVoceRiepilogo,
+  titoloRiepilogoSezione,
+  vociRiepilogo,
+} from './giornata';
+
+describe('vociRiepilogo', () => {
+  const r = { presenti: 15, totale: 16, preAsilo: 3, postAsilo: 1, pastiSi: 14, pastiApplicabili: 15 };
+
+  it('sezione con pasti: denominatore dei pasti = bambini non assenti/malati', () => {
+    expect(vociRiepilogo(r, { conPasti: true, aggregato: false }).map(testoVoceRiepilogo)).toEqual([
+      'Presenti: 15/16',
+      'Pre-asilo: 3',
+      'Post-asilo: 1',
+      'Pasti: 14/15',
+    ]);
+  });
+
+  it('aggregato con pasti: denominatore dei pasti = tutti i bambini', () => {
+    expect(vociRiepilogo(r, { conPasti: true, aggregato: true }).at(-1)).toEqual({
+      etichetta: 'Pasti',
+      numeratore: 14,
+      denominatore: 16,
+    });
+  });
+
+  it('senza pasti (assistente): nessuna voce Pasti', () => {
+    const voci = vociRiepilogo(r, { conPasti: false, aggregato: true });
+    expect(voci.map((v) => v.etichetta)).toEqual(['Presenti', 'Pre-asilo', 'Post-asilo']);
+  });
+});
+
+describe('testoVoceRiepilogo', () => {
+  it('con denominatore anche se zero', () => {
+    expect(testoVoceRiepilogo({ etichetta: 'Pasti', numeratore: 0, denominatore: 0 })).toBe('Pasti: 0/0');
+  });
+
+  it('senza denominatore', () => {
+    expect(testoVoceRiepilogo({ etichetta: 'Pre-asilo', numeratore: 0 })).toBe('Pre-asilo: 0');
+  });
+});
 
 describe('percorsoGiornata', () => {
   it('senza data: la schermata unica, alla data odierna decisa dalla pagina', () => {
