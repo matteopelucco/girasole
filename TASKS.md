@@ -315,3 +315,15 @@ _(dettagli in archivio)_
 - [ ] Verifica visiva su un telefono reale (non disponibile in locale
       senza `.env.local`): il layout è coperto dagli e2e, i colori dal
       controllo axe-core.
+
+## #108 · Card bambino: avatar bambina/bambino/neutro al posto di ♀/♂ (v0.46.0, 2026-09-28)
+- [x] Specs: `specs/10` (intestazione con avatar illustrato in un cerchio
+      con bordo bianco, niente scritte Femmina/Maschio, sfondo grigio
+      `stone-100` per il caso neutro, avatar con nome accessibile
+      "Bambina"/"Bambino", neutro decorativo).
+- [x] e2e: `e2e/10` scenario "avatar in base al sesso" (colori, nome
+      accessibile, nessuna scritta Femmina/Maschio).
+- [x] Unit: `stileSesso` in `lib/giornata.ts` (`nomeAvatar`,
+      `sfondoAvatar`).
+- [x] Codice: nuovo `components/AvatarBambino.tsx` (SVG inline, nessuna
+      dipendenza), tolte `IconaFemmina`/`IconaMaschio`.
