@@ -91,9 +91,8 @@ il pulsante "Conferma pasti" resta disponibile
 Dato che sono autenticata come maestra e i pasti di oggi sono già stati
 comunicati a Rojac
 Quando apro "Presenze e pasti" per oggi
-Allora nella sezione "Pasto" non vedo più i pulsanti Sì/No né il "Salva
-nota" del pasto per nessun bambino: i valori restano visibili ma in sola
-lettura
+Allora nella sezione "Pasto" non vedo più i pulsanti Sì/No per nessun
+bambino: i valori restano visibili ma in sola lettura
 E questo vale per ogni classe dell'asilo, non solo per quella
 eventualmente aperta al momento della comunicazione
 E questo vale anche per un bambino il cui pasto non era ancora stato
@@ -107,7 +106,7 @@ comunicati a Rojac
 Quando apro "Presenze e pasti" per oggi
 Allora vedo comunque il messaggio con data, ora e numero dei pasti
 comunicati
-E i pulsanti Sì/No e "Salva nota" restano comunque attivi, per
+E i pulsanti Sì/No restano comunque attivi, per
 qualunque classe: l'admin può sempre modificare i pasti, la
 comunicazione non lo limita (nessuna eccezione di ruolo, coerente con
 [14 - segna-pasto.md](14%20-%20segna-pasto.md), "il ruolo admin può

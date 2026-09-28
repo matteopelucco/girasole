@@ -62,14 +62,16 @@ mockup fornito da Matteo), divisa in tre parti:
   presenza e il pulsante "Salva nota" (comportamento in
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
 - **Sezione "Pasto"** (con icona, solo maestra e admin): pulsanti grandi
-  Sì / No affiancati, con lo stesso stile di selezione; sotto, il campo
-  "Nota (opzionale)" del pasto e il pulsante "Salva nota" (comportamento
-  in [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Se il bambino è
-  "assente" o "malattia", la sezione mostra l'etichetta corrispondente al
-  posto dei pulsanti.
+  Sì / No affiancati, con lo stesso stile di selezione, **senza campo
+  nota** (comportamento in [14 - segna-pasto.md](14%20-%20segna-pasto.md)).
+  Se il bambino è "assente" o "malattia", la sezione mostra l'etichetta
+  corrispondente al posto dei pulsanti.
 
-Le due note (presenza e pasto) restano separate: sono due campi distinti
-con significati diversi.
+Una sola nota per card, quella della presenza (issue
+[#109](https://github.com/matteopelucco/girasole/issues/109)): con presenza
+e pasto nella stessa card, una seconda nota per il pasto era una
+ridondanza. Le note pasto già salvate restano nel database
+(`pasti.note`), ma la schermata non le mostra né le modifica più.
 
 ## Scenario: ogni bambino ha una card con intestazione, sezione presenza e sezione pasto
 Dato che sono autenticata come maestra (o admin) e ho aperto "Presenze e
@@ -79,7 +81,8 @@ Allora vedo nell'intestazione il suo nome e cognome come titolo della card
 E vedo una sezione "Presenza" con i pulsanti Presente, Pre-asilo,
 Post-asilo, Assente, Malattia, il campo "Nota (opzionale)" e "Salva nota"
 E vedo, a destra della sezione "Presenza", una sezione "Pasto" con i
-pulsanti Sì e No, il campo "Nota (opzionale)" e "Salva nota"
+pulsanti Sì e No, senza campo nota né "Salva nota"
+E nella card c'è un solo campo "Nota (opzionale)", quello della presenza
 
 ## Scenario: l'intestazione mostra l'avatar del bambino in base al sesso
 Dato che ho aperto "Presenze e pasti" e vedo tre bambini, una femmina,

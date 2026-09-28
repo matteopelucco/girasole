@@ -63,8 +63,8 @@ della maestra, `5x` amministrazione.
 - [13 - segna-presenza.md](13%20-%20segna-presenza.md) — presente /
   assente / malattia, con nota opzionale, incluse le presenze a
   pre-asilo e post-asilo
-- [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no, con nota
-  opzionale ed evidenza delle allergie del bambino
+- [14 - segna-pasto.md](14%20-%20segna-pasto.md) — sì / no ed evidenza delle
+  allergie del bambino
 - [15 - memo.md](15%20-%20memo.md) — avvisi per tutti, una sezione o
   un bambino
 - [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md) —
