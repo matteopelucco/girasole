@@ -126,8 +126,8 @@ export function assicuraScrivibile(ruolo: string | null | undefined, data: strin
 // data, e l'eventuale messaggio da mostrare se è un giorno di chiusura
 // scolastica (specs/53): combina la chiusura del giorno (fa I/O) con la
 // regola "sola data odierna per maestra/assistente" sopra — stesso
-// calcolo ripetuto identico in app/dashboard/presenze/page.tsx e
-// app/dashboard/pasti/page.tsx prima di questa estrazione (CLAUDE.md,
+// calcolo ripetuto identico nelle vecchie pagine Presenze e Pasti prima
+// di questa estrazione, ora in app/dashboard/giornata/page.tsx (CLAUDE.md,
 // jscpd). Vive qui (non in lib/calendarioScolastico.ts, dove è nato) e
 // non lì perché quel modulo è importato anche da componenti client
 // (components/VerificaBonifico.tsx, via lib/comunicazioneRetta.ts): un

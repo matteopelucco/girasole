@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import {
@@ -39,7 +40,7 @@ async function upsertPresenza(
 
 // segnaPresenza/segnaPreAsilo/segnaPostAsilo/salvaNotaPresenza sono
 // legate a bottoni diversi dentro allo stesso form (vedi
-// app/dashboard/presenze/page.tsx): niente useFormState, il feedback
+// app/dashboard/giornata/ColonnaPresenza.tsx): niente useFormState, il feedback
 // "ko" (specs/05 - feedback.md) passa dal sollevare l'errore,
 // intercettato da app/error.tsx.
 async function applicaAzionePresenza(
@@ -57,7 +58,7 @@ async function applicaAzionePresenza(
   const prossima = prossimaPresenza(rigaAttuale, azione);
   await upsertPresenza(supabase, user.id, bambinoId, data, prossima, note);
 
-  revalidatePath('/dashboard/presenze');
+  revalidatePath(PERCORSO_GIORNATA);
 }
 
 export async function segnaPresenza(
@@ -105,5 +106,5 @@ export async function salvaNotaPresenza(
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
   await upsertPresenza(supabase, user.id, bambinoId, data, rigaAttuale, note);
 
-  revalidatePath('/dashboard/presenze');
+  revalidatePath(PERCORSO_GIORNATA);
 }

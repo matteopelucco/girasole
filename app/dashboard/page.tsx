@@ -7,6 +7,7 @@ import { requireProfilo } from '@/lib/auth';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
 import { cardsDashboard } from '@/lib/dashboardSezioni';
+import { percorsoGiornata } from '@/lib/giornata';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import {
   allarmePersonalePresenzePastiAttivo,
@@ -46,7 +47,7 @@ export default async function DashboardPage({
   const dataOggi = oggi();
   const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
-  const cards = cardsDashboard({ data: dataOggi, haSezioni, ruolo, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
+  const cards = cardsDashboard({ data: dataOggi, haSezioni, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
 
   // Allarme 1 (specs/07 - allarmi.md): presenze/pasti non ancora
   // segnati dopo le 10:00, personale — solo le mie sezioni (tutte le
@@ -97,14 +98,14 @@ export default async function DashboardPage({
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {statoPersonale.sezioniPresenzeIncomplete.map((sezione) => (
                 <li key={sezione.id}>
-                  <Link href={`/dashboard/presenze?data=${dataOggi}`} className="underline">
+                  <Link href={percorsoGiornata(dataOggi)} className="underline">
                     Presenze — {sezione.nome}
                   </Link>
                 </li>
               ))}
               {statoPersonale.pastiNonConfermati && (
                 <li>
-                  <Link href={`/dashboard/pasti?data=${dataOggi}`} className="underline">
+                  <Link href={`${percorsoGiornata(dataOggi)}#comunicazione-rojac`} className="underline">
                     Comunicare i pasti a Rojac
                   </Link>
                 </li>

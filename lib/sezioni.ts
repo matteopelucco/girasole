@@ -65,8 +65,8 @@ export type BambinoBase = { id: string; nome: string; cognome: string; sezione_i
 // pura, generica sul tipo di elemento (bambini di Presenze/Pasti/Rette,
 // coppie {bambino, comunicazione} di Rette hanno forme diverse ma lo
 // stesso bisogno di raggruppamento — CLAUDE.md, jscpd: condivisa da
-// app/dashboard/presenze/page.tsx, app/dashboard/pasti/page.tsx e
-// app/admin/rette/page.tsx invece di essere ridefinita in ciascuno).
+// app/dashboard/giornata/page.tsx e app/admin/rette/page.tsx invece di
+// essere ridefinita in ciascuno).
 export function raggruppaPerSezione<T>(
   elementi: T[],
   sezioneIdDi: (elemento: T) => string | null,
@@ -102,8 +102,8 @@ export function raggruppaPerSezione<T>(
 // un'assegnazione per maestra/assistente, semplice presa d'atto per
 // l'admin (che vede sempre tutte le sezioni attive — se non ce ne sono,
 // nessuna è stata ancora creata). Funzione pura, nessun I/O: stesso
-// testo ripetuto identico in app/dashboard/presenze/page.tsx e
-// app/dashboard/pasti/page.tsx prima di questa estrazione (CLAUDE.md,
+// testo ripetuto identico nelle vecchie pagine Presenze e Pasti prima di
+// questa estrazione, ora in app/dashboard/giornata/page.tsx (CLAUDE.md,
 // jscpd).
 export function messaggioSezioniVuote(ruolo: string | null | undefined): string {
   return ruolo === 'maestra' || ruolo === 'assistente'
