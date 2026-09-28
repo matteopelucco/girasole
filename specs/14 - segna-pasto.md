@@ -9,20 +9,24 @@ accesso al registro pasti, né in lettura né in scrittura (vedi
 ## Obiettivo
 Registrare in pochi tap se un bambino ha mangiato a pranzo, con particolare
 attenzione a rendere visibili le eventuali allergie/intolleranze prima di
-segnare il pasto, seguendo il flusso calendario → Pasti → bambini
-(raggruppati per classe nella stessa schermata, senza un click
-intermedio per scegliere la classe) descritto in
+segnare il pasto, dalla colonna "Pasto" della card di ogni bambino nella
+schermata unica "Presenze e pasti" (bambini raggruppati per classe
+nella stessa schermata, senza un click intermedio per scegliere la
+classe) descritta in
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md) e
 [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
-## Scenario: da Pasti si arriva direttamente ai bambini
-Dato che ho aperto "Pasti" dalla dashboard per una data
+## Scenario: la colonna Pasto mostra lo stato pasto di ogni bambino
+Dato che ho aperto "Presenze e pasti" dalla dashboard per una data
 Allora vedo l'elenco dei bambini di tutte le mie classi, raggruppati per
-sezione, con lo stato pasto di quella data, se già segnato
+sezione, e nella colonna "Pasto" di ciascuna card lo stato pasto di
+quella data, se già segnato
 
 ## Scenario: riepilogo pasti della classe
-Dato che sono su "Pasti" per una data
-Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
-titolo "Pasti giornalieri - Sezione {nome classe}", con un riepilogo
+Dato che sono su "Presenze e pasti" per una data
+Allora vedo, sopra l'elenco bambini di ciascuna classe, nella card con
+titolo "Sezione {nome classe}" (la stessa del riepilogo presenze, vedi
+[13 - segna-presenza.md](13%20-%20segna-presenza.md)), un riepilogo
 "Pasti: X/Y", dove X è il numero di bambini segnati "sì" per quella data
 e Y il numero di bambini della classe che non risultano "assente" né
 "malattia" quel giorno (i soli per cui ha senso segnare il pasto)
@@ -30,12 +34,13 @@ e Y il numero di bambini della classe che non risultano "assente" né
 ## Scenario: le allergie sono visibili prima di segnare il pasto
 Dato che un bambino ha `note_allergie` compilato (es. "Allergia alle
 arachidi")
-Quando guardo la riga di quel bambino nell'elenco
-Allora vedo un'etichetta ben visibile con il testo dell'allergia, accanto
-al nome del bambino, indipendentemente dallo stato del pasto
+Quando guardo la card di quel bambino nell'elenco
+Allora vedo nell'intestazione della card un'etichetta ben visibile con il
+testo dell'allergia, accanto al nome del bambino, indipendentemente dallo
+stato del pasto e della presenza
 
 ## Scenario: segnare che un bambino ha mangiato
-Quando premo "Sì" sulla riga pasto di un bambino
+Quando premo "Sì" nella colonna "Pasto" di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "sì"
 
 ## Scenario: salvare una nota senza cambiare lo stato
@@ -45,36 +50,40 @@ Allora la nota viene salvata restando associata allo stato già segnato
 E la nota resta visibile anche dopo aver ricaricato la pagina
 
 ## Scenario: segnare che un bambino non ha mangiato
-Quando premo "No" sulla riga pasto di un bambino
+Quando premo "No" nella colonna "Pasto" di un bambino
 Allora lo stato pasto di oggi per quel bambino diventa "no"
 
 ## Scenario: un bambino assente non è selezionabile per il pasto
 Dato che un bambino è segnato "assente" per la data in questione
-Quando apro l'elenco Pasti della sua classe per quella data
-Allora al posto dei pulsanti Sì/No vedo l'etichetta "Assente"
+Quando apro "Presenze e pasti" per quella data
+Allora nella colonna "Pasto" della sua card, al posto dei pulsanti Sì/No,
+vedo l'etichetta "🚫 Assente"
 E non posso selezionare alcuno stato pasto per quel bambino, nemmeno
 come admin
 
 ## Scenario: un bambino malato non è selezionabile per il pasto
 Dato che un bambino è segnato "malattia" per la data in questione
-Quando apro l'elenco Pasti della sua classe per quella data
-Allora al posto dei pulsanti Sì/No vedo l'etichetta "🤒 Malattia"
+Quando apro "Presenze e pasti" per quella data
+Allora nella colonna "Pasto" della sua card, al posto dei pulsanti Sì/No,
+vedo l'etichetta "🤒 Malattia"
 E non posso selezionare alcuno stato pasto per quel bambino, nemmeno
 come admin
 
 ## Scenario: la maestra non può modificare il pasto di una data diversa da oggi
-Dato che sono autenticata come maestra e ho aperto Pasti per una data
-diversa da oggi (passata o futura)
-Quando guardo l'elenco bambini di una mia classe
+Dato che sono autenticata come maestra e ho aperto "Presenze e pasti" per
+una data diversa da oggi (passata o futura)
+Quando guardo la colonna "Pasto" dei bambini delle mie classi
 Allora vedo lo stato eventualmente già registrato ma senza pulsanti per
 modificarlo: è in sola lettura
 
-## Scenario: l'assistente non vede la sezione Pasti
+## Scenario: l'assistente non vede alcun dato pasto
 Dato che sono autenticata come assistente
-Quando apro la dashboard, oppure provo ad aprire direttamente `/dashboard/pasti`
-Allora non vedo il pulsante/scheda "Pasti" in dashboard, e aprendo
-l'indirizzo direttamente vengo reindirizzata alla dashboard senza vedere
-alcun dato pasto
+Quando apro "Presenze e pasti", oppure provo ad aprire direttamente il
+vecchio indirizzo `/dashboard/pasti`
+Allora non vedo nessuna colonna "Pasto", nessun pulsante Sì/No e nessun
+riepilogo "Pasti: X/Y"; il vecchio indirizzo mi porta alla schermata
+unica (vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)),
+sempre senza alcun dato pasto
 
 ## Regole
 - Stati validi: `si`, `no`. (Lo stato `parziale` è stato rimosso dopo
@@ -115,9 +124,13 @@ alcun dato pasto
   aver ancora segnato la presenza (utile se la maestra segna prima il
   pranzo e la presenza a fine giornata) — a meno che la presenza non sia
   già "assente" (vedi sopra).
-- Se il bambino risulta "malattia" per la data visualizzata, l'etichetta
-  malattia appare anche in questo elenco, accanto al nome (vedi
+- Se il bambino risulta "malattia" (o "assente") per la data
+  visualizzata, l'etichetta appare nell'intestazione della card, accanto
+  al nome, e al posto dei pulsanti nella colonna "Pasto" (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
+- Dopo la comunicazione dei pasti a Rojac la colonna "Pasto" è in sola
+  lettura per la maestra, in ogni classe (l'admin può sempre modificare):
+  vedi [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md).
 - L'elenco bambini mostra solo i bambini attivi, raggruppati per sezione
   (stessa regola e stesso raggruppamento di
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)) e

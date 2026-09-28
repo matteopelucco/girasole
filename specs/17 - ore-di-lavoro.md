@@ -28,7 +28,7 @@ riaprendo la pagina
 Dato che sono autenticata come maestra, assistente o admin e il mio
 profilo è abilitato al report ore
 Quando apro la dashboard
-Allora vedo, insieme a Presenze/Pasti/Report, anche il pulsante/scheda
+Allora vedo, insieme a "Presenze e pasti"/Report, anche il pulsante/scheda
 "Ore di lavoro" con la sua icona (🕒)
 E tappandolo apro la sezione dedicata (`/dashboard/ore-lavoro`)
 
@@ -54,7 +54,7 @@ reindirizzata alla dashboard invece di vedere il contenuto della sezione
   ridistribuisce le card/pulsanti (Presenze, Pasti, Report, Ore di
   lavoro) in un'unica griglia bilanciata a due colonne: quali card
   compaiono dipende da ruolo/sezioni assegnate/abilitazione (come già
-  oggi per Presenze/Pasti), ma la disposizione è sempre quella — quando
+  oggi per "Presenze e pasti"), ma la disposizione è sempre quella — quando
   il numero di card visibili è dispari, l'ultima occupa l'intera
   larghezza invece di lasciare un buco vuoto in griglia.
 - Come le ore vengono effettivamente registrate (form di inserimento,

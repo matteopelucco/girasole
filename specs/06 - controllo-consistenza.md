@@ -2,8 +2,10 @@
 
 ## Attori
 Maestra, assistente, admin — ovunque vedano presenze/pasti di un
-bambino: elenchi di [13 - segna-presenza.md](13%20-%20segna-presenza.md)
-e [14 - segna-pasto.md](14%20-%20segna-pasto.md), report a schermo e
+bambino: card della schermata "Presenze e pasti"
+([10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md), regole in
+[13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+[14 - segna-pasto.md](14%20-%20segna-pasto.md)), report a schermo e
 drill-down giorno per giorno di
 [51 - report.md](51%20-%20report.md), report via email di
 [52 - report-email-automatico.md](52%20-%20report-email-automatico.md).
@@ -20,21 +22,21 @@ quando tutto torna.
 ## Scenario: nessun warning su una riga coerente
 Dato che un bambino ha presenza e pasto coerenti fra loro per un giorno
 (es. presente con pasto sì, oppure assente senza pasto segnato)
-Quando guardo la sua riga in Presenze, Pasti, nel report o nel
-drill-down
+Quando guardo la sua card in "Presenze e pasti", la sua riga nel report
+o nel drill-down
 Allora non vedo alcun warning
 
 ## Scenario: warning per pasto segnato con presenza assente
 Dato che un bambino è segnato "assente" per un giorno ma il suo pasto
 per quello stesso giorno è segnato "sì"
-Quando guardo la sua riga in Presenze o in Pasti per quel giorno
-Allora vedo un'etichetta di warning con un messaggio che spiega
-l'incoerenza (pasto "sì" con presenza assente)
+Quando guardo la sua card in "Presenze e pasti" per quel giorno
+Allora vedo nell'intestazione della card un'etichetta di warning con un
+messaggio che spiega l'incoerenza (pasto "sì" con presenza assente)
 
 ## Scenario: warning per pasto segnato con presenza malattia
 Dato che un bambino è segnato "malattia" per un giorno ma il suo pasto
 per quello stesso giorno è segnato "sì"
-Quando guardo la sua riga in Presenze o in Pasti per quel giorno
+Quando guardo la sua card in "Presenze e pasti" per quel giorno
 Allora vedo lo stesso tipo di warning, con un messaggio equivalente
 riferito alla malattia
 
@@ -96,7 +98,14 @@ già a livello di scrittura:
   presenza in assente/malattia (le due tabelle sono indipendenti,
   scritte da azioni separate — vedi "Presenza e pasto sono indipendenti"
   in [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Questo è il caso
-  reale che il warning intercetta.
+  reale che il warning intercetta. **Dopo la comunicazione dei pasti a
+  Rojac** il caso non è più raggiungibile per maestra e assistente:
+  segnare "assente"/"malattia" un bambino con pasto "sì" è bloccato
+  anche a livello di database (vedi
+  [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).
+  Resta raggiungibile prima della comunicazione (da cui il warning
+  continua a servire), e in ogni momento per l'admin, che è esentato da
+  quel blocco.
 - Il messaggio del warning è specifico (spiega quale regola è violata),
   non un'etichetta generica, per permettere una correzione rapida senza
   dover indovinare il problema.

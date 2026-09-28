@@ -20,14 +20,25 @@ permanente — con conferma via email allo staff — consultabile nei
 report (a schermo e via email) per confrontare il totale del mese con
 la fattura Rojac.
 
+Il box di comunicazione (pulsante "Conferma pasti", oppure il messaggio
+"presenze mancanti", oppure il messaggio "pasti comunicati") sta in cima
+alla schermata unica "Presenze e pasti", sotto il riepilogo aggregato
+(vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Dopo la
+comunicazione, oltre ai pasti, per i bambini con pasto "sì" non si
+possono più segnare "Assente" o "Malattia" (vedi gli scenari in fondo):
+evita il caso "pasto comunicato e fatturato, poi bambino segnato
+assente", che produrrebbe un'incoerenza
+([06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)) e
+uno scostamento con la fattura Rojac.
+
 **Correzione rispetto a una prima versione di questo requisito**: il
 blocco e il pulsante non sono per singola classe, ma per l'intero asilo
 in blocco — un'unica comunicazione al giorno copre tutte le classi.
 
 ## Scenario: comunicare i pasti del giorno
-Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
-la data odierna (l'elenco delle classi, non ancora entrata in una
-classe specifica), i pasti di oggi non sono ancora stati comunicati e
+Dato che sono autenticata come maestra o admin, ho aperto "Presenze e
+pasti" per la data odierna, i pasti di oggi non sono ancora stati
+comunicati e
 tutti i bambini attivi dell'asilo hanno una presenza già segnata per
 oggi
 Quando premo "Conferma pasti"
@@ -39,19 +50,20 @@ perché è già quella selezionata in cima alla pagina
 E vedo due pulsanti, "Conferma" e "Annulla"
 
 ## Scenario: la comunicazione è bloccata se manca la presenza di qualche bambino
-Dato che sono autenticata come maestra o admin, ho aperto "Pasti" per
-la data odierna (tutti i bambini, raggruppati per sezione), i pasti di
-oggi non sono ancora stati
-comunicati e almeno un bambino attivo, di una qualunque classe
+Dato che sono autenticata come maestra o admin, ho aperto "Presenze e
+pasti" per la data odierna (tutti i bambini, raggruppati per sezione), i
+pasti di oggi non sono ancora stati comunicati e almeno un bambino attivo, di una qualunque classe
 dell'asilo, non ha ancora una presenza segnata per oggi
 Allora al posto del pulsante "Conferma pasti" vedo un messaggio che mi
 avvisa che non è ancora possibile comunicare i pasti, con il numero di
 bambini a cui manca la presenza
 E vedo l'elenco con nome e cognome di ciascun bambino a cui manca la
 presenza, anche se appartiene a una classe non assegnata a me
-E vedo un link "Vai alle presenze" che mi porta alla schermata
-Presenze per la stessa data, come scorciatoia per segnarle senza dover
-prima cercare la pagina
+E ogni nome di un bambino la cui card è in questa stessa pagina (cioè di
+una mia classe, o di qualunque classe se sono admin) è un link che mi
+porta direttamente alla sua card, come scorciatoia per segnare la
+presenza mancante; i bambini di classi non mie restano testo semplice
+(la loro card non è in pagina)
 E non è possibile aprire il riquadro di conferma: nessun pulsante
 "Conferma pasti" è presente nella pagina
 E quando tutte le presenze mancanti vengono segnate (in una qualunque
@@ -78,21 +90,21 @@ il pulsante "Conferma pasti" resta disponibile
 ## Scenario: dopo la comunicazione i pasti non sono più modificabili per la maestra, in nessuna classe
 Dato che sono autenticata come maestra e i pasti di oggi sono già stati
 comunicati a Rojac
-Quando apro l'elenco bambini di Pasti di una qualunque delle mie classi
-per oggi
-Allora non vedo più i pulsanti Sì/No né "Salva nota" per nessun
-bambino di quella classe: i valori restano visibili ma in sola lettura
+Quando apro "Presenze e pasti" per oggi
+Allora nella colonna "Pasto" non vedo più i pulsanti Sì/No né il "Salva
+nota" del pasto per nessun bambino: i valori restano visibili ma in sola
+lettura
 E questo vale per ogni classe dell'asilo, non solo per quella
 eventualmente aperta al momento della comunicazione
 E questo vale anche per un bambino il cui pasto non era ancora stato
 segnato prima della comunicazione
-E vedo comunque, in cima a quella classe, un messaggio con data, ora e
+E vedo comunque, in cima alla pagina, un messaggio con data, ora e
 numero dei pasti comunicati
 
 ## Scenario: l'admin può sempre modificare, anche dopo la comunicazione
 Dato che sono autenticato come admin e i pasti di oggi sono già stati
 comunicati a Rojac
-Quando apro l'elenco bambini di Pasti di una qualunque classe per oggi
+Quando apro "Presenze e pasti" per oggi
 Allora vedo comunque il messaggio con data, ora e numero dei pasti
 comunicati
 E i pulsanti Sì/No e "Salva nota" restano comunque attivi, per
@@ -103,11 +115,38 @@ scrivere su qualunque data")
 
 ## Scenario: la comunicazione è irreversibile e una tantum
 Dato che i pasti di oggi sono già stati comunicati a Rojac
-Quando riapro "Pasti" in un altro momento della stessa
+Quando riapro "Presenze e pasti" in un altro momento della stessa
 giornata, anche ricaricando la pagina
 Allora il pulsante "Conferma pasti" non ricompare più: non è possibile
 comunicare due volte nello stesso giorno, né annullare una
 comunicazione già fatta
+
+## Scenario: dopo la comunicazione la maestra non può segnare Assente o Malattia un bambino con pasto "sì"
+Dato che sono autenticata come maestra, i pasti di oggi sono già stati
+comunicati a Rojac e un bambino di una mia classe ha il pasto di oggi
+segnato "sì" e una presenza diversa da "assente"/"malattia"
+Quando guardo la colonna "Presenza" della sua card in "Presenze e pasti"
+Allora i pulsanti "Assente" e "Malattia" sono disabilitati, con la breve
+spiegazione "Pasto già comunicato a Rojac"
+E i pulsanti "Presente", "Pre-asilo", "Post-asilo" e il "Salva nota"
+della presenza restano disponibili (non cambiano il conteggio dei pasti)
+
+## Scenario: dopo la comunicazione un bambino senza pasto "sì" può ancora essere segnato Assente o Malattia
+Dato che sono autenticata come maestra, i pasti di oggi sono già stati
+comunicati a Rojac e un bambino di una mia classe ha il pasto di oggi
+segnato "no" (o non segnato)
+Quando guardo la colonna "Presenza" della sua card
+Allora i pulsanti "Assente" e "Malattia" restano disponibili: quel
+bambino non è nel conteggio comunicato
+
+## Scenario: l'admin può segnare Assente o Malattia anche dopo la comunicazione
+Dato che sono autenticato come admin e i pasti di oggi sono già stati
+comunicati a Rojac
+Quando guardo la colonna "Presenza" della card di un bambino con pasto
+"sì"
+Allora i pulsanti "Assente" e "Malattia" restano disponibili (l'admin
+deve poter correggere errori reali; il log della comunicazione resta
+comunque immutabile)
 
 ## Scenario: sezione "Comunicazione pasti" nel report a schermo
 Dato che sto guardando il Report (giornaliero, settimanale o mensile)
@@ -141,8 +180,8 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   disallinearsi dal conteggio reale non appena quella presenza verrà
   segnata. Se ne manca anche solo una, il pulsante "Conferma pasti" non
   compare affatto (sostituito da un messaggio con il numero di bambini
-  a cui manca la presenza, il loro elenco nome e cognome, e un link
-  "Vai alle presenze" verso la schermata Presenze della stessa data):
+  a cui manca la presenza e il loro elenco nome e cognome, in cui ogni
+  bambino con la card nella stessa pagina è un link alla sua card):
   non è un errore mostrato dopo aver aperto il riquadro di conferma, il
   pulsante stesso non è disponibile finché la condizione non è
   soddisfatta. L'elenco include anche bambini di classi non assegnate a
@@ -167,7 +206,7 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   restare leggibile e corretto anche se in futuro quel profilo viene
   rinominato o eliminato — è un log contabile, non deve cambiare
   retroattivamente.
-- Chiunque abbia accesso a Pasti (qualunque maestra, non solo quelle
+- Chiunque abbia accesso ai pasti (qualunque maestra, non solo quelle
   assegnate a una classe specifica, o l'admin) può confermare la
   comunicazione: è un'azione sull'intero asilo, non su una singola
   classe, quindi non è ristretta alle sole classi assegnate a chi la
@@ -195,6 +234,32 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   le altre regole pasti (vedi
   `supabase/migrations/0012_pasto_senza_parziale.sql`,
   `0017_pasto_blocca_anche_malattia.sql`).
+- **Blocco di Assente/Malattia dopo la comunicazione**: da quando esiste
+  la comunicazione di una data, maestra e assistente non possono più far
+  passare a "assente" o "malattia" la presenza di un bambino che ha il
+  pasto di quella data segnato "sì". Vale per un bambino senza ancora
+  una presenza e per uno "presente" (con o senza pre/post-asilo); non
+  riguarda chi è già "assente"/"malattia" (può ancora salvare la nota o
+  passare dall'uno all'altro: non cambia il conteggio dei pasti), né chi
+  ha il pasto "no" o non segnato. Presente, Pre-asilo, Post-asilo e la
+  nota di presenza restano sempre consentiti. L'admin è esentato (può
+  comunque correggere prima il pasto e poi la presenza, quindi
+  bloccarlo non servirebbe). Il pasto considerato è quello **attuale**
+  del bambino per quella data (che dopo la comunicazione solo l'admin
+  può cambiare), non una fotografia al momento della comunicazione.
+- Il blocco di Assente/Malattia è applicato anche a livello di database
+  (trigger su `presenze`, vedi
+  `supabase/migrations/0052_presenza_blocca_assenza_se_pasto_comunicato.sql`),
+  non solo in UI: vale anche forzando la richiesta senza passare dai
+  pulsanti. Se il database rifiuta la modifica, l'app mostra un
+  messaggio comprensibile ("il pasto di questo bambino è già stato
+  comunicato a Rojac…"), non l'errore grezzo.
+- Per l'assistente la schermata non legge i pasti (vedi
+  [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)), quindi non
+  può sapere in anticipo quali bambini sono bloccati: i suoi pulsanti
+  Assente/Malattia restano visibili e, se il bambino ha il pasto
+  comunicato, è il database a rifiutare la modifica, con lo stesso
+  messaggio comprensibile.
 - L'email di notifica (a info@asilosartorio.it) è un effetto collaterale
   best-effort: se l'invio fallisce (es. servizio email non
   configurato/irraggiungibile), la comunicazione resta comunque

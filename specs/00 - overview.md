@@ -47,14 +47,19 @@ della maestra, `5x` amministrazione.
   scenari che scrivono sul database
 - [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md) —
   warning quando presenza/pasto/pre-asilo/post-asilo di un bambino sono
-  incoerenti fra loro, in Presenze, Pasti, Report e report email
+  incoerenti fra loro, in "Presenze e pasti", Report e report email
 - [07 - allarmi.md](07%20-%20allarmi.md) — banner in dashboard ed email
   automatiche per presenze/pasti non completati entro mezzogiorno e per
   settimane di ore di lavoro non confermate
+- [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md) — schermata
+  unica "Presenze e pasti": una card per bambino con la presenza a
+  sinistra e il pasto a destra (solo presenza per l'assistente),
+  disposizione mobile, reindirizzamento delle vecchie pagine Presenze e
+  Pasti
 - [11 - login.md](11%20-%20login.md) — login e schermata di login
 - [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md) — dashboard
-  maestra: lista bambini della sezione con stato presenza/pasto del
-  giorno
+  maestra: punto d'ingresso a "Presenze e pasti", riepilogo aggregato del
+  giorno, avvisi
 - [13 - segna-presenza.md](13%20-%20segna-presenza.md) — presente /
   assente / malattia, con nota opzionale, incluse le presenze a
   pre-asilo e post-asilo
@@ -63,9 +68,9 @@ della maestra, `5x` amministrazione.
 - [15 - memo.md](15%20-%20memo.md) — avvisi per tutti, una sezione o
   un bambino
 - [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md) —
-  comunicare i pasti di una classe a Rojac (mensa esterna), blocco
-  successivo delle modifiche per la maestra e log delle comunicazioni
-  nei report
+  comunicare i pasti dell'intero asilo a Rojac (mensa esterna), blocco
+  successivo delle modifiche ai pasti e di Assente/Malattia sui bambini
+  con pasto comunicato, log delle comunicazioni nei report
 - [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md) — abilitazione per
   utente (decisa dall'admin) e punto d'ingresso in dashboard per la
   registrazione delle ore di lavoro/assenze del personale retribuito

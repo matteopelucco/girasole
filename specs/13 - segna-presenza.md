@@ -9,9 +9,11 @@ in questo file (vedi la matrice permessi in
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino
 — compresa un'eventuale presenza a pre-asilo e/o post-asilo — con una
-nota libera opzionale, seguendo il flusso calendario → Presenze →
-bambini (raggruppati per classe nella stessa schermata, senza un click
-intermedio per scegliere la classe) descritto in
+nota libera opzionale, dalla colonna "Presenza" della card di ogni
+bambino nella schermata unica "Presenze e pasti" (bambini raggruppati
+per classe nella stessa schermata, senza un click intermedio per
+scegliere la classe) descritta in
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md) e
 [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md).
 
 ## Presenza ordinaria, pre-asilo e post-asilo
@@ -32,26 +34,29 @@ giorno sono quindi:
 - **Assente**.
 - **Malattia** (con nota opzionale).
 
-I pulsanti per ogni bambino sono disposti su tre righe: la prima con
+I pulsanti per ogni bambino, nella colonna "Presenza" della sua card,
+sono disposti su tre righe: la prima con
 Presente, Pre-asilo, Post-asilo (gli stati/indicatori dell'orario
 "disteso", dal più corto al più lungo); la seconda con Assente e
 Malattia (le eccezioni alla presenza); la terza con il campo nota (un
 `<textarea>` alto due righe, non un campo a riga singola — per una nota
 un po' più lunga il testo resta leggibile senza scorrimento laterale) e
-il pulsante "Salva nota".
+il pulsante "Salva nota" (sotto il campo nota quando la colonna è
+stretta, come su telefono).
 
 ## Scenario: riepilogo presenze della classe
-Dato che sono su "Presenze" per una data
+Dato che sono su "Presenze e pasti" per una data
 Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
-titolo "Presenze giornaliere - Sezione {nome classe}", con un riepilogo
-"Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
+titolo "Sezione {nome classe}", con un riepilogo "Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
 quella data e Y il totale dei bambini attivi della classe
 E accanto vedo altri due riepiloghi, "Pre-asilo: P" e "Post-asilo: Q",
 dove P e Q sono rispettivamente il numero di bambini con pre-asilo e con
 post-asilo attivi per quella data
+E, per maestra e admin, nella stessa card anche il riepilogo pasti della
+sezione (vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: segnare un bambino presente
-Dato che ho aperto "Presenze" per la data odierna e vedo l'elenco dei
+Dato che ho aperto "Presenze e pasti" per la data odierna e vedo l'elenco dei
 bambini delle mie classi
 Quando premo il pulsante "Presente" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa "presente"
@@ -73,15 +78,16 @@ Dato che un bambino è già segnato "presente" per oggi
 Quando premo "Malattia" e scrivo una nota
 Allora lo stato per oggi viene sovrascritto in "malattia" con quella nota
 E resta un solo record di presenza per quel bambino per quella data
-E lo stato "malattia" appare anche come etichetta (tag) accanto al nome
-del bambino negli elenchi bambini, sia in Presenze sia in Pasti, per
-quella data
+E lo stato "malattia" appare anche come etichetta (tag) "🤒 Malattia"
+nell'intestazione della card del bambino, accanto al nome, per quella
+data (e la colonna "Pasto" della stessa card mostra l'etichetta al posto
+dei pulsanti Sì/No — vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 E se il bambino aveva pre-asilo e/o post-asilo attivi, vengono
 disattivati (non ha senso un pre/post-asilo su un bambino malato o
 assente per quel giorno)
 
 ## Scenario: segnare un bambino presente al pre-asilo
-Dato che ho aperto "Presenze" per la data odierna
+Dato che ho aperto "Presenze e pasti" per la data odierna
 Quando premo il pulsante "Pre-asilo" su un bambino
 Allora lo stato di presenza di oggi per quel bambino diventa (o resta)
 "presente"
@@ -120,15 +126,15 @@ Allora lo stato diventa quello premuto ed entrambi gli indicatori
 pre-asilo e post-asilo vengono disattivati
 
 ## Scenario: la maestra o l'assistente non può modificare una data diversa da oggi
-Dato che sono autenticata come maestra o assistente e ho aperto Presenze
-per una data diversa da oggi (passata o futura)
+Dato che sono autenticata come maestra o assistente e ho aperto
+"Presenze e pasti" per una data diversa da oggi (passata o futura)
 Quando guardo l'elenco bambini delle mie classi
 Allora vedo lo stato eventualmente già registrato (incluso pre/post-asilo)
 ma senza pulsanti per modificarlo: è in sola lettura
 
 ## Scenario: l'admin può modificare qualunque data
-Dato che sono autenticato come admin e ho aperto Presenze per una data
-diversa da oggi
+Dato che sono autenticato come admin e ho aperto "Presenze e pasti" per
+una data diversa da oggi
 Quando guardo l'elenco bambini di una classe
 Allora i pulsanti Presente/Assente/Malattia/Pre-asilo/Post-asilo restano
 attivi e posso modificare lo stato di quella data
@@ -161,6 +167,12 @@ attivi e posso modificare lo stato di quella data
   `supabase/migrations/0001_init.sql`); l'assistente ha lo stesso
   perimetro di scrittura della maestra su questa tabella (vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
+- Dopo la comunicazione dei pasti a Rojac, maestra e assistente non
+  possono più segnare "assente" o "malattia" un bambino il cui pasto del
+  giorno è "sì" (Presente, Pre-asilo, Post-asilo e nota restano
+  consentiti); l'admin è esentato. Vincolo imposto anche a livello di
+  database — vedi
+  [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md).
 - La data usata come "oggi" è quella nel fuso orario Europe/Rome (non
   UTC), vedi `lib/date.ts`.
 - I ruoli "maestra" e "assistente" possono scrivere (inserire/modificare)

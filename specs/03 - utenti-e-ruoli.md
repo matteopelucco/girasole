@@ -45,6 +45,7 @@ Un utente ha uno e un solo ruolo, tra:
 - **maestra** *(corrisponde a "insegnante" nel linguaggio corrente)* —
   gestione (crud) della propria sezione, dei bambini, delle presenze,
   dei pasti e degli avvisi (vedi
+  [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md),
   [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md),
   [13 - segna-presenza.md](13%20-%20segna-presenza.md),
   [14 - segna-pasto.md](14%20-%20segna-pasto.md),
@@ -56,7 +57,9 @@ Un utente ha uno e un solo ruolo, tra:
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)), con
   **gli stessi permessi di una maestra tranne sul registro pasti**, a cui
   non ha accesso né in lettura né in scrittura (vedi
-  [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Vale in particolare
+  [14 - segna-pasto.md](14%20-%20segna-pasto.md)): nella schermata unica
+  "Presenze e pasti" vede solo la colonna presenze (vedi
+  [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Vale in particolare
   anche per le presenze a pre-asilo/post-asilo (vedi
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)). Come la maestra,
   può scrivere solo sulla data odierna (vedi Regole in
@@ -71,8 +74,8 @@ in ogni file — il dettaglio di ciascuna riga resta nel file linkato.
 | Funzionalità | admin | maestra | assistente | genitore |
 | --- | --- | --- | --- | --- |
 | Sezioni/bambini/utenti ([50](50%20-%20amministrazione_base.md)) | crud | — | — | — |
-| Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | crud, solo oggi, proprie sezioni | lettura, solo il proprio figlio (fuori scope UI) |
-| Pasti ([14](14%20-%20segna-pasto.md)) | crud, ogni data | crud, solo oggi, proprie sezioni | **nessun accesso** | lettura, solo il proprio figlio (fuori scope UI) |
+| Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) — colonna "Presenza" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | crud, solo oggi, proprie sezioni; dopo la comunicazione a Rojac niente Assente/Malattia sui bambini con pasto "sì" ([16](16%20-%20comunicazione-pasti-rojac.md)) | come la maestra | lettura, solo il proprio figlio (fuori scope UI) |
+| Pasti ([14](14%20-%20segna-pasto.md)) — colonna "Pasto" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | crud, solo oggi, proprie sezioni; sola lettura dopo la comunicazione a Rojac ([16](16%20-%20comunicazione-pasti-rojac.md)) | **nessun accesso** (colonna non mostrata, dati non letti) | lettura, solo il proprio figlio (fuori scope UI) |
 | Avvisi ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli avvisi a lui destinati (fuori scope UI) |
 | Report/anagrafica classi ([51](51%20-%20report.md)) | tutte le classi | proprie classi | proprie classi | — |
 
