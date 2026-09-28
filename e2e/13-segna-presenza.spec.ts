@@ -14,7 +14,7 @@ import {
   clickEAttendiAzione,
   colonnaPasto,
   colonnaPresenza,
-  dataIeriRoma,
+  dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
   primaCardConPulsante,
@@ -136,7 +136,7 @@ test.describe('13 — Segna presenza', () => {
     });
 
     test('non posso modificare una data diversa da oggi: sola lettura', async ({ page }) => {
-      const haBambini = await apriGiornata(page, dataIeriRoma());
+      const haBambini = await apriGiornata(page, dataUltimoGiornoApertoPrimaDiOggi());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
@@ -246,11 +246,11 @@ test.describe('13 — Segna presenza', () => {
     test('i pulsanti restano attivi anche su una data diversa da oggi', async ({ page }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
-      const haBambini = await apriGiornata(page, dataIeriRoma());
+      const haBambini = await apriGiornata(page, dataUltimoGiornoApertoPrimaDiOggi());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = primaCardConPulsante(page, 'Presenza', 'Presente');
-      test.skip((await card.count()) === 0, 'nessun bambino segnabile (es. ieri era un giorno di chiusura)');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toHaveCount(0);
       const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });

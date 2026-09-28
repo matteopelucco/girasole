@@ -21,6 +21,25 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// L'ultimo giorno APERTO prima di oggi (fuso Europe/Rome): salta sabato e
+// domenica, chiusura implicita (specs/53). Serve ai test "sola lettura su
+// una data diversa da oggi" (specs/13, specs/14): su un giorno chiuso la
+// pagina mostra giustamente l'avviso di chiusura, che ha la precedenza sul
+// banner "Sola lettura", e il test fallirebbe il lunedì. Limite noto: non
+// conosce i giorni di chiusura registrati in `giorni_chiusura`. Il seed
+// (supabase/seed.sql) non ne definisce e l'unico test che ne crea
+// (53-calendario-scolastico.spec.ts) usa date lontane nel futuro e le
+// elimina a fine test, quindi oggi nessuno cade su un giorno passato.
+export function dataUltimoGiornoApertoPrimaDiOggi(): string {
+  for (let i = 1; i <= 7; i++) {
+    const candidata = dataFraGiorni(-i);
+    const [anno, mese, giorno] = candidata.split('-').map(Number);
+    const giornoSettimana = new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay();
+    if (giornoSettimana !== 0 && giornoSettimana !== 6) return candidata;
+  }
+  throw new Error('impossibile trovare un giorno feriale nei 7 giorni precedenti');
+}
+
 // Oggi + n giorni (fuso Europe/Rome, n può essere negativo) — usata dai
 // test di specs/53 - calendario-scolastico.md per trovare un prossimo
 // sabato/domenica e una data lontana su cui creare un giorno di chiusura

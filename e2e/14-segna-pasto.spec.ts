@@ -12,7 +12,7 @@ import {
   clickEAttendiAzione,
   colonnaPasto,
   colonnaPresenza,
-  dataIeriRoma,
+  dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -110,7 +110,7 @@ test.describe('14 — Segna pasto', () => {
     });
 
     test('non posso modificare il pasto di una data diversa da oggi: sola lettura', async ({ page }) => {
-      const haBambini = await apriGiornata(page, dataIeriRoma());
+      const haBambini = await apriGiornata(page, dataUltimoGiornoApertoPrimaDiOggi());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
