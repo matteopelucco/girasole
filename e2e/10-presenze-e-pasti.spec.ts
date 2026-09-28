@@ -126,10 +126,13 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await expect(presenza.getByLabel('Nota (opzionale)')).toBeVisible();
 
       const pasto = colonnaPasto(card);
-      for (const nome of ['Sì', 'No', 'Salva nota']) {
+      for (const nome of ['Sì', 'No']) {
         await expect(pasto.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
-      await expect(pasto.getByLabel('Nota (opzionale)')).toBeVisible();
+      // Una sola nota per card, quella della presenza (issue #109).
+      await expect(pasto.getByLabel('Nota (opzionale)')).toHaveCount(0);
+      await expect(pasto.getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
+      await expect(card.getByLabel('Nota (opzionale)')).toHaveCount(1);
 
       // Schermo da computer (viewport di default, 1280px): sezioni affiancate.
       const boxPresenza = await riquadro(presenza);

@@ -47,7 +47,7 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
     conPasti && idBambini.length
       ? supabase
           .from('pasti')
-          .select('bambino_id, mangiato, note')
+          .select('bambino_id, mangiato')
           .eq('data', data)
           .in('bambino_id', idBambini)
           .returns<RigaPastoDb[]>()

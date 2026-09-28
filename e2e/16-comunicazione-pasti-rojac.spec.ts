@@ -129,7 +129,8 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       test.skip((await cardBambini(page).count()) === 0, 'nessun bambino per questo account');
       await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
-      // Il "Salva nota" della presenza resta; quello del pasto no.
+      // Il "Salva nota" della presenza resta; la sezione Pasto non ne ha
+      // (issue #109).
       await expect(colonnaPasto(page).getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);

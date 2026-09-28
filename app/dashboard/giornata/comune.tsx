@@ -49,9 +49,8 @@ export function PulsanteStato({
   );
 }
 
-// Campo "Nota (opzionale)" con etichetta visibile (non solo segnaposto),
-// condiviso da presenza e pasto: due campi distinti, con `name` diversi
-// (nota_presenza / nota_pasto) letti dalle rispettive server action.
+// Campo "Nota (opzionale)" con etichetta visibile (non solo segnaposto):
+// l'unica nota della card, quella della presenza (issue #109).
 export function CampoNota({ id, name, valore }: { id: string; name: string; valore: string | null | undefined }) {
   return (
     <div className="space-y-1">
