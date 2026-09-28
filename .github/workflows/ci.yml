@@ -6,7 +6,26 @@ name: CI
 # rendere obbligatorio nella protezione di main (A10) e le dipendenze si
 # installano una volta sola.
 #
+# Issue #98 — PR "non codice" (solo docs/**, specs/**, TASKS.md, README.md,
+# CHANGELOG.md, o un bump puro di versione in package.json/package-lock.json):
+# il job `verifica` parte SEMPRE ed è SEMPRE lo stesso check obbligatorio nel
+# ruleset di main (niente `paths`/`paths-ignore` su questo workflow: quello
+# renderebbe il check "non eseguito" invece che "verde" su quelle PR, e un
+# check obbligatorio mai eseguito blocca il merge). Un primo step
+# (`scripts/classifica-pr.mts`, logica pura in `lib/pr-classificazione.ts`)
+# classifica la PR ed espone `is-non-codice-ci`: gli step pesanti (5-8,
+# install Chromium, upload report) si saltano con un `if:` su
+# quell'output — restano `skipped` nel log, il job resta verde. I passi
+# 1-4 (tsc/lint/jscpd/vitest) restano SEMPRE attivi anche su queste PR:
+# costano pochi secondi in totale (il triage li considerava "da saltare",
+# ma sono anche l'unico modo per accorgersi che un CHANGELOG.md o un
+# TASKS.md rotto non è mai "solo doc" per definizione se contenesse per
+# assurdo markup non valido; soprattutto, saltarli non fa risparmiare
+# quasi nulla mentre build/reset-DB/e2e sono minuti — non vale il rischio
+# di un falso "verde" per una manciata di secondi risparmiati).
+#
 # Ordine dei passi, dal più veloce/economico al più lento:
+#   0. classifica — issue #98, vedi sopra
 #   1. tsc      — type-check
 #   2. lint     — ESLint (next lint)
 #   3. jscpd    — codice duplicato
@@ -41,6 +60,11 @@ name: CI
 #      "Repository secrets" di GitHub, mai hardcoded qui. Un ruolo E2E_*
 #      mancante fa solo saltare (test.skip) i test che lo richiedono.
 #
+# PR "non codice" (issue #98) e PR di Dependabot (issue #68, causa 2) si
+# combinano con lo stesso meccanismo (`if:` sui passi 5-8), ma restano due
+# condizioni indipendenti: una PR non-dependabot ma docs-only salta lo
+# stesso i passi pesanti.
+#
 # PR di Dependabot (issue #68, causa 2): i passi 6-8 NON girano quando
 # l'attore è `dependabot[bot]`. Quelle run vedono solo lo store di secret
 # "Dependabot", dove deliberatamente NON copiamo SUPABASE_ACCESS_TOKEN,
@@ -70,11 +94,19 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Serve la storia completa (non solo l'ultimo commit) per poter
+          # fare `git diff`/`git show` tra base e head nello step 0
+          # (issue #98): con il default (shallow) i commit precedenti non
+          # sono nel checkout locale del runner.
+          fetch-depth: 0
 
       # 22, non 20: lo step 7 (crea-utenti-e2e.mjs) usa @supabase/supabase-js,
       # che inizializza sempre anche un client realtime — su Node richiede il
       # WebSocket nativo, disponibile solo da Node 22 in poi (su 20 lo step
       # falliva subito con "Node.js detected but native WebSocket not found").
+      # Lo stesso Node 22+ esegue nativamente anche lo script TypeScript
+      # dello step 0 (issue #98), nessuna dipendenza nuova.
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -82,6 +114,18 @@ jobs:
 
       - name: Installa le dipendenze
         run: npm ci
+
+      - name: 0. Classifica la PR (issue #98)
+        id: classifica
+        run: >
+          node --no-warnings scripts/classifica-pr.mts
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+
+      - name: PR "non codice" — passi pesanti saltati (issue #98)
+        if: steps.classifica.outputs.is-non-codice-ci == 'true'
+        run: |
+          echo "::notice::PR solo docs/specs/TASKS/README/CHANGELOG o bump di versione — build, reset DB ed e2e saltati (issue #98)."
 
       - name: 1. Type-check (tsc)
         run: npx tsc --noEmit
@@ -96,6 +140,7 @@ jobs:
         run: npm run test:unit
 
       - name: 5. Build di produzione (next build)
+        if: steps.classifica.outputs.is-non-codice-ci != 'true'
         run: npm run build
         env:
           # Le NEXT_PUBLIC_* vengono inlinate nel bundle client in fase di
@@ -112,7 +157,7 @@ jobs:
           echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
 
       - name: 6. Reset del DB di test (Supabase CLI, A23)
-        if: github.actor != 'dependabot[bot]'
+        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: |
           npm install -g supabase
           supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
@@ -128,7 +173,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)
-        if: github.actor != 'dependabot[bot]'
+        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: node scripts/crea-utenti-e2e.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -146,11 +191,11 @@ jobs:
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
       - name: Installa Chromium (Playwright)
-        if: github.actor != 'dependabot[bot]'
+        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: 8. Test end-to-end (Playwright)
-        if: github.actor != 'dependabot[bot]'
+        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -171,7 +216,9 @@ jobs:
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
-        if: always() && github.actor != 'dependabot[bot]'
+        if: >-
+          always() && github.actor != 'dependabot[bot]' &&
+          steps.classifica.outputs.is-non-codice-ci != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
