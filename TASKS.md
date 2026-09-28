@@ -259,6 +259,14 @@ _(dettagli in archivio)_
       flag e che gli step marcati `if:` risultino `skipped` invece di
       `failed`) va confermato con un run CI reale dopo il merge di questa
       PR, e idealmente con una seconda PR di prova solo-docs.
+- [x] Follow-up della review post-merge (v0.43.1): `git diff` fallito o
+      SHA mancanti → classificazione "codice" invece di un'eccezione che
+      faceva fallire il check obbligatorio (`classificaPR` in
+      `lib/pr-classificazione.ts`, con unit test); `--experimental-strip-types`
+      passato esplicitamente nei due workflow (lo shebang non conta con
+      `node script`). Sul punto aperto sopra: su Node 22.18+ il flag è
+      già di default, quindi il run reale confermava il default, non lo
+      shebang.
 
 
 ## #100 · Presenze e pasti in un'unica schermata, blocco Assente/Malattia dopo Rojac (v0.43.0, 2026-09-28)

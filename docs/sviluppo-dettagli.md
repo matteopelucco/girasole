@@ -231,7 +231,8 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   `verifica` di `ci.yml` NON usa `paths`/`paths-ignore` (renderebbe il
   check obbligatorio del ruleset di `main` "non eseguito" invece che
   "verde" su queste PR, bloccando il merge) — parte sempre, e un primo
-  step (`node scripts/classifica-pr.mts <baseSha> <headSha>`, che
+  step (`node --experimental-strip-types scripts/classifica-pr.mts
+  <baseSha> <headSha>`, che
   richiede `fetch-depth: 0` nel checkout) classifica la PR usando la
   logica pura di `lib/pr-classificazione.ts` ed espone l'output
   `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`, `TASKS.md`,
@@ -249,7 +250,11 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   `claude-code-action` quando l'output `is-non-codice-review` è true —
   non l'intero job, perché `jobs.<id>.if` non può eseguire script. Nessuna
   dipendenza nuova: Node 22+ esegue nativamente `scripts/classifica-pr.mts`
-  (file `.ts`, sintassi TypeScript "erasable" — solo tipi/interfacce).
+  (file `.ts`, sintassi TypeScript "erasable" — solo tipi/interfacce). Il
+  flag `--experimental-strip-types` è passato sulla riga di comando dei
+  workflow (lo shebang del file conta solo eseguendolo direttamente). Nel
+  dubbio è codice: se gli SHA mancano o `git diff` fallisce, lo step non
+  fallisce e la PR è classificata "codice" (CI completa, review eseguita).
 - **Il reset del DB di test prima della e2e (A23)** usa il Supabase CLI
   (`supabase db reset --project-ref <ref-test>`, ref letto dalla
   repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret): riapplica

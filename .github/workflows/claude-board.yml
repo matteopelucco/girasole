@@ -109,7 +109,7 @@ jobs:
       - name: Classifica la PR (issue #98)
         id: classifica
         run: >
-          node --no-warnings scripts/classifica-pr.mts
+          node --no-warnings --experimental-strip-types scripts/classifica-pr.mts
           "${{ github.event.pull_request.base.sha }}"
           "${{ github.event.pull_request.head.sha }}"
 
