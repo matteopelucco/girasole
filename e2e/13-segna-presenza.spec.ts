@@ -4,9 +4,9 @@
 // Supabase puntato da NEXT_PUBLIC_SUPABASE_URL (di test in locale, quello
 // configurato nei secret in CI) — mai contro un progetto di produzione.
 //
-// La presenza si segna dalla colonna "Presenza" della card di ogni
+// La presenza si segna dalla sezione "Presenza" della card di ogni
 // bambino nella schermata unica "Presenze e pasti" (specs/10): ogni
-// interazione è ristretta a quella colonna, perché la colonna "Pasto"
+// interazione è ristretta a quella sezione, perché la sezione "Pasto"
 // della stessa card ha un proprio campo nota e un proprio "Salva nota".
 import { test, expect } from '@playwright/test';
 import {
@@ -57,7 +57,7 @@ test.describe('13 — Segna presenza', () => {
         'Assente bloccato (pasto già comunicato a Rojac)'
       );
 
-      await presenza.getByPlaceholder('Nota (opzionale)').fill('influenza, rientra lunedì');
+      await presenza.getByLabel('Nota (opzionale)').fill('influenza, rientra lunedì');
       const bottoneAssente = presenza.getByRole('button', { name: 'Assente' });
       await clickEAttendiAzione(page, bottoneAssente);
 
@@ -68,15 +68,15 @@ test.describe('13 — Segna presenza', () => {
       // (tailwind.config.ts). Verifico il colore di sfondo REALE, non
       // solo il nome classe.
       await expect(bottoneAssente).toHaveCSS('background-color', 'rgb(87, 83, 78)');
-      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
+      await expect(presenza.getByLabel('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
 
       // La nota deve restare salvata anche dopo un ricaricamento.
       await page.reload();
-      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
+      await expect(presenza.getByLabel('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
 
       // Riporto il bambino a "presente": gli altri test (stesso worker,
       // stessi bambini del seed) cercano la prima card con Sì/No
-      // disponibili nella colonna Pasto.
+      // disponibili nella sezione Pasto.
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
 
@@ -91,14 +91,14 @@ test.describe('13 — Segna presenza', () => {
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
       await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
-      await presenza.getByPlaceholder('Nota (opzionale)').fill('entra alle 9:03');
+      await presenza.getByLabel('Nota (opzionale)').fill('entra alle 9:03');
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Salva nota' }));
 
       // Lo stato non cambia: resta "presente".
       await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
       await page.reload();
-      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('entra alle 9:03');
+      await expect(presenza.getByLabel('Nota (opzionale)')).toHaveValue('entra alle 9:03');
       await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
     });
 
@@ -117,14 +117,14 @@ test.describe('13 — Segna presenza', () => {
       // Ricarico e correggo in malattia: se l'upsert funziona resta un
       // solo record (nessun duplicato, nessuno stato "fantasma").
       await page.reload();
-      await presenza.getByPlaceholder('Nota (opzionale)').fill('febbre alta');
+      await presenza.getByLabel('Nota (opzionale)').fill('febbre alta');
       const bottoneMalattia = presenza.getByRole('button', { name: 'Malattia' });
       await clickEAttendiAzione(page, bottoneMalattia);
 
       await expect(bottoneMalattia).toHaveClass(/bg-rose-600/);
       await expect(presenza.getByRole('button', { name: 'Presente' })).not.toHaveClass(/bg-emerald-700/);
       // Il tag compare nell'intestazione della card (una sola card per
-      // bambino, specs/10) e la colonna Pasto della stessa card mostra
+      // bambino, specs/10) e la sezione Pasto della stessa card mostra
       // l'etichetta al posto dei pulsanti Sì/No.
       await expect(card.getByText('🤒 Malattia').first()).toBeVisible();
       if ((await colonnaPasto(card).count()) > 0) {

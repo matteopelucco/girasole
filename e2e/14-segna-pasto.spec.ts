@@ -3,7 +3,7 @@
 // ATTENZIONE: questi test scrivono davvero in `pasti` sul progetto
 // Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.
 //
-// Il pasto si segna dalla colonna "Pasto" della card di ogni bambino
+// Il pasto si segna dalla sezione "Pasto" della card di ogni bambino
 // nella schermata unica "Presenze e pasti" (specs/10).
 import { test, expect } from '@playwright/test';
 import {
@@ -30,7 +30,7 @@ test.describe('14 — Segna pasto', () => {
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
     });
 
-    test('la colonna Pasto mostra lo stato pasto di ogni bambino', async ({ page }) => {
+    test('la sezione Pasto mostra lo stato pasto di ogni bambino', async ({ page }) => {
       await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
       await expect(colonnaPasto(cardBambini(page).first())).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
@@ -75,13 +75,13 @@ test.describe('14 — Segna pasto', () => {
       await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'Sì' }));
       await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
-      await pasto.getByPlaceholder('Nota (opzionale)').fill('ha finito tutto');
+      await pasto.getByLabel('Nota (opzionale)').fill('ha finito tutto');
       await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'Salva nota' }));
 
       await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
 
       await page.reload();
-      await expect(pasto.getByPlaceholder('Nota (opzionale)')).toHaveValue('ha finito tutto');
+      await expect(pasto.getByLabel('Nota (opzionale)')).toHaveValue('ha finito tutto');
       await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
     });
 
@@ -120,7 +120,7 @@ test.describe('14 — Segna pasto', () => {
 
     // Segna un bambino assente e poi lo riporta a "presente", per non
     // condizionare gli altri test (un bambino assente non ha più
-    // pulsanti Sì/No nella colonna Pasto).
+    // pulsanti Sì/No nella sezione Pasto).
     test('un bambino assente non è selezionabile per il pasto', async ({ page }) => {
       const card = primaCardConPulsante(page, 'Presenza', 'Assente');
       test.skip((await card.count()) === 0, 'nessun bambino segnabile');

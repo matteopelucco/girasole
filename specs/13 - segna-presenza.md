@@ -9,7 +9,7 @@ in questo file (vedi la matrice permessi in
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino
 — compresa un'eventuale presenza a pre-asilo e/o post-asilo — con una
-nota libera opzionale, dalla colonna "Presenza" della card di ogni
+nota libera opzionale, dalla sezione "Presenza" della card di ogni
 bambino nella schermata unica "Presenze e pasti" (bambini raggruppati
 per classe nella stessa schermata, senza un click intermedio per
 scegliere la classe) descritta in
@@ -34,15 +34,16 @@ giorno sono quindi:
 - **Assente**.
 - **Malattia** (con nota opzionale).
 
-I pulsanti per ogni bambino, nella colonna "Presenza" della sua card,
-sono disposti su tre righe: la prima con
-Presente, Pre-asilo, Post-asilo (gli stati/indicatori dell'orario
-"disteso", dal più corto al più lungo); la seconda con Assente e
-Malattia (le eccezioni alla presenza); la terza con il campo nota (un
-`<textarea>` alto due righe, non un campo a riga singola — per una nota
-un po' più lunga il testo resta leggibile senza scorrimento laterale) e
-il pulsante "Salva nota" (sotto il campo nota quando la colonna è
-stretta, come su telefono).
+I pulsanti per ogni bambino, nella sezione "Presenza" della sua card,
+sono pulsanti grandi disposti due per riga, nell'ordine Presente,
+Pre-asilo, Post-asilo, Assente, Malattia (prima gli stati/indicatori
+dell'orario "disteso", dal più corto al più lungo, poi le eccezioni alla
+presenza); lo stato selezionato è pieno, colorato e con un segno ✓ (vedi
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Sotto, il
+campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un campo a
+riga singola — per una nota un po' più lunga il testo resta leggibile
+senza scorrimento laterale) e il pulsante "Salva nota", largo quanto la
+sezione.
 
 ## Scenario: riepilogo presenze della classe
 Dato che sono su "Presenze e pasti" per una data
@@ -80,7 +81,7 @@ Allora lo stato per oggi viene sovrascritto in "malattia" con quella nota
 E resta un solo record di presenza per quel bambino per quella data
 E lo stato "malattia" appare anche come etichetta (tag) "🤒 Malattia"
 nell'intestazione della card del bambino, accanto al nome, per quella
-data (e la colonna "Pasto" della stessa card mostra l'etichetta al posto
+data (e la sezione "Pasto" della stessa card mostra l'etichetta al posto
 dei pulsanti Sì/No — vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 E se il bambino aveva pre-asilo e/o post-asilo attivi, vengono
 disattivati (non ha senso un pre/post-asilo su un bambino malato o

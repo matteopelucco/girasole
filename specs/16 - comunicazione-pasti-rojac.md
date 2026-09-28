@@ -91,7 +91,7 @@ il pulsante "Conferma pasti" resta disponibile
 Dato che sono autenticata come maestra e i pasti di oggi sono già stati
 comunicati a Rojac
 Quando apro "Presenze e pasti" per oggi
-Allora nella colonna "Pasto" non vedo più i pulsanti Sì/No né il "Salva
+Allora nella sezione "Pasto" non vedo più i pulsanti Sì/No né il "Salva
 nota" del pasto per nessun bambino: i valori restano visibili ma in sola
 lettura
 E questo vale per ogni classe dell'asilo, non solo per quella
@@ -125,7 +125,7 @@ comunicazione già fatta
 Dato che sono autenticata come maestra, i pasti di oggi sono già stati
 comunicati a Rojac e un bambino di una mia classe ha il pasto di oggi
 segnato "sì" e una presenza diversa da "assente"/"malattia"
-Quando guardo la colonna "Presenza" della sua card in "Presenze e pasti"
+Quando guardo la sezione "Presenza" della sua card in "Presenze e pasti"
 Allora i pulsanti "Assente" e "Malattia" sono disabilitati, con la breve
 spiegazione "Pasto già comunicato a Rojac"
 E i pulsanti "Presente", "Pre-asilo", "Post-asilo" e il "Salva nota"
@@ -135,14 +135,14 @@ della presenza restano disponibili (non cambiano il conteggio dei pasti)
 Dato che sono autenticata come maestra, i pasti di oggi sono già stati
 comunicati a Rojac e un bambino di una mia classe ha il pasto di oggi
 segnato "no" (o non segnato)
-Quando guardo la colonna "Presenza" della sua card
+Quando guardo la sezione "Presenza" della sua card
 Allora i pulsanti "Assente" e "Malattia" restano disponibili: quel
 bambino non è nel conteggio comunicato
 
 ## Scenario: l'admin può segnare Assente o Malattia anche dopo la comunicazione
 Dato che sono autenticato come admin e i pasti di oggi sono già stati
 comunicati a Rojac
-Quando guardo la colonna "Presenza" della card di un bambino con pasto
+Quando guardo la sezione "Presenza" della card di un bambino con pasto
 "sì"
 Allora i pulsanti "Assente" e "Malattia" restano disponibili (l'admin
 deve poter correggere errori reali; il log della comunicazione resta

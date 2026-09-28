@@ -17,8 +17,8 @@ type RigaPastoDb = PastoGiorno & { bambino_id: string };
 
 // Schermata unica "Presenze e pasti" (specs/10 - presenze-e-pasti.md):
 // sostituisce le vecchie /dashboard/presenze e /dashboard/pasti (che ora
-// reindirizzano qui). Una card per bambino con la presenza a sinistra e
-// il pasto a destra. L'assistente non ha accesso ai pasti (specs/03,
+// reindirizzano qui). Una card per bambino con intestazione, sezione
+// presenza e sezione pasto. L'assistente non ha accesso ai pasti (specs/03,
 // specs/14): per lei la pagina non legge né `pasti` né
 // `pasti_comunicati` (nessuna query, non solo nessun render) — la RLS
 // glielo impedirebbe comunque.
@@ -32,7 +32,7 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
   const [
     { data: presenzeData },
     { data: pastiData },
-    { data: allergieData },
+    { data: datiBambiniData },
     { data: comunicazione },
     { editable, messaggioChiuso },
   ] = await Promise.all([
@@ -52,11 +52,12 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
           .in('bambino_id', idBambini)
           .returns<RigaPastoDb[]>()
       : Promise.resolve({ data: [] as RigaPastoDb[] }),
-    // note_allergie non arriva da sezioniEBambiniVisibili (generica tra
-    // più pagine): una seconda select mirata sugli stessi id.
+    // note_allergie e sesso (intestazione della card, issue #106) non
+    // arrivano da sezioniEBambiniVisibili (generica tra più pagine): una
+    // seconda select mirata sugli stessi id.
     idBambini.length
-      ? supabase.from('bambini').select('id, note_allergie').in('id', idBambini)
-      : Promise.resolve({ data: [] as { id: string; note_allergie: string | null }[] }),
+      ? supabase.from('bambini').select('id, note_allergie, sesso').in('id', idBambini)
+      : Promise.resolve({ data: [] as { id: string; note_allergie: string | null; sesso: string | null }[] }),
     conPasti
       ? supabase
           .from('pasti_comunicati')
@@ -69,7 +70,8 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
   const pastoPerBambino = new Map((pastiData ?? []).map((p) => [p.bambino_id, p]));
-  const allergiePerBambino = new Map((allergieData ?? []).map((b) => [b.id, b.note_allergie]));
+  const allergiePerBambino = new Map((datiBambiniData ?? []).map((b) => [b.id, b.note_allergie]));
+  const sessoPerBambino = new Map((datiBambiniData ?? []).map((b) => [b.id, b.sesso]));
   const pastiComunicati = !!comunicazione;
 
   // Dopo la comunicazione (per l'intero asilo, specs/16) la colonna Pasto
@@ -133,6 +135,7 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
                     bambino={bambino}
                     data={data}
                     noteAllergie={allergiePerBambino.get(bambino.id)}
+                    sesso={sessoPerBambino.get(bambino.id)}
                     presenza={presenza}
                     pasto={pasto}
                     conPasti={conPasti}

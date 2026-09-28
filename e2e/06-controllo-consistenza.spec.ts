@@ -16,6 +16,7 @@ import {
   colonnaPresenza,
   dataOggiRoma,
   hasCredenziali,
+  nomeBambinoCard,
   nessunaViolazioneA11yGrave,
   primaCardConPulsante,
   statoAutenticazione,
@@ -54,7 +55,7 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       const primaCard = primaCardConPulsante(page, 'Pasto', 'Sì');
       test.skip((await primaCard.count()) === 0, 'nessun bambino selezionabile per il pasto');
 
-      nomeBambino = (await primaCard.locator('span.font-medium').first().textContent())?.trim();
+      nomeBambino = (await nomeBambinoCard(primaCard).textContent())?.trim();
 
       // Base coerente: presente con pasto "sì".
       await clickEAttendiAzione(page, colonnaPresenza(primaCard).getByRole('button', { name: 'Presente' }));
