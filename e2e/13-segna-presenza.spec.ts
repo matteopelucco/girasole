@@ -3,18 +3,23 @@
 // ATTENZIONE: questi test scrivono davvero in `presenze` sul progetto
 // Supabase puntato da NEXT_PUBLIC_SUPABASE_URL (di test in locale, quello
 // configurato nei secret in CI) — mai contro un progetto di produzione.
-import { test, expect, type Page } from '@playwright/test';
-import { clickEAttendiAzione, dataIeriRoma, dataOggiRoma, hasCredenziali, statoAutenticazione } from './helpers';
-
-// Apre "Presenze" per la data indicata (specs/12: i bambini di tutte le
-// classi visibili compaiono già raggruppati per sezione nella stessa
-// pagina, niente più click su una classe per raggiungerli). Ritorna
-// false se l'account non ha nessun bambino visibile (test si salta).
-async function apriPresenze(page: Page, data: string): Promise<boolean> {
-  await page.goto(`/dashboard/presenze?data=${data}`);
-  const primaRiga = page.locator('main li').first();
-  return (await primaRiga.count()) > 0;
-}
+//
+// La presenza si segna dalla colonna "Presenza" della card di ogni
+// bambino nella schermata unica "Presenze e pasti" (specs/10): ogni
+// interazione è ristretta a quella colonna, perché la colonna "Pasto"
+// della stessa card ha un proprio campo nota e un proprio "Salva nota".
+import { test, expect } from '@playwright/test';
+import {
+  apriGiornata,
+  clickEAttendiAzione,
+  colonnaPasto,
+  colonnaPresenza,
+  dataIeriRoma,
+  dataOggiRoma,
+  hasCredenziali,
+  primaCardConPulsante,
+  statoAutenticazione,
+} from './helpers';
 
 test.describe('13 — Segna presenza', () => {
   test.describe('come maestra, sulla data odierna', () => {
@@ -22,108 +27,116 @@ test.describe('13 — Segna presenza', () => {
 
     test.beforeEach(async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
-      const haBambini = await apriPresenze(page, dataOggiRoma());
+      const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
     });
 
     test('riepilogo presenze della classe', async ({ page }) => {
       // Il riepilogo aggregato (in cima) e quello per sezione condividono
-      // lo stesso formato di testo: più di una sezione visibile può dare
-      // più corrispondenze, .first() basta a verificare che compaia.
+      // lo stesso formato di testo: .first() basta a verificare che compaia.
       await expect(page.getByText(/^Presenti: \d+\/\d+$/).first()).toBeVisible();
-      await expect(page.getByRole('heading', { name: /^Presenze giornaliere - Sezione /i }).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: /^Sezione / }).first()).toBeVisible();
     });
 
     test('segnare un bambino presente evidenzia il pulsante corretto', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
 
-      const bottonePresente = primaRiga.getByRole('button', { name: 'Presente' });
+      const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
       await bottonePresente.click();
 
       await expect(bottonePresente).toHaveClass(/bg-emerald-700/);
     });
 
     test("segnare un'assenza con nota", async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Assente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Assente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
+        'Assente bloccato (pasto già comunicato a Rojac)'
+      );
 
-      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('influenza, rientra lunedì');
-      const bottoneAssente = primaRiga.getByRole('button', { name: 'Assente' });
-      await bottoneAssente.click();
+      await presenza.getByPlaceholder('Nota (opzionale)').fill('influenza, rientra lunedì');
+      const bottoneAssente = presenza.getByRole('button', { name: 'Assente' });
+      await clickEAttendiAzione(page, bottoneAssente);
 
       await expect(bottoneAssente).toHaveClass(/bg-stone-600/);
       // Bug reale trovato durante un test con un'insegnante: il
       // pulsante selezionato appariva come uno spazio bianco perché
       // lib/classiStato.ts non era incluso nel content di Tailwind
-      // (tailwind.config.ts) — la classe bg-stone-600 non veniva mai
-      // generata nel CSS finale, pur comparendo nell'attributo class.
-      // Verifico il colore di sfondo REALE, non solo il nome classe.
+      // (tailwind.config.ts). Verifico il colore di sfondo REALE, non
+      // solo il nome classe.
       await expect(bottoneAssente).toHaveCSS('background-color', 'rgb(87, 83, 78)');
-      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue(
-        'influenza, rientra lunedì'
-      );
+      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
 
-      // La nota deve restare salvata anche dopo un ricaricamento, non
-      // solo visibile finché l'input non viene rimontato.
+      // La nota deve restare salvata anche dopo un ricaricamento.
       await page.reload();
-      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue(
-        'influenza, rientra lunedì'
-      );
+      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('influenza, rientra lunedì');
+
+      // Riporto il bambino a "presente": gli altri test (stesso worker,
+      // stessi bambini del seed) cercano la prima card con Sì/No
+      // disponibili nella colonna Pasto.
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
 
     test('salvare una nota senza cambiare lo stato', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
 
       // Serve uno stato già segnato: "Salva nota" richiede un record di
-      // presenza esistente (la colonna stato non è nullable). Aspetto la
-      // fine di ciascun salvataggio: altrimenti la risposta dello stato
-      // ancora in volo verrebbe scambiata per quella della nota, e il
+      // presenza esistente. Aspetto la fine di ciascun salvataggio: il
       // reload annullerebbe il salvataggio della nota (issue #70).
-      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Presente' }));
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
-      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('entra alle 9:03');
-      await clickEAttendiAzione(page, primaRiga.getByRole('button', { name: 'Salva nota' }));
+      await presenza.getByPlaceholder('Nota (opzionale)').fill('entra alle 9:03');
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Salva nota' }));
 
       // Lo stato non cambia: resta "presente".
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
       await page.reload();
-      await expect(primaRiga.getByPlaceholder('Nota (opzionale)')).toHaveValue('entra alle 9:03');
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toHaveValue('entra alle 9:03');
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
     });
 
-    test('correggere uno stato in malattia: upsert, nota e tag negli elenchi', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
-      const nomeBambino = (await primaRiga.locator('span.font-medium').first().textContent())?.trim();
+    test('correggere uno stato in malattia: upsert, nota e tag nella card', async ({ page }) => {
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Malattia' }).isDisabled(),
+        'Malattia bloccata (pasto già comunicato a Rojac)'
+      );
 
-      await primaRiga.getByRole('button', { name: 'Presente' }).click();
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
       // Ricarico e correggo in malattia: se l'upsert funziona resta un
       // solo record (nessun duplicato, nessuno stato "fantasma").
       await page.reload();
-      await primaRiga.getByPlaceholder('Nota (opzionale)').fill('febbre alta');
-      const bottoneMalattia = primaRiga.getByRole('button', { name: 'Malattia' });
-      await bottoneMalattia.click();
+      await presenza.getByPlaceholder('Nota (opzionale)').fill('febbre alta');
+      const bottoneMalattia = presenza.getByRole('button', { name: 'Malattia' });
+      await clickEAttendiAzione(page, bottoneMalattia);
 
       await expect(bottoneMalattia).toHaveClass(/bg-rose-600/);
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).not.toHaveClass(/bg-emerald-700/);
-      await expect(primaRiga.getByText('🤒 Malattia')).toBeVisible();
+      await expect(presenza.getByRole('button', { name: 'Presente' })).not.toHaveClass(/bg-emerald-700/);
+      // Il tag compare nell'intestazione della card (una sola card per
+      // bambino, specs/10) e la colonna Pasto della stessa card mostra
+      // l'etichetta al posto dei pulsanti Sì/No.
+      await expect(card.getByText('🤒 Malattia').first()).toBeVisible();
+      if ((await colonnaPasto(card).count()) > 0) {
+        await expect(colonnaPasto(card).getByRole('button', { name: 'Sì' })).toHaveCount(0);
+      }
 
-      // Lo stato malattia appare come tag anche nell'elenco Pasti,
-      // stessa data (specs/13, stesso scenario).
-      const data = new URL(page.url()).searchParams.get('data') ?? dataOggiRoma();
-      await page.goto(`/dashboard/pasti?data=${data}`);
-      const rigaPasto = page.locator('li', { hasText: nomeBambino ?? '' }).first();
-      await expect(rigaPasto.getByText('🤒 Malattia')).toBeVisible();
+      // Ripristino (vedi il test sull'assenza sopra).
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
 
     test('non posso modificare una data diversa da oggi: sola lettura', async ({ page }) => {
-      const haBambini = await apriPresenze(page, dataIeriRoma());
+      const haBambini = await apriGiornata(page, dataIeriRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
@@ -137,61 +150,73 @@ test.describe('13 — Segna presenza', () => {
       await expect(page.getByText(/^Post-asilo: \d+$/).first()).toBeVisible();
     });
 
-    test('segnare pre-asilo forza presente e attiva l\'indicatore', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+    test("segnare pre-asilo forza presente e attiva l'indicatore", async ({ page }) => {
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
 
-      const bottonePreAsilo = primaRiga.getByRole('button', { name: 'Pre-asilo' });
-      await bottonePreAsilo.click();
+      // Base nota: "Presente" azzera pre/post-asilo, così il click sotto
+      // attiva (e non disattiva) il toggle.
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      const bottonePreAsilo = presenza.getByRole('button', { name: 'Pre-asilo' });
+      await clickEAttendiAzione(page, bottonePreAsilo);
 
       await expect(bottonePreAsilo).toHaveClass(/bg-sky-700/);
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
     });
 
     test('pre-asilo e post-asilo sono indipendenti e cumulabili', async ({ page }) => {
-      const primaRiga = page
-        .locator('li', { has: page.getByRole('button', { name: 'Post-asilo' }) })
-        .first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Post-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
 
-      // Riparte da una base nota (nessun pre/post-asilo attivo): un test
-      // precedente in questo stesso describe può aver già lasciato
-      // pre-asilo attivo sullo stesso bambino, e un secondo click su un
-      // toggle già attivo lo disattiva invece di (ri)attivarlo.
-      await primaRiga.getByRole('button', { name: 'Presente' }).click();
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      // Riparte da una base nota (nessun pre/post-asilo attivo): un
+      // secondo click su un toggle già attivo lo disattiverebbe.
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
 
-      await primaRiga.getByRole('button', { name: 'Pre-asilo' }).click();
-      const bottonePostAsilo = primaRiga.getByRole('button', { name: 'Post-asilo' });
-      await bottonePostAsilo.click();
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Pre-asilo' }));
+      const bottonePostAsilo = presenza.getByRole('button', { name: 'Post-asilo' });
+      await clickEAttendiAzione(page, bottonePostAsilo);
 
-      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
       await expect(bottonePostAsilo).toHaveClass(/bg-sky-700/);
     });
 
     test('ripremere pre-asilo lo disattiva, restando presente', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
 
-      const bottonePreAsilo = primaRiga.getByRole('button', { name: 'Pre-asilo' });
-      await bottonePreAsilo.click();
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      const bottonePreAsilo = presenza.getByRole('button', { name: 'Pre-asilo' });
+      await clickEAttendiAzione(page, bottonePreAsilo);
       await expect(bottonePreAsilo).toHaveClass(/bg-sky-700/);
 
-      await bottonePreAsilo.click();
+      await clickEAttendiAzione(page, bottonePreAsilo);
       await expect(bottonePreAsilo).not.toHaveClass(/bg-sky-700/);
-      await expect(primaRiga.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
     });
 
     test('segnare assente resetta pre-asilo e post-asilo', async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Pre-asilo' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
+        'Assente bloccato (pasto già comunicato a Rojac)'
+      );
 
-      await primaRiga.getByRole('button', { name: 'Pre-asilo' }).click();
-      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Pre-asilo' }));
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
 
-      await primaRiga.getByRole('button', { name: 'Assente' }).click();
-      await expect(primaRiga.getByRole('button', { name: 'Pre-asilo' })).not.toHaveClass(/bg-sky-700/);
-      await expect(primaRiga.getByRole('button', { name: 'Post-asilo' })).not.toHaveClass(/bg-sky-700/);
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).not.toHaveClass(/bg-sky-700/);
+      await expect(presenza.getByRole('button', { name: 'Post-asilo' })).not.toHaveClass(/bg-sky-700/);
+
+      // Ripristino (vedi il test sull'assenza sopra).
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
   });
 
@@ -200,15 +225,15 @@ test.describe('13 — Segna presenza', () => {
 
     test.beforeEach(async ({ page }) => {
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
-      const haBambini = await apriPresenze(page, dataOggiRoma());
+      const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
     });
 
     test("l'assistente può segnare una presenza, come una maestra", async ({ page }) => {
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
 
-      const bottonePresente = primaRiga.getByRole('button', { name: 'Presente' });
+      const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
       await bottonePresente.click();
 
       await expect(bottonePresente).toHaveClass(/bg-emerald-700/);
@@ -221,14 +246,14 @@ test.describe('13 — Segna presenza', () => {
     test('i pulsanti restano attivi anche su una data diversa da oggi', async ({ page }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
-      const haBambini = await apriPresenze(page, dataIeriRoma());
+      const haBambini = await apriGiornata(page, dataIeriRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino segnabile');
+      const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile (es. ieri era un giorno di chiusura)');
 
       await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toHaveCount(0);
-      const bottonePresente = primaRiga.getByRole('button', { name: 'Presente' });
+      const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
       await bottonePresente.click();
       await expect(bottonePresente).toHaveClass(/bg-emerald-700/);
     });

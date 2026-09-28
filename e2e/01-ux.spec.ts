@@ -1,6 +1,6 @@
 // Requisito: specs/01 - ux.md
 import { test, expect, type Page } from '@playwright/test';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { colonnaPasto, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 const MOBILE = { width: 375, height: 812 }; // priorità dichiarata nel requisito
 
@@ -32,17 +32,16 @@ test.describe('01 — UX/UI', () => {
       await page.goto('/dashboard');
 
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
-      // Niente selettore di data in dashboard (specs/12): Presenze e Pasti
-      // sono raggiungibili con un solo tap sulla rispettiva scheda.
+      // Niente selettore di data in dashboard (specs/12): "Presenze e
+      // pasti" è raggiungibile con un solo tap sulla sua scheda.
       await expect(page.getByLabel('Data')).toHaveCount(0);
-      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Presenze e pasti' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
   });
 
-  test.describe('flusso Presenze (mobile)', () => {
+  test.describe('flusso "Presenze e pasti", colonna presenza (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
     test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {
@@ -51,7 +50,7 @@ test.describe('01 — UX/UI', () => {
       // Navigazione a 2 livelli (specs/12, v0.39.0): la pagina mostra
       // direttamente i bambini raggruppati per sezione, senza un elenco
       // classi intermedio da cliccare.
-      await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
+      await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
 
       // Gli stati si impostano con un bottone diretto, non con menu a
@@ -81,7 +80,7 @@ test.describe('01 — UX/UI', () => {
       // il click userebbe la pagina già scaricata e la navigazione sarebbe
       // istantanea. Il route va installato prima di aprire la dashboard,
       // perché il prefetch parte appena i link sono visibili.
-      await page.route('**/dashboard/presenze**', async (route) => {
+      await page.route('**/dashboard/giornata**', async (route) => {
         if (route.request().headers()['next-router-prefetch']) {
           await route.abort();
           return;
@@ -94,13 +93,13 @@ test.describe('01 — UX/UI', () => {
       const barra = page.getByRole('status', { name: 'Caricamento in corso' });
       await expect(barra).toHaveCount(0);
 
-      const linkPresenze = page.getByRole('link', { name: 'Presenze', exact: true });
-      test.skip((await linkPresenze.count()) === 0, 'nessuna sezione assegnata a questo account');
+      const linkGiornata = page.getByRole('link', { name: 'Presenze e pasti' });
+      test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
 
-      await linkPresenze.click();
+      await linkGiornata.click();
       await expect(barra).toBeVisible();
 
-      await page.waitForURL(/\/dashboard\/presenze\?/);
+      await page.waitForURL(/\/dashboard\/giornata\?/);
       await expect(barra).toHaveCount(0);
     });
   });
@@ -166,16 +165,16 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
-  test.describe('flusso Pasti (mobile)', () => {
+  test.describe('flusso "Presenze e pasti", colonna pasto (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
     test('elenco bambini per sezione resta usabile a larghezza mobile', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
-      await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
+      await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
       expect(await nessunOverflowOrizzontale(page)).toBe(false);
-      const primoBottone = page.getByRole('button', { name: 'Sì' }).first();
-      test.skip((await primoBottone.count()) === 0, 'nessun bambino visibile per questo account');
+      const primoBottone = colonnaPasto(page).getByRole('button', { name: 'Sì' }).first();
+      test.skip((await primoBottone.count()) === 0, 'nessun bambino con Sì/No disponibili per questo account');
       await expect(primoBottone).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });

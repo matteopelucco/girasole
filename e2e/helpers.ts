@@ -90,6 +90,51 @@ export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
   return page.locator('li').filter({ hasText: nomeAnno });
 }
 
+// Schermata unica "Presenze e pasti" (specs/10 - presenze-e-pasti.md):
+// una card per bambino (<li id="bambino-<id>">) con una colonna
+// "Presenza" e, per maestra/admin, una colonna "Pasto" (role="group"
+// con aria-label). Le due colonne hanno ciascuna un proprio campo nota e
+// un proprio "Salva nota": i test vanno sempre ristretti alla colonna
+// giusta, altrimenti un getByRole/getByPlaceholder sulla card intera
+// trova due elementi. Il selettore sull'id esclude anche gli altri <li>
+// della pagina (es. l'elenco "Bambini senza presenza" del box Rojac).
+export const PERCORSO_GIORNATA = '/dashboard/giornata';
+
+export function cardBambini(page: Page): Locator {
+  return page.locator('li[id^="bambino-"]');
+}
+
+export function colonnaPresenza(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Presenza', exact: true });
+}
+
+export function colonnaPasto(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Pasto', exact: true });
+}
+
+// Card del primo bambino la cui colonna indicata contiene il pulsante
+// `nomePulsante` (es. la prima card con "Sì" ancora disponibile).
+export function primaCardConPulsante(
+  page: Page,
+  colonna: 'Presenza' | 'Pasto',
+  nomePulsante: string
+): Locator {
+  return cardBambini(page)
+    .filter({
+      has: page
+        .getByRole('group', { name: colonna, exact: true })
+        .getByRole('button', { name: nomePulsante, exact: true }),
+    })
+    .first();
+}
+
+// Apre "Presenze e pasti" per la data indicata; ritorna false se
+// l'account non vede nessun bambino (il test chiamante si salta).
+export async function apriGiornata(page: Page, data: string): Promise<boolean> {
+  await page.goto(`${PERCORSO_GIORNATA}?data=${data}`);
+  return (await cardBambini(page).count()) > 0;
+}
+
 // Messaggi con role="alert" mostrati dall'app (errori dei form, banner),
 // escluso l'annunciatore di route di Next.js: un <div role="alert"
 // id="__next-route-announcer__"> vuoto che compare dopo una navigazione

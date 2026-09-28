@@ -7,8 +7,19 @@
 // sullo stesso bambino/giorno — lo stesso ordine di eventi reale che il
 // requisito intercetta (vedi specs/06, "Perché il controllo serve
 // comunque").
-import { test, expect, type Page } from '@playwright/test';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { test, expect } from '@playwright/test';
+import {
+  apriGiornata,
+  cardBambini,
+  clickEAttendiAzione,
+  colonnaPasto,
+  colonnaPresenza,
+  dataOggiRoma,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  primaCardConPulsante,
+  statoAutenticazione,
+} from './helpers';
 
 // Stessa formattazione di lib/date.ts:formattaDataItaliana, per
 // individuare nel drill-down mensile la riga del giorno odierno senza
@@ -24,13 +35,8 @@ function dataOggiFormattata(): string {
   }).format(new Date(Date.UTC(anno, mese - 1, giorno, 12)));
 }
 
-// Navigazione a 2 livelli (specs/12, v0.39.0): Presenze e Pasti mostrano
-// direttamente i bambini di tutte le sezioni visibili, raggruppati per
-// sezione — non c'è più una pagina per singola classe da aprire.
-async function apriPagina(page: Page, sezione: 'presenze' | 'pasti', data: string): Promise<void> {
-  await page.goto(`/dashboard/${sezione}?data=${data}`);
-}
-
+// Schermata unica "Presenze e pasti" (specs/10): presenza e pasto dello
+// stesso bambino sono nella stessa card, colonne "Presenza" e "Pasto".
 let nomeBambino: string | undefined;
 
 test.describe('06 — Controllo di consistenza dei dati', () => {
@@ -43,37 +49,42 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
     });
 
     test('nessun warning su un bambino con pasto "sì" coerente', async ({ page }) => {
-      await apriPagina(page, 'pasti', dataOggiRoma());
+      await apriGiornata(page, dataOggiRoma());
 
-      const primaRiga = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-      test.skip((await primaRiga.count()) === 0, 'nessun bambino selezionabile per il pasto in questa classe');
+      const primaCard = primaCardConPulsante(page, 'Pasto', 'Sì');
+      test.skip((await primaCard.count()) === 0, 'nessun bambino selezionabile per il pasto');
 
-      nomeBambino = (await primaRiga.locator('span.font-medium').first().textContent())?.trim();
+      nomeBambino = (await primaCard.locator('span.font-medium').first().textContent())?.trim();
 
-      await primaRiga.getByRole('button', { name: 'Sì' }).click();
-      await expect(primaRiga.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-      await expect(primaRiga.getByText('Inconsistenza')).toHaveCount(0);
+      // Base coerente: presente con pasto "sì".
+      await clickEAttendiAzione(page, colonnaPresenza(primaCard).getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, colonnaPasto(primaCard).getByRole('button', { name: 'Sì' }));
+      await expect(colonnaPasto(primaCard).getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+      await expect(primaCard.getByText('Inconsistenza')).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('segnare "assente" sullo stesso bambino crea l\'incoerenza e mostra il warning in Presenze e Pasti', async ({
+    test('segnare "assente" sullo stesso bambino crea l\'incoerenza e mostra il warning nella sua card', async ({
       page,
     }) => {
       test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
 
-      await apriPagina(page, 'presenze', dataOggiRoma());
-      const rigaPresenze = page.locator('li', { hasText: nomeBambino! }).first();
-      await rigaPresenze.getByRole('button', { name: 'Assente' }).click();
-      await expect(rigaPresenze.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+      await apriGiornata(page, dataOggiRoma());
+      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
+      const presenza = colonnaPresenza(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
+        'Assente bloccato (pasto già comunicato a Rojac): incoerenza non più raggiungibile per la maestra'
+      );
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
+      await expect(presenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
 
-      await expect(rigaPresenze.getByText('Inconsistenza')).toBeVisible();
+      // Una sola card per bambino (specs/10): il warning è nella sua
+      // intestazione, e la colonna Pasto mostra l'etichetta "Assente".
+      await expect(card.getByText('Inconsistenza')).toBeVisible();
+      await expect(colonnaPasto(card).getByText('🚫 Assente')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
-
-      await apriPagina(page, 'pasti', dataOggiRoma());
-      const rigaPasti = page.locator('li', { hasText: nomeBambino! }).first();
-      await expect(rigaPasti.getByText('Bambino assente: il pasto non è applicabile.')).toBeVisible();
-      await expect(rigaPasti.getByText('Inconsistenza')).toBeVisible();
     });
 
     test('il warning compare nel report a schermo (giornaliero)', async ({ page }) => {

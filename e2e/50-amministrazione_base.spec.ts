@@ -5,6 +5,7 @@
 // nota in 13-segna-presenza.spec.ts.
 import { test, expect, type Page } from '@playwright/test';
 import {
+  cardBambini,
   dataOggiRoma,
   formCreaBambino,
   hasCredenziali,
@@ -170,11 +171,13 @@ test.describe('50 — Amministrazione base', () => {
     await link.click();
     await page.waitForURL(/\/admin\/bambini\/.+/);
 
-    // Prima di disattivarlo, il bambino compare in Presenze per la sua
-    // sezione, nella pagina unica raggruppata per sezione (verifico come
-    // admin, che vede tutte le sezioni).
-    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
-    await expect(page.getByText(cognome, { exact: false })).toBeVisible();
+    // Prima di disattivarlo, il bambino ha la sua card nella schermata
+    // unica "Presenze e pasti" (specs/10), raggruppata per sezione
+    // (verifico come admin, che vede tutte le sezioni). Il nome può
+    // comparire anche nell'elenco "Bambini senza presenza" del box Rojac,
+    // quindi mi limito alle card.
+    await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
+    await expect(cardBambini(page).filter({ hasText: cognome })).toHaveCount(1);
 
     // Torno alla scheda di dettaglio tramite l'elenco.
     await page.goto('/admin');
@@ -192,8 +195,8 @@ test.describe('50 — Amministrazione base', () => {
     await expect(gruppoClassiAssegnate(page).locator('li', { hasText: cognome })).toHaveCount(0);
     await expect(gruppoSenzaClasse(page).locator('li', { hasText: cognome })).toBeVisible();
 
-    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
-    await expect(page.getByText(cognome, { exact: false })).toHaveCount(0);
+    await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
+    await expect(cardBambini(page).filter({ hasText: cognome })).toHaveCount(0);
 
     // Riattivo dal dettaglio: torna a comparire tra i bambini assegnati.
     await page.goto('/admin');
@@ -204,8 +207,8 @@ test.describe('50 — Amministrazione base', () => {
       timeout: 20_000,
     });
 
-    await page.goto(`/dashboard/presenze?data=${dataOggiRoma()}`);
-    await expect(page.getByText(cognome, { exact: false })).toBeVisible();
+    await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
+    await expect(cardBambini(page).filter({ hasText: cognome })).toHaveCount(1);
   });
 
   test('/admin/maestre: elementi presenti + accessibilità', async ({ page }) => {
