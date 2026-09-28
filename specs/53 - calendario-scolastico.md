@@ -2,7 +2,7 @@
 
 ## Attori
 Admin (gestisce i giorni di chiusura). Tutto lo staff (admin, maestra,
-assistente) vede l'informazione in Presenze e Pasti.
+assistente) vede l'informazione in "Presenze e pasti".
 
 ## Obiettivo
 Permettere all'admin di dichiarare i giorni in cui l'asilo è chiuso
@@ -51,7 +51,7 @@ normalmente scrivibili (salvo che siano sabato o domenica)
 
 ## Scenario: sabato e domenica sono chiusura implicita
 Dato che una data è un sabato o una domenica
-Quando apro Presenze o Pasti per quella data, per una qualunque classe
+Quando apro "Presenze e pasti" per quella data, per una qualunque classe
 Allora vedo l'informazione che l'asilo è chiuso per quel giorno
 E questo vale sempre, anche se l'admin non ha creato nessun giorno di
 chiusura per quella data
@@ -59,7 +59,7 @@ chiusura per quella data
 ## Scenario: un giorno di chiusura è visibile e bloccante in Presenze
 Dato che una data ricade in un giorno di chiusura registrato dall'admin
 (o è sabato/domenica)
-Quando apro Presenze per quella data, per una classe
+Quando apro "Presenze e pasti" per quella data, per una classe
 Allora vedo un messaggio che segnala la chiusura (con la nota, se
 presente)
 E non vedo i pulsanti per segnare presente/assente/malattia/pre-asilo/
@@ -69,7 +69,7 @@ incluso)
 ## Scenario: un giorno di chiusura è visibile e bloccante in Pasti
 Dato che una data ricade in un giorno di chiusura registrato dall'admin
 (o è sabato/domenica)
-Quando apro Pasti per quella data, per una classe
+Quando apro "Presenze e pasti" per quella data, per una classe
 Allora vedo un messaggio che segnala la chiusura (con la nota, se
 presente)
 E non vedo i pulsanti sì/no per nessun bambino, indipendentemente dal

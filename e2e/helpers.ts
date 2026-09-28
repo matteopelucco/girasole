@@ -21,6 +21,25 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// L'ultimo giorno APERTO prima di oggi (fuso Europe/Rome): salta sabato e
+// domenica, chiusura implicita (specs/53). Serve ai test "sola lettura su
+// una data diversa da oggi" (specs/13, specs/14): su un giorno chiuso la
+// pagina mostra giustamente l'avviso di chiusura, che ha la precedenza sul
+// banner "Sola lettura", e il test fallirebbe il lunedì. Limite noto: non
+// conosce i giorni di chiusura registrati in `giorni_chiusura`. Il seed
+// (supabase/seed.sql) non ne definisce e l'unico test che ne crea
+// (53-calendario-scolastico.spec.ts) usa date lontane nel futuro e le
+// elimina a fine test, quindi oggi nessuno cade su un giorno passato.
+export function dataUltimoGiornoApertoPrimaDiOggi(): string {
+  for (let i = 1; i <= 7; i++) {
+    const candidata = dataFraGiorni(-i);
+    const [anno, mese, giorno] = candidata.split('-').map(Number);
+    const giornoSettimana = new Date(Date.UTC(anno, mese - 1, giorno, 12)).getUTCDay();
+    if (giornoSettimana !== 0 && giornoSettimana !== 6) return candidata;
+  }
+  throw new Error('impossibile trovare un giorno feriale nei 7 giorni precedenti');
+}
+
 // Oggi + n giorni (fuso Europe/Rome, n può essere negativo) — usata dai
 // test di specs/53 - calendario-scolastico.md per trovare un prossimo
 // sabato/domenica e una data lontana su cui creare un giorno di chiusura
@@ -88,6 +107,51 @@ export function rigaSezione(page: Page, nomeSezione: string) {
 // sopra — quindi qui basta il tag).
 export function rigaAnnoScolastico(page: Page, nomeAnno: string) {
   return page.locator('li').filter({ hasText: nomeAnno });
+}
+
+// Schermata unica "Presenze e pasti" (specs/10 - presenze-e-pasti.md):
+// una card per bambino (<li id="bambino-<id>">) con una colonna
+// "Presenza" e, per maestra/admin, una colonna "Pasto" (role="group"
+// con aria-label). Le due colonne hanno ciascuna un proprio campo nota e
+// un proprio "Salva nota": i test vanno sempre ristretti alla colonna
+// giusta, altrimenti un getByRole/getByPlaceholder sulla card intera
+// trova due elementi. Il selettore sull'id esclude anche gli altri <li>
+// della pagina (es. l'elenco "Bambini senza presenza" del box Rojac).
+export const PERCORSO_GIORNATA = '/dashboard/giornata';
+
+export function cardBambini(page: Page): Locator {
+  return page.locator('li[id^="bambino-"]');
+}
+
+export function colonnaPresenza(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Presenza', exact: true });
+}
+
+export function colonnaPasto(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Pasto', exact: true });
+}
+
+// Card del primo bambino la cui colonna indicata contiene il pulsante
+// `nomePulsante` (es. la prima card con "Sì" ancora disponibile).
+export function primaCardConPulsante(
+  page: Page,
+  colonna: 'Presenza' | 'Pasto',
+  nomePulsante: string
+): Locator {
+  return cardBambini(page)
+    .filter({
+      has: page
+        .getByRole('group', { name: colonna, exact: true })
+        .getByRole('button', { name: nomePulsante, exact: true }),
+    })
+    .first();
+}
+
+// Apre "Presenze e pasti" per la data indicata; ritorna false se
+// l'account non vede nessun bambino (il test chiamante si salta).
+export async function apriGiornata(page: Page, data: string): Promise<boolean> {
+  await page.goto(`${PERCORSO_GIORNATA}?data=${data}`);
+  return (await cardBambini(page).count()) > 0;
 }
 
 // Messaggi con role="alert" mostrati dall'app (errori dei form, banner),

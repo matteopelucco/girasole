@@ -34,10 +34,11 @@ ancora stati comunicati a Rojac (vedi
 Quando apro la dashboard
 Allora vedo un banner di allarme che elenca cosa manca, con un link per
 ciascuna mia sezione che ha ancora presenze da segnare (mi porta a
-Presenze per oggi, `/dashboard/presenze?data=<oggi>`, dove i bambini di
-tutte le mie sezioni sono raggruppati per sezione) e, se manca anche
-la comunicazione pasti, un link a Pasti (per oggi, dove si conferma la
-comunicazione)
+"Presenze e pasti" per oggi, `/dashboard/giornata?data=<oggi>`, dove i
+bambini di tutte le mie sezioni sono raggruppati per sezione) e, se
+manca anche la comunicazione pasti, un link alla stessa schermata
+posizionato sul box di comunicazione a Rojac
+(`/dashboard/giornata?data=<oggi>#comunicazione-rojac`)
 E questo banner riguarda solo le mie sezioni: una maestra di un'altra
 sezione, senza anomalie nelle proprie, non lo vede
 
@@ -125,7 +126,7 @@ Allora non vedo il riepilogo del personale
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
-  già usata per Presenze/Pasti, nessun permesso nuovo necessario);
+  già usata per "Presenze e pasti", nessun permesso nuovo necessario);
   l'admin lo vede calcolato su tutte le sezioni attive, essendo la sua
   "sezione" l'intero asilo (stessa visibilità già in uso altrove per
   l'admin). A differenza di una prima versione di questo requisito, il
@@ -136,10 +137,12 @@ Allora non vedo il riepilogo del personale
   — non conta se il bambino risulta assente/malato (quello è comunque
   "segnato"), solo l'assenza totale di un dato. Il banner elenca le
   singole sezioni interessate (non solo un riepilogo aggregato); ogni
-  voce linka a `/dashboard/presenze?data=<oggi>` — dalla v0.39.0 non
-  esiste più una pagina Presenze per singola sezione (navigazione a 2
-  livelli, bambini raggruppati per sezione nella stessa pagina), quindi
-  un link a `/dashboard/presenze/<sezione>` porterebbe a un 404.
+  voce linka a `/dashboard/giornata?data=<oggi>` (la schermata unica
+  "Presenze e pasti", [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
+  — non esiste una pagina per singola sezione (bambini raggruppati per
+  sezione nella stessa pagina). Le vecchie rotte `/dashboard/presenze` e
+  `/dashboard/pasti` reindirizzano comunque lì. L'email aggregata non
+  contiene link all'app.
 - "Pasti non confermati" = non esiste ancora una riga in
   `pasti_comunicati` per oggi (specs/16): la comunicazione a Rojac è
   un'unica cosa al giorno per l'intero asilo, non per classe. Riguarda
@@ -178,7 +181,7 @@ Allora non vedo il riepilogo del personale
   presenze/pasti/settimane ore di chiunque, nessuna service_role key
   necessaria. È **read-only**: nessun link, nessuna azione per
   "correggere" al posto del dipendente — l'admin può comunque, come
-  sempre, aprire di persona Presenze/Pasti/Ore di lavoro e intervenire
+  sempre, aprire di persona "Presenze e pasti"/Ore di lavoro e intervenire
   con il proprio account, ma non da questo riepilogo.
 - Il ruolo **Segretaria** non esiste ancora nel sistema (vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)): per ora solo

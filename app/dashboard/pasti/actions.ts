@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -53,7 +54,7 @@ export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: 
   const note = (formData.get('nota_pasto') as string)?.trim() || null;
   await upsertPasto(supabase, user.id, bambinoId, data, mangiato, note);
 
-  revalidatePath('/dashboard/pasti');
+  revalidatePath(PERCORSO_GIORNATA);
 }
 
 // Salva la nota senza richiedere di ripremere lo stato già segnato
@@ -78,7 +79,7 @@ export async function salvaNotaPasto(
   const note = (formData.get('nota_pasto') as string)?.trim() || null;
   await upsertPasto(supabase, user.id, bambinoId, data, mangiatoAttuale, note);
 
-  revalidatePath('/dashboard/pasti');
+  revalidatePath(PERCORSO_GIORNATA);
 }
 
 // Comunica a Rojac il totale dei pasti dell'INTERO asilo per una data
@@ -148,6 +149,6 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     console.error('comunicaPastiRojac: invio email di notifica fallito', erroreEmail);
   }
 
-  revalidatePath('/dashboard/pasti');
+  revalidatePath(PERCORSO_GIORNATA);
   return { ok: true };
 }
