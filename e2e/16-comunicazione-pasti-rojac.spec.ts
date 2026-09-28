@@ -34,6 +34,7 @@ import {
   hasCredenziali,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
+  sezioneNota,
 } from './helpers';
 
 const SPIEGAZIONE_BLOCCO = 'Pasto già comunicato a Rojac';
@@ -151,7 +152,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       await expect(presenza.getByRole('button', { name: 'Presente' })).toBeEnabled();
       await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toBeEnabled();
       await expect(presenza.getByRole('button', { name: 'Post-asilo' })).toBeEnabled();
-      await expect(presenza.getByLabel('Nota (opzionale)')).toBeEditable();
+      await expect(sezioneNota(card).getByLabel('Nota (opzionale)')).toBeEditable();
 
       await nessunaViolazioneA11yGrave(page);
     });

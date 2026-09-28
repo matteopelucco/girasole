@@ -124,7 +124,7 @@ export function cardBambini(page: Page): Locator {
   return page.locator('li[id^="bambino-"]');
 }
 
-// Intestazione della card (sfondo e scritta Femmina/Maschio, issue #106)
+// Intestazione della card (sfondo e avatar per sesso, issue #106 e #108)
 // e nome del bambino, titolo della card.
 export function intestazioneCard(card: Locator): Locator {
   return card.locator('header');
@@ -140,6 +140,12 @@ export function colonnaPresenza(contenitore: Page | Locator): Locator {
 
 export function colonnaPasto(contenitore: Page | Locator): Locator {
   return contenitore.getByRole('group', { name: 'Pasto', exact: true });
+}
+
+// Sezione "Nota" in fondo alla card (issue #110): campo "Nota
+// (opzionale)" e "Salva nota" della presenza.
+export function sezioneNota(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Nota', exact: true });
 }
 
 // Card del primo bambino la cui colonna indicata contiene il pulsante

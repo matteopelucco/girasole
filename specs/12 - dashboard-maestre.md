@@ -30,8 +30,8 @@ Quando tappo su "Presenze e pasti"
 Allora vedo, in un'unica schermata, un selettore di data (per
 consultare/segnare un'altra data) e l'elenco dei bambini di tutte le mie
 classi assegnate (tutte le classi attive se sono admin) per la data
-odierna, raggruppati visivamente per sezione — una card "Sezione {nome}"
-con il riepilogo della sezione sopra i suoi bambini, ordinati per
+odierna, raggruppati visivamente per sezione — un'intestazione "Sezione {nome}"
+(solo titolo e riassunto testuale, non una card) sopra i suoi bambini, ordinati per
 cognome — per consultare/segnare presenza e pasto di ciascuno senza dover
 prima scegliere una classe (dettagli in
 [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md),
@@ -44,7 +44,7 @@ un gruppo a parte, intitolato "Senza sezione"
 Dato che sono su "Presenze e pasti", per una data
 Quando guardo la pagina
 Allora vedo in cima, sotto il selettore data, una card con titolo
-"Riepilogo giornaliero" — diversa dalle card "Sezione {nome}" che
+"Riepilogo giornaliero" — diversa dalle intestazioni "Sezione {nome}" che
 compaiono sopra ciascun gruppo di bambini, essendo la somma di tutte —
 con gli stessi specchietti mostrati per ciascuna sezione, ma con la
 somma di **tutte** le classi visibili (tutte le mie sezioni assegnate se

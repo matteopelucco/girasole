@@ -14,7 +14,7 @@ export type ComunicazioneGiorno = {
 const TITOLO = 'Comunicazione pasti a Rojac';
 
 // Box di comunicazione pasti a Rojac (specs/16), in cima alla schermata
-// "Presenze e pasti" sotto il riepilogo aggregato (specs/10). Un'unica
+// "Presenze e pasti" dentro la card del riepilogo aggregato (specs/10). Un'unica
 // azione al giorno sull'intero asilo, non sulle sole sezioni visibili a
 // chi guarda. Solo maestra e admin: la pagina non lo renderizza (né
 // legge pasti_comunicati) per l'assistente. Al posto del vecchio link
@@ -25,11 +25,13 @@ export async function BoxComunicazioneRojac({
   ruolo,
   comunicazione,
   idBambiniInPagina,
+  capitoloDiCard,
 }: {
   data: string;
   ruolo: string | null;
   comunicazione: ComunicazioneGiorno | null;
   idBambiniInPagina: Set<string>;
+  capitoloDiCard: boolean;
 }) {
   let contenuto;
   if (comunicazione) {
@@ -94,9 +96,20 @@ export async function BoxComunicazioneRojac({
     }
   }
 
+  // Di norma è un capitolo dentro la card "Riepilogo giornaliero"
+  // (specs/10); se quella card non c'è (nessun bambino visibile a chi
+  // guarda, ma l'asilo ne ha) resta una card a sé.
+  if (!capitoloDiCard) {
+    return (
+      <div id="comunicazione-rojac" className="scroll-mt-4">
+        <CardRiepilogo titolo={TITOLO}>{contenuto}</CardRiepilogo>
+      </div>
+    );
+  }
   return (
-    <div id="comunicazione-rojac" className="scroll-mt-4">
-      <CardRiepilogo titolo={TITOLO}>{contenuto}</CardRiepilogo>
-    </div>
+    <section id="comunicazione-rojac" className="mt-3 scroll-mt-4 border-t border-stone-200 pt-3">
+      <h3 className="mb-2 text-sm font-semibold text-stone-800">{TITOLO}</h3>
+      {contenuto}
+    </section>
   );
 }

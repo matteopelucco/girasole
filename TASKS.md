@@ -326,3 +326,31 @@ _(dettagli in archivio)_
       `salvaNotaPasto`; `segnaPasto` non scrive più `note` (l'upsert
       non la azzera sui record esistenti). Nessuna migration: la colonna
       `pasti.note` resta con i dati storici, non più mostrata.
+## #108 · Card bambino: avatar bambina/bambino/neutro al posto di ♀/♂ (v0.46.0, 2026-09-28)
+- [x] Specs: `specs/10` (intestazione con avatar illustrato in un cerchio
+      con bordo bianco, niente scritte Femmina/Maschio, sfondo grigio
+      `stone-100` per il caso neutro, avatar con nome accessibile
+      "Bambina"/"Bambino", neutro decorativo).
+- [x] e2e: `e2e/10` scenario "avatar in base al sesso" (colori, nome
+      accessibile, nessuna scritta Femmina/Maschio).
+- [x] Unit: `stileSesso` in `lib/giornata.ts` (`nomeAvatar`,
+      `sfondoAvatar`).
+- [x] Codice: nuovo `components/AvatarBambino.tsx` (SVG inline, nessuna
+      dipendenza), tolte `IconaFemmina`/`IconaMaschio`.
+
+## #110 · Card bambino: Presenza / Pasto / Nota su una colonna, icone piene (v0.47.0, 2026-09-28)
+- [x] Specs: `specs/10` (una colonna a qualunque larghezza — decisione di
+      Matteo —, sezione "Nota" in fondo, icone piene, form unico della
+      card), `specs/13` (posizione della nota).
+- [x] e2e: helper `sezioneNota`; ordine Presenza → Pasto → Nota
+      verificato a 340/375/768/1280px; test della nota in 13 e 16 sulla
+      nuova sezione.
+- [x] Codice: nuova `SezioneNota`, `CardBambino` con un unico `<form>`
+      (i pulsanti di stato salvano anche la nota, come prima), icone
+      piene per Presenza/Pasto/Nota.
+
+## #113 · Presenze e pasti: Rojac nella card del riepilogo, intestazioni di sezione senza card (v0.48.0, 2026-09-28)
+- [x] Specs: `specs/10` (due scenari nuovi), allineati 12, 13, 14, 16.
+- [x] e2e: `e2e/10` (Rojac dentro la card, intestazione di sezione senza
+      bordo/ombra/sfondo), `e2e/14` sul nuovo riassunto.
+- [x] Unit: `vociRiepilogo` e `testoVoceRiepilogo` in `lib/giornata.ts`.

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 
-// Icone lineari (SVG inline, nessuna dipendenza) della card bambino della
-// schermata "Presenze e pasti" (specs/10). Sempre decorative
-// (aria-hidden): il significato è dato dal testo accanto — "Femmina",
-// "Maschio", "Presenza", "Pasto", "Salva nota" — mai dalla sola icona
+// Icone (SVG inline, nessuna dipendenza) della card bambino della
+// schermata "Presenze e pasti" (specs/10): piene per i titoli delle
+// sezioni, lineare per "Salva nota". Sempre decorative (aria-hidden): il
+// significato è dato dal testo accanto — "Presenza", "Pasto", "Nota",
+// "Salva nota" — mai dalla sola icona
 // (specs/01, accessibilità).
 type PropsIcona = { className?: string };
 
@@ -25,49 +26,41 @@ function Svg({ className, children }: PropsIcona & { children: ReactNode }) {
   );
 }
 
-// ♀: cerchio con la croce in basso.
-export function IconaFemmina({ className }: PropsIcona) {
+// Icone piene dei titoli delle sezioni della card (issue #110).
+function SvgPiena({ className, children }: PropsIcona & { children: ReactNode }) {
   return (
-    <Svg className={className}>
-      <circle cx="12" cy="9" r="5" />
-      <path d="M12 14v7M9 18h6" />
-    </Svg>
-  );
-}
-
-// ♂: cerchio con la freccia verso l'alto a destra.
-export function IconaMaschio({ className }: PropsIcona) {
-  return (
-    <Svg className={className}>
-      <circle cx="10" cy="14" r="5" />
-      <path d="M14 10l6-6M15 4h5v5" />
-    </Svg>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false" className={className ?? 'h-4 w-4'}>
+      {children}
+    </svg>
   );
 }
 
 export function IconaPersona({ className }: PropsIcona) {
   return (
-    <Svg className={className}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </Svg>
+    <SvgPiena className={className}>
+      <circle cx="12" cy="7" r="4.5" />
+      <path d="M3.5 21.5a8.5 8 0 0 1 17 0z" />
+    </SvgPiena>
   );
 }
 
 export function IconaPosate({ className }: PropsIcona) {
   return (
-    <Svg className={className}>
-      <path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 21V3c-2 1-3 4-3 7s1 4 3 4" />
-    </Svg>
+    <SvgPiena className={className}>
+      <path d="M4 2h1.6v6.5h1.2V2h1.6v6.5h1.2V2h1.6v7.5a3.2 3.2 0 0 1-2.4 3.1V22H6.4v-9.4A3.2 3.2 0 0 1 4 9.5z" />
+      <path d="M18.5 2.2V22h-2.8v-7.5c-1.4-.5-2.2-2-2.2-4.2 0-4 1.8-7.1 4.2-8.3a.6.6 0 0 1 .8.2z" />
+    </SvgPiena>
   );
 }
 
 export function IconaNota({ className }: PropsIcona) {
   return (
-    <Svg className={className}>
-      <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
-      <path d="M14 3v5h5M9 13h6M9 17h4" />
-    </Svg>
+    <SvgPiena className={className}>
+      <path
+        fillRule="evenodd"
+        d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm2 5.2v1.6h8V7.2zm0 4v1.6h8v-1.6zm0 4v1.6h5v-1.6z"
+      />
+    </SvgPiena>
   );
 }
 

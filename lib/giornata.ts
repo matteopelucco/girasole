@@ -53,51 +53,79 @@ export function riepilogoGiornata(righe: StatoGiornoBambino[]): RiepilogoGiornat
   };
 }
 
-// Titolo della card riepilogo sopra un gruppo di bambini: "Sezione
+export type VoceRiepilogo = { etichetta: string; numeratore: number; denominatore?: number };
+
+// Voci mostrate per un riepilogo, nell'ordine: gli specchietti della
+// card "Riepilogo giornaliero" e il riassunto testuale dell'intestazione
+// di sezione (specs/10) usano la stessa lista. "Pasti" solo se il ruolo
+// vede i pasti; il denominatore dipende da `aggregato` (vedi
+// RiepilogoGiornata.pastiSi).
+export function vociRiepilogo(
+  r: RiepilogoGiornata,
+  { conPasti, aggregato }: { conPasti: boolean; aggregato: boolean }
+): VoceRiepilogo[] {
+  const voci: VoceRiepilogo[] = [
+    { etichetta: 'Presenti', numeratore: r.presenti, denominatore: r.totale },
+    { etichetta: 'Pre-asilo', numeratore: r.preAsilo },
+    { etichetta: 'Post-asilo', numeratore: r.postAsilo },
+  ];
+  if (conPasti) {
+    voci.push({ etichetta: 'Pasti', numeratore: r.pastiSi, denominatore: aggregato ? r.totale : r.pastiApplicabili });
+  }
+  return voci;
+}
+
+// "Presenti: 8/12", oppure "Pre-asilo: 3" senza denominatore.
+export function testoVoceRiepilogo({ etichetta, numeratore, denominatore }: VoceRiepilogo): string {
+  return denominatore === undefined ? `${etichetta}: ${numeratore}` : `${etichetta}: ${numeratore}/${denominatore}`;
+}
+
+// Titolo dell'intestazione sopra un gruppo di bambini: "Sezione
 // {nome}", senza prefisso per il gruppo "Senza sezione" (solo admin).
 export function titoloRiepilogoSezione(titoloGruppo: string): string {
   return titoloGruppo === 'Senza sezione' ? titoloGruppo : `Sezione ${titoloGruppo}`;
 }
 
 // Stile dell'intestazione della card bambino in base a `bambini.sesso`
-// (specs/10, issue #106): rosa tenue per le femmine, azzurro tenue per i
-// maschi, neutro se il sesso non è compilato (o ha un valore inatteso).
+// (specs/10, issue #106 e #108): avatar di una bambina su rosa tenue per
+// le femmine, di un bambino su azzurro tenue per i maschi, avatar neutro
+// su grigio se il sesso non è compilato (o ha un valore inatteso).
 // Classi Tailwind letterali: Tailwind genera solo le classi che trova
 // come testo nei file scansionati (lib/** è incluso, vedi
-// tailwind.config.ts). `etichetta` è null quando non c'è sesso: niente
-// icona né scritta, solo lo sfondo neutro.
+// tailwind.config.ts). `nomeAvatar` è il nome accessibile dell'avatar,
+// null per quello neutro (decorativo).
 export type StileSesso = {
   sesso: 'F' | 'M' | null;
-  etichetta: 'Femmina' | 'Maschio' | null;
+  nomeAvatar: 'Bambina' | 'Bambino' | null;
   bordoCard: string;
   sfondoIntestazione: string;
-  testoEtichetta: string;
+  sfondoAvatar: string;
 };
 
 export function stileSesso(sesso: string | null | undefined): StileSesso {
   if (sesso === 'F') {
     return {
       sesso: 'F',
-      etichetta: 'Femmina',
+      nomeAvatar: 'Bambina',
       bordoCard: 'border-pink-200',
       sfondoIntestazione: 'bg-pink-100',
-      testoEtichetta: 'text-pink-800',
+      sfondoAvatar: 'bg-pink-200',
     };
   }
   if (sesso === 'M') {
     return {
       sesso: 'M',
-      etichetta: 'Maschio',
+      nomeAvatar: 'Bambino',
       bordoCard: 'border-sky-200',
       sfondoIntestazione: 'bg-sky-100',
-      testoEtichetta: 'text-sky-800',
+      sfondoAvatar: 'bg-sky-200',
     };
   }
   return {
     sesso: null,
-    etichetta: null,
+    nomeAvatar: null,
     bordoCard: 'border-stone-200',
-    sfondoIntestazione: 'bg-stone-50',
-    testoEtichetta: 'text-stone-600',
+    sfondoIntestazione: 'bg-stone-100',
+    sfondoAvatar: 'bg-stone-200',
   };
 }

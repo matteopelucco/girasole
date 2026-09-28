@@ -9,7 +9,7 @@ in questo file (vedi la matrice permessi in
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino
 — compresa un'eventuale presenza a pre-asilo e/o post-asilo — con una
-nota libera opzionale, dalla sezione "Presenza" della card di ogni
+nota libera opzionale, dalle sezioni "Presenza" e "Nota" della card di ogni
 bambino nella schermata unica "Presenze e pasti" (bambini raggruppati
 per classe nella stessa schermata, senza un click intermedio per
 scegliere la classe) descritta in
@@ -39,21 +39,24 @@ sono pulsanti grandi disposti due per riga, nell'ordine Presente,
 Pre-asilo, Post-asilo, Assente, Malattia (prima gli stati/indicatori
 dell'orario "disteso", dal più corto al più lungo, poi le eccezioni alla
 presenza); lo stato selezionato è pieno, colorato e con un segno ✓ (vedi
-[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Sotto, il
-campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un campo a
-riga singola — per una nota un po' più lunga il testo resta leggibile
-senza scorrimento laterale) e il pulsante "Salva nota", largo quanto la
-sezione.
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). La nota è
+nella sezione "Nota" in fondo alla card, sotto la sezione "Pasto" (issue
+#110): campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un
+campo a riga singola — per una nota un po' più lunga il testo resta
+leggibile senza scorrimento laterale) e il pulsante "Salva nota", largo
+quanto la card.
 
 ## Scenario: riepilogo presenze della classe
 Dato che sono su "Presenze e pasti" per una data
-Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
-titolo "Sezione {nome classe}", con un riepilogo "Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
+Allora vedo, sopra l'elenco bambini di ciascuna classe, un'intestazione
+(non una card, vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
+con titolo "Sezione {nome classe}" e un riassunto testuale con
+"Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
 quella data e Y il totale dei bambini attivi della classe
-E accanto vedo altri due riepiloghi, "Pre-asilo: P" e "Post-asilo: Q",
+E di seguito altri due conteggi, "Pre-asilo: P" e "Post-asilo: Q",
 dove P e Q sono rispettivamente il numero di bambini con pre-asilo e con
 post-asilo attivi per quella data
-E, per maestra e admin, nella stessa card anche il riepilogo pasti della
+E, per maestra e admin, nello stesso riassunto anche il conteggio pasti della
 sezione (vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: segnare un bambino presente

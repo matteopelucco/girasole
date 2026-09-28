@@ -4,7 +4,7 @@ import { SelettoreData } from '@/components/SelettoreData';
 
 // Involucro della schermata "Presenze e pasti" (app/dashboard/giornata/
 // page.tsx — specs/10, specs/12): header, selettore data, riepilogo
-// aggregato, box extra (comunicazione a Rojac) e banner di sola lettura;
+// aggregato (con dentro la comunicazione a Rojac) e banner di sola lettura;
 // il contenuto raggruppato per sezione (`children`) lo costruisce la
 // pagina. Nato come involucro comune alle vecchie Presenze e Pasti
 // separate, ora unificate (issue #100). Non c'è più una
@@ -18,7 +18,6 @@ export function PaginaAttivitaGiornaliera({
   basePath,
   data,
   riepilogoAggregato,
-  extra,
   messaggioChiusura,
   editable,
   children,
@@ -29,7 +28,6 @@ export function PaginaAttivitaGiornaliera({
   basePath: string;
   data: string;
   riepilogoAggregato?: ReactNode;
-  extra?: ReactNode;
   // Messaggio di chiusura scolastica (specs/53 - calendario-scolastico.md)
   // per la data corrente, o null/undefined se scrivibile. Ha priorità sul
   // banner "sola lettura" sotto: vale per QUALUNQUE ruolo, admin incluso,
@@ -51,7 +49,6 @@ export function PaginaAttivitaGiornaliera({
         <SelettoreData basePath={basePath} data={data} />
 
         {riepilogoAggregato}
-        {extra}
 
         {messaggioChiusura ? (
           <p className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">

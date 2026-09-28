@@ -22,8 +22,9 @@ la fattura Rojac.
 
 Il box di comunicazione (pulsante "Conferma pasti", oppure il messaggio
 "presenze mancanti", oppure il messaggio "pasti comunicati") sta in cima
-alla schermata unica "Presenze e pasti", sotto il riepilogo aggregato
-(vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Dopo la
+alla schermata unica "Presenze e pasti", come capitolo "Comunicazione
+pasti a Rojac" dentro la card del riepilogo aggregato, sotto gli
+specchietti (vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Dopo la
 comunicazione, oltre ai pasti, per i bambini con pasto "sì" non si
 possono più segnare "Assente" o "Malattia" (vedi gli scenari in fondo):
 evita il caso "pasto comunicato e fatturato, poi bambino segnato
