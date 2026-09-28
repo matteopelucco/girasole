@@ -290,3 +290,20 @@ _(dettagli in archivio)_
       il messaggio degli errori delle server action con un digest, quindi il
       messaggio tradotto "pasto già comunicato a Rojac" non arriva
       all'utente. Valutare redirect con avviso in pagina.
+
+
+## #106 · Card bambino ridisegnata: header con sesso, sezioni Presenza e Pasto (v0.44.0, 2026-09-28)
+- [x] Specs: `specs/10` (intestazione con icona/scritta Femmina/Maschio e
+      sfondo rosa/azzurro/neutro, sezioni con pulsanti grandi e ✓, soglia
+      di layout 640px invece di 360px — decisione di Matteo), allineati
+      13 (disposizione dei pulsanti), 03, 12, 14, 16 ("sezione" invece di
+      "colonna").
+- [x] e2e: `e2e/10` riscritto sui nuovi scenari (sesso, ✓/aria-pressed,
+      telefono 375px, 340px, tablet 768px); note cercate per etichetta
+      visibile "Nota (opzionale)" in 10/13/14/16; nome del bambino come
+      `<h3>` (helper `nomeBambinoCard`/`intestazioneCard`).
+- [x] Unit: `stileSesso` in `lib/giornata.ts`.
+- [x] Seed di test: `sesso` fittizio sui quattro bambini (F, M, F, nullo).
+- [ ] Verifica visiva su un telefono reale (non disponibile in locale
+      senza `.env.local`): il layout è coperto dagli e2e, i colori dal
+      controllo axe-core.
