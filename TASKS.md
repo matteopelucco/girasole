@@ -249,3 +249,14 @@ _(dettagli in archivio)_
       quindi `npm ci` fallisce. Riprendere alzando `@types/node` e
       verificando `vitest.config.ts` contro i breaking change di v5.
 
+## #98 · CI/review saltano gli step pesanti sulle PR "non codice" (2026-09-28)
+- [ ] **Non verificabile in locale in questa sessione**: la classificazione
+      (`scripts/classifica-pr.mts`, `lib/pr-classificazione.ts`) è testata
+      unitariamente e provata a mano contro il diff reale di due commit
+      passati (#97, docs-only, e un commit di codice), ma il comportamento
+      reale dei workflow (`ci.yml`/`claude-board.yml`, in particolare che
+      Node 22 su GitHub Actions esegua nativamente lo script `.ts` senza
+      flag e che gli step marcati `if:` risultino `skipped` invece di
+      `failed`) va confermato con un run CI reale dopo il merge di questa
+      PR, e idealmente con una seconda PR di prova solo-docs.
+

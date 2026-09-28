@@ -15,6 +15,24 @@ name: Claude Board
 #      Modo rapido: in Claude Code -> /install-github-app (crea app + secret)
 #   2) label create con scripts/setup-board-labels.sh
 #   3) i file .claude/agents/*.md committati nel repo
+#
+# Issue #98 — PR "non codice" (solo docs/**, TASKS.md, README.md,
+# CHANGELOG.md, o un bump puro di versione; NON include specs/**, a
+# differenza di ci.yml — vedi sotto): il job `review` salta il solo step
+# `claude-code-action` (non l'intero job: `jobs.<id>.if` non può eseguire
+# script, quindi la classificazione è uno step dentro il job, con `if:`
+# sullo step successivo — vedi commenti nel job `review`). Il job `triage`
+# (issues) e `chiusura-issue` non sono toccati da questa logica: girano
+# solo su eventi `issues`, mai su `pull_request`.
+#
+# specs/** resta ESCLUSO dall'allow-list "non codice" ai fini della
+# review (a differenza della CI, dove è incluso): una PR che tocca solo
+# `specs/` riceve comunque sempre una review, anche se aggiunge un nuovo
+# `## Scenario:` senza codice/e2e a corredo — è il modo più semplice per
+# garantire che la coerenza "specs ↔ e2e non divergono" (CLAUDE.md) venga
+# controllata da qualcuno (Claude o un umano), invece di analizzare il
+# contenuto del diff di specs/ riga per riga per distinguere un refuso da
+# uno scenario nuovo.
 
 on:
   issues:
@@ -80,10 +98,28 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0          # serve il diff completo per una review sensata
+
+      # Node 22+ esegue nativamente scripts/classifica-pr.mts (issue #98,
+      # stessa logica di ci.yml, in lib/pr-classificazione.ts): nessuna
+      # dipendenza nuova.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Classifica la PR (issue #98)
+        id: classifica
+        run: >
+          node --no-warnings scripts/classifica-pr.mts
+          "${{ github.event.pull_request.base.sha }}"
+          "${{ github.event.pull_request.head.sha }}"
+
       # Il diff si prepara qui, gratis, invece di farlo esplorare al modello
       # turno dopo turno. Esclusi i file enormi o generati che non servono
       # alla review e costano token: TASKS.md, l'archivio, il lockfile.
+      # Saltato sulle PR "non codice" (issue #98): claude-code-action, lo
+      # step che lo consuma, è a sua volta saltato subito sotto.
       - name: Prepara il diff della PR
+        if: steps.classifica.outputs.is-non-codice-review != 'true'
         run: |
           set -eu
           mkdir -p .review
@@ -97,7 +133,14 @@ jobs:
             git diff "$base"...HEAD -- . "${escludi[@]}"
           } > .review/diff.txt
           wc -c .review/diff.txt
+
+      - name: PR "non codice" — review saltata (issue #98)
+        if: steps.classifica.outputs.is-non-codice-review == 'true'
+        run: |
+          echo "::notice::PR solo docs/TASKS/README/CHANGELOG o bump di versione (nessuna specs/**) — review Claude saltata (issue #98)."
+
       - uses: anthropics/claude-code-action@v1
+        if: steps.classifica.outputs.is-non-codice-review != 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Sonnet: buon rapporto qualità/costo per la review standard.

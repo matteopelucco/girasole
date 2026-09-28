@@ -217,16 +217,39 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   merge su `main`: un push su `main` fa deploy automatico in produzione
   su Vercel.
 - Su ogni PR gira un unico workflow GitHub Actions
-  (`.github/workflows/ci.yml`, gratuito su repo pubblici) con sette passi
-  in sequenza: tsc → lint → jscpd → vitest → **`next build`** → reset del
-  DB di test → e2e. I primi quattro non richiedono secret e falliscono in
-  secondi; la build di produzione è l'unico passo che intercetta un
-  import lato server trascinato in un componente client (dalla A15 lo
-  intercetta anche il pre-push hook in locale, salvo skip esplicito o
-  `.env.local` incompleta — vedi sopra); la suite e2e usa le variabili
-  configurate come "Repository secrets" in GitHub — mai hardcoded nel
-  workflow. Anche in CI devono puntare a un progetto Supabase di test,
-  mai a quello di produzione.
+  (`.github/workflows/ci.yml`, gratuito su repo pubblici) con un passo di
+  classificazione seguito da sette passi in sequenza: tsc → lint → jscpd →
+  vitest → **`next build`** → reset del DB di test → e2e. I primi quattro
+  non richiedono secret e falliscono in secondi; la build di produzione è
+  l'unico passo che intercetta un import lato server trascinato in un
+  componente client (dalla A15 lo intercetta anche il pre-push hook in
+  locale, salvo skip esplicito o `.env.local` incompleta — vedi sopra); la
+  suite e2e usa le variabili configurate come "Repository secrets" in
+  GitHub — mai hardcoded nel workflow. Anche in CI devono puntare a un
+  progetto Supabase di test, mai a quello di produzione.
+- **PR "non codice" saltano gli step pesanti (issue #98)**: il job
+  `verifica` di `ci.yml` NON usa `paths`/`paths-ignore` (renderebbe il
+  check obbligatorio del ruleset di `main` "non eseguito" invece che
+  "verde" su queste PR, bloccando il merge) — parte sempre, e un primo
+  step (`node scripts/classifica-pr.mts <baseSha> <headSha>`, che
+  richiede `fetch-depth: 0` nel checkout) classifica la PR usando la
+  logica pura di `lib/pr-classificazione.ts` ed espone l'output
+  `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`, `TASKS.md`,
+  `README.md`, `CHANGELOG.md`, o un bump puro del campo `version` in
+  `package.json`/`package-lock.json`), gli step 5-8 (build, reset DB di
+  test, ricreazione utenti E2E_*, install Chromium, e2e, upload del
+  report) hanno `if: steps.classifica.outputs.is-non-codice-ci != 'true'`
+  e restano `skipped` nel log — tsc/lint/jscpd/vitest (economici, pochi
+  secondi in totale) restano SEMPRE attivi, anche su queste PR. Stessa
+  logica riusata in `.github/workflows/claude-board.yml`: il job `review`
+  fa la stessa classificazione (con un'allow-list più stretta, che
+  ESCLUDE `specs/**`: una PR che tocca solo `specs/` riceve comunque
+  sempre una review, anche con un nuovo `## Scenario:`, per non dover
+  analizzare il contenuto del diff riga per riga) e salta il solo step
+  `claude-code-action` quando l'output `is-non-codice-review` è true —
+  non l'intero job, perché `jobs.<id>.if` non può eseguire script. Nessuna
+  dipendenza nuova: Node 22+ esegue nativamente `scripts/classifica-pr.mts`
+  (file `.ts`, sintassi TypeScript "erasable" — solo tipi/interfacce).
 - **Il reset del DB di test prima della e2e (A23)** usa il Supabase CLI
   (`supabase db reset --project-ref <ref-test>`, ref letto dalla
   repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret): riapplica
