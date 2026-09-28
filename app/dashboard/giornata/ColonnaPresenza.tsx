@@ -18,8 +18,8 @@ export function rigaPresenzaAttuale(presenza: PresenzaGiorno | undefined): RigaP
 }
 
 // Sezione "Presenza" della card bambino (specs/10, regole in specs/13):
-// pulsanti grandi due per riga — Presente, Pre-asilo, Post-asilo,
-// Assente, Malattia. La nota è nella sezione "Nota" in fondo alla card
+// pulsanti grandi — Presente, Assente, Malattia su una riga, un
+// separatore, poi Pre-asilo e Post-asilo affiancati. La nota è nella sezione "Nota" in fondo alla card
 // (SezioneNota, issue #110), nello stesso <form> della card: premendo
 // uno stato si salva anche la nota scritta. Dopo la comunicazione dei
 // pasti a Rojac, per un bambino con pasto "sì" Assente/Malattia sono
@@ -52,55 +52,60 @@ export function ColonnaPresenza({
       </IntestazioneSezione>
 
       {editable ? (
-        <div className="grid grid-cols-2 gap-2">
-          <PulsanteStato
-            formAction={segnaPresenza.bind(null, bambinoId, 'presente', data)}
-            selezionato={presenza?.stato === 'presente'}
-            className={classePulsanteStato('presente', presenza?.stato === 'presente')}
-          >
-            {ETICHETTE_PRESENZA.presente}
-          </PulsanteStato>
-          <PulsanteStato
-            formAction={segnaPreAsilo.bind(null, bambinoId, rigaAttuale, data)}
-            selezionato={preAsilo}
-            className={classePulsanteToggle(preAsilo)}
-          >
-            Pre-asilo
-          </PulsanteStato>
-          <PulsanteStato
-            formAction={segnaPostAsilo.bind(null, bambinoId, rigaAttuale, data)}
-            selezionato={postAsilo}
-            className={classePulsanteToggle(postAsilo)}
-          >
-            Post-asilo
-          </PulsanteStato>
-          {(['assente', 'malattia'] as const).map((stato) =>
-            assenzaBloccata ? (
-              <button
-                key={stato}
-                type="button"
-                disabled
-                aria-describedby={idBlocco}
-                className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
-              >
-                {ETICHETTE_PRESENZA[stato]}
-              </button>
-            ) : (
-              <PulsanteStato
-                key={stato}
-                formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
-                selezionato={presenza?.stato === stato}
-                className={classePulsanteStato(stato, presenza?.stato === stato)}
-              >
-                {ETICHETTE_PRESENZA[stato]}
-              </PulsanteStato>
-            )
-          )}
-          {assenzaBloccata && (
-            <p id={idBlocco} className="col-span-2 text-xs text-amber-800">
-              <span aria-hidden="true">🔒</span> Pasto già comunicato a Rojac
-            </p>
-          )}
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
+            <PulsanteStato
+              formAction={segnaPresenza.bind(null, bambinoId, 'presente', data)}
+              selezionato={presenza?.stato === 'presente'}
+              className={classePulsanteStato('presente', presenza?.stato === 'presente')}
+            >
+              {ETICHETTE_PRESENZA.presente}
+            </PulsanteStato>
+            {(['assente', 'malattia'] as const).map((stato) =>
+              assenzaBloccata ? (
+                <button
+                  key={stato}
+                  type="button"
+                  disabled
+                  aria-describedby={idBlocco}
+                  className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
+                >
+                  {ETICHETTE_PRESENZA[stato]}
+                </button>
+              ) : (
+                <PulsanteStato
+                  key={stato}
+                  formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
+                  selezionato={presenza?.stato === stato}
+                  className={classePulsanteStato(stato, presenza?.stato === stato)}
+                >
+                  {ETICHETTE_PRESENZA[stato]}
+                </PulsanteStato>
+              )
+            )}
+            {assenzaBloccata && (
+              <p id={idBlocco} className="col-span-3 text-xs text-amber-800">
+                <span aria-hidden="true">🔒</span> Pasto già comunicato a Rojac
+              </p>
+            )}
+          </div>
+          <hr className="border-stone-200" />
+          <div className="grid grid-cols-2 gap-2">
+            <PulsanteStato
+              formAction={segnaPreAsilo.bind(null, bambinoId, rigaAttuale, data)}
+              selezionato={preAsilo}
+              className={classePulsanteToggle(preAsilo)}
+            >
+              Pre-asilo
+            </PulsanteStato>
+            <PulsanteStato
+              formAction={segnaPostAsilo.bind(null, bambinoId, rigaAttuale, data)}
+              selezionato={postAsilo}
+              className={classePulsanteToggle(postAsilo)}
+            >
+              Post-asilo
+            </PulsanteStato>
+          </div>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 [overflow-wrap:anywhere]">
