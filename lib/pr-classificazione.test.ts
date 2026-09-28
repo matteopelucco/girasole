@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  classificaPR,
   eNonCodiceCI,
   eNonCodiceReview,
   eSoloBumpDiVersione,
@@ -150,5 +151,30 @@ describe('eNonCodiceReview', () => {
       { path: 'TASKS.md' },
     ];
     expect(eNonCodiceReview(file)).toBe(false);
+  });
+});
+
+describe('classificaPR — nel dubbio è codice', () => {
+  it('elenco file non disponibile (git diff fallito): codice sia per la CI sia per la review', () => {
+    expect(classificaPR(null)).toEqual({ nonCodiceCI: false, nonCodiceReview: false });
+  });
+
+  it('elenco vuoto: codice', () => {
+    expect(classificaPR([])).toEqual({ nonCodiceCI: false, nonCodiceReview: false });
+  });
+
+  it('solo docs: non codice per entrambe', () => {
+    expect(classificaPR([{ path: 'docs/qualcosa.md' }])).toEqual({ nonCodiceCI: true, nonCodiceReview: true });
+  });
+
+  it('solo specs: non codice per la CI, codice per la review', () => {
+    expect(classificaPR([{ path: 'specs/10 - presenze-e-pasti.md' }])).toEqual({
+      nonCodiceCI: true,
+      nonCodiceReview: false,
+    });
+  });
+
+  it('codice applicativo: codice per entrambe', () => {
+    expect(classificaPR([{ path: 'lib/giornata.ts' }])).toEqual({ nonCodiceCI: false, nonCodiceReview: false });
   });
 });
