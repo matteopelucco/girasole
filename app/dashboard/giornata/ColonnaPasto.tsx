@@ -66,7 +66,7 @@ export function ColonnaPasto({
     );
   } else {
     contenuto = (
-      <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 [overflow-wrap:anywhere]">
         <span>{pasto ? ETICHETTE_PASTO[pasto.mangiato] : 'Non ancora segnato'}</span>
         {pasto?.note && <span>— {pasto.note}</span>}
       </div>

@@ -20,8 +20,67 @@ import {
   statoAutenticazione,
 } from './helpers';
 
-async function overflowOrizzontale(page: Page): Promise<boolean> {
-  return page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+// Verifica che la pagina non scorra in orizzontale. Se scorre, il
+// messaggio dell'asserzione elenca gli elementi che sporgono oltre il
+// bordo destro (tag, id/classi abbreviati, right e larghezza), così un
+// fallimento in CI dice direttamente chi è il colpevole.
+async function nessunOverflowOrizzontale(page: Page): Promise<void> {
+  const esito = await page.evaluate(() => {
+    const larghezza = document.documentElement.clientWidth;
+    const scroll = document.documentElement.scrollWidth;
+    const sporgenti: string[] = [];
+    if (scroll > larghezza) {
+      for (const el of Array.from(document.body.querySelectorAll('*'))) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.right <= larghezza + 0.5) continue;
+        // Solo gli elementi più interni che sporgono: se un figlio sporge
+        // già lui, il genitore è una conseguenza.
+        const figlioSporge = Array.from(el.children).some(
+          (f) => f.getBoundingClientRect().right > larghezza + 0.5
+        );
+        if (figlioSporge) continue;
+        const id = el.id ? `#${el.id}` : '';
+        const classi =
+          typeof el.className === 'string' && el.className
+            ? `.${el.className.trim().split(/\s+/).slice(0, 4).join('.')}`
+            : '';
+        const testo = (el.textContent ?? '').trim().slice(0, 40);
+        sporgenti.push(
+          `${el.tagName.toLowerCase()}${id}${classi} right=${Math.round(r.right)} width=${Math.round(r.width)} "${testo}"`
+        );
+        if (sporgenti.length >= 15) break;
+      }
+    }
+    // Se la pagina si è solo "allargata" (nessun figlio sporge dal
+    // genitore, sporgono header e main interi), il colpevole è di solito
+    // una parola senza spazi più larga dello spazio disponibile: elenco
+    // le parole più larghe, misurate col font reale del loro elemento.
+    const paroleLarghe: string[] = [];
+    if (scroll > larghezza) {
+      const tela = document.createElement('canvas').getContext('2d');
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      const viste = new Set<string>();
+      for (let nodo = walker.nextNode(); nodo; nodo = walker.nextNode()) {
+        const genitore = nodo.parentElement;
+        if (!genitore || !tela) continue;
+        tela.font = getComputedStyle(genitore).font;
+        for (const parola of (nodo.textContent ?? '').split(/\s+/)) {
+          if (parola.length < 12 || viste.has(parola)) continue;
+          viste.add(parola);
+          const w = tela.measureText(parola).width;
+          if (w > larghezza * 0.6) {
+            paroleLarghe.push(`${Math.round(w)}px "${parola}" in <${genitore.tagName.toLowerCase()}>`);
+          }
+        }
+      }
+    }
+    sporgenti.push(...paroleLarghe.sort((x, y) => parseInt(y) - parseInt(x)).slice(0, 10).map((p) => `parola: ${p}`));
+    return { larghezza, scroll, sporgenti };
+  });
+  expect(
+    esito.scroll,
+    `scorrimento orizzontale: scrollWidth ${esito.scroll} > clientWidth ${esito.larghezza}. Elementi che sporgono:\n${esito.sporgenti.join('\n')}`
+  ).toBeLessThanOrEqual(esito.larghezza);
 }
 
 async function riquadro(locator: Locator) {
@@ -116,7 +175,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
     }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       const haBambini = await apriGiornata(page, dataOggiRoma());
-      expect(await overflowOrizzontale(page)).toBe(false);
+      await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = cardBambini(page).first();
@@ -142,7 +201,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
     test('il pasto va sotto la presenza, nella stessa card, senza scorrimento orizzontale', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       const haBambini = await apriGiornata(page, dataOggiRoma());
-      expect(await overflowOrizzontale(page)).toBe(false);
+      await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = cardBambini(page).first();

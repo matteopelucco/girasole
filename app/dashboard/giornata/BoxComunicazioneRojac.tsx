@@ -54,7 +54,10 @@ export async function BoxComunicazioneRojac({
             {bambiniSenzaPresenza.length === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza
             segnata per oggi.
           </p>
-          <ul aria-label="Bambini senza presenza" className="mt-2 list-disc space-y-1 pl-5">
+          {/* Nomi senza spazi anche molto lunghi (es. quelli generati dagli
+              e2e): overflow-wrap:anywhere li spezza invece di allargare la
+              pagina oltre lo schermo del telefono (specs/10, 375px). */}
+          <ul aria-label="Bambini senza presenza" className="mt-2 list-disc space-y-1 pl-5 [overflow-wrap:anywhere]">
             {bambiniSenzaPresenza.map((b) => (
               <li key={b.id}>
                 {idBambiniInPagina.has(b.id) ? (

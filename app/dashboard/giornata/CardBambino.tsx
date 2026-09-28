@@ -44,11 +44,14 @@ export function CardBambino({
       id={`bambino-${bambino.id}`}
       className="scroll-mt-4 rounded-xl border border-stone-200 bg-white p-3 shadow-sm sm:p-4"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium">
+      {/* overflow-wrap:anywhere + min-w-0: un nome (o un'allergia) senza
+          spazi più largo della card va a capo invece di far scorrere la
+          pagina in orizzontale su telefono (specs/10). */}
+      <div className="flex flex-wrap items-center justify-between gap-2 [overflow-wrap:anywhere]">
+        <span className="min-w-0 font-medium">
           {bambino.nome} {bambino.cognome}
         </span>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex min-w-0 flex-wrap gap-1">
           {presenza?.stato === 'assente' && <EtichettaAssente />}
           {presenza?.stato === 'malattia' && <EtichettaMalattia />}
           {noteAllergie && (
