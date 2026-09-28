@@ -62,8 +62,9 @@ dall'alto in basso in quattro parti separate da una linea sottile:
   Nessuna foto del bambino: l'avatar è lo stesso per tutti i bambini
   dello stesso sesso.
 - **Sezione "Presenza"** (icona piena di una persona): pulsanti grandi,
-  due per riga, nell'ordine Presente, Pre-asilo, Post-asilo, Assente,
-  Malattia; lo stato (o l'indicatore) selezionato è pieno, colorato e con
+  nell'ordine: Presente, Assente, Malattia (stati esclusivi, sulla stessa
+  riga), un separatore orizzontale sottile, poi Pre-asilo e Post-asilo
+  (indicatori dell'orario, affiancati); lo stato (o l'indicatore) selezionato è pieno, colorato e con
   un segno ✓, gli altri hanno solo il bordo (comportamento in
   [13 - segna-presenza.md](13%20-%20segna-presenza.md)).
 - **Sezione "Pasto"** (icona piena di forchetta e coltello, solo maestra
@@ -91,13 +92,22 @@ Dato che sono autenticata come maestra (o admin) e ho aperto "Presenze e
 pasti" per la data odierna, su uno schermo da computer
 Quando guardo la card di un bambino
 Allora vedo nell'intestazione il suo nome e cognome come titolo della card
-E vedo una sezione "Presenza" con i pulsanti Presente, Pre-asilo,
-Post-asilo, Assente, Malattia
+E vedo una sezione "Presenza" con i pulsanti Presente, Assente,
+Malattia, Pre-asilo, Post-asilo
 E vedo, sotto la sezione "Presenza", una sezione "Pasto" con i pulsanti
 Sì e No
 E vedo, sotto la sezione "Pasto", in fondo alla card, una sezione "Nota"
 con il campo "Nota (opzionale)" e il pulsante "Salva nota"
 E nella card c'è un solo campo "Nota (opzionale)"
+
+## Scenario: i pulsanti della sezione Presenza hanno un ordine fisso
+Dato che sono autenticata come maestra (o admin) e ho aperto "Presenze e
+pasti" per la data odierna
+Quando guardo la sezione "Presenza" di una card
+Allora vedo, nell'ordine, Presente, Assente e Malattia affiancati sulla
+stessa riga
+E sotto di loro un separatore orizzontale sottile
+E sotto il separatore, affiancati, Pre-asilo e Post-asilo
 
 ## Scenario: la comunicazione pasti a Rojac sta nella card del riepilogo giornaliero
 Dato che sono autenticata come maestra (o admin) e ho aperto "Presenze e

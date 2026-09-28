@@ -35,10 +35,10 @@ giorno sono quindi:
 - **Malattia** (con nota opzionale).
 
 I pulsanti per ogni bambino, nella sezione "Presenza" della sua card,
-sono pulsanti grandi disposti due per riga, nell'ordine Presente,
-Pre-asilo, Post-asilo, Assente, Malattia (prima gli stati/indicatori
-dell'orario "disteso", dal più corto al più lungo, poi le eccezioni alla
-presenza); lo stato selezionato è pieno, colorato e con un segno ✓ (vedi
+sono pulsanti grandi, nell'ordine Presente, Assente, Malattia (prima gli
+stati esclusivi, sulla stessa riga), un separatore orizzontale sottile,
+poi Pre-asilo e Post-asilo (gli indicatori dell'orario, affiancati);
+lo stato selezionato è pieno, colorato e con un segno ✓ (vedi
 [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). La nota è
 nella sezione "Nota" in fondo alla card, sotto la sezione "Pasto" (issue
 #110): campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un

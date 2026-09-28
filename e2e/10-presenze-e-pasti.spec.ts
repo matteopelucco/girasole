@@ -133,7 +133,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       // Il nome è il titolo della card, dentro l'intestazione.
       await expect(intestazioneCard(card).getByRole('heading', { level: 3 })).not.toBeEmpty();
       const presenza = colonnaPresenza(card);
-      for (const nome of ['Presente', 'Pre-asilo', 'Post-asilo', 'Assente', 'Malattia']) {
+      for (const nome of ['Presente', 'Assente', 'Malattia', 'Pre-asilo', 'Post-asilo']) {
         await expect(presenza.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
 
@@ -150,6 +150,39 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
 
       // Anche da computer (viewport di default, 1280px): una colonna.
       await sezioniUnaSottoLAltra(card);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('i pulsanti della sezione Presenza hanno un ordine fisso', async ({ page }) => {
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino con i pulsanti di presenza modificabili');
+
+      const presenza = colonnaPresenza(card);
+      const box = async (nome: string) =>
+        riquadro(presenza.getByRole('button', { name: nome, exact: true }));
+      const [presente, assente, malattia, pre, post] = [
+        await box('Presente'),
+        await box('Assente'),
+        await box('Malattia'),
+        await box('Pre-asilo'),
+        await box('Post-asilo'),
+      ];
+      const separatore = await riquadro(presenza.getByRole('separator'));
+
+      // Presente, Assente, Malattia: stessa riga, da sinistra a destra.
+      expect(Math.abs(assente.y - presente.y)).toBeLessThan(2);
+      expect(Math.abs(malattia.y - presente.y)).toBeLessThan(2);
+      expect(assente.x).toBeGreaterThan(presente.x);
+      expect(malattia.x).toBeGreaterThan(assente.x);
+      // Separatore sotto gli stati esclusivi.
+      expect(separatore.y).toBeGreaterThanOrEqual(presente.y + presente.height - 1);
+      // Pre-asilo e Post-asilo affiancati sotto il separatore.
+      expect(pre.y).toBeGreaterThanOrEqual(separatore.y + separatore.height - 1);
+      expect(Math.abs(post.y - pre.y)).toBeLessThan(2);
+      expect(post.x).toBeGreaterThan(pre.x);
 
       await nessunaViolazioneA11yGrave(page);
     });

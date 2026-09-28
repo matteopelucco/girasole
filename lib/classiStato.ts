@@ -8,7 +8,7 @@
 //
 // Dimensioni (issue #106, specs/10): pulsanti grandi a pillola, alti
 // almeno 44px e larghi quanto la cella della griglia che li contiene
-// (due per riga nella sezione Presenza, affiancati Sì/No nella sezione
+// (tre o due per riga nella sezione Presenza, affiancati Sì/No nella sezione
 // Pasto); il segno ✓ dello stato selezionato lo aggiunge il componente.
 const BASE = 'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm';
 
