@@ -130,3 +130,21 @@ export function eNonCodiceCI(file: FileCambiatoPR[]): boolean {
 export function eNonCodiceReview(file: FileCambiatoPR[]): boolean {
   return file.length > 0 && file.every((f) => eNonCodice(f, false));
 }
+
+export type ClassificazionePR = { nonCodiceCI: boolean; nonCodiceReview: boolean };
+
+/**
+ * Classificazione completa della PR a partire dall'elenco dei file
+ * cambiati, oppure `null` se l'elenco non si è potuto ottenere (es.
+ * `git diff` fallito per uno SHA non risolvibile o una history troncata).
+ * Nel dubbio è codice: con `null` entrambe le classificazioni sono
+ * `false`, quindi CI completa e review eseguita, invece di un'eccezione
+ * che farebbe fallire il check obbligatorio o di un "non codice" che
+ * salterebbe controlli per errore.
+ */
+export function classificaPR(file: FileCambiatoPR[] | null): ClassificazionePR {
+  if (file === null) {
+    return { nonCodiceCI: false, nonCodiceReview: false };
+  }
+  return { nonCodiceCI: eNonCodiceCI(file), nonCodiceReview: eNonCodiceReview(file) };
+}
