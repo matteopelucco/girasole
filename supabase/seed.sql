@@ -7,12 +7,15 @@ insert into public.sezioni (id, nome)
 values ('00000000-0000-0000-0000-000000000001', 'Girasoli')
 on conflict (id) do nothing;
 
-insert into public.bambini (id, nome, cognome, sezione_id, note_allergie)
+-- sesso (issue #106, specs/10): un bambino per caso — femmina, maschio,
+-- non compilato (Marco) — per coprire i tre stili dell'intestazione
+-- della card in e2e/10. Dati fittizi.
+insert into public.bambini (id, nome, cognome, sezione_id, note_allergie, sesso)
 values
-  ('00000000-0000-0000-0000-000000000011', 'Anna', 'Rossi', '00000000-0000-0000-0000-000000000001', null),
-  ('00000000-0000-0000-0000-000000000012', 'Luca', 'Bianchi', '00000000-0000-0000-0000-000000000001', 'Allergia alle arachidi'),
-  ('00000000-0000-0000-0000-000000000013', 'Sara', 'Verdi', '00000000-0000-0000-0000-000000000001', null),
-  ('00000000-0000-0000-0000-000000000014', 'Marco', 'Neri', '00000000-0000-0000-0000-000000000001', 'Intolleranza al lattosio')
+  ('00000000-0000-0000-0000-000000000011', 'Anna', 'Rossi', '00000000-0000-0000-0000-000000000001', null, 'F'),
+  ('00000000-0000-0000-0000-000000000012', 'Luca', 'Bianchi', '00000000-0000-0000-0000-000000000001', 'Allergia alle arachidi', 'M'),
+  ('00000000-0000-0000-0000-000000000013', 'Sara', 'Verdi', '00000000-0000-0000-0000-000000000001', null, 'F'),
+  ('00000000-0000-0000-0000-000000000014', 'Marco', 'Neri', '00000000-0000-0000-0000-000000000001', 'Intolleranza al lattosio', null)
 on conflict (id) do nothing;
 
 -- Per collegare una maestra a questa sezione (dopo aver registrato un

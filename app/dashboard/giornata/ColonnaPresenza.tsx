@@ -1,9 +1,9 @@
-import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { BottoneSalvaNota } from '@/components/BottoneSalvaNota';
+import { IconaPersona } from '@/components/icone';
 import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza, StatoPresenza } from '@/lib/presenza';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo, salvaNotaPresenza } from '../presenze/actions';
-import { ALTEZZA_TAP, ETICHETTE_PRESENZA, IntestazioneColonna } from './comune';
+import { CampoNota, ETICHETTE_PRESENZA, IntestazioneSezione, PulsanteStato } from './comune';
 
 export type PresenzaGiorno = {
   stato: StatoPresenza;
@@ -12,13 +12,13 @@ export type PresenzaGiorno = {
   post_asilo: boolean;
 };
 
-// Colonna "Presenza" della card bambino (specs/10, regole in specs/13):
-// riga Presente/Pre-asilo/Post-asilo, riga Assente/Malattia, nota +
-// "Salva nota". Dopo la comunicazione dei pasti a Rojac, per un bambino
-// con pasto "sì" Assente/Malattia sono disabilitati con una breve
-// spiegazione (specs/16, `assenzaBloccata` calcolata dalla pagina con
-// lib/presenza.ts:assenzaBloccataDaComunicazione; il trigger di 0052
-// resta la difesa reale).
+// Sezione "Presenza" della card bambino (specs/10, regole in specs/13):
+// pulsanti grandi due per riga — Presente, Pre-asilo, Post-asilo,
+// Assente, Malattia — poi nota + "Salva nota". Dopo la comunicazione dei
+// pasti a Rojac, per un bambino con pasto "sì" Assente/Malattia sono
+// disabilitati con una breve spiegazione (specs/16, `assenzaBloccata`
+// calcolata dalla pagina con lib/presenza.ts:assenzaBloccataDaComunicazione;
+// il trigger di 0052 resta la difesa reale).
 export function ColonnaPresenza({
   bambinoId,
   data,
@@ -37,37 +37,39 @@ export function ColonnaPresenza({
   const rigaAttuale: RigaPresenza | null = presenza
     ? { stato: presenza.stato, preAsilo: presenza.pre_asilo, postAsilo: presenza.post_asilo }
     : null;
+  const preAsilo = !!presenza?.pre_asilo;
+  const postAsilo = !!presenza?.post_asilo;
 
   return (
     <div role="group" aria-labelledby={idTitolo} className="min-w-0">
-      <IntestazioneColonna id={idTitolo}>Presenza</IntestazioneColonna>
+      <IntestazioneSezione id={idTitolo} icona={<IconaPersona />}>
+        Presenza
+      </IntestazioneSezione>
 
       {editable ? (
-        <form className="space-y-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <PulsanteInvio
-              mantieniTesto
+        <form className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <PulsanteStato
               formAction={segnaPresenza.bind(null, bambinoId, 'presente', data)}
-              className={`${classePulsanteStato('presente', presenza?.stato === 'presente')} ${ALTEZZA_TAP}`}
+              selezionato={presenza?.stato === 'presente'}
+              className={classePulsanteStato('presente', presenza?.stato === 'presente')}
             >
               {ETICHETTE_PRESENZA.presente}
-            </PulsanteInvio>
-            <PulsanteInvio
-              mantieniTesto
+            </PulsanteStato>
+            <PulsanteStato
               formAction={segnaPreAsilo.bind(null, bambinoId, rigaAttuale, data)}
-              className={`${classePulsanteToggle(!!presenza?.pre_asilo)} ${ALTEZZA_TAP}`}
+              selezionato={preAsilo}
+              className={classePulsanteToggle(preAsilo)}
             >
               Pre-asilo
-            </PulsanteInvio>
-            <PulsanteInvio
-              mantieniTesto
+            </PulsanteStato>
+            <PulsanteStato
               formAction={segnaPostAsilo.bind(null, bambinoId, rigaAttuale, data)}
-              className={`${classePulsanteToggle(!!presenza?.post_asilo)} ${ALTEZZA_TAP}`}
+              selezionato={postAsilo}
+              className={classePulsanteToggle(postAsilo)}
             >
               Post-asilo
-            </PulsanteInvio>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+            </PulsanteStato>
             {(['assente', 'malattia'] as const).map((stato) =>
               assenzaBloccata ? (
                 <button
@@ -75,35 +77,28 @@ export function ColonnaPresenza({
                   type="button"
                   disabled
                   aria-describedby={idBlocco}
-                  className={`${classePulsanteStato(stato, false)} ${ALTEZZA_TAP} cursor-not-allowed opacity-60`}
+                  className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
                 >
                   {ETICHETTE_PRESENZA[stato]}
                 </button>
               ) : (
-                <PulsanteInvio
+                <PulsanteStato
                   key={stato}
-                  mantieniTesto
                   formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
-                  className={`${classePulsanteStato(stato, presenza?.stato === stato)} ${ALTEZZA_TAP}`}
+                  selezionato={presenza?.stato === stato}
+                  className={classePulsanteStato(stato, presenza?.stato === stato)}
                 >
                   {ETICHETTE_PRESENZA[stato]}
-                </PulsanteInvio>
+                </PulsanteStato>
               )
             )}
             {assenzaBloccata && (
-              <p id={idBlocco} className="w-full text-xs text-amber-800">
+              <p id={idBlocco} className="col-span-2 text-xs text-amber-800">
                 <span aria-hidden="true">🔒</span> Pasto già comunicato a Rojac
               </p>
             )}
           </div>
-          <textarea
-            name="nota_presenza"
-            rows={2}
-            defaultValue={presenza?.note ?? ''}
-            placeholder="Nota (opzionale)"
-            aria-label="Nota presenza"
-            className="block w-full min-w-0 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
-          />
+          <CampoNota id={`nota-presenza-${bambinoId}`} name="nota_presenza" valore={presenza?.note} />
           <BottoneSalvaNota
             formAction={rigaAttuale ? salvaNotaPresenza.bind(null, bambinoId, data, rigaAttuale) : null}
           />

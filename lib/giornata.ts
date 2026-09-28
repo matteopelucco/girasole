@@ -58,3 +58,46 @@ export function riepilogoGiornata(righe: StatoGiornoBambino[]): RiepilogoGiornat
 export function titoloRiepilogoSezione(titoloGruppo: string): string {
   return titoloGruppo === 'Senza sezione' ? titoloGruppo : `Sezione ${titoloGruppo}`;
 }
+
+// Stile dell'intestazione della card bambino in base a `bambini.sesso`
+// (specs/10, issue #106): rosa tenue per le femmine, azzurro tenue per i
+// maschi, neutro se il sesso non è compilato (o ha un valore inatteso).
+// Classi Tailwind letterali: Tailwind genera solo le classi che trova
+// come testo nei file scansionati (lib/** è incluso, vedi
+// tailwind.config.ts). `etichetta` è null quando non c'è sesso: niente
+// icona né scritta, solo lo sfondo neutro.
+export type StileSesso = {
+  sesso: 'F' | 'M' | null;
+  etichetta: 'Femmina' | 'Maschio' | null;
+  bordoCard: string;
+  sfondoIntestazione: string;
+  testoEtichetta: string;
+};
+
+export function stileSesso(sesso: string | null | undefined): StileSesso {
+  if (sesso === 'F') {
+    return {
+      sesso: 'F',
+      etichetta: 'Femmina',
+      bordoCard: 'border-pink-200',
+      sfondoIntestazione: 'bg-pink-100',
+      testoEtichetta: 'text-pink-800',
+    };
+  }
+  if (sesso === 'M') {
+    return {
+      sesso: 'M',
+      etichetta: 'Maschio',
+      bordoCard: 'border-sky-200',
+      sfondoIntestazione: 'bg-sky-100',
+      testoEtichetta: 'text-sky-800',
+    };
+  }
+  return {
+    sesso: null,
+    etichetta: null,
+    bordoCard: 'border-stone-200',
+    sfondoIntestazione: 'bg-stone-50',
+    testoEtichetta: 'text-stone-600',
+  };
+}
