@@ -142,6 +142,12 @@ export function colonnaPasto(contenitore: Page | Locator): Locator {
   return contenitore.getByRole('group', { name: 'Pasto', exact: true });
 }
 
+// Sezione "Nota" in fondo alla card (issue #110): campo "Nota
+// (opzionale)" e "Salva nota" della presenza.
+export function sezioneNota(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('group', { name: 'Nota', exact: true });
+}
+
 // Card del primo bambino la cui colonna indicata contiene il pulsante
 // `nomePulsante` (es. la prima card con "Sì" ancora disponibile).
 export function primaCardConPulsante(

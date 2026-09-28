@@ -337,3 +337,14 @@ _(dettagli in archivio)_
       `sfondoAvatar`).
 - [x] Codice: nuovo `components/AvatarBambino.tsx` (SVG inline, nessuna
       dipendenza), tolte `IconaFemmina`/`IconaMaschio`.
+
+## #110 · Card bambino: Presenza / Pasto / Nota su una colonna, icone piene (v0.47.0, 2026-09-28)
+- [x] Specs: `specs/10` (una colonna a qualunque larghezza — decisione di
+      Matteo —, sezione "Nota" in fondo, icone piene, form unico della
+      card), `specs/13` (posizione della nota).
+- [x] e2e: helper `sezioneNota`; ordine Presenza → Pasto → Nota
+      verificato a 340/375/768/1280px; test della nota in 13 e 16 sulla
+      nuova sezione.
+- [x] Codice: nuova `SezioneNota`, `CardBambino` con un unico `<form>`
+      (i pulsanti di stato salvano anche la nota, come prima), icone
+      piene per Presenza/Pasto/Nota.

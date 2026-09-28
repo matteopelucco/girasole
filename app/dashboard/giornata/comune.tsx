@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { IconaNota } from '@/components/icone';
 
-// Elementi condivisi dalle sezioni "Presenza" e "Pasto" della card
-// bambino della schermata "Presenze e pasti" (specs/10, issue #106).
+// Elementi condivisi dalle sezioni "Presenza", "Pasto" e "Nota" della
+// card bambino della schermata "Presenze e pasti" (specs/10, issue #106
+// e #110).
 
 export const ETICHETTE_PRESENZA: Record<string, string> = {
   presente: 'Presente',
@@ -19,8 +20,8 @@ export const ETICHETTE_PASTO: Record<string, string> = { si: 'Sì', no: 'No' };
 // esattamente "Presenza" / "Pasto".
 export function IntestazioneSezione({ id, icona, children }: { id: string; icona: ReactNode; children: ReactNode }) {
   return (
-    <p id={id} className="mb-2 flex items-center gap-2 text-sm font-semibold text-stone-800">
-      <span className="text-stone-600">{icona}</span>
+    <p id={id} className="mb-3 flex items-center gap-2.5 text-base font-semibold text-slate-800">
+      <span className="text-slate-700">{icona}</span>
       {children}
     </p>
   );
@@ -54,9 +55,11 @@ export function PulsanteStato({
 export function CampoNota({ id, name, valore }: { id: string; name: string; valore: string | null | undefined }) {
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="flex items-center gap-1.5 text-xs font-medium text-stone-700">
-        <IconaNota className="h-3.5 w-3.5" />
-        Nota <span className="font-normal text-stone-600">(opzionale)</span>
+      <label htmlFor={id} className="mb-2 flex items-center gap-2.5 text-base font-semibold text-slate-800">
+        <span className="text-slate-700">
+          <IconaNota className="h-5 w-5" />
+        </span>
+        Nota <span className="text-sm font-normal text-stone-600">(opzionale)</span>
       </label>
       <textarea
         id={id}

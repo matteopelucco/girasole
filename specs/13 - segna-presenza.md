@@ -9,7 +9,7 @@ in questo file (vedi la matrice permessi in
 ## Obiettivo
 Registrare in pochi tap lo stato di presenza giornaliero di ogni bambino
 — compresa un'eventuale presenza a pre-asilo e/o post-asilo — con una
-nota libera opzionale, dalla sezione "Presenza" della card di ogni
+nota libera opzionale, dalle sezioni "Presenza" e "Nota" della card di ogni
 bambino nella schermata unica "Presenze e pasti" (bambini raggruppati
 per classe nella stessa schermata, senza un click intermedio per
 scegliere la classe) descritta in
@@ -39,11 +39,12 @@ sono pulsanti grandi disposti due per riga, nell'ordine Presente,
 Pre-asilo, Post-asilo, Assente, Malattia (prima gli stati/indicatori
 dell'orario "disteso", dal più corto al più lungo, poi le eccezioni alla
 presenza); lo stato selezionato è pieno, colorato e con un segno ✓ (vedi
-[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). Sotto, il
-campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un campo a
-riga singola — per una nota un po' più lunga il testo resta leggibile
-senza scorrimento laterale) e il pulsante "Salva nota", largo quanto la
-sezione.
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)). La nota è
+nella sezione "Nota" in fondo alla card, sotto la sezione "Pasto" (issue
+#110): campo "Nota (opzionale)" (un `<textarea>` alto due righe, non un
+campo a riga singola — per una nota un po' più lunga il testo resta
+leggibile senza scorrimento laterale) e il pulsante "Salva nota", largo
+quanto la card.
 
 ## Scenario: riepilogo presenze della classe
 Dato che sono su "Presenze e pasti" per una data

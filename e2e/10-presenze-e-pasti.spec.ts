@@ -19,6 +19,7 @@ import {
   nessunaViolazioneA11yGrave,
   nomeBambinoCard,
   primaCardConPulsante,
+  sezioneNota,
   statoAutenticazione,
 } from './helpers';
 
@@ -101,6 +102,18 @@ async function riquadro(locator: Locator) {
   return box;
 }
 
+// Una sola colonna a qualunque larghezza (issue #110): Presenza, poi
+// Pasto, poi Nota, una sotto l'altra e tutte dentro la card.
+async function sezioniUnaSottoLAltra(card: Locator) {
+  const boxPresenza = await riquadro(colonnaPresenza(card));
+  const boxPasto = await riquadro(colonnaPasto(card));
+  const boxNota = await riquadro(sezioneNota(card));
+  expect(boxPasto.y).toBeGreaterThanOrEqual(boxPresenza.y + boxPresenza.height - 1);
+  expect(boxNota.y).toBeGreaterThanOrEqual(boxPasto.y + boxPasto.height - 1);
+  const boxCard = await riquadro(card);
+  expect(boxNota.y + boxNota.height).toBeLessThanOrEqual(boxCard.y + boxCard.height + 1);
+}
+
 test.describe('10 — Presenze e pasti (schermata unica)', () => {
   test.describe('come maestra', () => {
     test.use({ storageState: statoAutenticazione('maestra') });
@@ -109,7 +122,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
     });
 
-    test('ogni bambino ha una card con intestazione, sezione presenza e sezione pasto', async ({ page }) => {
+    test('ogni bambino ha una card con intestazione, sezione presenza, sezione pasto e nota', async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
       await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
@@ -120,24 +133,23 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       // Il nome è il titolo della card, dentro l'intestazione.
       await expect(intestazioneCard(card).getByRole('heading', { level: 3 })).not.toBeEmpty();
       const presenza = colonnaPresenza(card);
-      for (const nome of ['Presente', 'Pre-asilo', 'Post-asilo', 'Assente', 'Malattia', 'Salva nota']) {
+      for (const nome of ['Presente', 'Pre-asilo', 'Post-asilo', 'Assente', 'Malattia']) {
         await expect(presenza.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
-      await expect(presenza.getByLabel('Nota (opzionale)')).toBeVisible();
 
       const pasto = colonnaPasto(card);
       for (const nome of ['Sì', 'No']) {
         await expect(pasto.getByRole('button', { name: nome, exact: true })).toBeVisible();
       }
-      // Una sola nota per card, quella della presenza (issue #109).
-      await expect(pasto.getByLabel('Nota (opzionale)')).toHaveCount(0);
-      await expect(pasto.getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
+      // Una sola nota per card (issue #109), nella sezione "Nota" in
+      // fondo (issue #110).
+      const nota = sezioneNota(card);
+      await expect(nota.getByLabel('Nota (opzionale)')).toBeVisible();
+      await expect(nota.getByRole('button', { name: 'Salva nota', exact: true })).toBeVisible();
       await expect(card.getByLabel('Nota (opzionale)')).toHaveCount(1);
 
-      // Schermo da computer (viewport di default, 1280px): sezioni affiancate.
-      const boxPresenza = await riquadro(presenza);
-      const boxPasto = await riquadro(pasto);
-      expect(boxPasto.x).toBeGreaterThan(boxPresenza.x + boxPresenza.width - 1);
+      // Anche da computer (viewport di default, 1280px): una colonna.
+      await sezioniUnaSottoLAltra(card);
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -249,11 +261,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = cardBambini(page).first();
-      const boxPresenza = await riquadro(colonnaPresenza(card));
-      const boxPasto = await riquadro(colonnaPasto(card));
-      expect(boxPasto.y).toBeGreaterThanOrEqual(boxPresenza.y + boxPresenza.height - 1);
-      const boxCard = await riquadro(card);
-      expect(boxPasto.y + boxPasto.height).toBeLessThanOrEqual(boxCard.y + boxCard.height + 1);
+      await sezioniUnaSottoLAltra(card);
 
       const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
       if ((await bottonePresente.count()) > 0) {
@@ -274,28 +282,20 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       const card = cardBambini(page).first();
-      const boxPresenza = await riquadro(colonnaPresenza(card));
-      const boxPasto = await riquadro(colonnaPasto(card));
-      expect(boxPasto.y).toBeGreaterThanOrEqual(boxPresenza.y + boxPresenza.height - 1);
-      const boxCard = await riquadro(card);
-      expect(boxPasto.y + boxPasto.height).toBeLessThanOrEqual(boxCard.y + boxCard.height + 1);
+      await sezioniUnaSottoLAltra(card);
     });
   });
 
   test.describe('come maestra, su tablet (768px)', () => {
     test.use({ viewport: { width: 768, height: 1024 }, storageState: statoAutenticazione('maestra') });
 
-    test('su tablet le sezioni sono affiancate', async ({ page }) => {
+    test("anche su tablet e computer le sezioni sono una sotto l'altra", async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
-      const card = cardBambini(page).first();
-      const boxPresenza = await riquadro(colonnaPresenza(card));
-      const boxPasto = await riquadro(colonnaPasto(card));
-      expect(boxPasto.x).toBeGreaterThan(boxPresenza.x + boxPresenza.width - 1);
-      expect(Math.abs(boxPasto.y - boxPresenza.y)).toBeLessThan(4);
+      await sezioniUnaSottoLAltra(cardBambini(page).first());
     });
   });
 
@@ -311,6 +311,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
 
       await expect(colonnaPresenza(cardBambini(page).first())).toBeVisible();
+      await expect(sezioneNota(cardBambini(page).first())).toBeVisible();
       await expect(colonnaPasto(page)).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
       await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toHaveCount(0);

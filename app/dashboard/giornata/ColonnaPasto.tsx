@@ -13,7 +13,8 @@ export type PastoGiorno = { mangiato: 'si' | 'no' };
 // legge i pasti) per l'assistente. Per un bambino assente o malato
 // mostra l'etichetta al posto dei pulsanti; `modificabile` è falso nei
 // giorni non scrivibili e, per la maestra, dopo la comunicazione a Rojac
-// (specs/16).
+// (specs/16). Non ha un proprio <form>: sta nel form unico della card
+// (CardBambino, issue #110).
 export function ColonnaPasto({
   bambinoId,
   data,
@@ -41,20 +42,18 @@ export function ColonnaPasto({
     );
   } else if (modificabile) {
     contenuto = (
-      <form>
-        <div className="grid grid-cols-2 gap-2">
-          {(['si', 'no'] as const).map((mangiato) => (
-            <PulsanteStato
-              key={mangiato}
-              formAction={segnaPasto.bind(null, bambinoId, mangiato, data)}
-              selezionato={pasto?.mangiato === mangiato}
-              className={classePulsanteStato(mangiato, pasto?.mangiato === mangiato)}
-            >
-              {ETICHETTE_PASTO[mangiato]}
-            </PulsanteStato>
-          ))}
-        </div>
-      </form>
+      <div className="grid grid-cols-2 gap-2">
+        {(['si', 'no'] as const).map((mangiato) => (
+          <PulsanteStato
+            key={mangiato}
+            formAction={segnaPasto.bind(null, bambinoId, mangiato, data)}
+            selezionato={pasto?.mangiato === mangiato}
+            className={classePulsanteStato(mangiato, pasto?.mangiato === mangiato)}
+          >
+            {ETICHETTE_PASTO[mangiato]}
+          </PulsanteStato>
+        ))}
+      </div>
     );
   } else {
     contenuto = (
@@ -64,7 +63,7 @@ export function ColonnaPasto({
 
   return (
     <div role="group" aria-labelledby={idTitolo} className="min-w-0">
-      <IntestazioneSezione id={idTitolo} icona={<IconaPosate />}>
+      <IntestazioneSezione id={idTitolo} icona={<IconaPosate className="h-5 w-5" />}>
         Pasto
       </IntestazioneSezione>
       {contenuto}

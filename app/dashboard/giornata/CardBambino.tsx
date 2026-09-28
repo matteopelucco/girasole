@@ -4,6 +4,7 @@ import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { ColonnaPresenza, type PresenzaGiorno } from './ColonnaPresenza';
 import { ColonnaPasto, type PastoGiorno } from './ColonnaPasto';
+import { SezioneNota } from './SezioneNota';
 import { AvatarBambino } from '@/components/AvatarBambino';
 import { stileSesso } from '@/lib/giornata';
 
@@ -12,10 +13,12 @@ import { stileSesso } from '@/lib/giornata';
 // bambina/bambino su sfondo rosa/azzurro tenue — neutro su grigio se il
 // sesso non è compilato, issue #108 —, nome come titolo, allergie,
 // Assente/Malattia, warning di
-// specs/06), sezione "Presenza" e, solo se `conPasti` (maestra/admin),
-// sezione "Pasto". Su telefono le sezioni sono una sotto l'altra; da
-// 640px (`sm`) in su sono affiancate. L'id `bambino-<id>` è l'ancora
-// usata dal box di comunicazione a Rojac.
+// specs/06), poi, una sotto l'altra a qualunque larghezza (issue #110),
+// sezione "Presenza", sezione "Pasto" solo se `conPasti` (maestra/admin)
+// e sezione "Nota". Nei giorni modificabili le tre sezioni sono in un
+// unico <form>: i pulsanti di stato della Presenza inviano anche la nota
+// (specs/13, "segnare un'assenza con nota"). L'id `bambino-<id>` è
+// l'ancora usata dal box di comunicazione a Rojac.
 export function CardBambino({
   bambino,
   data,
@@ -46,6 +49,7 @@ export function CardBambino({
     mangiato: pasto?.mangiato as StatoPasto | undefined,
   });
   const stile = stileSesso(sesso);
+  const Corpo = editable ? 'form' : 'div';
 
   return (
     <li
@@ -76,16 +80,18 @@ export function CardBambino({
         </div>
       </header>
 
-      <div className={`grid grid-cols-1 gap-4 p-4 ${conPasti ? 'sm:grid-cols-2' : ''}`}>
-        <ColonnaPresenza
-          bambinoId={bambino.id}
-          data={data}
-          presenza={presenza}
-          editable={editable}
-          assenzaBloccata={assenzaBloccata}
-        />
+      <Corpo className="divide-y divide-stone-200 px-4">
+        <div className="py-4">
+          <ColonnaPresenza
+            bambinoId={bambino.id}
+            data={data}
+            presenza={presenza}
+            editable={editable}
+            assenzaBloccata={assenzaBloccata}
+          />
+        </div>
         {conPasti && (
-          <div className="border-t border-stone-100 pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+          <div className="py-4">
             <ColonnaPasto
               bambinoId={bambino.id}
               data={data}
@@ -95,7 +101,8 @@ export function CardBambino({
             />
           </div>
         )}
-      </div>
+        <SezioneNota bambinoId={bambino.id} data={data} presenza={presenza} editable={editable} />
+      </Corpo>
     </li>
   );
 }
