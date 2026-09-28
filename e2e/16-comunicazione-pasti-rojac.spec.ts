@@ -19,8 +19,39 @@
 // precedenza nello stesso giorno (test.skip altrimenti) — copertura
 // completa richiede quindi ANCHE una verifica manuale una tantum del
 // click "Conferma", vedi TASKS.md.
-import { test, expect } from '@playwright/test';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+//
+// Lo stesso vale per i nuovi scenari sul blocco di Assente/Malattia dopo
+// la comunicazione (issue #100): si verificano solo se oggi i pasti sono
+// già stati comunicati, altrimenti si saltano. Il box di comunicazione
+// sta in cima alla schermata unica "Presenze e pasti" (specs/10).
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import {
+  apriGiornata,
+  cardBambini,
+  colonnaPasto,
+  colonnaPresenza,
+  dataOggiRoma,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+} from './helpers';
+
+const SPIEGAZIONE_BLOCCO = 'Pasto già comunicato a Rojac';
+
+// Card dei bambini con pasto (in sola lettura, dopo la comunicazione)
+// uguale a `testoPasto` ("Sì", "No" o "Non ancora segnato") e presenza
+// non ancora "assente"/"malattia" (nessuna etichetta nella colonna Pasto).
+function cardConPasto(page: Page, testoPasto: string): Locator {
+  return cardBambini(page)
+    .filter({ has: page.getByRole('group', { name: 'Pasto', exact: true }).getByText(testoPasto, { exact: true }) })
+    .filter({ hasNot: page.getByRole('group', { name: 'Pasto', exact: true }).getByText('🚫 Assente') })
+    .filter({ hasNot: page.getByRole('group', { name: 'Pasto', exact: true }).getByText('🤒 Malattia') });
+}
+
+async function saltaSeNonComunicato(page: Page) {
+  const banner = page.getByText('Pasti comunicati a Rojac il', { exact: false });
+  test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
+}
 
 const TELEFONO_ROJAC = '0331 955630';
 
@@ -30,10 +61,10 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
 
     test.beforeEach(async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
-      await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
+      await apriGiornata(page, dataOggiRoma());
     });
 
-    test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio con l\'elenco dei bambini e un link alle presenze', async ({
+    test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio con l\'elenco dei bambini, con scorciatoie alle loro card', async ({
       page,
     }) => {
       const messaggioBloccato = page.getByText('Non puoi ancora comunicare i pasti', { exact: false });
@@ -53,10 +84,15 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       const elencoBambini = page.getByRole('list', { name: 'Bambini senza presenza' }).getByRole('listitem');
       await expect(elencoBambini).toHaveCount(numeroAtteso);
 
-      const linkPresenze = page.getByRole('link', { name: 'Vai alle presenze' });
-      await expect(linkPresenze).toBeVisible();
-      await linkPresenze.click();
-      await page.waitForURL(/\/dashboard\/presenze/);
+      // Niente più "Vai alle presenze" (la schermata è la stessa): i nomi
+      // dei bambini con la card in questa pagina sono ancore alla card.
+      await expect(page.getByRole('link', { name: 'Vai alle presenze' })).toHaveCount(0);
+      const ancora = page.getByRole('list', { name: 'Bambini senza presenza' }).getByRole('link').first();
+      if ((await ancora.count()) > 0) {
+        const href = (await ancora.getAttribute('href')) ?? '';
+        expect(href).toMatch(/^#bambino-/);
+        await expect(page.locator(`li${href}`)).toHaveCount(1);
+      }
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -90,13 +126,47 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       // Navigazione a 2 livelli (specs/12): tutte le classi della maestra
       // sono nella stessa pagina, quindi il blocco si verifica una volta
       // sola su tutti i bambini visibili.
-      test.skip((await page.locator('main li').count()) === 0, 'nessun bambino per questo account');
-      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false }).first()).toBeVisible();
+      test.skip((await cardBambini(page).count()) === 0, 'nessun bambino per questo account');
       await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
+      // Il "Salva nota" della presenza resta; quello del pasto no.
+      await expect(colonnaPasto(page).getByRole('button', { name: 'Salva nota' })).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('dopo la comunicazione la maestra non può segnare Assente o Malattia un bambino con pasto "sì"', async ({
+      page,
+    }) => {
+      await saltaSeNonComunicato(page);
+      const card = cardConPasto(page, 'Sì').first();
+      test.skip((await card.count()) === 0, 'nessun bambino visibile con pasto "sì" e presenza non assente/malattia');
+
+      const presenza = colonnaPresenza(card);
+      await expect(presenza.getByRole('button', { name: 'Assente' })).toBeDisabled();
+      await expect(presenza.getByRole('button', { name: 'Malattia' })).toBeDisabled();
+      await expect(presenza.getByText(SPIEGAZIONE_BLOCCO)).toBeVisible();
+      // Presente, Pre-asilo, Post-asilo e la nota restano disponibili.
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toBeEnabled();
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toBeEnabled();
+      await expect(presenza.getByRole('button', { name: 'Post-asilo' })).toBeEnabled();
+      await expect(presenza.getByPlaceholder('Nota (opzionale)')).toBeEditable();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('dopo la comunicazione un bambino senza pasto "sì" può ancora essere segnato Assente o Malattia', async ({
+      page,
+    }) => {
+      await saltaSeNonComunicato(page);
+      let card = cardConPasto(page, 'No').first();
+      if ((await card.count()) === 0) card = cardConPasto(page, 'Non ancora segnato').first();
+      test.skip((await card.count()) === 0, 'nessun bambino visibile con pasto "no" o non segnato');
+
+      const presenza = colonnaPresenza(card);
+      await expect(presenza.getByRole('button', { name: 'Assente' })).toBeEnabled();
+      await expect(presenza.getByRole('button', { name: 'Malattia' })).toBeEnabled();
+      await expect(presenza.getByText(SPIEGAZIONE_BLOCCO)).toHaveCount(0);
     });
   });
 
@@ -106,17 +176,34 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
     test('l\'admin vede comunque il messaggio, e può sempre modificare i pasti', async ({ page }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
 
-      await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
+      await apriGiornata(page, dataOggiRoma());
       const banner = page.getByText('Pasti comunicati a Rojac il', { exact: false });
       test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
       await expect(banner).toBeVisible();
 
-      await expect(page.getByText('sono stati comunicati a Rojac il', { exact: false }).first()).toBeVisible();
       const primoSi = page.getByRole('button', { name: 'Sì', exact: true }).first();
       test.skip((await primoSi.count()) === 0, 'nessun bambino in questa classe');
       await expect(primoSi).toBeEnabled();
 
       await nessunaViolazioneA11yGrave(page);
+    });
+
+    test("l'admin può segnare Assente o Malattia anche dopo la comunicazione", async ({ page }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+      await apriGiornata(page, dataOggiRoma());
+      await saltaSeNonComunicato(page);
+      // Per l'admin la colonna Pasto resta modificabile: il pasto "sì" è
+      // il pulsante "Sì" evidenziato, non un testo in sola lettura.
+      const card = cardBambini(page)
+        .filter({ has: page.getByRole('group', { name: 'Pasto', exact: true }).locator('button.bg-emerald-700') })
+        .first();
+      test.skip((await card.count()) === 0, 'nessun bambino con pasto "sì" oggi');
+
+      const presenza = colonnaPresenza(card);
+      await expect(presenza.getByRole('button', { name: 'Assente' })).toBeEnabled();
+      await expect(presenza.getByRole('button', { name: 'Malattia' })).toBeEnabled();
+      await expect(presenza.getByText(SPIEGAZIONE_BLOCCO)).toHaveCount(0);
     });
   });
 

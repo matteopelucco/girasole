@@ -4,62 +4,57 @@
 Maestra, assistente, admin. (Genitore: fuori scope in questa fase.)
 
 ## Obiettivo
-Un punto d'ingresso unico da cui maestra e admin raggiungono le due
-attività quotidiane — Presenze e Pasti, sempre riferite alla data
-odierna — e da cui pubblicano avvisi.
+Un punto d'ingresso unico da cui maestra e admin raggiungono l'attività
+quotidiana — "Presenze e pasti", una sola schermata riferita alla data
+odierna (vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
+— e da cui pubblicano avvisi.
 
 ## Scenario: aprire la dashboard mostra le attività del giorno
 Dato che sono autenticata come maestra (con almeno una sezione assegnata)
 o come admin
 Quando apro la dashboard
-Allora vedo due pulsanti/schede "Presenze" e "Pasti", ciascuno con
-un'icona (☑️ per Presenze, 🍝 per Pasti) oltre al testo, riferiti alla
-data odierna
+Allora vedo un solo pulsante/scheda "Presenze e pasti", con un'icona
+(📋) oltre al testo, riferito alla data odierna
+E NON vedo più due schede separate "Presenze" e "Pasti"
 E vedo anche il pulsante/scheda "Report" con la sua icona (📊)
 E se il mio profilo è abilitato al report ore, vedo anche il
 pulsante/scheda "Ore di lavoro" con la sua icona (🕒) — vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)
 E NON vedo un selettore di data: la dashboard mostra sempre la data
-odierna, la scelta di un'altra data avviene dentro Presenze/Pasti (vedi
-[13 - segna-presenza.md](13%20-%20segna-presenza.md) e
-[14 - segna-pasto.md](14%20-%20segna-pasto.md))
+odierna, la scelta di un'altra data avviene dentro "Presenze e pasti"
+(vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
 
-## Scenario: da Presenze si arriva direttamente ai bambini, raggruppati per classe
+## Scenario: da "Presenze e pasti" si arriva direttamente ai bambini, raggruppati per classe
 Dato che sono sulla dashboard
-Quando tappo su "Presenze"
+Quando tappo su "Presenze e pasti"
 Allora vedo, in un'unica schermata, un selettore di data (per
 consultare/segnare un'altra data) e l'elenco dei bambini di tutte le mie
 classi assegnate (tutte le classi attive se sono admin) per la data
-odierna, raggruppati visivamente per sezione — un titolo con il nome
-della sezione sopra i suoi bambini, ordinati per cognome — per
-consultare/segnare la presenza di ciascuno senza dover prima scegliere
-una classe (dettagli in [13 - segna-presenza.md](13%20-%20segna-presenza.md))
+odierna, raggruppati visivamente per sezione — una card "Sezione {nome}"
+con il riepilogo della sezione sopra i suoi bambini, ordinati per
+cognome — per consultare/segnare presenza e pasto di ciascuno senza dover
+prima scegliere una classe (dettagli in
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md),
+[13 - segna-presenza.md](13%20-%20segna-presenza.md) e
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
 E i bambini senza sezione assegnata (possibile solo per l'admin) sono in
 un gruppo a parte, intitolato "Senza sezione"
 
-## Scenario: da Pasti si arriva direttamente ai bambini, raggruppati per classe
-Dato che sono sulla dashboard
-Quando tappo su "Pasti"
-Allora vedo la stessa schermata di Presenze — selettore di data, bambini
-di tutte le classi visibili raggruppati per sezione, in ordine di
-cognome — ma per consultare/segnare il pasto di ciascuno (dettagli in
-[14 - segna-pasto.md](14%20-%20segna-pasto.md))
-
 ## Scenario: riepilogo aggregato di tutte le classi in cima alla pagina
-Dato che sono su Presenze o su Pasti, per una data
+Dato che sono su "Presenze e pasti", per una data
 Quando guardo la pagina
 Allora vedo in cima, sotto il selettore data, una card con titolo
-"Presenze giornaliere" (in Presenze) o "Pasti giornalieri" (in Pasti) —
-senza il suffisso "- Sezione ..." che invece compare sopra ciascun
-gruppo di bambini di una sezione, essendo la somma di tutte — con lo
-stesso tipo di specchietto mostrato per ciascuna sezione, ma con la
+"Riepilogo giornaliero" — diversa dalle card "Sezione {nome}" che
+compaiono sopra ciascun gruppo di bambini, essendo la somma di tutte —
+con gli stessi specchietti mostrati per ciascuna sezione, ma con la
 somma di **tutte** le classi visibili (tutte le mie sezioni assegnate se
-sono maestra o assistente, tutte le classi attive se sono admin): in
-Presenze "Presenti: X/Y" (X = somma dei bambini presenti di tutte le
-classi, Y = totale bambini di tutte le classi), "Pre-asilo: P" e
-"Post-asilo: Q" (somma su tutte le classi); in Pasti "Pasti: X/Y" (X =
-somma dei pasti "sì" segnati oggi in tutte le classi, Y = totale bambini
-di tutte le classi, **senza escludere** chi risulta assente o malato)
+sono maestra o assistente, tutte le classi attive se sono admin):
+"Presenti: X/Y" (X = somma dei bambini presenti di tutte le classi, Y =
+totale bambini di tutte le classi), "Pre-asilo: P" e "Post-asilo: Q"
+(somma su tutte le classi) e, solo per maestra e admin, "Pasti: X/Y" (X =
+somma dei pasti "sì" segnati in tutte le classi, Y = totale bambini di
+tutte le classi, **senza escludere** chi risulta assente o malato)
+E se sono assistente non vedo lo specchietto "Pasti: X/Y"
 E se non c'è ancora nessun bambino in nessuna classe visibile, non vedo
 alcuno specchietto (solo il messaggio che non ci sono classi/bambini)
 
@@ -67,12 +62,12 @@ alcuno specchietto (solo il messaggio che non ci sono classi/bambini)
 Dato che sono autenticata come assistente (con almeno una sezione
 assegnata)
 Quando apro la dashboard
-Allora vedo il pulsante/scheda "Presenze" (senza selettore di data, come
-per la maestra), con lo
-stesso comportamento di una maestra (vedi
-[13 - segna-presenza.md](13%20-%20segna-presenza.md))
-E NON vedo il pulsante/scheda "Pasti": il registro pasti non è
-accessibile al ruolo assistente (vedi
+Allora vedo il pulsante/scheda "Presenze e pasti" (senza selettore di
+data, come per la maestra)
+E aprendolo vedo solo la parte presenze: nessuna colonna pasto, nessun
+riepilogo pasti, nessun box Rojac (vedi
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md)) — il registro
+pasti non è accessibile al ruolo assistente (vedi
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 E vedo comunque la sezione avvisi, con la possibilità di crearne uno
 per le sezioni a cui sono assegnata o per i loro bambini
@@ -82,13 +77,12 @@ Dato che sono autenticata come maestra o assistente ma non ho ancora
 nessuna sezione
 Quando apro la dashboard
 Allora vedo un messaggio che mi invita a chiedere all'admin di assegnarmi
-una sezione, e non vedo i pulsanti Presenze/Pasti (né Presenze soltanto,
-per l'assistente)
+una sezione, e non vedo il pulsante "Presenze e pasti"
 
 ## Scenario: l'admin apre la dashboard
 Dato che sono autenticato come admin
 Quando apro la dashboard
-Allora vedo Presenze/Pasti come una maestra
+Allora vedo "Presenze e pasti" come una maestra
 E vedo comunque la sezione avvisi, con la possibilità di crearne uno
 per qualsiasi sezione o bambino
 E per le pagine di amministrazione (`/admin`, `/admin/maestre`, ecc.) uso
@@ -105,7 +99,7 @@ successiva, e nessun dato di altri bambini
   [11 - login.md](11%20-%20login.md)).
 - Il contenuto mostrato dipende dal ruolo del profilo (`admin`, `maestra`,
   `assistente`, altro), non dal solo fatto di essere autenticati.
-- Il selettore di data, dentro Presenze/Pasti (non più in dashboard),
+- Il selettore di data, dentro "Presenze e pasti" (non in dashboard),
   permette di consultare presenze/pasti di qualunque data passata o
   futura; se e quando quei dati sono modificabili dipende dal ruolo e
   dalla data (vedi le Regole in
@@ -114,7 +108,7 @@ successiva, e nessun dato di altri bambini
 - Priorità a interfaccia rapida, pochi tap, testo leggibile: le maestre
   useranno l'app prevalentemente da smartphone, opzionalmente da tablet e
   desktop in sezione — vedi [01 - ux.md](01%20-%20ux.md).
-- Le card/pulsanti Presenze/Pasti/Report/Ore di lavoro condividono
+- Le card/pulsanti "Presenze e pasti"/Report/Ore di lavoro condividono
   un'unica griglia bilanciata a due colonne: quali card compaiono dipende
   da ruolo, sezioni assegnate e abilitazione (vedi
   [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)), ma quando il
@@ -123,7 +117,7 @@ successiva, e nessun dato di altri bambini
 - Il denominatore "Y" del riepilogo aggregato "Pasti: X/Y" conta **tutti**
   i bambini attivi di tutte le classi visibili, indipendentemente dal
   loro stato di presenza/assenza/malattia — a differenza del riepilogo
-  "Pasti: X/Y" dentro una singola classe (vedi
+  "Pasti: X/Y" nella card di una singola sezione (vedi
   [14 - segna-pasto.md](14%20-%20segna-pasto.md)), che invece esclude dal
   denominatore chi risulta assente o malato. Scelta esplicita, non un
   refuso: questo specchietto è pensato come vista d'insieme rapida su

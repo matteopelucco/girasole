@@ -1,9 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
-import { prossimaPresenza, type AzionePresenza, type RigaPresenza } from '@/lib/presenza';
+import {
+  messaggioErroreSalvataggioPresenza,
+  prossimaPresenza,
+  type AzionePresenza,
+  type RigaPresenza,
+} from '@/lib/presenza';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 async function upsertPresenza(
@@ -26,12 +32,15 @@ async function upsertPresenza(
     },
     { onConflict: 'bambino_id,data' }
   );
-  if (error) throw new Error(`Impossibile salvare la presenza: ${error.message}`);
+  // Il trigger di 0052 (niente Assente/Malattia dopo la comunicazione a
+  // Rojac, specs/16) rifiuta con un messaggio del database: tradotto qui
+  // in una spiegazione comprensibile, mostrata da ErroreAzione.
+  if (error) throw new Error(messaggioErroreSalvataggioPresenza(error.message));
 }
 
 // segnaPresenza/segnaPreAsilo/segnaPostAsilo/salvaNotaPresenza sono
 // legate a bottoni diversi dentro allo stesso form (vedi
-// app/dashboard/presenze/page.tsx): niente useFormState, il feedback
+// app/dashboard/giornata/ColonnaPresenza.tsx): niente useFormState, il feedback
 // "ko" (specs/05 - feedback.md) passa dal sollevare l'errore,
 // intercettato da app/error.tsx.
 async function applicaAzionePresenza(
@@ -49,7 +58,7 @@ async function applicaAzionePresenza(
   const prossima = prossimaPresenza(rigaAttuale, azione);
   await upsertPresenza(supabase, user.id, bambinoId, data, prossima, note);
 
-  revalidatePath('/dashboard/presenze');
+  revalidatePath(PERCORSO_GIORNATA);
 }
 
 export async function segnaPresenza(
@@ -97,5 +106,5 @@ export async function salvaNotaPresenza(
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
   await upsertPresenza(supabase, user.id, bambinoId, data, rigaAttuale, note);
 
-  revalidatePath('/dashboard/presenze');
+  revalidatePath(PERCORSO_GIORNATA);
 }

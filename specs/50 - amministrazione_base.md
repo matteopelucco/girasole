@@ -71,7 +71,7 @@ Dato che un utente ha ruolo `maestra` o `assistente`
 Quando su `/admin/maestre` scelgo l'utente e la sezione, e confermo
 Allora quell'utente vede i bambini di quella sezione nella propria
 dashboard (vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md)) —
-una maestra anche in Pasti, un'assistente solo in Presenze (vedi
+una maestra con presenze e pasti, un'assistente solo con le presenze (vedi
 [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: rimuovere l'assegnazione di una maestra o assistente a una sezione

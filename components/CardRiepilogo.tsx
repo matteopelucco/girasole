@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 export function CardRiepilogo({ titolo, children }: { titolo: string; children: ReactNode }) {
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
-      <h2 className="mb-2 text-sm font-semibold text-stone-800">{titolo}</h2>
+      <h2 className="mb-2 text-sm font-semibold text-stone-800 [overflow-wrap:anywhere]">{titolo}</h2>
       {children}
     </div>
   );

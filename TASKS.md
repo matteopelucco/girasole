@@ -259,7 +259,7 @@ _(dettagli in archivio)_
       flag e che gli step marcati `if:` risultino `skipped` invece di
       `failed`) va confermato con un run CI reale dopo il merge di questa
       PR, e idealmente con una seconda PR di prova solo-docs.
-- [x] Follow-up della review post-merge (v0.42.33): `git diff` fallito o
+- [x] Follow-up della review post-merge (v0.43.1): `git diff` fallito o
       SHA mancanti → classificazione "codice" invece di un'eccezione che
       faceva fallire il check obbligatorio (`classificaPR` in
       `lib/pr-classificazione.ts`, con unit test); `--experimental-strip-types`
@@ -267,3 +267,34 @@ _(dettagli in archivio)_
       `node script`). Sul punto aperto sopra: su Node 22.18+ il flag è
       già di default, quindi il run reale confermava il default, non lo
       shebang.
+
+
+## #100 · Presenze e pasti in un'unica schermata, blocco Assente/Malattia dopo Rojac (v0.43.0, 2026-09-28)
+- [x] Specs: nuovo `specs/10 - presenze-e-pasti.md`; aggiornati 12, 13,
+      14, 16, 06, 07, 03, indice in 00 (e riferimenti in 01, 17, 50, 53, 57).
+- [x] e2e: nuovo `e2e/10-presenze-e-pasti.spec.ts`, allineati 01, 06, 07,
+      12, 13, 14, 16, 50, 53, 57 alla rotta `/dashboard/giornata`.
+- [x] Schermata `/dashboard/giornata`, redirect delle vecchie rotte, una
+      sola card in dashboard; unit test in `lib/giornata.test.ts` e
+      `lib/presenza.test.ts`.
+- [ ] **Review rls-guardian** della migration
+      `0052_presenza_blocca_assenza_se_pasto_comunicato.sql` (trigger
+      SECURITY DEFINER su `presenze`) prima del merge.
+- [ ] **Da fare da parte tua dopo il merge**: applicare la 0052 in
+      produzione (`supabase db push --project-ref <ref-produzione>`). In
+      test la applica il reset di CI.
+- [ ] **Non verificabile in automatico**: gli scenari dopo la
+      comunicazione a Rojac (blocco Assente/Malattia, anche forzando la
+      richiesta) si saltano in e2e se oggi non c'è una comunicazione
+      (come gli altri scenari di specs/16): serve una verifica manuale una
+      tantum su un giorno già comunicato, incluso il messaggio mostrato
+      all'assistente quando il database rifiuta la modifica.
+- [ ] **Follow-up (N7, review rls-guardian, fuori da #100)**:
+      `segnaPreAsilo`/`segnaPostAsilo`/`salvaNotaPresenza` ricevono
+      `rigaAttuale` dal client via `.bind` (falsificabile): dovrebbero
+      rileggere la riga dal DB. Il trigger di 0052 non se ne fida, quindi
+      il blocco regge comunque.
+- [ ] **Follow-up (N8, fuori da #100)**: in produzione Next 14 sostituisce
+      il messaggio degli errori delle server action con un digest, quindi il
+      messaggio tradotto "pasto già comunicato a Rojac" non arriva
+      all'utente. Valutare redirect con avviso in pagina.

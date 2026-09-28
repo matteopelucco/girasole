@@ -98,10 +98,14 @@ test.describe('07 — Allarmi', () => {
         test.skip(!presente, 'oggi presenze e pasti risultano già completati per le mie sezioni: nessuna anomalia da verificare ora');
 
         await expect(banner).toContainText('10:00');
-        // Ogni link del banner porta direttamente a Presenze di una
-        // sezione, o a Pasti — mai a una pagina generica.
+        // Ogni link del banner porta direttamente alla schermata unica
+        // "Presenze e pasti" di oggi (specs/10), eventualmente sul box di
+        // comunicazione a Rojac — mai a una pagina generica.
         const link = banner.getByRole('link').first();
-        await expect(link).toHaveAttribute('href', /^\/dashboard\/(presenze|pasti)\?data=\d{4}-\d{2}-\d{2}$/);
+        await expect(link).toHaveAttribute(
+          'href',
+          /^\/dashboard\/giornata\?data=\d{4}-\d{2}-\d{2}(#comunicazione-rojac)?$/
+        );
         await nessunaViolazioneA11yGrave(page);
       });
     });

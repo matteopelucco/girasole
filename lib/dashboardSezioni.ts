@@ -1,3 +1,5 @@
+import { percorsoGiornata } from '@/lib/giornata';
+
 export type CardDashboard = {
   href: string;
   icona: string;
@@ -16,31 +18,24 @@ export type CardDashboard = {
 export function cardsDashboard({
   data,
   haSezioni,
-  ruolo,
   abilitatoOreLavoro,
 }: {
   data: string;
   haSezioni: boolean;
-  ruolo: string | null | undefined;
   abilitatoOreLavoro: boolean | null | undefined;
 }): CardDashboard[] {
   const cards: Omit<CardDashboard, 'spanIntero'>[] = [];
 
+  // Una sola card "Presenze e pasti" (specs/10, specs/12) per tutti i
+  // ruoli dello staff: per l'assistente la schermata mostra solo la parte
+  // presenze, quindi la card non dipende più dal ruolo.
   if (haSezioni) {
     cards.push({
-      href: `/dashboard/presenze?data=${data}`,
-      icona: '☑️',
-      etichetta: 'Presenze',
+      href: percorsoGiornata(data),
+      icona: '📋',
+      etichetta: 'Presenze e pasti',
       classi: 'bg-emerald-700 hover:bg-emerald-800',
     });
-    if (ruolo !== 'assistente') {
-      cards.push({
-        href: `/dashboard/pasti?data=${data}`,
-        icona: '🍝',
-        etichetta: 'Pasti',
-        classi: 'bg-amber-700 hover:bg-amber-800',
-      });
-    }
   }
 
   cards.push({

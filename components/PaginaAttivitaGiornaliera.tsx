@@ -2,12 +2,12 @@ import type { ReactNode } from 'react';
 import { NavHeader } from '@/components/NavHeader';
 import { SelettoreData } from '@/components/SelettoreData';
 
-// Involucro comune a Presenze e Pasti (app/dashboard/presenze/page.tsx,
-// app/dashboard/pasti/page.tsx — specs/12 - dashboard-maestre.md): header,
-// selettore data, riepilogo aggregato e banner di sola lettura sono
-// identici, cambia solo il contenuto raggruppato per sezione (`children`
-// — costruito dalla pagina chiamante, perché le righe bambino di
-// Presenze e Pasti hanno pulsanti diversi tra loro). Non c'è più una
+// Involucro della schermata "Presenze e pasti" (app/dashboard/giornata/
+// page.tsx — specs/10, specs/12): header, selettore data, riepilogo
+// aggregato, box extra (comunicazione a Rojac) e banner di sola lettura;
+// il contenuto raggruppato per sezione (`children`) lo costruisce la
+// pagina. Nato come involucro comune alle vecchie Presenze e Pasti
+// separate, ora unificate (issue #100). Non c'è più una
 // pagina "elenco classi" intermedia (vedi PaginaClassi/ElencoClassi/
 // PaginaClasseAttivita, rimossi): la scelta di una classe è ora solo
 // visiva (un titolo sopra ciascun gruppo), non un click in più.

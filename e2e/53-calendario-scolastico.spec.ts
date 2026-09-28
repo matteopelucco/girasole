@@ -5,7 +5,7 @@
 // I test che creano un giorno di chiusura usano una data lontana nel
 // futuro (dataFraGiorni con un n grande) per non collidere con "oggi"/
 // "ieri", usate da altri test, e lo eliminano a fine test.
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import {
   dataFraGiorni,
   dataProssimoGiornoFeriale,
@@ -15,21 +15,12 @@ import {
   statoAutenticazione,
   alertApp,
   clickEAttendiAzione,
+  apriGiornata,
 } from './helpers';
 
-// Navigazione a 2 livelli (specs/12, v0.39.0): Presenze e Pasti mostrano
-// direttamente i bambini di tutte le sezioni visibili, senza una pagina
-// per singola classe. Ritorna se l'account vede almeno un bambino.
-async function apriPresenze(page: Page, data: string): Promise<boolean> {
-  await page.goto(`/dashboard/presenze?data=${data}`);
-  return (await page.locator('main li').count()) > 0;
-}
-
-async function apriPasti(page: Page, data: string): Promise<boolean> {
-  await page.goto(`/dashboard/pasti?data=${data}`);
-  return (await page.locator('main li').count()) > 0;
-}
-
+// "Presenze e pasti" (specs/10) mostra presenza e pasto di tutti i
+// bambini visibili nella stessa pagina: apriGiornata (e2e/helpers.ts)
+// ritorna se l'account vede almeno un bambino.
 test.describe('53 — Calendario scolastico', () => {
   test.describe('come admin', () => {
     test.use({ storageState: statoAutenticazione('admin') });
@@ -182,14 +173,14 @@ test.describe('53 — Calendario scolastico', () => {
       await expect(page.getByText(nota, { exact: false })).toBeVisible({ timeout: 20_000 });
 
       try {
-        const haClassiPresenze = await apriPresenze(page, giorno);
+        const haClassiPresenze = await apriGiornata(page, giorno);
         if (haClassiPresenze) {
           await expect(page.getByText(nota, { exact: false })).toBeVisible();
           await expect(page.getByRole('button', { name: 'Presente' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Assente' })).toHaveCount(0);
         }
 
-        const haClassiPasti = await apriPasti(page, giorno);
+        const haClassiPasti = await apriGiornata(page, giorno);
         if (haClassiPasti) {
           await expect(page.getByText(nota, { exact: false })).toBeVisible();
           await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
@@ -206,7 +197,7 @@ test.describe('53 — Calendario scolastico', () => {
 
     test('un sabato è chiusura implicita anche senza un giorno registrato', async ({ page }) => {
       const sabato = dataProssimoSabato();
-      const haClassi = await apriPresenze(page, sabato);
+      const haClassi = await apriGiornata(page, sabato);
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toBeVisible();
@@ -223,7 +214,7 @@ test.describe('53 — Calendario scolastico', () => {
 
     test('un sabato mostra la chiusura anche alla maestra, senza pulsanti', async ({ page }) => {
       const sabato = dataProssimoSabato();
-      const haClassi = await apriPresenze(page, sabato);
+      const haClassi = await apriGiornata(page, sabato);
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toBeVisible();
@@ -232,7 +223,7 @@ test.describe('53 — Calendario scolastico', () => {
     });
 
     test('un giorno feriale resta scrivibile (nessun falso positivo di chiusura)', async ({ page }) => {
-      const haClassi = await apriPresenze(page, dataProssimoGiornoFeriale());
+      const haClassi = await apriGiornata(page, dataProssimoGiornoFeriale());
       test.skip(!haClassi, 'nessuna classe attiva per questo account');
 
       await expect(page.getByText("L'asilo è chiuso", { exact: false })).toHaveCount(0);

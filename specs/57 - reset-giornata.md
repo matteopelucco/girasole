@@ -14,7 +14,7 @@ poter correggere anche un giorno già trascorso.
 ## Scenario: vedere cosa c'è da resettare prima di confermare
 Dato che sono autenticato come admin e apro "Reset giornata" dal menu
 Quando scelgo una data (di default oggi, con lo stesso selettore
-←/→/calendario già usato in Presenze e Pasti)
+←/→/calendario già usato in "Presenze e pasti")
 Allora vedo quante presenze e quanti pasti sono registrati per quella
 data, su tutte le classi
 E se per quella data risulta già una comunicazione dei pasti a Rojac

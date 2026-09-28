@@ -6,7 +6,16 @@
 // da solo alla fine — stesso genere di pulizia automatica delle altre
 // suite che scrivono dati veri.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
+import {
+  apriGiornata,
+  clickEAttendiAzione,
+  colonnaPasto,
+  colonnaPresenza,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  primaCardConPulsante,
+  statoAutenticazione,
+} from './helpers';
 
 const DATA_TEST = '2019-05-15';
 
@@ -36,19 +45,17 @@ test.describe('57 — Reset giornata', () => {
     // Registro una presenza per la prima classe/bambino disponibile,
     // sulla data di test (l'admin può scrivere su qualunque data,
     // specs/13).
-    // Navigazione a 2 livelli (specs/12): i bambini di tutte le sezioni
-    // sono direttamente in pagina, senza aprire una classe.
-    await page.goto(`/dashboard/presenze?data=${DATA_TEST}`);
-    const primaRigaPresenze = page.locator('li', { has: page.getByRole('button', { name: 'Presente' }) }).first();
-    test.skip((await primaRigaPresenze.count()) === 0, 'nessun bambino visibile per questo account');
+    // Schermata unica "Presenze e pasti" (specs/10): presenza e pasto
+    // dello stesso bambino sono nella stessa card.
+    await apriGiornata(page, DATA_TEST);
+    const card = primaCardConPulsante(page, 'Presenza', 'Presente');
+    test.skip((await card.count()) === 0, 'nessun bambino visibile per questo account');
     // Attendo la risposta della Server Action: con un'attesa fissa il goto
     // successivo poteva interrompere il salvataggio (issue #70).
-    await clickEAttendiAzione(page, primaRigaPresenze.getByRole('button', { name: 'Presente' }));
+    await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
 
-    // Registro anche un pasto, stessa data.
-    await page.goto(`/dashboard/pasti?data=${DATA_TEST}`);
-    const primaRigaPasti = page.locator('li', { has: page.getByRole('button', { name: 'Sì' }) }).first();
-    await clickEAttendiAzione(page, primaRigaPasti.getByRole('button', { name: 'Sì' }));
+    // Registro anche un pasto, stessa data e stesso bambino.
+    await clickEAttendiAzione(page, colonnaPasto(card).getByRole('button', { name: 'Sì' }));
 
     await page.goto(`/admin/reset-giornata?data=${DATA_TEST}`);
     await expect(page.getByText(/^[1-9]\d* presenze$/)).toBeVisible();
