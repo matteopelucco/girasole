@@ -1,10 +1,17 @@
+import { Fragment } from 'react';
 import { PaginaAttivitaGiornaliera } from '@/components/PaginaAttivitaGiornaliera';
 import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { RiepilogoConteggio } from '@/components/RiepilogoConteggio';
 import { requireStaff, editabilitaGiorno } from '@/lib/auth';
 import { sezioniEBambiniVisibili, raggruppaPerSezione, messaggioSezioniVuote } from '@/lib/sezioni';
 import { assenzaBloccataDaComunicazione } from '@/lib/presenza';
-import { PERCORSO_GIORNATA, riepilogoGiornata, titoloRiepilogoSezione } from '@/lib/giornata';
+import {
+  PERCORSO_GIORNATA,
+  riepilogoGiornata,
+  testoVoceRiepilogo,
+  titoloRiepilogoSezione,
+  vociRiepilogo,
+} from '@/lib/giornata';
 import { CardBambino } from './CardBambino';
 import { BoxComunicazioneRojac, type ComunicazioneGiorno } from './BoxComunicazioneRojac';
 import type { PresenzaGiorno } from './ColonnaPresenza';
@@ -89,28 +96,38 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
     };
   }
 
-  // Riepilogo di un gruppo di bambini: "Pasti: X/Y" solo per maestra/admin,
-  // con denominatore diverso tra aggregato (tutti i bambini, specs/12) e
-  // singola sezione (esclusi assenti/malati, specs/14).
-  function cardRiepilogo(titolo: string, gruppo: { id: string }[], aggregato: boolean) {
-    const r = riepilogoGiornata(gruppo.map((b) => statoGiorno(b.id)));
-    return (
-      <CardRiepilogo titolo={titolo}>
-        <div className="flex flex-wrap gap-2">
-          <RiepilogoConteggio etichetta="Presenti" numeratore={r.presenti} denominatore={r.totale} />
-          <RiepilogoConteggio etichetta="Pre-asilo" numeratore={r.preAsilo} />
-          <RiepilogoConteggio etichetta="Post-asilo" numeratore={r.postAsilo} />
-          {conPasti && (
-            <RiepilogoConteggio
-              etichetta="Pasti"
-              numeratore={r.pastiSi}
-              denominatore={aggregato ? r.totale : r.pastiApplicabili}
-            />
-          )}
-        </div>
-      </CardRiepilogo>
-    );
+  // Voci di riepilogo di un gruppo di bambini: "Pasti: X/Y" solo per
+  // maestra/admin, con denominatore diverso tra aggregato (tutti i
+  // bambini, specs/12) e singola sezione (esclusi assenti/malati, specs/14).
+  function voci(gruppo: { id: string }[], aggregato: boolean) {
+    return vociRiepilogo(riepilogoGiornata(gruppo.map((b) => statoGiorno(b.id))), { conPasti, aggregato });
   }
+
+  const boxRojac = (capitoloDiCard: boolean) =>
+    conPasti ? (
+      <BoxComunicazioneRojac
+        data={data}
+        ruolo={ruolo}
+        comunicazione={comunicazione}
+        idBambiniInPagina={new Set(idBambini)}
+        capitoloDiCard={capitoloDiCard}
+      />
+    ) : null;
+
+  // Card "Riepilogo giornaliero" (specs/12) con dentro, sotto gli
+  // specchietti, il capitolo di comunicazione a Rojac (specs/10, specs/16).
+  const riepilogoAggregato = bambini.length ? (
+    <CardRiepilogo titolo="Riepilogo giornaliero">
+      <div className="flex flex-wrap gap-2">
+        {voci(bambini, true).map((v) => (
+          <RiepilogoConteggio key={v.etichetta} {...v} />
+        ))}
+      </div>
+      {boxRojac(true)}
+    </CardRiepilogo>
+  ) : (
+    boxRojac(false)
+  );
 
   const gruppi = raggruppaPerSezione(bambini, (b) => b.sezione_id, sezioni);
 
@@ -124,7 +141,21 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
       <div className="space-y-6">
         {gruppi.map((gruppo) => (
           <div key={gruppo.titolo} className="space-y-3">
-            {cardRiepilogo(titoloRiepilogoSezione(gruppo.titolo), gruppo.elementi, false)}
+            {/* Intestazione di sezione: titolo e riassunto testuale, non
+                una card (specs/10). */}
+            <div className="px-1 pt-2">
+              <h2 className="text-base font-semibold text-stone-800 [overflow-wrap:anywhere]">
+                {titoloRiepilogoSezione(gruppo.titolo)}
+              </h2>
+              <p className="mt-0.5 text-sm text-stone-600">
+                {voci(gruppo.elementi, false).map((v, i) => (
+                  <Fragment key={v.etichetta}>
+                    {i > 0 && <span aria-hidden="true"> · </span>}
+                    <span className="whitespace-nowrap">{testoVoceRiepilogo(v)}</span>
+                  </Fragment>
+                ))}
+              </p>
+            </div>
             <ul className="space-y-3">
               {gruppo.elementi.map((bambino) => {
                 const presenza = presenzaPerBambino.get(bambino.id);
@@ -164,17 +195,7 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
       titolo="Presenze e pasti"
       basePath={PERCORSO_GIORNATA}
       data={data}
-      riepilogoAggregato={bambini.length ? cardRiepilogo('Riepilogo giornaliero', bambini, true) : null}
-      extra={
-        conPasti ? (
-          <BoxComunicazioneRojac
-            data={data}
-            ruolo={ruolo}
-            comunicazione={comunicazione}
-            idBambiniInPagina={new Set(idBambini)}
-          />
-        ) : null
-      }
+      riepilogoAggregato={riepilogoAggregato}
       messaggioChiusura={messaggioChiuso}
       editable={editable}
     >

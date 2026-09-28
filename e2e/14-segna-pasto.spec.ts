@@ -40,8 +40,8 @@ test.describe('14 — Segna pasto', () => {
       // Il riepilogo aggregato (in cima) e quello per sezione condividono
       // lo stesso formato: .first() basta a verificare che compaia.
       await expect(page.getByText(/^Pasti: \d+\/\d+$/).first()).toBeVisible();
-      const cardSezione = page.locator('div', { has: page.getByRole('heading', { name: /^Sezione / }) }).last();
-      await expect(cardSezione.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+      const intestazioneSezione = page.getByRole('heading', { name: /^Sezione / }).last().locator('..');
+      await expect(intestazioneSezione.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
     });
 
     test("le allergie sono visibili nell'intestazione della card, indipendentemente dallo stato pasto", async ({

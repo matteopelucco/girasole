@@ -154,6 +154,48 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
+    test('la comunicazione pasti a Rojac sta nella card del riepilogo giornaliero', async ({ page }) => {
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+
+      // Il div più interno che contiene il titolo è la card stessa.
+      const titoloRiepilogo = page.getByRole('heading', { name: 'Riepilogo giornaliero', exact: true });
+      const cardRiepilogo = page.locator('div', { has: titoloRiepilogo }).last();
+      const titoloRojac = page.getByRole('heading', { name: 'Comunicazione pasti a Rojac', exact: true });
+      await expect(titoloRojac).toHaveCount(1);
+      await expect(cardRiepilogo.getByRole('heading', { name: 'Comunicazione pasti a Rojac', exact: true })).toBeVisible();
+
+      // Sotto gli specchietti del riepilogo, non sopra.
+      const yPasti = (await riquadro(cardRiepilogo.getByText(/^Pasti: \d+\/\d+$/))).y;
+      expect((await riquadro(titoloRojac)).y).toBeGreaterThan(yPasti);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test("ogni gruppo di bambini ha un'intestazione di sezione che non è una card", async ({ page }) => {
+      const haBambini = await apriGiornata(page, dataOggiRoma());
+      test.skip(!haBambini, 'nessun bambino visibile per questo account');
+
+      const titoloSezione = page.getByRole('heading', { name: /^Sezione / }).first();
+      await expect(titoloSezione).toBeVisible();
+      const intestazione = titoloSezione.locator('..');
+
+      // Niente bordo, ombra né sfondo da card.
+      const stile = await intestazione.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { bordo: s.borderTopWidth, ombra: s.boxShadow, sfondo: s.backgroundColor };
+      });
+      expect(stile).toEqual({ bordo: '0px', ombra: 'none', sfondo: 'rgba(0, 0, 0, 0)' });
+
+      // Riassunto testuale sotto il titolo.
+      await expect(intestazione.getByText(/^Presenti: \d+\/\d+$/)).toBeVisible();
+      await expect(intestazione.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
+      await expect(intestazione.getByText(/^Post-asilo: \d+$/)).toBeVisible();
+      await expect(intestazione.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
     test("l'intestazione mostra l'avatar del bambino in base al sesso", async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');

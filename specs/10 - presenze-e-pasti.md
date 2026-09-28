@@ -27,12 +27,15 @@ Dall'alto verso il basso:
    già per le vecchie schermate separate.
 2. Riepilogo aggregato di tutte le classi visibili (card "Riepilogo
    giornaliero" — vedi [12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md)).
-3. Box di comunicazione pasti a Rojac (solo maestra e admin — vedi
+   Nella **stessa card**, subito sotto gli specchietti, il capitolo
+   "Comunicazione pasti a Rojac" (solo maestra e admin — vedi
    [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).
-4. Eventuale messaggio di chiusura scolastica o di sola lettura.
-5. I bambini raggruppati per sezione: sopra ciascun gruppo una card
-   "Sezione {nome}" con il riepilogo della sezione, poi una card per
-   bambino.
+3. Eventuale messaggio di chiusura scolastica o di sola lettura.
+4. I bambini raggruppati per sezione: sopra ciascun gruppo
+   un'intestazione di sezione — **non una card**, solo il titolo
+   "Sezione {nome}" e sotto un riassunto testuale su una riga (es.
+   "Presenti: 15/16 · Pre-asilo: 3 · Post-asilo: 1 · Pasti: 15/15") —
+   poi una card per bambino.
 
 Card bambino (disegno rivisto nella issue
 [#106](https://github.com/matteopelucco/girasole/issues/106), su un
@@ -95,6 +98,21 @@ Sì e No
 E vedo, sotto la sezione "Pasto", in fondo alla card, una sezione "Nota"
 con il campo "Nota (opzionale)" e il pulsante "Salva nota"
 E nella card c'è un solo campo "Nota (opzionale)"
+
+## Scenario: la comunicazione pasti a Rojac sta nella card del riepilogo giornaliero
+Dato che sono autenticata come maestra (o admin) e ho aperto "Presenze e
+pasti" per la data odierna, con almeno un bambino visibile
+Quando guardo la parte alta della pagina
+Allora vedo il capitolo "Comunicazione pasti a Rojac" dentro la card
+"Riepilogo giornaliero", sotto gli specchietti del riepilogo, e non in
+una card separata
+
+## Scenario: ogni gruppo di bambini ha un'intestazione di sezione che non è una card
+Dato che ho aperto "Presenze e pasti" e vedo almeno un bambino
+Quando guardo l'inizio di un gruppo di bambini
+Allora vedo il titolo "Sezione {nome}" senza bordo né sfondo da card
+E sotto il titolo un riassunto testuale della sezione ("Presenti: X/Y",
+"Pre-asilo: P", "Post-asilo: Q" e, per maestra e admin, "Pasti: X/Y")
 
 ## Scenario: l'intestazione mostra l'avatar del bambino in base al sesso
 Dato che ho aperto "Presenze e pasti" e vedo tre bambini, una femmina,

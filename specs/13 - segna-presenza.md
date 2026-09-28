@@ -48,13 +48,15 @@ quanto la card.
 
 ## Scenario: riepilogo presenze della classe
 Dato che sono su "Presenze e pasti" per una data
-Allora vedo, sopra l'elenco bambini di ciascuna classe, una card con
-titolo "Sezione {nome classe}", con un riepilogo "Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
+Allora vedo, sopra l'elenco bambini di ciascuna classe, un'intestazione
+(non una card, vedi [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
+con titolo "Sezione {nome classe}" e un riassunto testuale con
+"Presenti: X/Y", dove X è il numero di bambini segnati "presente" per
 quella data e Y il totale dei bambini attivi della classe
-E accanto vedo altri due riepiloghi, "Pre-asilo: P" e "Post-asilo: Q",
+E di seguito altri due conteggi, "Pre-asilo: P" e "Post-asilo: Q",
 dove P e Q sono rispettivamente il numero di bambini con pre-asilo e con
 post-asilo attivi per quella data
-E, per maestra e admin, nella stessa card anche il riepilogo pasti della
+E, per maestra e admin, nello stesso riassunto anche il conteggio pasti della
 sezione (vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md))
 
 ## Scenario: segnare un bambino presente
