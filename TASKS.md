@@ -281,3 +281,12 @@ _(dettagli in archivio)_
       (come gli altri scenari di specs/16): serve una verifica manuale una
       tantum su un giorno già comunicato, incluso il messaggio mostrato
       all'assistente quando il database rifiuta la modifica.
+- [ ] **Follow-up (N7, review rls-guardian, fuori da #100)**:
+      `segnaPreAsilo`/`segnaPostAsilo`/`salvaNotaPresenza` ricevono
+      `rigaAttuale` dal client via `.bind` (falsificabile): dovrebbero
+      rileggere la riga dal DB. Il trigger di 0052 non se ne fida, quindi
+      il blocco regge comunque.
+- [ ] **Follow-up (N8, fuori da #100)**: in produzione Next 14 sostituisce
+      il messaggio degli errori delle server action con un digest, quindi il
+      messaggio tradotto "pasto già comunicato a Rojac" non arriva
+      all'utente. Valutare redirect con avviso in pagina.
