@@ -106,6 +106,20 @@ straordinarie) − previste, la stessa formula usata da report e monte
 ore, quindi i dati storici restano compatibili e monte ore e report
 non cambiano
 
+## Scenario: i dati storici non a quarti d'ora sono mostrati arrotondati e non vengono modificati finché non si salva
+Dato che un giorno salvato in passato ha una differenza (ordinarie +
+straordinarie − previste) che non è multiplo di 0,25 (es. 0,2 o 0,37)
+Quando apro la settimana
+Allora la "Differenza ore" mostrata nel campo è arrotondata al quarto
+d'ora più vicino (0,2 ⇒ 0,25; 0,37 ⇒ 0,25; a metà strada, come 0,125,
+si arrotonda per eccesso, verso +∞), e il "Totale ore erogate" e il
+colore della card sono calcolati sul valore arrotondato
+E l'arrotondamento è solo in lettura: nessuna migration e nessuna
+modifica ai dati salvati, che cambiano solo se salvo la card (così il
+salvataggio non è rifiutato per i dati storici)
+E monte ore, report e PDF continuano a usare i dati salvati così
+come sono, e la validazione lato server resta rigida sui valori inviati
+
 ## Scenario: salvare le ore della settimana
 Quando modifico le ore di uno o più giorni e premo "Salva modifiche"
 Allora i valori inseriti sono salvati e restano tali riaprendo la pagina

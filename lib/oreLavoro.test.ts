@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   deltaGiornoOreLavoro,
+  arrotondaAQuartiDora,
   differenzaGiornoOreLavoro,
   oreDaDifferenza,
   sonoQuartiDora,
@@ -387,5 +388,39 @@ describe('settimanaOreLavoroRichiesta', () => {
   it('una stringa non valida viene riportata alla settimana corrente, senza errori', () => {
     expect(settimanaOreLavoroRichiesta('non-una-data', OGGI)).toBe('2026-08-31');
     expect(settimanaOreLavoroRichiesta('', OGGI)).toBe('2026-08-31');
+  });
+});
+
+describe('arrotondaAQuartiDora', () => {
+  it('lascia invariati i valori già a quarti d\'ora', () => {
+    for (const v of [0, 0.25, 0.5, 0.75, 1, 2.5, -0.25, -1.25, 4.75]) {
+      expect(arrotondaAQuartiDora(v)).toBe(v);
+    }
+  });
+  it('arrotonda al quarto d\'ora più vicino', () => {
+    expect(arrotondaAQuartiDora(0.1)).toBe(0);
+    expect(arrotondaAQuartiDora(0.2)).toBe(0.25);
+    expect(arrotondaAQuartiDora(0.37)).toBe(0.25);
+    expect(arrotondaAQuartiDora(0.4)).toBe(0.5);
+  });
+  it('a metà strada arrotonda per eccesso', () => {
+    expect(arrotondaAQuartiDora(0.125)).toBe(0.25);
+    expect(arrotondaAQuartiDora(0.375)).toBe(0.5);
+  });
+  it('negativi: metà strada verso +infinito, senza -0', () => {
+    expect(arrotondaAQuartiDora(-0.2)).toBe(-0.25);
+    expect(arrotondaAQuartiDora(-0.125)).toBe(0);
+    expect(Object.is(arrotondaAQuartiDora(-0.125), -0)).toBe(false);
+    expect(Object.is(arrotondaAQuartiDora(-0.1), -0)).toBe(false);
+    expect(arrotondaAQuartiDora(-0.375)).toBe(-0.25);
+  });
+  it('valori grandi', () => {
+    expect(arrotondaAQuartiDora(1234.37)).toBe(1234.25);
+    expect(arrotondaAQuartiDora(-1234.4)).toBe(-1234.5);
+  });
+  it('il risultato è sempre accettato dalla validazione (sonoQuartiDora)', () => {
+    for (const v of [0.1, 0.125, 0.2, 0.37, 0.4, -0.2, -0.125, 3.3, 1e6 + 0.13]) {
+      expect(sonoQuartiDora(arrotondaAQuartiDora(v))).toBe(true);
+    }
   });
 });
