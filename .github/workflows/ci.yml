@@ -101,6 +101,12 @@ name: CI
 #      `supabase/seed.sql`, così ogni run e2e parte da schema/seed noti
 #      (compromesso accettato da Matteo, ADR-0006). Richiede il secret
 #      `SUPABASE_ACCESS_TOKEN`.
+#   6b. grant-check (A26, issue #28) — `scripts/grant-check.mts` confronta le
+#      tabelle usate nel codice (per ruolo `authenticated`/`service_role`)
+#      con `information_schema.role_table_grants` del DB di test appena
+#      resettato (sola lettura, Management API, stesso token del passo 6) e
+#      fallisce con nome di tabella/ruolo/privilegio se manca un GRANT.
+#      Gira prima delle e2e: un "permission denied" si vede in secondi.
 #   7. account di test E2E_* (A24) — il reset del passo 6 azzera anche
 #      `auth.users`: `scripts/crea-utenti-e2e.mjs` li ricrea con la Admin
 #      API di Supabase (service_role key), stesse email/password dei
@@ -256,6 +262,14 @@ jobs:
         env:
           # Token di accesso personale Supabase (Management API), non la
           # password del database: letto automaticamente dal CLI.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: 6b. Grant-check (A26, issue #28)
+        run: node --no-warnings --experimental-strip-types scripts/grant-check.mts
+        env:
+          # Solo lettura di information_schema sul progetto di TEST: il ref
+          # viene dalla variabile di repo, mai hardcoded.
+          SUPABASE_TEST_PROJECT_REF: ${{ vars.SUPABASE_TEST_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)

@@ -8,6 +8,7 @@ export type SezioneAttiva = { id: string; nome: string };
 // anche le classi disattivate — le pagine operative (Presenze/Pasti/
 // promemoria) non ne hanno bisogno, solo l'anagrafica classi
 // (specs/51 - report.md) vuole vederle tutte.
+// grant-check: authenticated
 async function sezioniPerRuolo(
   supabase: SupabaseClient,
   userId: string,

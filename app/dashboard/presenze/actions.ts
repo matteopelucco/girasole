@@ -12,6 +12,7 @@ import {
 } from '@/lib/presenza';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+// grant-check: authenticated
 async function upsertPresenza(
   supabase: SupabaseClient,
   userId: string,
