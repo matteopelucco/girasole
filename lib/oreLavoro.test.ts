@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   deltaGiornoOreLavoro,
+  deltaGiornoPerStatoOreLavoro,
+  ETICHETTE_STATO_ORE_LAVORO,
+  isStatoNeutroOreLavoro,
+  statoPredefinitoGiornoOreLavoro,
   arrotondaAQuartiDora,
   descrizioneDifferenzaOre,
   totaleOreErogate,
@@ -453,5 +457,76 @@ describe('totaleOreErogate', () => {
   });
   it('ripulisce i residui della virgola mobile', () => {
     expect(totaleOreErogate(3.3, 0.2)).toBe(3.5);
+  });
+});
+
+// Chiusura e Ferie (specs/18): stati "di vacanza", neutri per il calcolo.
+describe('Chiusura e Ferie', () => {
+  const chiusure: GiornoChiusura[] = [
+    { id: '1', dataInizio: '2026-08-10', dataFine: '2026-08-31', nota: 'Chiusura Estiva 2026' },
+  ];
+
+  it('hanno un\'etichetta italiana nel selettore', () => {
+    expect(ETICHETTE_STATO_ORE_LAVORO.chiusura).toBe('Chiusura');
+    expect(ETICHETTE_STATO_ORE_LAVORO.ferie).toBe('Ferie');
+  });
+
+  it('solo chiusura e ferie sono stati neutri', () => {
+    expect(isStatoNeutroOreLavoro('chiusura')).toBe(true);
+    expect(isStatoNeutroOreLavoro('ferie')).toBe(true);
+    expect(isStatoNeutroOreLavoro('lavorativo')).toBe(false);
+    expect(isStatoNeutroOreLavoro('malattia')).toBe(false);
+    expect(isStatoNeutroOreLavoro('assenza')).toBe(false);
+  });
+
+  it('lo stato predefinito di un giorno di chiusura scolastica è "chiusura"', () => {
+    expect(statoPredefinitoGiornoOreLavoro('2026-08-31', chiusure)).toBe('chiusura'); // in un intervallo
+    expect(statoPredefinitoGiornoOreLavoro('2026-09-05', [])).toBe('chiusura'); // sabato
+    expect(statoPredefinitoGiornoOreLavoro('2026-09-06', [])).toBe('chiusura'); // domenica
+  });
+
+  it('lo stato predefinito di un giorno normale è "lavorativo"', () => {
+    expect(statoPredefinitoGiornoOreLavoro('2026-09-07', chiusure)).toBe('lavorativo');
+  });
+
+  it.each(['chiusura', 'ferie'] as const)('%s è valido senza campi, con ore a zero', (stato) => {
+    const esito = validaGiornoOreLavoro(inputBase({ stato }));
+    expect(esito).toEqual({
+      ok: true,
+      giorno: {
+        data: '2026-08-31',
+        stato,
+        oreOrdinarie: 0,
+        oreStraordinarie: 0,
+        motivoStraordinario: null,
+        codiceMalattia: null,
+        notaAssenza: null,
+      },
+    });
+  });
+
+  it.each(['chiusura', 'ferie'] as const)('%s ignora differenza, motivo, codice e nota inviati', (stato) => {
+    const esito = validaGiornoOreLavoro(
+      inputBase({ stato, differenzaOre: 3, motivo: 'x', codiceMalattia: 'ABC', notaAssenza: 'y' })
+    );
+    expect(esito.ok).toBe(true);
+    if (esito.ok) {
+      expect(esito.giorno.oreOrdinarie).toBe(0);
+      expect(esito.giorno.oreStraordinarie).toBe(0);
+      expect(esito.giorno.motivoStraordinario).toBeNull();
+      expect(esito.giorno.codiceMalattia).toBeNull();
+      expect(esito.giorno.notaAssenza).toBeNull();
+    }
+  });
+
+  it('il delta di un giorno neutro è sempre 0, anche con un profilo che prevede ore', () => {
+    expect(deltaGiornoPerStatoOreLavoro('chiusura', 7, 0, 0)).toBe(0);
+    expect(deltaGiornoPerStatoOreLavoro('ferie', 7, 0, 0)).toBe(0);
+  });
+
+  it('il delta degli altri stati resta quello di deltaGiornoOreLavoro', () => {
+    expect(deltaGiornoPerStatoOreLavoro('lavorativo', 7, 7, 1)).toBe(1);
+    expect(deltaGiornoPerStatoOreLavoro('malattia', 7, 0, 0)).toBe(-7);
+    expect(deltaGiornoPerStatoOreLavoro('assenza', 7, 0, 0)).toBe(-7);
   });
 });

@@ -47,8 +47,8 @@ Dato che confermo (o l'admin conferma per me) una settimana di ore di
 lavoro (vedi [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md))
 Quando la conferma va a buon fine
 Allora la settimana registra, per i soli giorni in stato "lavorativo"
-(i giorni "malattia"/"assenza" sono esclusi, non contribuiscono a
-nessuno dei valori seguenti):
+(i giorni "malattia", "assenza", "chiusura" e "ferie" sono esclusi, non
+contribuiscono a nessuno dei valori seguenti):
 - **ore dovute** = somma delle ore previste dal profilo orario per quei
   giorni (0 se non ho un profilo orario assegnato)
 - **ore ordinarie erogate** e **ore straordinarie erogate** = quanto

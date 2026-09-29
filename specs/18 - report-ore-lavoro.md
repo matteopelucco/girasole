@@ -183,7 +183,8 @@ Allora la settimana risulta confermata, con la data/ora della conferma
 mostrate a schermo
 E ogni giorno non ancora salvato esplicitamente viene comunque
 registrato, con le ore precaricate dal profilo orario (o 0 se nessun
-profilo è assegnato)
+profilo è assegnato), oppure nello stato "Chiusura" se è un giorno di
+chiusura scolastica
 
 ## Scenario: una settimana confermata non è più modificabile dal personale
 Dato che la settimana corrente è già stata confermata
@@ -201,16 +202,42 @@ quando la differenza è diversa da 0; l'intestazione e le viste
 "Ordinarie / Straordinarie" per giorno. Nessun dato, calcolo o
 validazione cambia: solo cosa si legge
 
-## Scenario: il personale può registrare ore anche nei giorni di chiusura scolastica
-Dato che un giorno della settimana corrente è un giorno di chiusura
-scolastica (weekend, o un intervallo registrato dall'admin — vedi
-[53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
+## Scenario: un giorno di chiusura scolastica è "Chiusura" per impostazione predefinita
+Dato che un giorno della settimana è un giorno di chiusura scolastica
+(weekend, o un intervallo registrato dall'admin — vedi
+[53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)) e non
+è ancora stato salvato
 Quando apro "Ore di lavoro"
-Allora quel giorno mostra comunque un'informazione di chiusura, ma resta
-pienamente modificabile: posso registrare ore ordinarie/straordinarie o
-malattia/assenza esattamente come per un giorno normale — il personale
-può lavorare (es. pulizie, attività amministrative, formazione) anche
-quando l'asilo non è operativo
+Allora quel giorno è nello stato "Chiusura", con l'informazione di
+chiusura, e non mostra campi da compilare (né ore previste, né
+differenza, né motivo)
+E il giorno è "di vacanza": non è considerato nel calcolo delle ore
+dovute e del monte ore, come se avessi fatto tutto quello che dovevo
+
+## Scenario: il personale può registrare ore anche nei giorni di chiusura scolastica
+Dato che un giorno di chiusura scolastica è nello stato "Chiusura"
+Quando scelgo lo stato "Lavorativo" per quel giorno e premo "Salva
+modifiche"
+Allora quel giorno diventa modificabile come un giorno normale: posso
+registrare la differenza ore (con motivo) o malattia/assenza — il
+personale può lavorare (es. pulizie, attività amministrative,
+formazione) anche quando l'asilo non è operativo
+E lo stato scelto resta salvato: non torna a "Chiusura" al
+ricaricamento
+
+## Scenario: segnare un giorno di ferie
+Quando per un giorno qualunque scelgo lo stato "Ferie" e premo "Salva
+modifiche"
+Allora quel giorno risulta segnato come ferie, senza campi da compilare
+E non è considerato nel calcolo delle ore dovute e del monte ore (stesso
+comportamento di "Chiusura"): le ore dovute della settimana e la
+variazione del monte ore non lo contano né in più né in meno
+
+## Scenario: Chiusura e Ferie non alterano il monte ore
+Dato che in una settimana ho un giorno in stato "Chiusura" o "Ferie"
+Quando guardo il riepilogo della settimana e la variazione del monte ore
+Allora quel giorno non aggiunge né toglie ore: né dovute, né erogate,
+né differenza, come se fosse stato lavorato esattamente come previsto
 
 ## Scenario: navigare a una settimana passata
 Dato che sono su "Ore di lavoro" (settimana corrente)
@@ -323,13 +350,22 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   un giorno di chiusura registrato dall'admin come "non scrivibili" — il
   personale può lavorare anche quando l'asilo non è operativo (es.
   pulizie, attività amministrative, formazione). Un giorno di chiusura
-  mostra comunque l'informazione (stessa provenienza dati di specs/53),
-  a puro scopo informativo, senza bloccare nulla.
-- Un giorno è in uno di tre stati, esclusivi: **lavorativo** (ore
+  mostra l'informazione (stessa provenienza dati di specs/53) ed è per
+  impostazione predefinita nello stato "Chiusura", modificabile in
+  "Lavorativo": nulla è mai bloccato.
+- Un giorno è in uno di cinque stati, esclusivi: **lavorativo** (ore
   ordinarie/straordinarie), **malattia** (richiede il codice ricevuto
-  dal medico) o **assenza** (richiede una nota giustificativa). Passare
-  a malattia o assenza azzera le ore ordinarie/straordinarie di quel
-  giorno; passare a lavorativo azzera codice malattia/nota assenza.
+  dal medico), **assenza** (richiede una nota giustificativa),
+  **chiusura** o **ferie**. "Chiusura" è lo stato predefinito di un
+  giorno di chiusura scolastica non ancora salvato (specs/53), l'utente
+  può cambiarlo; "Ferie" lo sceglie l'utente su qualunque giorno. Le
+  due voci si comportano allo stesso modo: nessun campo da compilare,
+  nessuna ora registrata, e il giorno è escluso dal calcolo di ore
+  dovute, differenza e monte ore (come se avessi fatto tutto quello
+  che dovevo; a differenza di malattia/assenza, che nei report
+  risultano in meno del previsto). Passare a uno stato diverso da
+  lavorativo azzera le ore ordinarie/straordinarie di quel giorno;
+  passare a lavorativo azzera codice malattia/nota assenza.
 - Le ore ordinarie di un giorno lavorativo sono quelle previste dal
   profilo orario assegnato all'utente (campo del giorno della settimana
   corrispondente, specs/54; 0 senza profilo) e **non sono modificabili**.
