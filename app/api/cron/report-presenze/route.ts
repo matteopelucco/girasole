@@ -73,7 +73,8 @@ async function allegatoPeriodico(
   inizio: string,
   fine: string,
   titolo: string,
-  sottotitolo: string
+  sottotitolo: string,
+  generatoIl: Date
 ): Promise<AllegatoEmail> {
   const [sezioniDati, comunicazioni] = await Promise.all([
     aggregaReportPeriodoTutteLeClassi(inizio, fine),
@@ -83,12 +84,13 @@ async function allegatoPeriodico(
     titolo,
     sottotitolo,
     sezioniPdf(sezioniDati, ['Bambino', 'Presenze', 'Pre-asilo', 'Post-asilo', 'Pasti']),
+    generatoIl,
     comunicazionePastiPdf(comunicazioni)
   );
   return { filename: `report-${tipo}-${fine}.pdf`, content: pdf };
 }
 
-async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
+async function allegatoGiornaliero(data: string, generatoIl: Date): Promise<AllegatoEmail> {
   const [sezioniDati, comunicazioni] = await Promise.all([
     aggregaReportPeriodoTutteLeClassi(data, data),
     recuperaComunicazioniPastiPeriodo(data, data),
@@ -97,6 +99,7 @@ async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
     'Report giornaliero',
     formattaDataItaliana(data),
     sezioniPdf(sezioniDati, ['Bambino', 'Presente', 'Pre-asilo', 'Post-asilo', 'Pasto']),
+    generatoIl,
     comunicazionePastiPdf(comunicazioni)
   );
   return { filename: `report-giornaliero-${data}.pdf`, content: pdf };
@@ -106,9 +109,9 @@ async function allegatoGiornaliero(data: string): Promise<AllegatoEmail> {
 // "PDF mensile delle ore del personale in allegato"; specs/19 -
 // monte-ore.md): allegato insieme al report mensile di presenze/pasti,
 // stessa idempotenza (nessun tracciamento separato — vedi Regole).
-async function allegatoOreLavoroMensile(mese: string): Promise<AllegatoEmail> {
+async function allegatoOreLavoroMensile(mese: string, generatoIl: Date): Promise<AllegatoEmail> {
   const persone = await personePdfOreLavoroMensile(mese);
-  const pdf = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone);
+  const pdf = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
   return { filename: `ore-lavoro-${mese}.pdf`, content: pdf };
 }
 
@@ -126,6 +129,8 @@ export async function GET(request: Request) {
   // Il cron gira poco dopo la mezzanotte Rome: oggi() è già il nuovo
   // giorno, quindi il giorno da riepilogare è quello appena concluso.
   const dataReport = sommaGiorni(oggi(), -1);
+  // Istante di generazione, stampato in testa a ogni PDF (specs/52).
+  const generatoIl = new Date();
   const supabase = createAdminClient();
 
   const risultati: Record<TipoReportNotturno, 'inviato' | 'gia_inviato' | 'saltato'> = {
@@ -148,7 +153,7 @@ export async function GET(request: Request) {
   if (giornalieroInviato) {
     risultati.giornaliero = 'gia_inviato';
   } else {
-    daPreparare.push({ tipo: 'giornaliero', genera: async () => [await allegatoGiornaliero(dataReport)] });
+    daPreparare.push({ tipo: 'giornaliero', genera: async () => [await allegatoGiornaliero(dataReport, generatoIl)] });
   }
 
   const modalita = modalitaPeriodici();
@@ -172,7 +177,8 @@ export async function GET(request: Request) {
             inizio,
             dataReport,
             'Report settimanale',
-            formattaIntervalloItaliano(inizio, dataReport)
+            formattaIntervalloItaliano(inizio, dataReport),
+            generatoIl
           ),
         ],
       });
@@ -194,8 +200,8 @@ export async function GET(request: Request) {
       daPreparare.push({
         tipo: 'mensile',
         genera: async () => [
-          await allegatoPeriodico('mensile', inizio, dataReport, 'Report mensile', formattaMeseItaliano(mese)),
-          await allegatoOreLavoroMensile(mese),
+          await allegatoPeriodico('mensile', inizio, dataReport, 'Report mensile', formattaMeseItaliano(mese), generatoIl),
+          await allegatoOreLavoroMensile(mese, generatoIl),
         ],
       });
     }

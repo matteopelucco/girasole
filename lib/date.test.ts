@@ -5,6 +5,7 @@ import {
   formattaDataCorta,
   formattaDataItaliana,
   formattaDataOraItaliana,
+  formattaGeneratoIl,
   formattaIntervalloItaliano,
   formattaMeseItaliano,
   giorniInRange,
@@ -251,6 +252,30 @@ describe('formattaDataOraItaliana', () => {
 
   it('aggiunge lo zero iniziale a giorno/mese/ora/minuti a una cifra', () => {
     expect(formattaDataOraItaliana('2026-03-05T07:09:00Z')).toBe('05/03/2026_08:09');
+  });
+});
+
+describe('formattaGeneratoIl', () => {
+  it('formatta data e ora in Europe/Rome con la dicitura "Generato il ... alle ..."', () => {
+    expect(formattaGeneratoIl(new Date('2026-09-29T06:15:00Z'))).toBe('Generato il 29/09/2026 alle 08:15');
+  });
+
+  it('usa l\'ora solare (CET, UTC+1) in inverno', () => {
+    expect(formattaGeneratoIl(new Date('2026-01-15T10:05:00Z'))).toBe('Generato il 15/01/2026 alle 11:05');
+  });
+
+  it('passaggio a ora legale (29/03/2026): 00:59 UTC è ancora CET, 01:00 UTC è CEST', () => {
+    expect(formattaGeneratoIl(new Date('2026-03-29T00:59:00Z'))).toBe('Generato il 29/03/2026 alle 01:59');
+    expect(formattaGeneratoIl(new Date('2026-03-29T01:00:00Z'))).toBe('Generato il 29/03/2026 alle 03:00');
+  });
+
+  it('passaggio a ora solare (25/10/2026): 00:59 UTC è ancora CEST, 01:00 UTC è CET', () => {
+    expect(formattaGeneratoIl(new Date('2026-10-25T00:59:00Z'))).toBe('Generato il 25/10/2026 alle 02:59');
+    expect(formattaGeneratoIl(new Date('2026-10-25T01:00:00Z'))).toBe('Generato il 25/10/2026 alle 02:00');
+  });
+
+  it('a cavallo della mezzanotte il giorno è quello di Roma, non UTC', () => {
+    expect(formattaGeneratoIl(new Date('2026-08-26T22:30:00Z'))).toBe('Generato il 27/08/2026 alle 00:30');
   });
 });
 

@@ -154,6 +154,14 @@ export function formattaDataOraItaliana(istante: string | Date): string {
   return `${data}_${ora}`;
 }
 
+// Riga "Generato il gg/mm/aaaa alle hh:mm" (fuso Europe/Rome) stampata in
+// testa a ogni PDF (specs/52). Riceve l'istante come parametro: niente
+// new Date() nascosto, così è testabile (anche ai cambi ora legale/solare).
+export function formattaGeneratoIl(istante: Date): string {
+  const [data, ora] = formattaDataOraItaliana(istante).split('_');
+  return `Generato il ${data} alle ${ora}`;
+}
+
 // Giorno della settimana in formato ISO (1 = lunedì ... 7 = domenica),
 // usato da isWeekend e dal report ore di lavoro (specs/18 -
 // report-ore-lavoro.md) per sapere quale campo ore_* del profilo orario
