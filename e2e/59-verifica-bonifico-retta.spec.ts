@@ -117,7 +117,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     await popup.getByLabel('Importo ricevuto (€)').fill('100');
     // Nota lasciata vuota: la validazione JS (VerificaBonifico.tsx, non
     // più un <form required> dopo il fix del bug "spagina" — vedi
-    // TASKS.md) blocca l'invio, nessuna richiesta arriva al server.
+    // docs/tasks-archivio.md) blocca l'invio, nessuna richiesta arriva al server.
     await popup.getByRole('button', { name: 'Conferma' }).click();
     await expect(rigaInviata.getByText('Bonifico ricevuto (importo diverso)', { exact: false })).toHaveCount(0);
   });

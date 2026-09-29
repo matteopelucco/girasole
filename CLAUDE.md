@@ -33,8 +33,8 @@ lo richiede.
 
 ## Workflow
 - Trunk-based, commit atomici in italiano.
-- `TASKS.md` (voci aperte): aggiornare prima di ogni feature. Storico in
-  `docs/tasks-archivio.md`.
+- Backlog e storia sono issue e PR; `docs/tasks-archivio.md` è solo
+  storico, da leggere se serve.
 - Requisiti: `specs/`, numerati per scenario. Aggiornare `00 - overview.md`
   se nuovi.
 - Bump versione in `package.json`/`package-lock.json` coerenti prima di

@@ -67,5 +67,5 @@ Non ci riesce. Il sistema è sufficientemente sicuro per evitare di fare enumera
   (stesso motivo); se configurata, un token mancante/non valido/con
   `action` diverso da `recupera-password` fa fallire silenziosamente la
   richiesta (stesso messaggio generico di sempre, nessun errore dedicato
-  — coerente con l'anti-enumeration). Vedi TASKS.md per la procedura di
-  configurazione dei secret in locale e su Vercel.
+  — coerente con l'anti-enumeration). I secret si configurano in locale
+  (`.env.local`) e su Vercel.

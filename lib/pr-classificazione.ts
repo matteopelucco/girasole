@@ -37,7 +37,7 @@ export interface FileCambiatoPR {
 
 const PREFISSO_DOCS = 'docs/';
 const PREFISSO_SPECS = 'specs/';
-const FILE_NON_CODICE_ESATTI = new Set(['TASKS.md', 'README.md', 'CHANGELOG.md']);
+const FILE_NON_CODICE_ESATTI = new Set(['README.md', 'CHANGELOG.md']);
 const FILE_VERSIONAMENTO = new Set(['package.json', 'package-lock.json']);
 
 function normalizzaPercorso(percorso: string): string {

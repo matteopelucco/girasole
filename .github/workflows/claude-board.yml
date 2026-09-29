@@ -16,7 +16,7 @@ name: Claude Board
 #   2) label create con scripts/setup-board-labels.sh
 #   3) i file .claude/agents/*.md committati nel repo
 #
-# Issue #98 — PR "non codice" (solo docs/**, TASKS.md, README.md,
+# Issue #98 — PR "non codice" (solo docs/**, README.md,
 # CHANGELOG.md, o un bump puro di versione; NON include specs/**, a
 # differenza di ci.yml — vedi sotto): il job `review` salta il solo step
 # `claude-code-action` (non l'intero job: `jobs.<id>.if` non può eseguire
@@ -115,7 +115,7 @@ jobs:
 
       # Il diff si prepara qui, gratis, invece di farlo esplorare al modello
       # turno dopo turno. Esclusi i file enormi o generati che non servono
-      # alla review e costano token: TASKS.md, l'archivio, il lockfile.
+      # alla review e costano token: l'archivio, il lockfile.
       # Saltato sulle PR "non codice" (issue #98): claude-code-action, lo
       # step che lo consuma, è a sua volta saltato subito sotto.
       - name: Prepara il diff della PR
@@ -123,13 +123,13 @@ jobs:
         run: |
           set -eu
           mkdir -p .review
-          escludi=(':(exclude)TASKS.md' ':(exclude)docs/tasks-archivio.md' ':(exclude)package-lock.json')
+          escludi=(':(exclude)docs/tasks-archivio.md' ':(exclude)package-lock.json')
           base="origin/${{ github.base_ref }}"
           {
             echo "# File modificati"
             git diff --stat "$base"...HEAD
             echo
-            echo "# Diff (senza TASKS.md, archivio e package-lock.json)"
+            echo "# Diff (senza archivio e package-lock.json)"
             git diff "$base"...HEAD -- . "${escludi[@]}"
           } > .review/diff.txt
           wc -c .review/diff.txt

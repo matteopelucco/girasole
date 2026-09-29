@@ -19,7 +19,7 @@ Next.js 14 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Verc
 4. `npm run dev` e apri http://localhost:3000
 
 Vedi `specs/` per i requisiti di questa fase (un file per scenario) e
-`TASKS.md` per lo stato di avanzamento. `CLAUDE.md` contiene il contesto
+le issue e le PR per lo stato di avanzamento. `CLAUDE.md` contiene il contesto
 per lo sviluppo con Claude Code.
 
 ## Test end-to-end
