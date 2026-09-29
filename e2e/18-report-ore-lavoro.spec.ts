@@ -287,7 +287,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // alterano il monte ore": giovedì (7h previste) in Ferie non ha
         // campi e toglie 7h dalle ore dovute della settimana.
         const oreDovuteLette = async () =>
-          Number(((await page.getByText('Ore dovute:', { exact: false }).textContent()) ?? '').match(/([d.]+)h/)![1]);
+          Number(((await page.getByText('Ore dovute:', { exact: false }).textContent()) ?? '').match(/(\d+(?:\.\d+)?)h/)![1]);
         const dovutePrima = await oreDovuteLette();
         await page.getByLabel('Stato Giovedì').selectOption('ferie');
         await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
@@ -569,7 +569,8 @@ test.describe('18 — Report ore di lavoro', () => {
         if (!giaConfermata) {
           await expect(oreOrdinarieGiorno(paginaMaestra, 0)).toHaveText('6h');
           await expect(oreOrdinarieGiorno(paginaMaestra, 4)).toHaveText('3h');
-          await expect(oreOrdinarieGiorno(paginaMaestra, 5)).toHaveText('0h');
+          // Sabato (chiusura implicita) parte in Chiusura, senza ore previste da mostrare.
+          await expect(paginaMaestra.getByLabel('Stato Sabato')).toHaveValue('chiusura');
         }
         await contestoMaestra.close();
       } finally {
