@@ -33,3 +33,7 @@ la CI.
 - Se in futuro più persone sviluppano in parallelo, questa decisione
   andrebbe rivista (rischio di reset che si sovrappongono a sessioni di
   lavoro locale altrui) — non è il caso oggi con un solo sviluppatore.
+- Aggiornamento (2026-09-29, issue #105): le CI di PR diverse non si
+  sovrappongono più sul DB, le e2e sono in coda globale — vedi
+  [ADR-0008](0008-coda-globale-e2e-db-di-test.md). Resta possibile la
+  sovrapposizione tra una CI e una sessione locale.
