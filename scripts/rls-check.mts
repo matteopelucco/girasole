@@ -10,7 +10,7 @@
 // Uso (CI, dopo il reset del DB di test):
 //   node --experimental-strip-types scripts/rls-check.mts
 
-import { QUERY_RLS, formattaSenzaRls, guardiaTabelle, trovaSenzaRls, type TabellaRls } from '../lib/rlsCheck.ts';
+import { QUERY_RLS, formattaSenzaRls, guardiaTabelle, normalizzaRighe, trovaSenzaRls } from '../lib/rlsCheck.ts';
 
 const ref = process.env.SUPABASE_TEST_PROJECT_REF;
 const token = process.env.SUPABASE_ACCESS_TOKEN;
@@ -28,13 +28,12 @@ if (!res.ok) {
   console.error(`Query RLS fallita: HTTP ${res.status} ${await res.text()}`);
   process.exit(2);
 }
-const righe = (await res.json()) as { tabella: string; rls: boolean; grantee: string[] | string }[];
-const tabelle: TabellaRls[] = righe.map((r) => ({
-  tabella: r.tabella,
-  rls: r.rls === true,
-  // Postgres array: normalmente già array JSON; tollera la forma testuale "{a,b}".
-  grantee: Array.isArray(r.grantee) ? r.grantee : String(r.grantee).replace(/[{}]/g, '').split(',').filter(Boolean),
-}));
+const normalizzato = normalizzaRighe(await res.json());
+if ('errore' in normalizzato) {
+  console.error(normalizzato.errore);
+  process.exit(2);
+}
+const { tabelle } = normalizzato;
 
 const guardia = guardiaTabelle(tabelle);
 if (guardia) {
