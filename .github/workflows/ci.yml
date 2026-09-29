@@ -2,27 +2,86 @@ name: CI
 
 # Unico workflow di verifica su ogni pull request verso main (A12,
 # docs/programma-attivita.md). Sostituisce i vecchi analisi-statica.yml e
-# playwright.yml: un solo job sequenziale, così c'è un solo check da
-# rendere obbligatorio nella protezione di main (A10) e le dipendenze si
-# installano una volta sola.
+# playwright.yml. Tre job (issue #105), un solo check obbligatorio:
+#
+#   statico ──► e2e ──► verifica
+#      └────────────────────┘
+#
+#   - `statico`  passi 0-5 (classificazione, tsc, lint, jscpd, vitest,
+#                next build). Nessun secret sensibile, nessun accesso al DB:
+#                gira in parallelo tra PR diverse.
+#   - `e2e`      passi 6-8 (reset del DB di test, account E2E_*, Playwright)
+#                più una seconda `next build` (serve a `next start`, vedi
+#                playwright.config.ts; ~35 s, più semplice e robusto che
+#                passare .next tra job come artifact). Gira in coda
+#                GLOBALE, una PR alla volta (vedi "Coda del DB" sotto).
+#                Non parte proprio sulle PR "non codice" e di Dependabot.
+#   - `verifica` gate finale, pochi secondi: è il check richiesto dal
+#                ruleset di main ("CI / verifica", stesso nome di quando il
+#                workflow aveva un solo job — il ruleset non va toccato).
+#                Gira sempre (`if: always()`) e fallisce se `statico` non è
+#                verde, o se `e2e` doveva girare e non è verde (fallito o
+#                cancellato). Passa se `e2e` è stato saltato di proposito.
+#                `always()` e non `!cancelled()`: un job richiesto
+#                `skipped` conta come verde per il ruleset, quindi con
+#                `!cancelled()` un run annullato a mano lascerebbe la PR
+#                mergiabile senza CI. Il job non fa checkout né install,
+#                quindi non rischia di restare appeso.
+#
+# Coda del DB (issue #105) — il DB di test `girasole_dev` è unico e
+# condiviso (ADR-0006, ADR-0008): il 28/09 il reset della CI di una PR è
+# caduto a metà della e2e di un'altra, 15 falsi rossi. Il job `e2e` ha
+# quindi un gruppo di concorrenza globale `db-test-girasole-dev` con
+# `cancel-in-progress: false` (chi sta usando il DB finisce) e
+# `queue: max` (fino a 100 job in attesa, in ordine di arrivo in coda).
+# Senza `queue: max` GitHub tiene UN solo job in attesa per gruppo: il
+# terzo che arriva cancella quello in attesa. Se comunque un job `e2e` in
+# coda viene cancellato (coda piena, annullo a mano), `verifica` diventa
+# rosso: si rilancia con "Re-run failed jobs" dalla pagina del run, o
+# `gh run rerun <run-id> --failed` (rilancia i job falliti/cancellati e
+# quelli che ne dipendono, cioè anche `verifica`).
+# Il tempo in attesa nel gruppo non conta nel `timeout-minutes` del job:
+# per la documentazione di GitHub il timeout vale per il tempo in cui il
+# job "gira", e un job in coda di concurrency è `pending`, non ancora
+# assegnato a un runner. Il timeout di `e2e` (25 min) copre quindi solo
+# l'esecuzione reale (~11 min oggi).
+# La coda vale solo tra run di CI: una sessione locale di Matteo sullo
+# stesso DB non ne fa parte (compromesso di ADR-0006, invariato).
+#
+# Due livelli di concurrency, che non si pestano i piedi perché hanno
+# gruppi diversi:
+#   - workflow `ci-<numero PR>`, `cancel-in-progress: true`: un nuovo push
+#     sulla stessa PR cancella l'intero run precedente, compreso il suo
+#     job `e2e` se è in coda (libera il posto) o se sta girando (il DB
+#     resta a metà, ma il prossimo `e2e` in coda parte comunque da un
+#     reset). Il `verifica` del run cancellato diventa rosso sul vecchio
+#     commit: irrilevante, il ruleset guarda il check del commit di testa.
+#   - job `e2e` `db-test-girasole-dev`: serializza solo il job che usa il
+#     DB. Il gruppo è unico per tutto il repo: nessun altro workflow deve
+#     usare lo stesso nome, o cancellerebbe/accoderebbe questi job.
 #
 # Issue #98 — PR "non codice" (solo docs/**, specs/**, TASKS.md, README.md,
 # CHANGELOG.md, o un bump puro di versione in package.json/package-lock.json):
-# il job `verifica` parte SEMPRE ed è SEMPRE lo stesso check obbligatorio nel
-# ruleset di main (niente `paths`/`paths-ignore` su questo workflow: quello
-# renderebbe il check "non eseguito" invece che "verde" su quelle PR, e un
-# check obbligatorio mai eseguito blocca il merge). Un primo step
-# (`scripts/classifica-pr.mts`, logica pura in `lib/pr-classificazione.ts`)
-# classifica la PR ed espone `is-non-codice-ci`: gli step pesanti (5-8,
-# install Chromium, upload report) si saltano con un `if:` su
-# quell'output — restano `skipped` nel log, il job resta verde. I passi
-# 1-4 (tsc/lint/jscpd/vitest) restano SEMPRE attivi anche su queste PR:
-# costano pochi secondi in totale (il triage li considerava "da saltare",
-# ma sono anche l'unico modo per accorgersi che un CHANGELOG.md o un
-# TASKS.md rotto non è mai "solo doc" per definizione se contenesse per
-# assurdo markup non valido; soprattutto, saltarli non fa risparmiare
-# quasi nulla mentre build/reset-DB/e2e sono minuti — non vale il rischio
-# di un falso "verde" per una manciata di secondi risparmiati).
+# il workflow parte SEMPRE e il check obbligatorio `verifica` c'è SEMPRE
+# (niente `paths`/`paths-ignore`: renderebbero il check "non eseguito"
+# invece che "verde", e un check obbligatorio mai eseguito blocca il
+# merge). Il passo 0 (`scripts/classifica-pr.mts`, logica pura in
+# `lib/pr-classificazione.ts`) espone `is-non-codice-ci`: la build (5) si
+# salta con un `if:` sullo step, e il job `e2e` non parte (output
+# `serve-e2e` di `statico`), quindi queste PR non occupano la coda del DB.
+# I passi 1-4 (tsc/lint/jscpd/vitest) restano SEMPRE attivi: costano pochi
+# secondi e saltarli non farebbe risparmiare quasi nulla.
+#
+# PR di Dependabot (issue #68, causa 2): il job `e2e` non parte quando
+# l'attore è `dependabot[bot]` (stesso output `serve-e2e`). Quelle run
+# vedono solo lo store di secret "Dependabot", dove deliberatamente NON
+# copiamo SUPABASE_ACCESS_TOKEN, SUPABASE_SERVICE_ROLE_KEY né i secret
+# E2E_*: renderli disponibili significherebbe esporli a `npm ci` su
+# dipendenze aggiornate in automatico, prima di qualunque revisione umana
+# (uno script postinstall malevolo potrebbe leggerli). Per queste PR il
+# gate resta 1-5; quando un bump tocca codice sensibile (es. @supabase/ssr)
+# la e2e si fa girare rifacendo la PR da una branch umana (come #72/#73).
+# Le due condizioni (non codice, Dependabot) restano indipendenti.
 #
 # Ordine dei passi, dal più veloce/economico al più lento:
 #   0. classifica — issue #98, vedi sopra
@@ -33,48 +92,25 @@ name: CI
 #   5. next build — la build di produzione, lo stesso bundler di Vercel:
 #      è l'unico passo che intercetta un import lato server (next/headers)
 #      trascinato in un componente client — il buco esatto di v0.39/v0.40,
-#      che tsc/lint/vitest non vedono (vedi TASKS.md, "due deploy Vercel
-#      di fila falliti").
+#      che tsc/lint/vitest non vedono. Resta in `statico` (anche se `e2e`
+#      ricompila) perché fallisca PRIMA di mettersi in coda per il DB.
 #   6. reset DB di test (A23) — `supabase db reset --linked --project-ref <ref> --yes`
-#      (--yes salta la conferma interattiva "Do you want to reset the remote
-#      database?", che in CI non ha nessuno a rispondere)
-#      via Supabase CLI: riapplica tutte le migration da zero sul progetto
-#      di test condiviso (`girasole_dev`, non isolato dalla CI) e poi
-#      lancia `supabase/seed.sql` in automatico, così ogni run e2e parte
-#      da uno schema/seed noti invece che da qualunque cosa sia rimasta
-#      da run precedenti o da sessioni locali di Matteo (che ha accettato
-#      esplicitamente questo compromesso — vedi CLAUDE.md e
-#      docs/programma-attivita.md, voce A23). Richiede il secret
-#      `SUPABASE_ACCESS_TOKEN` (repository secret, non ancora configurato
-#      al momento in cui questo step è stato introdotto — senza, questo
-#      passo fallisce: vedi la PR che lo introduce per le istruzioni).
+#      (--yes salta la conferma interattiva, che in CI non ha nessuno a
+#      cui chiedere) via Supabase CLI: riapplica tutte le migration da
+#      zero sul progetto di test condiviso (`girasole_dev`) e poi lancia
+#      `supabase/seed.sql`, così ogni run e2e parte da schema/seed noti
+#      (compromesso accettato da Matteo, ADR-0006). Richiede il secret
+#      `SUPABASE_ACCESS_TOKEN`.
 #   7. account di test E2E_* (A24) — il reset del passo 6 azzera anche
-#      `auth.users`, non solo lo schema `public`: `scripts/crea-utenti-e2e.mjs`
-#      li ricrea con la Admin API di Supabase (service_role key), stesse
-#      email/password dei secret `E2E_<RUOLO>_EMAIL`/`_PASSWORD` letti da
-#      `e2e/auth.setup.ts`. Un ruolo il cui secret non è configurato viene
-#      solo saltato (log); admin/maestra/assistente/genitore falliscono
-#      forte lo step se non possono essere creati.
+#      `auth.users`: `scripts/crea-utenti-e2e.mjs` li ricrea con la Admin
+#      API di Supabase (service_role key), stesse email/password dei
+#      secret `E2E_<RUOLO>_EMAIL`/`_PASSWORD` letti da `e2e/auth.setup.ts`.
+#      Un ruolo il cui secret non è configurato viene solo saltato (log);
+#      admin/maestra/assistente/genitore falliscono forte lo step.
 #   8. e2e      — Playwright contro il DB di test appena resettato/riseedato
-#      con gli account ai passi 6-7 (mai la produzione): i secret sono
-#      "Repository secrets" di GitHub, mai hardcoded qui. Un ruolo E2E_*
-#      mancante fa solo saltare (test.skip) i test che lo richiedono.
-#
-# PR "non codice" (issue #98) e PR di Dependabot (issue #68, causa 2) si
-# combinano con lo stesso meccanismo (`if:` sui passi 5-8), ma restano due
-# condizioni indipendenti: una PR non-dependabot ma docs-only salta lo
-# stesso i passi pesanti.
-#
-# PR di Dependabot (issue #68, causa 2): i passi 6-8 NON girano quando
-# l'attore è `dependabot[bot]`. Quelle run vedono solo lo store di secret
-# "Dependabot", dove deliberatamente NON copiamo SUPABASE_ACCESS_TOKEN,
-# SUPABASE_SERVICE_ROLE_KEY né i secret E2E_*: renderli disponibili
-# significherebbe esporli a `npm ci` su dipendenze aggiornate in automatico,
-# prima di qualunque revisione umana (uno script postinstall malevolo
-# potrebbe leggerli). Per queste PR il gate resta 1-5 (tsc, lint, jscpd,
-# vitest, build); quando un bump tocca codice sensibile (es. @supabase/ssr)
-# la e2e si fa girare rifacendo la PR da una branch umana (come #72/#73),
-# dove la CI è completa.
+#      (mai la produzione): i secret sono "Repository secrets" di GitHub,
+#      mai hardcoded qui. Un ruolo E2E_* mancante fa solo saltare
+#      (test.skip) i test che lo richiedono.
 
 on:
   pull_request:
@@ -83,15 +119,20 @@ on:
 permissions:
   contents: read
 
-# Se arrivano più push ravvicinati sulla stessa PR, tieni solo l'ultimo run.
+# Se arrivano più push ravvicinati sulla stessa PR, tieni solo l'ultimo run
+# (vedi sopra per l'interazione con la coda globale del job `e2e`).
 concurrency:
   group: ci-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  verifica:
+  statico:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Oggi ~1 minuto (npm ci + passi 0-5): 10 è ampio margine.
+    timeout-minutes: 10
+    outputs:
+      # 'true' se il job `e2e` deve girare (PR di codice, non Dependabot).
+      serve-e2e: ${{ steps.coda.outputs.serve-e2e }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -101,12 +142,10 @@ jobs:
           # sono nel checkout locale del runner.
           fetch-depth: 0
 
-      # 22, non 20: lo step 7 (crea-utenti-e2e.mjs) usa @supabase/supabase-js,
-      # che inizializza sempre anche un client realtime — su Node richiede il
-      # WebSocket nativo, disponibile solo da Node 22 in poi (su 20 lo step
-      # falliva subito con "Node.js detected but native WebSocket not found").
-      # Lo stesso Node 22+ esegue nativamente anche lo script TypeScript
-      # dello step 0 (issue #98), nessuna dipendenza nuova.
+      # 22, non 20: lo step 7 (crea-utenti-e2e.mjs, job `e2e`) usa
+      # @supabase/supabase-js, che su Node richiede il WebSocket nativo,
+      # disponibile solo da Node 22. Lo stesso Node 22+ esegue nativamente
+      # anche lo script TypeScript dello step 0 (issue #98).
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -115,17 +154,39 @@ jobs:
       - name: Installa le dipendenze
         run: npm ci
 
-      - name: 0. Classifica la PR (issue #98)
+      - name: "0. Classifica la PR (issue #98)"
         id: classifica
         run: >
           node --no-warnings --experimental-strip-types scripts/classifica-pr.mts
           "${{ github.event.pull_request.base.sha }}"
           "${{ github.event.pull_request.head.sha }}"
 
-      - name: PR "non codice" — passi pesanti saltati (issue #98)
+      - name: 'PR "non codice" — build ed e2e saltati (issue #98)'
         if: steps.classifica.outputs.is-non-codice-ci == 'true'
         run: |
           echo "::notice::PR solo docs/specs/TASKS/README/CHANGELOG o bump di versione — build, reset DB ed e2e saltati (issue #98)."
+
+      - name: Dependabot — job e2e saltato (nessun secret sensibile)
+        if: github.actor == 'dependabot[bot]'
+        # Blocco "|": in uno scalare YAML non quotato " #68" apre un commento
+        # e tronca il comando lasciando la virgoletta aperta (bash: EOF).
+        run: |
+          echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
+
+      # Decide qui, una volta sola, se il job `e2e` deve partire: il suo
+      # `if:` a livello di job legge questo output. Valori da variabili
+      # d'ambiente, non interpolati nello script.
+      - name: "Decidi se serve la e2e (coda del DB, issue #105)"
+        id: coda
+        env:
+          NON_CODICE: ${{ steps.classifica.outputs.is-non-codice-ci }}
+          ATTORE: ${{ github.actor }}
+        run: |
+          if [ "$NON_CODICE" = "true" ] || [ "$ATTORE" = "dependabot[bot]" ]; then
+            echo "serve-e2e=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "serve-e2e=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 1. Type-check (tsc)
         run: npx tsc --noEmit
@@ -149,31 +210,55 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
 
-      - name: Dependabot — passi 6-8 saltati (nessun secret sensibile)
-        if: github.actor == 'dependabot[bot]'
-        # Blocco "|": in uno scalare YAML non quotato " #68" apre un commento
-        # e tronca il comando lasciando la virgoletta aperta (bash: EOF).
-        run: |
-          echo "::notice::PR di Dependabot — reset DB ed e2e saltati (issue #68). Se il bump tocca codice sensibile, rifare la PR da una branch umana per la CI completa."
+  e2e:
+    needs: statico
+    # Nessuna funzione di stato nell'espressione: GitHub aggiunge success(),
+    # quindi parte solo se `statico` è verde E la PR richiede la e2e.
+    # Saltato qui, il job non entra nemmeno nella coda del DB.
+    if: needs.statico.outputs.serve-e2e == 'true'
+    runs-on: ubuntu-latest
+    # Solo esecuzione reale (~11 min oggi): l'attesa in coda non conta.
+    # 25 come prima dello split: playwright.config.ts (maxFailures) è
+    # tarato perché il report arrivi prima di questo limite.
+    timeout-minutes: 25
+    concurrency:
+      group: db-test-girasole-dev
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      # `next start` (webServer di playwright.config.ts in CI) serve la
+      # build di produzione: si ricompila qui invece di passare .next tra
+      # job (stesso commit, stesse NEXT_PUBLIC_*).
+      - name: Build di produzione per la e2e (next build)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+
+      - name: Installa Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
 
       - name: 6. Reset del DB di test (Supabase CLI, A23)
-        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: |
           npm install -g supabase
           supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
         env:
           # Token di accesso personale Supabase (Management API), non la
-          # password del database: letto automaticamente dal CLI, nessun
-          # login interattivo. NON è ancora configurato come repository
-          # secret al momento in cui questo step viene introdotto: senza,
-          # questo comando fallisce con un errore di autenticazione. Va
-          # creato da Matteo (unico che può generarlo dal proprio account
-          # Supabase) — vedi la descrizione della PR che introduce questo
-          # step per l'istruzione esatta.
+          # password del database: letto automaticamente dal CLI.
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)
-        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: node scripts/crea-utenti-e2e.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -190,12 +275,7 @@ jobs:
           E2E_MAESTRA_SENZA_SEZIONE_PASSWORD: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD }}
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
-      - name: Installa Chromium (Playwright)
-        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
-        run: npx playwright install --with-deps chromium
-
       - name: 8. Test end-to-end (Playwright)
-        if: github.actor != 'dependabot[bot]' && steps.classifica.outputs.is-non-codice-ci != 'true'
         run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -216,11 +296,48 @@ jobs:
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
-        if: >-
-          always() && github.actor != 'dependabot[bot]' &&
-          steps.classifica.outputs.is-non-codice-ci != 'true'
+        # always(): anche a job scaduto per timeout si prova a caricare
+        # quel che c'è (issue #70).
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 14
+
+  # Check obbligatorio del ruleset di main ("CI / verifica"): NON
+  # rinominare questo job né dargli un `name:`, o il ruleset aspetterebbe
+  # per sempre un check che non arriva più.
+  verifica:
+    needs: [statico, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Esito di statico ed e2e
+        env:
+          STATICO: ${{ needs.statico.result }}
+          E2E: ${{ needs.e2e.result }}
+          SERVE_E2E: ${{ needs.statico.outputs.serve-e2e }}
+        run: |
+          echo "statico: $STATICO — e2e: $E2E — serve-e2e: ${SERVE_E2E:-?}"
+          if [ "$STATICO" != "success" ]; then
+            echo "::error::Job statico: $STATICO (tsc/lint/jscpd/vitest/build)."
+            exit 1
+          fi
+          if [ "$SERVE_E2E" = "true" ]; then
+            if [ "$E2E" = "success" ]; then
+              exit 0
+            fi
+            if [ "$E2E" = "cancelled" ]; then
+              echo "::error::Job e2e cancellato (run superato da un push più recente, annullato a mano o tolto dalla coda del DB). Se non c'è un run più recente per questa PR, rilanciare con 'Re-run failed jobs' o 'gh run rerun <run-id> --failed'."
+            else
+              echo "::error::Job e2e: $E2E."
+            fi
+            exit 1
+          fi
+          if [ "$E2E" != "skipped" ] && [ "$E2E" != "success" ]; then
+            echo "::error::Job e2e: $E2E, atteso skipped (PR non codice o Dependabot)."
+            exit 1
+          fi
+          echo "e2e saltata di proposito (PR non codice o Dependabot)."

@@ -218,8 +218,10 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   su Vercel.
 - Su ogni PR gira un unico workflow GitHub Actions
   (`.github/workflows/ci.yml`, gratuito su repo pubblici) con un passo di
-  classificazione seguito da sette passi in sequenza: tsc → lint → jscpd →
-  vitest → **`next build`** → reset del DB di test → e2e. I primi quattro
+  classificazione seguito da sette passi: tsc → lint → jscpd → vitest →
+  **`next build`** (job `statico`) → reset del DB di test → e2e (job
+  `e2e`), più il job `verifica` che fa da gate (vedi "Coda del DB"
+  sotto). I primi quattro
   non richiedono secret e falliscono in secondi; la build di produzione è
   l'unico passo che intercetta un import lato server trascinato in un
   componente client (dalla A15 lo intercetta anche il pre-push hook in
@@ -227,21 +229,20 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   suite e2e usa le variabili configurate come "Repository secrets" in
   GitHub — mai hardcoded nel workflow. Anche in CI devono puntare a un
   progetto Supabase di test, mai a quello di produzione.
-- **PR "non codice" saltano gli step pesanti (issue #98)**: il job
-  `verifica` di `ci.yml` NON usa `paths`/`paths-ignore` (renderebbe il
-  check obbligatorio del ruleset di `main` "non eseguito" invece che
-  "verde" su queste PR, bloccando il merge) — parte sempre, e un primo
+- **PR "non codice" saltano gli step pesanti (issue #98)**: `ci.yml`
+  NON usa `paths`/`paths-ignore` (renderebbe il check obbligatorio del
+  ruleset di `main` "non eseguito" invece che "verde" su queste PR,
+  bloccando il merge) — parte sempre, e un primo
   step (`node --experimental-strip-types scripts/classifica-pr.mts
   <baseSha> <headSha>`, che
   richiede `fetch-depth: 0` nel checkout) classifica la PR usando la
   logica pura di `lib/pr-classificazione.ts` ed espone l'output
   `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`, `TASKS.md`,
   `README.md`, `CHANGELOG.md`, o un bump puro del campo `version` in
-  `package.json`/`package-lock.json`), gli step 5-8 (build, reset DB di
-  test, ricreazione utenti E2E_*, install Chromium, e2e, upload del
-  report) hanno `if: steps.classifica.outputs.is-non-codice-ci != 'true'`
-  e restano `skipped` nel log — tsc/lint/jscpd/vitest (economici, pochi
-  secondi in totale) restano SEMPRE attivi, anche su queste PR. Stessa
+  `package.json`/`package-lock.json`), la build (passo 5) resta `skipped`
+  nel log e il job `e2e` (passi 6-8) non parte, quindi la PR non occupa
+  la coda del DB — tsc/lint/jscpd/vitest (economici, pochi secondi in
+  totale) restano SEMPRE attivi, anche su queste PR. Stessa
   logica riusata in `.github/workflows/claude-board.yml`: il job `review`
   fa la stessa classificazione (con un'allow-list più stretta, che
   ESCLUDE `specs/**`: una PR che tocca solo `specs/` riceve comunque
@@ -269,6 +270,30 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   — va creato da Matteo su
   https://supabase.com/dashboard/account/tokens e aggiunto con
   `gh secret set SUPABASE_ACCESS_TOKEN`.
+- **Coda del DB di test (issue #105, ADR-0008)**: `ci.yml` ha tre job,
+  `statico` (passi 0-5) → `e2e` (passi 6-8) → `verifica`. Solo `e2e`
+  usa il DB, e sta in un gruppo di concorrenza globale
+  (`db-test-girasole-dev`, `cancel-in-progress: false`, `queue: max`):
+  una e2e alla volta tra tutte le PR, le altre aspettano in ordine di
+  arrivo (fino a 100 in attesa; senza `queue: max` GitHub ne terrebbe
+  una sola e la terza cancellerebbe la seconda). I passi statici restano
+  paralleli tra PR. `e2e` ricompila l'app (serve a `next start`) e non
+  parte sulle PR "non codice" né su quelle di Dependabot.
+  - Il check obbligatorio del ruleset di `main` resta `CI / verifica`:
+    il job `verifica` gira sempre e passa solo se `statico` è verde e
+    `e2e` è verde o saltato di proposito. Non rinominarlo.
+  - Un nuovo push sulla stessa PR cancella ancora l'intero run
+    precedente (gruppo per PR a livello di workflow), compreso il suo
+    `e2e` in coda o in corso.
+  - L'attesa in coda non conta nel `timeout-minutes` del job `e2e` (25
+    min, solo esecuzione). Con più PR aperte la CI dura di più: ~11 min
+    per ogni e2e davanti in coda.
+  - Se un `e2e` viene cancellato mentre aspetta (coda piena, annullo a
+    mano) e non c'è un run più recente per la PR, `verifica` resta
+    rosso: "Re-run failed jobs" dalla pagina del run, oppure
+    `gh run rerun <run-id> --failed`.
+  - La coda vale solo tra run di CI: una sessione locale sullo stesso DB
+    può ancora sovrapporsi (ADR-0006).
 
   ## Versioning
   - `VERSIONE_APP` e `DATA_BUILD` (`lib/versione.ts`, mostrate nel footer)

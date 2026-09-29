@@ -94,8 +94,11 @@ reviewer. Sposta la issue in `status:review`.
 Alla apertura della PR (evento `pull_request: opened`), partono due cose in
 parallelo:
 
-**`ci.yml`** (unico workflow di verifica, A12), sei step in sequenza,
-sempre nello stesso ordine dal più veloce al più lento:
+**`ci.yml`** (unico workflow di verifica, A12), passi sempre nello stesso
+ordine dal più veloce al più lento, divisi in due job — `statico` (1-5) ed
+`e2e` (reset del DB di test e Playwright, in coda globale tra le PR: issue
+#105, ADR-0008) — più il job `verifica`, il gate che ne riassume l'esito
+(dettagli in `docs/sviluppo-dettagli.md`):
 1. `tsc --noEmit` — type-check
 2. `next lint` — ESLint
 3. `jscpd` — codice duplicato
@@ -118,8 +121,8 @@ esplicitamente scritto che serve la review dell'agente **rls-guardian**
 ## 6. Come Matteo revisiona e mergia dal telefono
 
 Da app GitHub mobile o browser mobile, Matteo guarda:
-- i check della PR (i 6 step di `ci.yml`, esposti come contesto unico
-  `CI / verifica` grazie ad A12) e il commento di review pubblicato da
+- i check della PR (l'esito di `ci.yml` è riassunto nel contesto unico
+  `CI / verifica`, A12 e #105) e il commento di review pubblicato da
   `claude-board.yml`;
 - se il commento di review segnala "serve rls-guardian", il merge aspetta
   quella review (fatta in locale, non da telefono — è la parte che questo

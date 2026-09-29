@@ -22,3 +22,4 @@ nuovo che lo riferisce).
 | [0005](0005-niente-automazioni-verso-la-produzione.md) | Niente link permanenti né automazioni CLI/CI verso il progetto Supabase di produzione | Accettata |
 | [0006](0006-db-di-test-condiviso-reset-ad-ogni-ci.md) | DB di test condiviso tra CI e sviluppo locale, resettato ad ogni run di CI | Accettata |
 | [0007](0007-versione-app-derivata-a-build-time.md) | `VERSIONE_APP`/`DATA_BUILD` derivate a build-time, non scritte a mano | Accettata |
+| [0008](0008-coda-globale-e2e-db-di-test.md) | Le e2e di CI usano il DB di test una alla volta (coda globale) | Accettata |

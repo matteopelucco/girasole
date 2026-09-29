@@ -354,3 +354,15 @@ _(dettagli in archivio)_
 - [x] e2e: `e2e/10` (Rojac dentro la card, intestazione di sezione senza
       bordo/ombra/sfondo), `e2e/14` sul nuovo riassunto.
 - [x] Unit: `vociRiepilogo` e `testoVoceRiepilogo` in `lib/giornata.ts`.
+
+## #105 · CI: e2e in coda globale sul DB di test condiviso (2026-09-29)
+- [x] `ci.yml` in tre job: `statico` → `e2e` (gruppo
+      `db-test-girasole-dev`, `cancel-in-progress: false`, `queue: max`)
+      → `verifica` (gate, check obbligatorio invariato). ADR-0008,
+      `docs/sviluppo-dettagli.md`, `docs/flusso-remoto.md`.
+- [ ] **Da verificare con la prossima coppia di PR reali**: due PR aperte
+      a pochi minuti di distanza devono avere i job `e2e` in sequenza
+      (il secondo parte dopo la fine del primo, dagli orari nei log). Non
+      provato con PR usa-e-getta.
+- [ ] **Da verificare alla prossima PR solo-docs e alla prossima di
+      Dependabot**: job `e2e` `skipped`, `verifica` verde.
