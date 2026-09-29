@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   deltaGiornoOreLavoro,
+  differenzaGiornoOreLavoro,
+  oreDaDifferenza,
+  sonoQuartiDora,
   formattaOreConSegno,
   notaGiornoChiusoOreLavoro,
   oreOrdinariePreviste,
@@ -108,17 +111,68 @@ function inputBase(sovrascrizioni: Partial<InputGiornoOreLavoro> = {}): InputGio
   return {
     data: '2026-08-31',
     stato: 'lavorativo',
-    oreOrdinarie: 7,
-    oreStraordinarie: 0,
-    motivoStraordinario: '',
+    orePreviste: 7,
+    differenzaOre: 0,
+    motivo: '',
     codiceMalattia: '',
     notaAssenza: '',
     ...sovrascrizioni,
   };
 }
 
+describe('oreDaDifferenza', () => {
+  it('differenza positiva: ordinarie = previste, straordinarie = differenza', () => {
+    expect(oreDaDifferenza(7, 2)).toEqual({ oreOrdinarie: 7, oreStraordinarie: 2 });
+  });
+  it('differenza negativa: ordinarie = previste + differenza, nessuno straordinario', () => {
+    expect(oreDaDifferenza(7, -1.5)).toEqual({ oreOrdinarie: 5.5, oreStraordinarie: 0 });
+  });
+  it('differenza zero: ordinarie = previste', () => {
+    expect(oreDaDifferenza(7, 0)).toEqual({ oreOrdinarie: 7, oreStraordinarie: 0 });
+  });
+  it('senza profilo (previste 0) una differenza positiva diventa straordinario', () => {
+    expect(oreDaDifferenza(0, 3.25)).toEqual({ oreOrdinarie: 0, oreStraordinarie: 3.25 });
+  });
+});
+
+describe('differenzaGiornoOreLavoro', () => {
+  it('è (ordinarie + straordinarie) - previste', () => {
+    expect(differenzaGiornoOreLavoro(7, 7, 2)).toBe(2);
+    expect(differenzaGiornoOreLavoro(7, 5.5, 0)).toBe(-1.5);
+    expect(differenzaGiornoOreLavoro(7, 7, 0)).toBe(0);
+  });
+  it('dato storico con ordinarie diverse dal previsto', () => {
+    expect(differenzaGiornoOreLavoro(7, 9, 0)).toBe(2);
+    expect(differenzaGiornoOreLavoro(7, 5, 1)).toBe(-1);
+  });
+  it('coincide con deltaGiornoOreLavoro (stessa formula di report e monte ore)', () => {
+    expect(differenzaGiornoOreLavoro(7, 6, 0.5)).toBe(deltaGiornoOreLavoro(7, 6, 0.5));
+  });
+  it('senza profilo', () => {
+    expect(differenzaGiornoOreLavoro(0, 0, 4)).toBe(4);
+  });
+  it('ripulisce i residui della virgola mobile', () => {
+    expect(differenzaGiornoOreLavoro(3.3, 3.5, 0)).toBe(0.2);
+  });
+  it('ricomposizione: salvare e rileggere restituisce la stessa differenza', () => {
+    for (const d of [-7, -1.25, 0, 0.25, 4.75]) {
+      const { oreOrdinarie, oreStraordinarie } = oreDaDifferenza(7, d);
+      expect(differenzaGiornoOreLavoro(7, oreOrdinarie, oreStraordinarie)).toBe(d);
+    }
+  });
+});
+
+describe('sonoQuartiDora', () => {
+  it('accetta multipli di 0,25, anche negativi', () => {
+    for (const v of [0, 1, 2.5, 4.25, 8.75, -0.5, -1.25]) expect(sonoQuartiDora(v)).toBe(true);
+  });
+  it('rifiuta gli altri valori e i non numeri', () => {
+    for (const v of [8.2, 7.15, 0.1, -0.3, NaN, Infinity]) expect(sonoQuartiDora(v)).toBe(false);
+  });
+});
+
 describe('validaGiornoOreLavoro', () => {
-  it('un giorno lavorativo normale è valido', () => {
+  it('un giorno lavorativo senza differenza è valido, senza motivo', () => {
     const esito = validaGiornoOreLavoro(inputBase());
     expect(esito.ok).toBe(true);
     if (esito.ok) {
@@ -134,32 +188,81 @@ describe('validaGiornoOreLavoro', () => {
     }
   });
 
-  it('ore straordinarie con motivo sono valide', () => {
-    const esito = validaGiornoOreLavoro(
-      inputBase({ oreStraordinarie: 2, motivoStraordinario: 'Riunione genitori' })
-    );
+  it('differenza positiva con motivo: straordinarie = differenza', () => {
+    const esito = validaGiornoOreLavoro(inputBase({ differenzaOre: 2, motivo: 'Riunione genitori' }));
     expect(esito.ok).toBe(true);
     if (esito.ok) {
+      expect(esito.giorno.oreOrdinarie).toBe(7);
       expect(esito.giorno.oreStraordinarie).toBe(2);
       expect(esito.giorno.motivoStraordinario).toBe('Riunione genitori');
     }
   });
 
-  it('ore straordinarie senza motivo sono rifiutate', () => {
-    const esito = validaGiornoOreLavoro(inputBase({ oreStraordinarie: 2 }));
-    expect(esito.ok).toBe(false);
-    if (!esito.ok) expect(esito.errore).toContain('motivo');
+  it('differenza negativa con motivo: ordinarie ridotte, motivo salvato', () => {
+    const esito = validaGiornoOreLavoro(inputBase({ differenzaOre: -1.25, motivo: 'Uscita anticipata' }));
+    expect(esito.ok).toBe(true);
+    if (esito.ok) {
+      expect(esito.giorno.oreOrdinarie).toBe(5.75);
+      expect(esito.giorno.oreStraordinarie).toBe(0);
+      expect(esito.giorno.motivoStraordinario).toBe('Uscita anticipata');
+    }
+  });
+
+  it('differenza diversa da zero senza motivo è rifiutata (in più e in meno)', () => {
+    for (const differenzaOre of [2, -1]) {
+      const esito = validaGiornoOreLavoro(inputBase({ differenzaOre }));
+      expect(esito.ok).toBe(false);
+      if (!esito.ok) expect(esito.errore).toContain('motivo');
+    }
   });
 
   it('un motivo tutto spazi conta come mancante', () => {
-    const esito = validaGiornoOreLavoro(inputBase({ oreStraordinarie: 1, motivoStraordinario: '   ' }));
+    expect(validaGiornoOreLavoro(inputBase({ differenzaOre: 1, motivo: '   ' })).ok).toBe(false);
+  });
+
+  it('con differenza zero il motivo eventuale non viene salvato', () => {
+    const esito = validaGiornoOreLavoro(inputBase({ motivo: 'residuo' }));
+    expect(esito.ok).toBe(true);
+    if (esito.ok) expect(esito.giorno.motivoStraordinario).toBeNull();
+  });
+
+  it('senza profilo una differenza positiva è valida con motivo', () => {
+    const esito = validaGiornoOreLavoro(inputBase({ orePreviste: 0, differenzaOre: 4, motivo: 'Pulizie' }));
+    expect(esito.ok).toBe(true);
+    if (esito.ok) {
+      expect(esito.giorno.oreOrdinarie).toBe(0);
+      expect(esito.giorno.oreStraordinarie).toBe(4);
+    }
+  });
+
+  it('rifiuta valori che non sono multipli di un quarto d\'ora', () => {
+    for (const differenzaOre of [0.2, -0.3, 1.15]) {
+      const esito = validaGiornoOreLavoro(inputBase({ differenzaOre, motivo: 'x' }));
+      expect(esito.ok).toBe(false);
+      if (!esito.ok) expect(esito.errore).toContain('quarto d');
+    }
+  });
+
+  it('rifiuta una differenza non numerica', () => {
+    const esito = validaGiornoOreLavoro(inputBase({ differenzaOre: NaN, motivo: 'x' }));
     expect(esito.ok).toBe(false);
   });
 
+  it('limite inferiore: -ordinarie è ammesso, oltre no (totale mai negativo)', () => {
+    const limite = validaGiornoOreLavoro(inputBase({ differenzaOre: -7, motivo: 'Permesso' }));
+    expect(limite.ok).toBe(true);
+    if (limite.ok) expect(limite.giorno.oreOrdinarie).toBe(0);
+    const oltre = validaGiornoOreLavoro(inputBase({ differenzaOre: -7.25, motivo: 'Permesso' }));
+    expect(oltre.ok).toBe(false);
+    if (!oltre.ok) expect(oltre.errore).toContain('negativo');
+  });
+
+  it('senza profilo una differenza negativa è rifiutata', () => {
+    expect(validaGiornoOreLavoro(inputBase({ orePreviste: 0, differenzaOre: -1, motivo: 'x' })).ok).toBe(false);
+  });
+
   it('malattia con codice è valida e azzera le ore', () => {
-    const esito = validaGiornoOreLavoro(
-      inputBase({ stato: 'malattia', oreOrdinarie: 7, codiceMalattia: 'ABC123' })
-    );
+    const esito = validaGiornoOreLavoro(inputBase({ stato: 'malattia', differenzaOre: 3, codiceMalattia: 'ABC123' }));
     expect(esito.ok).toBe(true);
     if (esito.ok) {
       expect(esito.giorno.stato).toBe('malattia');
@@ -176,9 +279,7 @@ describe('validaGiornoOreLavoro', () => {
   });
 
   it('assenza con nota è valida e azzera le ore', () => {
-    const esito = validaGiornoOreLavoro(
-      inputBase({ stato: 'assenza', oreOrdinarie: 7, notaAssenza: 'Visita medica' })
-    );
+    const esito = validaGiornoOreLavoro(inputBase({ stato: 'assenza', notaAssenza: 'Visita medica' }));
     expect(esito.ok).toBe(true);
     if (esito.ok) {
       expect(esito.giorno.stato).toBe('assenza');
@@ -197,15 +298,6 @@ describe('validaGiornoOreLavoro', () => {
     const esito = validaGiornoOreLavoro(inputBase({ stato: 'boh' }));
     expect(esito.ok).toBe(true);
     if (esito.ok) expect(esito.giorno.stato).toBe('lavorativo');
-  });
-
-  it('ore negative vengono riportate a zero', () => {
-    const esito = validaGiornoOreLavoro(inputBase({ oreOrdinarie: -3, oreStraordinarie: -1 }));
-    expect(esito.ok).toBe(true);
-    if (esito.ok) {
-      expect(esito.giorno.oreOrdinarie).toBe(0);
-      expect(esito.giorno.oreStraordinarie).toBe(0);
-    }
   });
 });
 
