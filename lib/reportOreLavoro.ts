@@ -142,14 +142,15 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
     let giorniPersona: GiornoPdfOreLavoro[] = [];
     if (settimaneConfermate.length) {
       const dateSettimane = settimaneConfermate.flatMap((s) => giorniSettimana(s));
-      const { data: righeGiorni } = await supabase
+      const rGiorni = await supabase
         .from('ore_lavoro_giorni')
         .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
         .eq('utente_id', persona.id)
         .in('data', dateSettimane)
         .order('data', { ascending: true });
+      const righeGiorni = righeOSollevaErrore(rGiorni, 'lettura giorni ore di lavoro');
 
-      giorniPersona = (righeGiorni ?? [])
+      giorniPersona = righeGiorni
         .filter((r) => r.data >= inizioMese && r.data <= fineMese)
         .map((r) => {
           const oreDovute = oreOrdinariePreviste(profiloOrario, r.data);
