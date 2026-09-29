@@ -314,3 +314,24 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
     alimenta `VERSIONE_APP`, quindi resta manuale.
   - La data di build non va più tracciata a mano: `DATA_BUILD` la deriva
     da sé ad ogni `next build`/`next dev` (vedi `next.config.mjs`).
+
+## Token e cache delle esecuzioni Claude in CI (issue #119)
+- Ogni job `triage`/`review` di `claude-board.yml` scrive nel **job
+  summary** (pagina del run su GitHub Actions, sezione "Summary") una
+  tabella con token di input, di output, letti dalla cache, scritti in
+  cache, contesto totale, quota letta dalla cache, turni e costo. Lo
+  produce `scripts/riepilogo-token-claude.mts` (logica in
+  `lib/claude-usage.ts`) leggendo l'output di `claude-code-action`.
+  Contiene solo contatori numerici, nessun secret né testo della sessione.
+- Come leggerla: il "contesto totale" (input + letti + scritti in cache) è
+  il numero da confrontare con la soglia di A32 (sessione tipica < 10k
+  token di governance). Attenzione: comprende anche diff e file letti,
+  non solo `CLAUDE.md`. Ogni esecuzione CI è una sessione nuova e la
+  cache dura pochi minuti: la "quota letta dalla cache" cresce nei turni
+  successivi della stessa esecuzione, non tra PR diverse.
+- Lo stesso file JSON grezzo è scaricabile come artifact
+  (`claude-execution-triage`/`claude-execution-review`, retention 7
+  giorni). Può contenere il testo della sessione: non condividerlo fuori
+  dal repo.
+- Se il riepilogo dice "nessun dato", lo step è stato saltato o il file non
+  c'era (es. PR "non codice" senza review): non rende rosso il job.
