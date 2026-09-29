@@ -115,7 +115,7 @@ export function RigaOreLavoro({
         </select>
       </div>
 
-      {messaggioChiuso && <p className="mt-1 text-xs text-stone-500">{messaggioChiuso}</p>}
+      {messaggioChiuso && <p className="mt-1 text-xs text-stone-700">{messaggioChiuso}</p>}
 
       {stato === 'lavorativo' && (
         <div className="mt-2 space-y-3">
@@ -127,7 +127,7 @@ export function RigaOreLavoro({
               <p className="text-base font-medium text-stone-900" data-ore-ordinarie>
                 {ordinarie}h
               </p>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-700">
                 {orePreviste === null
                   ? "Nessun profilo orario assegnato: chiedi all'admin di assegnarlo. Le ore fatte vanno scritte come differenza."
                   : `Previsto: ${orePreviste}h`}
