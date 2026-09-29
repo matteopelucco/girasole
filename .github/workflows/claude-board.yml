@@ -60,7 +60,11 @@ jobs:
     timeout-minutes: 8            # guardrail costo: sessione breve
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
       - uses: anthropics/claude-code-action@v1
+        id: claude
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Haiku: gira spessissimo, deve costare poco.
@@ -76,6 +80,15 @@ jobs:
             Agisci come l'agente di TRIAGE definito in .claude/agents/triage.md.
             Oggetto: issue #${{ github.event.issue.number }} di questo repo.
             Segui quel file alla lettera. Sii conciso: un solo commento di triage.
+
+      # Issue #119: token e cache dell'esecuzione nel job summary (solo
+      # contatori numerici, nessun secret). Niente artifact col file grezzo:
+      # il repo è pubblico e il file può contenere testo della sessione.
+      - name: Riepilogo token e cache (triage)
+        if: always()
+        run: >
+          node --no-warnings --experimental-strip-types scripts/riepilogo-token-claude.mts
+          "Triage" "${{ steps.claude.outputs.execution_file }}"
 
   # -------------------------------------------------------------------------
   review:
@@ -140,6 +153,7 @@ jobs:
           echo "::notice::PR solo docs/TASKS/README/CHANGELOG o bump di versione (nessuna specs/**) — review Claude saltata (issue #98)."
 
       - uses: anthropics/claude-code-action@v1
+        id: claude
         if: steps.classifica.outputs.is-non-codice-review != 'true'
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -177,6 +191,15 @@ jobs:
             ricostruirlo. Apri altri file solo se il diff non basta a
             giudicare (la spec pertinente, un file toccato per contesto).
             Review concisa e azionabile, un solo commento. NON mergiare mai.
+
+      # Issue #119: token e cache dell'esecuzione nel job summary (solo
+      # contatori numerici, nessun secret). Niente artifact col file grezzo:
+      # il repo è pubblico e il file può contenere testo della sessione.
+      - name: Riepilogo token e cache (review)
+        if: always() && steps.classifica.outputs.is-non-codice-review != 'true'
+        run: >
+          node --no-warnings --experimental-strip-types scripts/riepilogo-token-claude.mts
+          "Review" "${{ steps.claude.outputs.execution_file }}"
 
   # -------------------------------------------------------------------------
   # Nessun modello Claude: solo `gh issue edit` con il token di default del
