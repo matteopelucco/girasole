@@ -17,7 +17,13 @@ Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel (free tier).
   interattività.
 - Nessuna nuova dipendenza senza chiederlo (free tier).
 - Schema: file numerati in `supabase/migrations/`, mai dashboard.
-  RLS: difesa primaria. Policy nuova → migration insieme alla tabella.
+  Applicazione: in locale `supabase db push --project-ref <ref-test>`, in
+  test il reset di CI, in **produzione solo Matteo, a mano**, con
+  `--project-ref` esplicito. Mai link permanenti né automazioni verso la
+  produzione.
+- RLS: difesa primaria; ogni query rispetta i confini di ruolo (admin /
+  maestra / genitore) di `specs/`. Policy nuova → migration insieme alla
+  tabella.
 
 ## Specs: leggi solo il pertinente
 Per ogni task, leggere **solo** il file `specs/` della feature in corso;
@@ -37,10 +43,14 @@ lo richiede.
   `SKIP_BUILD_PRE_PUSH=1`). Dettagli in `docs/sviluppo-dettagli.md`.
 
 ## Test-first (obbligatorio)
-Ciclo: SPECS → TEST (prima del codice) → CODE → CHECK (verde?) → FIX.
+Ciclo, da ripetere finché è tutto verde: SPECS (scenari Given/When/Then,
+allineando le spec che si citano) → TEST (prima del codice) → CODE →
+CHECK (`npx vitest run` + `npx playwright test`) → FIX (un rosso non si
+lascia "per ora").
 
-**e2e**: `specs/NN - nome.md` ↔ `e2e/NN-nome.spec.ts`, uno scenario =
-un test. Nessuno scenario coperto 2× né test orfano. Credenziali da
+**e2e**: `specs/NN - nome.md` ↔ `e2e/NN-nome.spec.ts`, un test per ogni
+`## Scenario:`, aggiornato subito quando cambia la spec. Nessuno scenario
+scoperto né test orfano. Credenziali da
 `E2E_<RUOLO>_EMAIL/PASSWORD` (ambiente); DB = progetto test, mai
 produzione. Controllo a11y con axe-core su ogni pagina toccata.
 
