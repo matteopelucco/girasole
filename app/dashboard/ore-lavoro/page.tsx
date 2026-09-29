@@ -335,7 +335,7 @@ export default async function OreLavoroPage({
               Salva modifiche
             </PulsanteInvio>
             {ultimoSalvataggio && (
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-600">
                 Ultimo salvataggio: {formattaDataOraItaliana(ultimoSalvataggio).replace('_', ' alle ')}
               </p>
             )}
