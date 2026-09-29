@@ -172,6 +172,10 @@ finché non risulta tutto verde.
 - Le credenziali degli account di test (`E2E_*`) vanno in `.env.local`
   (mai committate). Un ruolo mancante fa saltare solo i test che lo
   richiedono: la suite resta comunque eseguibile parzialmente.
+- Ogni salvataggio seguito da `reload`/`goto`/lettura di un valore
+  calcolato dal server deve usare `clickEAttendiAzione`
+  (`e2e/helpers.ts`); i valori calcolati dal server si leggono con
+  `expect.poll` per attendere il calcolo asincrono.
 
 ### Unit (Vitest) — solo logica pura
 - **Criterio di ammissione, rigido**: un unit test in `lib/xxx.test.ts`
