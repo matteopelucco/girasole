@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import {
   ETICHETTE_STATO_ORE_LAVORO,
+  isStatoNeutroOreLavoro,
+  TESTO_GIORNO_DI_VACANZA,
   sonoQuartiDora,
   totaleOreErogate,
   type StatoGiornoOreLavoro,
@@ -178,6 +180,8 @@ export function RigaOreLavoro({
           <TotaleOreErogate etichettaGiorno={etichettaGiorno} totale={totale} differenza={differenzaValida ? differenza : null} />
         </div>
       )}
+
+      {isStatoNeutroOreLavoro(stato) && <p className="mt-2 text-sm text-stone-700">{TESTO_GIORNO_DI_VACANZA}</p>}
 
       {stato === 'malattia' && (
         <label className={`${CLASSE_LABEL} mt-2`}>

@@ -89,6 +89,19 @@ describe('controlloSettimanaOreLavoro', () => {
     expect(controlloSettimanaOreLavoro(giorni, profilo)).toMatchObject({ oreDovute: 0, variazioneMonteOre: 0 });
   });
 
+  it.each(['chiusura', 'ferie'])('esclude i giorni di %s dal calcolo (neutri, non alterano il monte ore)', (stato) => {
+    const giorni = [
+      { data: '2026-08-31', stato, oreOrdinarie: 0, oreStraordinarie: 0 },
+      { data: '2026-09-01', stato: 'lavorativo', oreOrdinarie: 7, oreStraordinarie: 0 },
+    ];
+    expect(controlloSettimanaOreLavoro(giorni, profilo)).toEqual({
+      oreDovute: 7,
+      oreOrdinarieErogate: 7,
+      oreStraordinarieErogate: 0,
+      variazioneMonteOre: 0,
+    });
+  });
+
   it('un weekend (previsto 0) scala interamente il monte ore', () => {
     const sabato = [{ data: '2026-09-05', stato: 'lavorativo', oreOrdinarie: 3, oreStraordinarie: 3 }];
     expect(controlloSettimanaOreLavoro(sabato, profilo)).toEqual({

@@ -94,7 +94,13 @@ test.describe('18 — Report ore di lavoro', () => {
         // differenza di presenze/pasti).
         await expect(page.getByLabel('Stato Sabato')).toBeVisible();
         await expect(page.getByLabel('Stato Domenica')).toBeVisible();
-        await expect(page.getByLabel('Differenza ore Sabato')).toBeEditable();
+        // Scenario "un giorno di chiusura scolastica è Chiusura per
+        // impostazione predefinita": sabato/domenica (chiusura implicita)
+        // partono in stato Chiusura, senza campi da compilare.
+        await expect(page.getByLabel('Stato Sabato')).toHaveValue('chiusura');
+        await expect(page.getByLabel('Stato Domenica')).toHaveValue('chiusura');
+        await expect(page.getByLabel('Differenza ore Sabato')).toHaveCount(0);
+        await expect(page.getByText('Giorno di vacanza', { exact: false }).first()).toBeVisible();
 
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
@@ -265,14 +271,34 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByLabel('Nota assenza Mercoledì')).toHaveValue('Visita E2E');
 
         // Il personale può lavorare anche in un giorno di chiusura
-        // (qui sabato, chiusura implicita): l'inserimento è accettato,
-        // non bloccato (specs/18, specs/53).
+        // (qui sabato, chiusura implicita): cambia lo stato in
+        // Lavorativo e l'inserimento è accettato, non bloccato
+        // (specs/18, specs/53); lo stato scelto resta dopo il reload.
+        await page.getByLabel('Stato Sabato').selectOption('lavorativo');
         await page.getByLabel('Differenza ore Sabato').fill('3');
         await page.getByLabel('Motivo Sabato').fill('Pulizie E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await page.waitForTimeout(1000);
         await page.reload();
+        await expect(page.getByLabel('Stato Sabato')).toHaveValue('lavorativo');
         await expect(page.getByLabel('Differenza ore Sabato')).toHaveValue('3');
+
+        // Scenari "segnare un giorno di ferie" e "Chiusura e Ferie non
+        // alterano il monte ore": giovedì (7h previste) in Ferie non ha
+        // campi e toglie 7h dalle ore dovute della settimana.
+        const oreDovuteLette = async () =>
+          Number(((await page.getByText('Ore dovute:', { exact: false }).textContent()) ?? '').match(/(\d+(?:\.\d+)?)h/)![1]);
+        const dovutePrima = await oreDovuteLette();
+        await page.getByLabel('Stato Giovedì').selectOption('ferie');
+        await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
+        await expect(page.getByText('non conta nel calcolo del monte ore', { exact: false }).first()).toBeVisible();
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await page.waitForTimeout(1000);
+        await page.reload();
+        await expect(page.getByLabel('Stato Giovedì')).toHaveValue('ferie');
+        await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
+        await expect.poll(oreDovuteLette).toBe(dovutePrima - 7);
+        await nessunaViolazioneA11yGrave(page);
 
         // --- Navigazione tra settimane (specs/18) ---
 
@@ -347,8 +373,8 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByRole('button', { name: 'Annulla' }).click();
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
       } finally {
-        // Ripristino: martedì/mercoledì tornano lavorativo, sabato torna
-        // a 0 ore, l'account torna disabilitato e senza profilo, il
+        // Ripristino: martedì/mercoledì/giovedì tornano lavorativo, sabato
+        // torna Chiusura, l'account torna disabilitato e senza profilo, il
         // profilo di test viene eliminato (svuota anche l'eventuale
         // assegnazione, specs/54).
         const confermata = await page.getByText('Settimana confermata il', { exact: false }).count();
@@ -360,8 +386,11 @@ test.describe('18 — Report ore di lavoro', () => {
           if ((await page.getByLabel('Stato Mercoledì').count()) > 0) {
             await page.getByLabel('Stato Mercoledì').selectOption('lavorativo');
           }
-          if ((await page.getByLabel('Differenza ore Sabato').count()) > 0) {
-            await page.getByLabel('Differenza ore Sabato').fill('0');
+          if ((await page.getByLabel('Stato Giovedì').count()) > 0) {
+            await page.getByLabel('Stato Giovedì').selectOption('lavorativo');
+          }
+          if ((await page.getByLabel('Stato Sabato').count()) > 0) {
+            await page.getByLabel('Stato Sabato').selectOption('chiusura');
           }
           if ((await page.getByLabel('Differenza ore Lunedì').count()) > 0) {
             await page.getByLabel('Differenza ore Lunedì').fill('0');
@@ -540,7 +569,8 @@ test.describe('18 — Report ore di lavoro', () => {
         if (!giaConfermata) {
           await expect(oreOrdinarieGiorno(paginaMaestra, 0)).toHaveText('6h');
           await expect(oreOrdinarieGiorno(paginaMaestra, 4)).toHaveText('3h');
-          await expect(oreOrdinarieGiorno(paginaMaestra, 5)).toHaveText('0h');
+          // Sabato (chiusura implicita) parte in Chiusura, senza ore previste da mostrare.
+          await expect(paginaMaestra.getByLabel('Stato Sabato')).toHaveValue('chiusura');
         }
         await contestoMaestra.close();
       } finally {

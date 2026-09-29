@@ -25,6 +25,9 @@ import {
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
   ETICHETTE_STATO_ORE_LAVORO,
+  isStatoNeutroOreLavoro,
+  statoPredefinitoGiornoOreLavoro,
+  TESTO_GIORNO_DI_VACANZA,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
 import { saldoMonteOre, controlloSettimanaOreLavoro, descrizioneEffettoMonteOre } from '@/lib/monteOre';
@@ -174,9 +177,15 @@ export default async function OreLavoroPage({
       // anche quando l'asilo non è operativo).
       chiuso: isGiornoChiuso(data, chiusure),
       messaggioChiuso: notaGiornoChiusoOreLavoro(data, chiusure),
-      stato: (salvata?.stato ?? 'lavorativo') as StatoGiornoOreLavoro,
+      // Un giorno non ancora salvato è "Chiusura" se l'asilo è chiuso,
+      // altrimenti "Lavorativo" (specs/18).
+      stato: (salvata?.stato ?? statoPredefinitoGiornoOreLavoro(data, chiusure)) as StatoGiornoOreLavoro,
       orePreviste: profiloOrario === null ? null : oreOrdinariePreviste(profiloOrario, data),
-      oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
+      oreOrdinarie: salvata
+        ? salvata.ore_ordinarie
+        : statoPredefinitoGiornoOreLavoro(data, chiusure) === 'lavorativo'
+          ? oreOrdinariePreviste(profiloOrario, data)
+          : 0,
       oreStraordinarie: salvata?.ore_straordinarie ?? 0,
       motivoStraordinario: salvata?.motivo_straordinario ?? '',
       // Differenza rispetto al previsto (specs/18): stessa formula del
@@ -297,6 +306,7 @@ export default async function OreLavoroPage({
                   <p className="mt-1 text-sm text-stone-600">Codice malattia: {r.codiceMalattia}</p>
                 )}
                 {r.stato === 'assenza' && <p className="mt-1 text-sm text-stone-600">Nota: {r.notaAssenza}</p>}
+                {isStatoNeutroOreLavoro(r.stato) && <p className="mt-1 text-sm text-stone-600">{TESTO_GIORNO_DI_VACANZA}</p>}
               </div>
             ))}
           </div>
@@ -325,7 +335,7 @@ export default async function OreLavoroPage({
               Salva modifiche
             </PulsanteInvio>
             {ultimoSalvataggio && (
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-600">
                 Ultimo salvataggio: {formattaDataOraItaliana(ultimoSalvataggio).replace('_', ' alle ')}
               </p>
             )}
