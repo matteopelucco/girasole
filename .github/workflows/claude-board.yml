@@ -82,20 +82,13 @@ jobs:
             Segui quel file alla lettera. Sii conciso: un solo commento di triage.
 
       # Issue #119: token e cache dell'esecuzione nel job summary (solo
-      # contatori numerici, nessun secret) + artifact a retention breve.
+      # contatori numerici, nessun secret). Niente artifact col file grezzo:
+      # il repo è pubblico e il file può contenere testo della sessione.
       - name: Riepilogo token e cache (triage)
         if: always()
         run: >
           node --no-warnings --experimental-strip-types scripts/riepilogo-token-claude.mts
           "Triage" "${{ steps.claude.outputs.execution_file }}"
-      - name: Salva output esecuzione Claude (triage)
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: claude-execution-triage
-          path: /home/runner/work/_temp/claude-execution-output.json
-          retention-days: 7
-          if-no-files-found: ignore
 
   # -------------------------------------------------------------------------
   review:
@@ -200,20 +193,13 @@ jobs:
             Review concisa e azionabile, un solo commento. NON mergiare mai.
 
       # Issue #119: token e cache dell'esecuzione nel job summary (solo
-      # contatori numerici, nessun secret) + artifact a retention breve.
+      # contatori numerici, nessun secret). Niente artifact col file grezzo:
+      # il repo è pubblico e il file può contenere testo della sessione.
       - name: Riepilogo token e cache (review)
         if: always() && steps.classifica.outputs.is-non-codice-review != 'true'
         run: >
           node --no-warnings --experimental-strip-types scripts/riepilogo-token-claude.mts
           "Review" "${{ steps.claude.outputs.execution_file }}"
-      - name: Salva output esecuzione Claude (review)
-        if: always() && steps.classifica.outputs.is-non-codice-review != 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: claude-execution-review
-          path: /home/runner/work/_temp/claude-execution-output.json
-          retention-days: 7
-          if-no-files-found: ignore
 
   # -------------------------------------------------------------------------
   # Nessun modello Claude: solo `gh issue edit` con il token di default del

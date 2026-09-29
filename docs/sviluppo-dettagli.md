@@ -329,9 +329,8 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   non solo `CLAUDE.md`. Ogni esecuzione CI è una sessione nuova e la
   cache dura pochi minuti: la "quota letta dalla cache" cresce nei turni
   successivi della stessa esecuzione, non tra PR diverse.
-- Lo stesso file JSON grezzo è scaricabile come artifact
-  (`claude-execution-triage`/`claude-execution-review`, retention 7
-  giorni). Può contenere il testo della sessione: non condividerlo fuori
-  dal repo.
+- Il file JSON grezzo NON è pubblicato come artifact: il repo è pubblico
+  e può contenere il testo della sessione. Nel summary ci sono solo
+  contatori numerici.
 - Se il riepilogo dice "nessun dato", lo step è stato saltato o il file non
   c'era (es. PR "non codice" senza review): non rende rosso il job.
