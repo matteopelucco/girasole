@@ -40,13 +40,14 @@ a schermo in [51 - report.md](51%20-%20report.md): bambini raggruppati
 per classe attiva, con presenze, presenze pre-asilo, presenze post-asilo
 e pasti "sì"
 E ciascun PDF riporta in intestazione il periodo a cui si riferisce e la
-data di generazione, in un formato adatto alla stampa (A4 verticale): la
-prima pagina mostra, in alto a destra, la riga "Generato il gg/mm/aaaa
+data di generazione, in un formato adatto alla stampa (A4 verticale): ogni
+pagina mostra, in alto a destra, la riga "Generato il gg/mm/aaaa
 alle hh:mm" (fuso Europe/Rome, istante reale di generazione, non la data
 del periodo, che resta com'è); vale per tutti i PDF (giornaliero,
 settimanale, mensile e PDF mensile delle ore di lavoro), perché la riga è
-disegnata da un solo primitivo condiviso (`creaDocumentoPdf` in
-`lib/pdfReport.ts`)
+disegnata a ogni nuova pagina da un solo primitivo condiviso
+(`creaDocumentoPdf`/`creaGestorePagine` in `lib/pdfReport.ts`), anche
+sulle pagine create dall'interruzione automatica e dalla pagina per persona
 E il corpo stesso dell'email (non solo gli allegati PDF) mostra il
 riepilogo del giorno appena concluso in forma tabellare — una tabella
 per classe attiva, con le stesse colonne del report giornaliero a
@@ -108,8 +109,8 @@ Quando l'email viene inviata
 Allora, oltre agli allegati già previsti, è allegato anche un PDF con le
 ore di lavoro del personale del mese "a tutt'oggi" (calcolato allo
 stesso modo del report mensile di presenze/pasti — vedi Regole)
-E il PDF riporta anche la riga "Generato il gg/mm/aaaa alle hh:mm" sulla
-prima pagina (vedi scenario "invio notturno")
+E il PDF riporta anche la riga "Generato il gg/mm/aaaa alle hh:mm" su
+ogni pagina (vedi scenario "invio notturno")
 E il PDF contiene una pagina per ciascuna persona abilitata al report
 ore, con: il suo nome, il mese solare a cui si riferisce, il profilo
 orario di riferimento assegnato (nome e ore per giorno), e una tabella
