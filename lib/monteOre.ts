@@ -70,6 +70,48 @@ export function controlloSettimanaOreLavoro(
   return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate, variazioneMonteOre };
 }
 
+export type RiepilogoSettimanaOreLavoro = {
+  orePreviste: number;
+  // Ore fatte in più (+) o in meno (−) rispetto al previsto (specs/18).
+  differenza: number;
+  // Effetto sul monte ore, applicato direttamente (specs/19, netto pieno):
+  // opposto della differenza.
+  variazioneMonteOre: number;
+};
+
+function riepilogo(orePreviste: number, differenza: number): RiepilogoSettimanaOreLavoro {
+  const diff = arrotonda(differenza);
+  // "+ 0" normalizza -0 in 0.
+  return { orePreviste: arrotonda(orePreviste), differenza: diff, variazioneMonteOre: arrotonda(-diff) + 0 };
+}
+
+// Riepilogo "a vivo" della settimana (specs/18): usa le differenze mostrate
+// nelle card, anche non ancora salvate. Solo i giorni "lavorativo"
+// contano (malattia/assenza/chiusura/ferie sono esclusi); una differenza
+// non valida (null) vale 0. Funzione pura, nessun I/O.
+export function riepilogoSettimanaDaDifferenze(
+  giorni: { stato: string; orePreviste: number; differenza: number | null }[]
+): RiepilogoSettimanaOreLavoro {
+  let orePreviste = 0;
+  let differenza = 0;
+  for (const g of giorni) {
+    if (g.stato !== 'lavorativo') continue;
+    orePreviste += g.orePreviste;
+    differenza += g.differenza ?? 0;
+  }
+  return riepilogo(orePreviste, differenza);
+}
+
+// Stesso riepilogo a partire dai totali registrati alla conferma (specs/19):
+// differenza = ordinarie + straordinarie − dovute. Funzione pura.
+export function riepilogoDaTotali(
+  oreDovute: number,
+  oreOrdinarieErogate: number,
+  oreStraordinarieErogate: number
+): RiepilogoSettimanaOreLavoro {
+  return riepilogo(oreDovute, oreOrdinarieErogate + oreStraordinarieErogate - oreDovute);
+}
+
 // Descrizione in italiano dell'effetto di una variazione di monte ore
 // (specs/19): stessa frase riusata sia nell'anteprima mostrata prima
 // della conferma ("Ore di lavoro", tabellina del riepilogo settimanale)
