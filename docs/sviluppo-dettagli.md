@@ -281,6 +281,19 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   — va creato da Matteo su
   https://supabase.com/dashboard/account/tokens e aggiunto con
   `gh secret set SUPABASE_ACCESS_TOKEN`.
+- **Grant-check (A26, issue #28)**: passo 6b del job `e2e`, subito dopo il
+  reset. `scripts/grant-check.mts` (logica pura in `lib/grantCheck.ts`)
+  estrae dal codice le tabelle usate per ruolo (`authenticated` per i client
+  utente, `service_role` per i client da `createAdminClient()`) e il
+  privilegio (select/insert/update/delete/upsert), poi legge
+  `information_schema.role_table_grants` sul DB di test via Management API
+  (sola SELECT; ref da `SUPABASE_TEST_PROJECT_REF`, token da
+  `SUPABASE_ACCESS_TOKEN`, mai la produzione). Fallisce con
+  "GRANT mancante: <privilegio> su public.<tabella> per <ruolo>". I grant
+  vivono nelle migration (non nel seed). Limiti dell'euristica: statica, non
+  copre `anon`, non richiede il SELECT implicito di update/delete, non vede
+  query costruite dinamicamente. Localmente: stesso comando con le due
+  variabili impostate sul progetto di test.
 - **Coda del DB di test (issue #105, ADR-0008)**: `ci.yml` ha tre job,
   `statico` (passi 0-5) → `e2e` (passi 6-8) → `verifica`. Solo `e2e`
   usa il DB, e sta in un gruppo di concorrenza globale
