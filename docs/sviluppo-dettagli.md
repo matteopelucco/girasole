@@ -39,7 +39,14 @@ Contesto operativo per Claude Code su questo progetto.
   nella migration insieme alla tabella.
 
 ## Workflow
-- Trunk-based development, commit atomici con messaggio in italiano.
+- Trunk-based development, commit atomici. Messaggi **in inglese**, formato
+  [Conventional Commits](https://www.conventionalcommits.org/):
+  `<tipo>(<ambito opzionale>): <descrizione all'imperativo>`, con tipo in
+  `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`;
+  `!` dopo il tipo per un breaking change. Titolo breve, dettagli nel corpo,
+  `Refs #<n>` (o `Closes #<n>`) in fondo. Es.:
+  `fix(presenze): block absence after Rojac communication`. Serve a generare
+  CHANGELOG e tag (issue #32). I commit precedenti restano com'erano.
 - Backlog e storia di lavoro: solo issue e PR (`docs/tasks-archivio.md`
   resta come storico).
 - Riferimento ai requisiti dettagliati: `specs/` — un file numerato per
