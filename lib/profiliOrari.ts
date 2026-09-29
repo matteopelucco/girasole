@@ -24,6 +24,21 @@ export function totaleOreSettimanali(profilo: ProfiloOrario): number {
     .reduce((totale, ore) => totale + ore, 0);
 }
 
+// Se la query è fallita (es. grant mancante, permessi) solleva un errore
+// invece di trattarla come "nessuna riga": un errore scartato produceva
+// "Nessun profilo orario assegnato" e ore dovute a 0 nel report (bug in
+// produzione, grant mancante a service_role su profili_orari). Stesso
+// principio di righeOSollevaErrore (lib/reportPresenze.ts).
+export function rigaOSollevaErrore<T>(
+  risultato: { data: T | null; error: { message: string } | null },
+  descrizione: string
+): T | null {
+  if (risultato.error) {
+    throw new Error(`${descrizione}: ${risultato.error.message}`);
+  }
+  return risultato.data;
+}
+
 // Il profilo orario assegnato a un utente (specs/18 -
 // report-ore-lavoro.md, precarica le ore ordinarie del report
 // settimanale), null se `profiloOrarioId` è null o non esiste più (fa
@@ -35,13 +50,13 @@ export async function recuperaProfiloOrario(
 ): Promise<ProfiloOrario | null> {
   if (!profiloOrarioId) return null;
 
-  const { data } = await supabase
+  const risultato = await supabase
     .from('profili_orari')
     .select('ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi')
     .eq('id', profiloOrarioId)
     .maybeSingle();
 
-  return data;
+  return rigaOSollevaErrore(risultato, 'lettura profilo orario');
 }
 
 export type ProfiloOrarioConNome = ProfiloOrario & { nome: string };
@@ -58,11 +73,11 @@ export async function recuperaProfiloOrarioConNome(
 ): Promise<ProfiloOrarioConNome | null> {
   if (!profiloOrarioId) return null;
 
-  const { data } = await supabase
+  const risultato = await supabase
     .from('profili_orari')
     .select('nome, ore_lunedi, ore_martedi, ore_mercoledi, ore_giovedi, ore_venerdi')
     .eq('id', profiloOrarioId)
     .maybeSingle();
 
-  return data;
+  return rigaOSollevaErrore(risultato, 'lettura profilo orario');
 }
