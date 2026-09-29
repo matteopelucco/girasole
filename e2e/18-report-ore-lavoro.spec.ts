@@ -19,8 +19,33 @@
 // confermata non è più modificabile" si attiva da solo (altrimenti
 // test.skip) solo se qualcuno l'ha già confermata manualmente questa
 // settimana.
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
+
+// Ore ordinarie mostrate (testo, non un campo: specs/18) del giorno
+// `indice` della settimana (0 = lunedì ... 5 = sabato).
+const oreOrdinarieGiorno = (page: Page, indice: number) => page.locator('[data-ore-ordinarie]').nth(indice);
+const totaleErogato = (page: Page, giorno: string) => page.getByRole('status', { name: `Totale ore erogate ${giorno}` });
+
+// Scenario "una settimana confermata non è più modificabile dal
+// personale": in sola lettura ogni giorno lavorativo mostra il totale
+// erogato con il testo di stato (non più "Ordinarie / Straordinarie").
+async function verificaCardSolaLettura(page: Page) {
+  const totali = page.getByRole('status', { name: /^Totale ore erogate/ });
+  expect(await totali.count()).toBeGreaterThan(0);
+  await expect(totali.first()).toContainText(/✓ Ore come previsto|⚠ .*(in più|in meno) del previsto/);
+  await expect(page.getByText('Straordinarie:', { exact: false })).toHaveCount(0);
+  await expect(page.locator('input[name^="differenza_ore"]')).toHaveCount(0);
+}
+
+// Il campo "Differenza ore" ha step 0.25: il browser bloccherebbe da sé
+// l'invio di valori non validi. Per verificare la validazione LATO
+// SERVER (fonte di verità, specs/18) disattivo quella nativa.
+async function disattivaValidazioneNativa(page: Page) {
+  await page.getByRole('button', { name: 'Salva modifiche' }).evaluate((b) => {
+    (b.closest('form') as HTMLFormElement).noValidate = true;
+  });
+}
 
 test.describe('18 — Report ore di lavoro', () => {
   test.describe('come admin', () => {
@@ -58,6 +83,7 @@ test.describe('18 — Report ore di lavoro', () => {
           // il resto del test presuppone di poter ancora modificare.
           await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
+          await verificaCardSolaLettura(page);
           await nessunaViolazioneA11yGrave(page);
           return;
         }
@@ -68,18 +94,23 @@ test.describe('18 — Report ore di lavoro', () => {
         // differenza di presenze/pasti).
         await expect(page.getByLabel('Stato Sabato')).toBeVisible();
         await expect(page.getByLabel('Stato Domenica')).toBeVisible();
-        await expect(page.getByLabel('Ore ordinarie Sabato')).toBeEditable();
+        await expect(page.getByLabel('Differenza ore Sabato')).toBeEditable();
 
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
-        // Senza profilo orario: ore ordinarie a 0, riferimento statico
-        // esplicito e nessun pulsante "Copia" (scenario "il profilo
-        // orario resta sempre visibile come riferimento statico").
-        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('0');
+        // Senza profilo orario: ore ordinarie a 0 (testo, non un campo),
+        // riferimento statico esplicito con il suggerimento di chiedere
+        // all'admin (scenari "senza profilo orario assegnato" e "il
+        // profilo orario resta sempre visibile come riferimento
+        // statico"), nessun pulsante "Copia" (scenario "le ore ordinarie
+        // non sono modificabili e non c'è il pulsante Copia").
+        await expect(oreOrdinarieGiorno(page, 0)).toHaveText('0h');
+        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveCount(0);
         await expect(page.getByText('Nessun profilo orario assegnato', { exact: false }).first()).toBeVisible();
-        await expect(page.getByRole('button', { name: /Copia dal profilo orario/ })).toHaveCount(0);
+        await expect(page.getByText("chiedi all'admin", { exact: false }).first()).toBeVisible();
+        await expect(page.getByRole('button', { name: /Copia/ })).toHaveCount(0);
 
         // Assegno un profilo orario e ricarico: ore ordinarie precaricate.
         await page.goto('/admin/profili-orari');
@@ -99,17 +130,39 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.waitForTimeout(1000);
 
         await page.goto('/dashboard/ore-lavoro');
-        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
-        await expect(page.getByLabel('Ore ordinarie Venerdì')).toHaveValue('4');
+        await expect(oreOrdinarieGiorno(page, 0)).toHaveText('7h');
+        await expect(oreOrdinarieGiorno(page, 4)).toHaveText('4h');
+        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveCount(0);
+        await expect(page.getByRole('button', { name: /Copia/ })).toHaveCount(0);
 
-        // Il valore previsto resta visibile come testo statico accanto
-        // al campo, mai dentro il campo stesso — e "Copia" lo reimposta
-        // con un tap, senza inviare il form (scenario "copiare le ore
-        // previste dal profilo orario con un tap").
+        // Il valore previsto resta visibile come testo statico, mai
+        // dentro un campo (scenario "il profilo orario resta sempre
+        // visibile come riferimento statico").
         await expect(page.getByText('Previsto: 7h', { exact: false }).first()).toBeVisible();
-        await page.getByLabel('Ore ordinarie Lunedì').fill('2');
-        await page.getByRole('button', { name: 'Copia dal profilo orario Lunedì' }).click();
-        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
+
+        // Scenario "la differenza ore aggiorna il totale erogato e il
+        // colore della card": con differenza 0 totale = ordinarie e
+        // segnale testuale "come previsto" (card verde); con una
+        // differenza il totale cambia e il testo dice quante ore in
+        // più/meno (card rossa); l'intestazione non cambia.
+        await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('0');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('7h');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('Ore come previsto');
+        await expect(page.getByLabel('Motivo Lunedì')).toHaveCount(0);
+        await page.getByLabel('Differenza ore Lunedì').fill('2');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('9h');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('2h in più del previsto');
+        await expect(page.getByLabel('Motivo Lunedì')).toBeVisible();
+        await page.getByRole('button', { name: "Un quarto d'ora in meno Lunedì" }).click();
+        await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('1.75');
+        await page.getByLabel('Differenza ore Lunedì').fill('-1');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('6h');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('1h in meno del previsto');
+        await nessunaViolazioneA11yGrave(page);
+        await page.getByLabel('Differenza ore Lunedì').fill('0');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('Ore come previsto');
+        await expect(page.getByLabel('Motivo Lunedì')).toHaveCount(0);
+        await expect(page.getByLabel('Stato Lunedì')).toBeVisible();
 
         // La scheda mostra ore dovute/ordinarie/straordinarie erogate,
         // in un riquadro separato dai singoli giorni (scenario "la
@@ -129,10 +182,42 @@ test.describe('18 — Report ore di lavoro', () => {
           /(\d+(\.\d+)? in (più|meno) sul monte ore|nessuna variazione del monte ore)/
         );
 
-        // Straordinario senza motivo: rifiutato, nessuna scrittura.
-        await page.getByLabel('Ore straordinarie Lunedì').fill('2');
+        // Differenza senza motivo: rifiutata, nessuna scrittura
+        // (scenario "una differenza diversa da zero richiede un motivo").
+        await page.getByLabel('Differenza ore Lunedì').fill('2');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(alertApp(page)).toContainText('motivo');
+
+        // Scenario "le ore ammettono solo multipli di un quarto d'ora e
+        // il totale non è mai negativo": validazione lato server.
+        await disattivaValidazioneNativa(page);
+        await page.getByLabel('Differenza ore Lunedì').fill('0.2');
+        await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await expect(alertApp(page)).toContainText("quarto d'ora");
+        await page.getByLabel('Differenza ore Lunedì').fill('-8');
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await expect(alertApp(page)).toContainText('negativo');
+
+        // Scenario "i dati storici non a quarti d'ora sono mostrati
+        // arrotondati e non vengono modificati finché non si salva": non
+        // simulabile via UI (il server rifiuta i valori non a quarti
+        // d'ora e l'e2e non ha accesso al DB con dati arbitrari); la
+        // logica di arrotondamento è coperta da lib/oreLavoro.test.ts
+        // (arrotondaAQuartiDora) e la pagina la applica in lettura.
+
+        // Differenza negativa valida: salvata come ordinarie ridotte,
+        // riletta come stessa differenza (scenario "la differenza è
+        // salvata nei dati esistenti senza cambiare monte ore e report").
+        await page.getByLabel('Differenza ore Lunedì').fill('-0.5');
+        await page.getByLabel('Motivo Lunedì').fill('Uscita anticipata E2E');
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await expect(alertApp(page)).toHaveCount(0);
+        await page.waitForTimeout(1000);
+        await page.reload();
+        await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('-0.5');
+        await expect(totaleErogato(page, 'Lunedì')).toContainText('6.5h');
+        await expect(oreOrdinarieGiorno(page, 0)).toHaveText('7h');
 
         // Con il motivo: accettato, il totale della settimana si aggiorna.
         // Il form invia sempre tutti e 7 i giorni in un solo
@@ -143,8 +228,8 @@ test.describe('18 — Report ore di lavoro', () => {
         // rifiutava erroneamente qualunque giorno futuro anche dentro
         // la settimana corrente, impedendo di salvare a metà settimana;
         // vedi supabase/migrations/0029_fix_ore_lavoro_vincolo_futuro.sql).
-        await page.getByLabel('Ore straordinarie Lunedì').fill('2');
-        await page.getByLabel('Motivo straordinario Lunedì').fill('Riunione E2E');
+        await page.getByLabel('Differenza ore Lunedì').fill('2');
+        await page.getByLabel('Motivo Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(alertApp(page)).toHaveCount(0);
         await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText('2h', {
@@ -182,11 +267,12 @@ test.describe('18 — Report ore di lavoro', () => {
         // Il personale può lavorare anche in un giorno di chiusura
         // (qui sabato, chiusura implicita): l'inserimento è accettato,
         // non bloccato (specs/18, specs/53).
-        await page.getByLabel('Ore ordinarie Sabato').fill('3');
+        await page.getByLabel('Differenza ore Sabato').fill('3');
+        await page.getByLabel('Motivo Sabato').fill('Pulizie E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await page.waitForTimeout(1000);
         await page.reload();
-        await expect(page.getByLabel('Ore ordinarie Sabato')).toHaveValue('3');
+        await expect(page.getByLabel('Differenza ore Sabato')).toHaveValue('3');
 
         // --- Navigazione tra settimane (specs/18) ---
 
@@ -198,7 +284,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // quella corrente, senza errori (stesso scenario, clamp lato pagina).
         await page.goto('/dashboard/ore-lavoro?settimana=2099-01-05');
         await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
-        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('7');
+        await expect(oreOrdinarieGiorno(page, 0)).toHaveText('7h');
 
         // "←" porta alla settimana precedente, con gli stessi dati
         // (precaricati dal profilo orario dove non ho ancora salvato
@@ -217,18 +303,21 @@ test.describe('18 — Report ore di lavoro', () => {
           // precedente risulta già confermata.
           await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
+          await verificaCardSolaLettura(page);
         } else {
           // Scenario "modificare o confermare una settimana passata non
           // ancora confermata": stesso comportamento della settimana
           // corrente. Ripristino lo stesso valore trovato, per non
           // lasciare lo stato diverso da come l'ho trovato.
-          await expect(page.getByLabel('Ore ordinarie Lunedì')).toBeEditable();
-          const valorePrecedente = await page.getByLabel('Ore ordinarie Lunedì').inputValue();
-          await page.getByLabel('Ore ordinarie Lunedì').fill('5');
+          await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
+          const valorePrecedente = await page.getByLabel('Differenza ore Lunedì').inputValue();
+          const motivoPrecedente = await page.getByLabel('Motivo Lunedì').count() ? await page.getByLabel('Motivo Lunedì').inputValue() : '';
+          await page.getByLabel('Differenza ore Lunedì').fill('1');
+          await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
           await page.getByRole('button', { name: 'Salva modifiche' }).click();
           await page.waitForTimeout(1000);
           await page.reload();
-          await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveValue('5');
+          await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('1');
 
           await page.getByRole('button', { name: 'Conferma settimana' }).click();
           await expect(
@@ -236,7 +325,8 @@ test.describe('18 — Report ore di lavoro', () => {
           ).toBeVisible();
           await page.getByRole('button', { name: 'Annulla' }).click();
 
-          await page.getByLabel('Ore ordinarie Lunedì').fill(valorePrecedente);
+          await page.getByLabel('Differenza ore Lunedì').fill(valorePrecedente);
+          if (Number(valorePrecedente) !== 0) await page.getByLabel('Motivo Lunedì').fill(motivoPrecedente || 'Ripristino E2E');
           await page.getByRole('button', { name: 'Salva modifiche' }).click();
           await page.waitForTimeout(1000);
         }
@@ -270,8 +360,11 @@ test.describe('18 — Report ore di lavoro', () => {
           if ((await page.getByLabel('Stato Mercoledì').count()) > 0) {
             await page.getByLabel('Stato Mercoledì').selectOption('lavorativo');
           }
-          if ((await page.getByLabel('Ore ordinarie Sabato').count()) > 0) {
-            await page.getByLabel('Ore ordinarie Sabato').fill('0');
+          if ((await page.getByLabel('Differenza ore Sabato').count()) > 0) {
+            await page.getByLabel('Differenza ore Sabato').fill('0');
+          }
+          if ((await page.getByLabel('Differenza ore Lunedì').count()) > 0) {
+            await page.getByLabel('Differenza ore Lunedì').fill('0');
           }
           const salva = page.getByRole('button', { name: 'Salva modifiche' });
           if ((await salva.count()) > 0) {
@@ -368,7 +461,8 @@ test.describe('18 — Report ore di lavoro', () => {
           // vista del diretto interessato (sola lettura), l'admin vede
           // comunque i campi modificabili.
           await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
-          await expect(page.getByLabel('Ore ordinarie Lunedì')).toBeEditable();
+          await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
+          await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveCount(0);
           await expect(page.getByText('Puoi comunque correggerla qui sotto', { exact: false })).toBeVisible();
         } else {
           // Scenario: l'admin conferma per conto di un dipendente una
@@ -444,9 +538,9 @@ test.describe('18 — Report ore di lavoro', () => {
         const giaConfermata =
           (await paginaMaestra.getByText('Settimana confermata il', { exact: false }).count()) > 0;
         if (!giaConfermata) {
-          await expect(paginaMaestra.getByLabel('Ore ordinarie Lunedì')).toHaveValue('6');
-          await expect(paginaMaestra.getByLabel('Ore ordinarie Venerdì')).toHaveValue('3');
-          await expect(paginaMaestra.getByLabel('Ore ordinarie Sabato')).toHaveValue('0');
+          await expect(oreOrdinarieGiorno(paginaMaestra, 0)).toHaveText('6h');
+          await expect(oreOrdinarieGiorno(paginaMaestra, 4)).toHaveText('3h');
+          await expect(oreOrdinarieGiorno(paginaMaestra, 5)).toHaveText('0h');
         }
         await contestoMaestra.close();
       } finally {

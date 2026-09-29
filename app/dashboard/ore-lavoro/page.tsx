@@ -4,6 +4,7 @@ import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { RigaOreLavoro } from '@/components/RigaOreLavoro';
+import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import {
   oggi,
@@ -17,6 +18,10 @@ import {
 } from '@/lib/date';
 import {
   oreOrdinariePreviste,
+  arrotondaAQuartiDora,
+  differenzaGiornoOreLavoro,
+  formattaOreConSegno,
+  totaleOreErogate,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
   ETICHETTE_STATO_ORE_LAVORO,
@@ -170,9 +175,26 @@ export default async function OreLavoroPage({
       chiuso: isGiornoChiuso(data, chiusure),
       messaggioChiuso: notaGiornoChiusoOreLavoro(data, chiusure),
       stato: (salvata?.stato ?? 'lavorativo') as StatoGiornoOreLavoro,
+      orePreviste: profiloOrario === null ? null : oreOrdinariePreviste(profiloOrario, data),
       oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
       oreStraordinarie: salvata?.ore_straordinarie ?? 0,
       motivoStraordinario: salvata?.motivo_straordinario ?? '',
+      // Differenza rispetto al previsto (specs/18): stessa formula del
+      // delta di report e monte ore, quindi compatibile con lo storico.
+      // Un giorno malattia/assenza (ore a 0) riparte da 0 se si torna a
+      // "Lavorativo", non da -previste.
+      differenzaOre:
+        salvata && salvata.stato === 'lavorativo'
+          ? // Dati storici non a quarti d'ora: mostrati arrotondati (solo
+            // in lettura, il dato cambia se si salva la card).
+            arrotondaAQuartiDora(
+              differenzaGiornoOreLavoro(
+                oreOrdinariePreviste(profiloOrario, data),
+                Number(salvata.ore_ordinarie),
+                Number(salvata.ore_straordinarie)
+              )
+            )
+          : 0,
       codiceMalattia: salvata?.codice_malattia ?? '',
       notaAssenza: salvata?.nota_assenza ?? '',
     };
@@ -247,7 +269,7 @@ export default async function OreLavoroPage({
         {soloLettura ? (
           <div className="space-y-2">
             {righe.map((r) => (
-              <div key={r.data} className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
+              <div key={r.data} className={`rounded-xl border p-3 shadow-sm ${classeCardOreLavoro(r.stato === 'lavorativo' ? r.differenzaOre : null)}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">
                     {r.etichetta} <span className="font-normal text-stone-600">{r.dataBreve}</span>
@@ -256,17 +278,20 @@ export default async function OreLavoroPage({
                 </div>
                 {r.chiuso && <p className="mt-1 text-xs text-stone-500">{r.messaggioChiuso}</p>}
                 {r.stato === 'lavorativo' && (
-                  <p className="mt-1 text-sm text-stone-600">
-                    Ordinarie: {r.oreOrdinarie}h · Straordinarie: {r.oreStraordinarie}h
-                    {r.motivoStraordinario ? ` (${r.motivoStraordinario})` : ''}
-                    <span className="ml-1 text-stone-500">
-                      (
-                      {profiloOrario === null
-                        ? 'Nessun profilo orario assegnato'
-                        : `Previsto: ${oreOrdinariePreviste(profiloOrario, r.data)}h`}
-                      )
-                    </span>
-                  </p>
+                  <div className="mt-2 space-y-3">
+                    <OrePreviste orePreviste={r.orePreviste} />
+                    <p className="text-sm text-stone-700">
+                      Differenza ore: <strong>{formattaOreConSegno(r.differenzaOre)}h</strong>
+                    </p>
+                    {r.differenzaOre !== 0 && r.motivoStraordinario && (
+                      <p className="text-sm text-stone-700">Motivo: {r.motivoStraordinario}</p>
+                    )}
+                    <TotaleOreErogate
+                      etichettaGiorno={r.etichetta}
+                      totale={totaleOreErogate(r.orePreviste ?? 0, r.differenzaOre)}
+                      differenza={r.differenzaOre}
+                    />
+                  </div>
                 )}
                 {r.stato === 'malattia' && (
                   <p className="mt-1 text-sm text-stone-600">Codice malattia: {r.codiceMalattia}</p>
@@ -285,13 +310,12 @@ export default async function OreLavoroPage({
                 etichettaGiorno={r.etichetta}
                 dataBreve={r.dataBreve}
                 messaggioChiuso={r.chiuso ? r.messaggioChiuso : null}
-                orePreviste={profiloOrario === null ? null : oreOrdinariePreviste(profiloOrario, r.data)}
+                orePreviste={r.orePreviste}
                 valori={{
                   data: r.data,
                   stato: r.stato,
-                  oreOrdinarie: r.oreOrdinarie,
-                  oreStraordinarie: r.oreStraordinarie,
-                  motivoStraordinario: r.motivoStraordinario,
+                  differenzaOre: r.differenzaOre,
+                  motivo: r.motivoStraordinario,
                   codiceMalattia: r.codiceMalattia,
                   notaAssenza: r.notaAssenza,
                 }}

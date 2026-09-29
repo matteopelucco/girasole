@@ -1,14 +1,21 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { ETICHETTE_STATO_ORE_LAVORO, type StatoGiornoOreLavoro } from '@/lib/oreLavoro';
+import { useState } from 'react';
+import {
+  ETICHETTE_STATO_ORE_LAVORO,
+  sonoQuartiDora,
+  totaleOreErogate,
+  type StatoGiornoOreLavoro,
+} from '@/lib/oreLavoro';
+import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
 
 export type ValoriGiornoOreLavoro = {
   data: string;
   stato: StatoGiornoOreLavoro;
-  oreOrdinarie: number | string;
-  oreStraordinarie: number | string;
-  motivoStraordinario: string;
+  // Ore in più (+) o in meno (-) rispetto al previsto, già calcolate
+  // dalla pagina (differenzaGiornoOreLavoro) dai dati salvati.
+  differenzaOre: number;
+  motivo: string;
   codiceMalattia: string;
   notaAssenza: string;
 };
@@ -16,16 +23,29 @@ export type ValoriGiornoOreLavoro = {
 const CLASSE_INPUT =
   'mt-1 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-none focus:border-stone-500';
 const CLASSE_LABEL = 'flex flex-col text-xs text-stone-600';
+// Bersagli tattili di almeno 44px (specs/01 - ux.md, uso da telefono).
+const CLASSE_INPUT_TATTILE = 'mt-1 h-11 rounded-lg border border-stone-300 px-2 text-base outline-none focus:border-stone-500';
+const CLASSE_PULSANTE_PASSO =
+  'mt-1 h-11 w-11 shrink-0 rounded-lg border border-stone-300 bg-white text-xl font-medium text-stone-700 hover:bg-stone-100';
+
+const PASSO_ORE = 0.25;
+
+function arrotonda(valore: number): number {
+  return Math.round(valore * 100) / 100;
+}
 
 // Riga editabile di un giorno nel form settimanale di "Ore di lavoro"
-// (specs/18 - report-ore-lavoro.md): mostra solo i campi pertinenti allo
-// stato scelto — ore ordinarie/straordinarie per "Lavorativo", codice
-// per "Malattia", nota per "Assenza" — invece di tutti insieme, coerente
-// con specs/01 - ux.md ("preferire azioni a un tap a form con molti
-// campi da compilare"). Componente client solo per questo toggle
-// visivo: la sottomissione resta un form nativo (ogni campo mantiene il
-// proprio `name`, il genitore è un <form> con Server Action — nessun
-// fetch qui, nessuno stato condiviso tra righe).
+// (specs/18 - report-ore-lavoro.md): per "Lavorativo" mostra le ore
+// ordinarie (non modificabili, quelle previste dal profilo orario), la
+// "Differenza ore" (l'unico campo modificabile, +/- multipli di un
+// quarto d'ora), il motivo (solo se la differenza è diversa da 0) e il
+// totale erogato calcolato; la card è verde con differenza 0, rossa
+// altrimenti, sempre con un testo oltre al colore (specs/01). Per
+// "Malattia" il codice, per "Assenza" la nota. Componente client solo
+// per lo stato di questi campi: la sottomissione resta un form nativo
+// (ogni campo mantiene il proprio `name`, il genitore è un <form> con
+// Server Action — nessun fetch qui, nessuno stato condiviso tra righe).
+// La validazione vera è lato server (validaGiornoOreLavoro).
 export function RigaOreLavoro({
   etichettaGiorno,
   dataBreve,
@@ -41,18 +61,40 @@ export function RigaOreLavoro({
   // comunque lavorare — null quando il giorno non è chiuso.
   messaggioChiuso?: string | null;
   // Ore previste dal profilo orario per questo giorno (specs/18, specs/54):
-  // mostrate come riferimento statico accanto al campo "Ore ordinarie",
-  // mai dentro il campo stesso — null se non c'è un profilo assegnato.
-  // Il pulsante "Copia" imposta il campo a questo valore con un tap,
-  // senza inviare il form.
+  // sono le "Ore ordinarie" mostrate (non modificabili) e il riferimento
+  // statico "Previsto: Xh" — null se non c'è un profilo assegnato (in
+  // quel caso le ore ordinarie sono 0).
   orePreviste?: number | null;
 }) {
   const [stato, setStato] = useState<StatoGiornoOreLavoro>(valori.stato);
+  const [differenzaTesto, setDifferenzaTesto] = useState(String(valori.differenzaOre));
+  const [motivo, setMotivo] = useState(valori.motivo);
   const nomeCampo = (suffisso: string) => `${suffisso}_${valori.data}`;
-  const campoOreOrdinarie = useRef<HTMLInputElement>(null);
+
+  const ordinarie = orePreviste ?? 0;
+  const testoNormalizzato = differenzaTesto.trim().replace(',', '.');
+  const differenza = testoNormalizzato === '' ? 0 : Number(testoNormalizzato);
+  const differenzaValida = Number.isFinite(differenza);
+  const totale = differenzaValida ? totaleOreErogate(ordinarie, differenza) : null;
+  const inRegola = differenzaValida && differenza === 0;
+  const fuoriRegola = differenzaValida && differenza !== 0;
+  const problema = !differenzaValida
+    ? 'Scrivi un numero (es. 1, 2.5, -0.5).'
+    : !sonoQuartiDora(differenza)
+      ? "Le ore devono essere multipli di un quarto d'ora (es. 1, 2.5, 0.25)."
+      : totale !== null && totale < 0
+        ? `La differenza non può superare le ore ordinarie (${ordinarie}h): il totale non può essere negativo.`
+        : null;
+
+  const cambiaDifferenza = (passo: number) => {
+    const base = differenzaValida ? differenza : 0;
+    setDifferenzaTesto(String(arrotonda(base + passo)));
+  };
+
+  const classeCard = stato !== 'lavorativo' ? classeCardOreLavoro(null) : classeCardOreLavoro(differenzaValida ? differenza : null);
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
+    <div className={`rounded-xl border p-3 shadow-sm ${classeCard}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium">
           {etichettaGiorno} <span className="font-normal text-stone-600">{dataBreve}</span>
@@ -72,62 +114,68 @@ export function RigaOreLavoro({
         </select>
       </div>
 
-      {messaggioChiuso && <p className="mt-1 text-xs text-stone-500">{messaggioChiuso}</p>}
+      {messaggioChiuso && <p className="mt-1 text-xs text-stone-700">{messaggioChiuso}</p>}
 
       {stato === 'lavorativo' && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          <label className={CLASSE_LABEL}>
-            Ore ordinarie
-            <input
-              ref={campoOreOrdinarie}
-              type="number"
-              min={0}
-              step={0.5}
-              name={nomeCampo('ore_ordinarie')}
-              defaultValue={valori.oreOrdinarie}
-              aria-label={`Ore ordinarie ${etichettaGiorno}`}
-              className={`${CLASSE_INPUT} w-20`}
-            />
-            {/* Riferimento statico del profilo orario (specs/18, specs/54):
-                mai dentro il campo, resta visibile qualunque cosa digiti. */}
-            <span className="mt-1 text-xs text-stone-500">
-              {orePreviste === null ? 'Nessun profilo orario assegnato' : `Previsto: ${orePreviste}h`}
-            </span>
-            {orePreviste !== null && orePreviste > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (campoOreOrdinarie.current) campoOreOrdinarie.current.value = String(orePreviste);
-                }}
-                aria-label={`Copia dal profilo orario ${etichettaGiorno}`}
-                className="mt-1 self-start rounded-lg border border-stone-300 bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-700 hover:bg-stone-100"
-              >
-                Copia
-              </button>
-            )}
-          </label>
-          <label className={CLASSE_LABEL}>
-            Ore straordinarie
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              name={nomeCampo('ore_straordinarie')}
-              defaultValue={valori.oreStraordinarie}
-              aria-label={`Ore straordinarie ${etichettaGiorno}`}
-              className={`${CLASSE_INPUT} w-20`}
-            />
-          </label>
-          <label className={`${CLASSE_LABEL} min-w-[10rem] flex-1`}>
-            Motivo straordinario
-            <input
-              type="text"
-              name={nomeCampo('motivo_straordinario')}
-              defaultValue={valori.motivoStraordinario}
-              aria-label={`Motivo straordinario ${etichettaGiorno}`}
-              className={CLASSE_INPUT}
-            />
-          </label>
+        <div className="mt-2 space-y-3">
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
+            {/* Ore ordinarie: solo testo, non modificabili (specs/18). */}
+            <OrePreviste orePreviste={orePreviste} />
+
+            <div className={CLASSE_LABEL}>
+              <label htmlFor={`differenza-${valori.data}`}>Differenza ore (in più + / in meno −)</label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => cambiaDifferenza(-PASSO_ORE)}
+                  aria-label={`Un quarto d'ora in meno ${etichettaGiorno}`}
+                  className={CLASSE_PULSANTE_PASSO}
+                >
+                  −
+                </button>
+                <input
+                  id={`differenza-${valori.data}`}
+                  type="number"
+                  step={PASSO_ORE}
+                  name={nomeCampo('differenza_ore')}
+                  value={differenzaTesto}
+                  onChange={(e) => setDifferenzaTesto(e.target.value)}
+                  aria-label={`Differenza ore ${etichettaGiorno}`}
+                  aria-invalid={problema ? true : undefined}
+                  className={`${CLASSE_INPUT_TATTILE} w-24 text-center`}
+                />
+                <button
+                  type="button"
+                  onClick={() => cambiaDifferenza(PASSO_ORE)}
+                  aria-label={`Un quarto d'ora in più ${etichettaGiorno}`}
+                  className={CLASSE_PULSANTE_PASSO}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {problema && (
+            <p className="text-xs font-medium text-red-800">{problema}</p>
+          )}
+
+          {fuoriRegola && (
+            <label className={`${CLASSE_LABEL} max-w-md`}>
+              Motivo (obbligatorio)
+              <input
+                type="text"
+                name={nomeCampo('motivo')}
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                aria-label={`Motivo ${etichettaGiorno}`}
+                placeholder="Perché hai fatto più o meno ore?"
+                className={CLASSE_INPUT_TATTILE}
+              />
+            </label>
+          )}
+
+          <TotaleOreErogate etichettaGiorno={etichettaGiorno} totale={totale} differenza={differenzaValida ? differenza : null} />
         </div>
       )}
 

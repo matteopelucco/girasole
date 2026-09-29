@@ -50,6 +50,36 @@ function risolviUtenteBersaglio(
   return utenteId;
 }
 
+// Valore del campo "Differenza ore": accetta anche la virgola decimale
+// italiana; campo vuoto = 0, testo non numerico = NaN (rifiutato).
+function differenzaDaForm(valore: FormDataEntryValue | null): number {
+  const testo = typeof valore === 'string' ? valore.trim().replace(',', '.') : '';
+  return testo === '' ? 0 : Number(testo);
+}
+
+// Profilo orario dell'utente su cui si scrive: quello di chi invia se
+// scrive su se stesso, altrimenti quello dell'utente indicato (solo un
+// admin può farlo) — condiviso da salvataggio e conferma, per calcolare
+// le ore previste sempre sul profilo giusto e mai sul valore inviato
+// dal client.
+async function profiloOrarioDelBersaglio(
+  supabase: Awaited<ReturnType<typeof requireStaff>>['supabase'],
+  userId: string,
+  profiloOrarioIdProprio: string | null | undefined,
+  utenteId: string
+) {
+  let profiloOrarioId = profiloOrarioIdProprio ?? null;
+  if (utenteId !== userId) {
+    const { data: profiloAltro } = await supabase
+      .from('profili')
+      .select('profilo_orario_id')
+      .eq('id', utenteId)
+      .maybeSingle();
+    profiloOrarioId = profiloAltro?.profilo_orario_id ?? null;
+  }
+  return recuperaProfiloOrario(supabase, profiloOrarioId);
+}
+
 // Salva le ore/lo stato di ogni giorno della settimana indicata
 // (specs/18: quella corrente o una passata, mai una futura) — valida
 // PRIMA tutti i giorni inviati (funzione pura, nessun I/O) e scrive
@@ -71,15 +101,18 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
   }
 
   const giorni = giorniSettimana(settimanaInizio);
+  const profiloOrario = await profiloOrarioDelBersaglio(supabase, user.id, profilo?.profilo_orario_id, utenteId);
 
   const daScrivere = [];
   for (const data of giorni) {
     const esito = validaGiornoOreLavoro({
       data,
       stato: (formData.get(`stato_${data}`) as string) || 'lavorativo',
-      oreOrdinarie: Number(formData.get(`ore_ordinarie_${data}`)) || 0,
-      oreStraordinarie: Number(formData.get(`ore_straordinarie_${data}`)) || 0,
-      motivoStraordinario: (formData.get(`motivo_straordinario_${data}`) as string) || '',
+      orePreviste: oreOrdinariePreviste(profiloOrario, data),
+      // Vuoto = 0 (default); un testo non numerico resta NaN e viene
+      // rifiutato dalla validazione, non azzerato in silenzio.
+      differenzaOre: differenzaDaForm(formData.get(`differenza_ore_${data}`)),
+      motivo: (formData.get(`motivo_${data}`) as string) || '',
       codiceMalattia: (formData.get(`codice_malattia_${data}`) as string) || '',
       notaAssenza: (formData.get(`nota_assenza_${data}`) as string) || '',
     });
@@ -144,16 +177,7 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     .in('data', giorni);
   const dateEsistenti = new Set((esistenti ?? []).map((r) => r.data));
 
-  let profiloOrarioId = profilo?.profilo_orario_id ?? null;
-  if (utenteId !== user.id) {
-    const { data: profiloAltro } = await supabase
-      .from('profili')
-      .select('profilo_orario_id')
-      .eq('id', utenteId)
-      .maybeSingle();
-    profiloOrarioId = profiloAltro?.profilo_orario_id ?? null;
-  }
-  const profiloOrario = await recuperaProfiloOrario(supabase, profiloOrarioId);
+  const profiloOrario = await profiloOrarioDelBersaglio(supabase, user.id, profilo?.profilo_orario_id, utenteId);
 
   const daCompletare = giorni
     .filter((data) => !dateEsistenti.has(data))
