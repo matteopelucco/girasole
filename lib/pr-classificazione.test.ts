@@ -70,19 +70,24 @@ describe('eNonCodiceCI', () => {
     expect(eNonCodiceCI([])).toBe(false);
   });
 
-  it('è true per soli file docs/specs/TASKS/README', () => {
+  it('è true per soli file docs/specs/README/CHANGELOG', () => {
     const file: FileCambiatoPR[] = [
       { path: 'docs/programma-attivita.md' },
       { path: 'specs/50 - amministrazione_base.md' },
-      { path: 'TASKS.md' },
+      { path: 'CHANGELOG.md' },
       { path: 'README.md' },
     ];
     expect(eNonCodiceCI(file)).toBe(true);
   });
 
+  it('TASKS.md (abolito, #118) non è più un file "non codice"', () => {
+    expect(eNonCodiceCI([{ path: 'TASKS.md' }])).toBe(false);
+    expect(eNonCodiceReview([{ path: 'TASKS.md' }])).toBe(false);
+  });
+
   it('è true per un bump puro di package.json + package-lock.json insieme a docs', () => {
     const file: FileCambiatoPR[] = [
-      { path: 'TASKS.md' },
+      { path: 'CHANGELOG.md' },
       {
         path: 'package.json',
         contenutoBase: packageJsonBase,
@@ -136,8 +141,8 @@ describe('eNonCodiceReview', () => {
     expect(eNonCodiceReview([])).toBe(false);
   });
 
-  it('è true per soli TASKS/README/docs (senza specs)', () => {
-    const file: FileCambiatoPR[] = [{ path: 'TASKS.md' }, { path: 'docs/foo.md' }];
+  it('è true per soli README/docs (senza specs)', () => {
+    const file: FileCambiatoPR[] = [{ path: 'README.md' }, { path: 'docs/foo.md' }];
     expect(eNonCodiceReview(file)).toBe(true);
   });
 
@@ -145,10 +150,10 @@ describe('eNonCodiceReview', () => {
     expect(eNonCodiceReview([{ path: 'specs/13 - segna-presenza.md' }])).toBe(false);
   });
 
-  it('è false per un mix specs + TASKS', () => {
+  it('è false per un mix specs + README', () => {
     const file: FileCambiatoPR[] = [
       { path: 'specs/13 - segna-presenza.md' },
-      { path: 'TASKS.md' },
+      { path: 'README.md' },
     ];
     expect(eNonCodiceReview(file)).toBe(false);
   });

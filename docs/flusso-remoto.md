@@ -37,7 +37,7 @@ repository**. `claude-board.yml` copre solo triage (Haiku, su issue aperta)
 e review (Sonnet, su PR aperta) — non implementazione: il commento in
 cima al file lo dice esplicitamente ("Il lavoro pesante [...] resta locale
 in Claude Code Desktop: quella parte non deve girare da sola sul cloud").
-`TASKS.md` (nota sotto `SETUP-BOARD.md`) menziona come idea futura, non
+`SETUP-BOARD.md` (nota in fondo) menzionava come idea futura, non
 ancora fatta, "promuovere un secondo step in cloud (es. far partire
 l'implementer su `status:ready` con assegnazione a `@claude`)".
 
@@ -50,7 +50,7 @@ gestito da Anthropic, che clona il repo e può aprire branch/PR via `gh`.
 Questo documento non descrive i passaggi esatti dell'interfaccia (nome dei
 pulsanti, menu) perché non fanno parte della configurazione di questo
 repo e possono cambiare senza che il repo ne sappia nulla — se in futuro
-si aggiunge un'automazione repo-specifica (es. l'idea di `TASKS.md` sopra),
+si aggiunge un'automazione repo-specifica (es. l'idea dell'implementer cloud sopra),
 va documentata qui con il suo meccanismo reale, non ipotizzata.
 
 La sandbox cloud, qualunque sia il modo in cui viene avviata, opera con lo

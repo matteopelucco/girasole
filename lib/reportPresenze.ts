@@ -8,7 +8,7 @@ import type { ComunicazionePasto } from '@/lib/comunicazionePasti';
 // dato": senza questo controllo un errore di configurazione produceva
 // silenziosamente un report vuoto ("Nessuna classe attiva"), identico a
 // una notte davvero senza dati — indistinguibile nei log (bug scoperto
-// in produzione, vedi TASKS.md).
+// in produzione, vedi docs/tasks-archivio.md).
 export function righeOSollevaErrore<T>(
   risultato: { data: T[] | null; error: { message: string } | null },
   descrizione: string

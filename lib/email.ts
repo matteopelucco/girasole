@@ -2,7 +2,7 @@
 // `fetch` nativo, nessun pacchetto npm aggiuntivo (CLAUDE.md: niente
 // nuove dipendenze senza chiederlo prima). RESEND_API_KEY va impostata
 // come variabile d'ambiente (locale: .env.local; produzione: Vercel),
-// mai committata — vedi TASKS.md per la procedura di attivazione.
+// mai committata — vedi docs/tasks-archivio.md per la procedura di attivazione.
 export type AllegatoEmail = {
   filename: string;
   content: Uint8Array;

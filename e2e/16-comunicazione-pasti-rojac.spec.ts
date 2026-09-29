@@ -18,7 +18,7 @@
 // attivano solo se qualcuno l'ha già confermata manualmente in
 // precedenza nello stesso giorno (test.skip altrimenti) — copertura
 // completa richiede quindi ANCHE una verifica manuale una tantum del
-// click "Conferma", vedi TASKS.md.
+// click "Conferma", vedi docs/tasks-archivio.md.
 //
 // Lo stesso vale per i nuovi scenari sul blocco di Assente/Malattia dopo
 // la comunicazione (issue #100): si verificano solo se oggi i pasti sono

@@ -18,7 +18,7 @@ scripts/setup-board-labels.sh        # crea le label (la macchina a stati)
 ```
 
 Copia queste cartelle nella radice del repo girasole (si fondono con i tuoi
-`CLAUDE.md` / `SPEC.md` / `TASKS.md` esistenti, che gli agenti leggono).
+`CLAUDE.md` / `SPEC.md` esistenti, che gli agenti leggono).
 
 ## La macchina a stati
 

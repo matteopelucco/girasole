@@ -6,7 +6,7 @@ import type { RigaReportBambino } from './report';
 // fanno query Supabase, coperte solo da e2e — vedi CLAUDE.md). Copre il
 // bug corretto in produzione: un errore di query mascherato da "nessun
 // dato" produceva un report vuoto indistinguibile da una notte senza
-// dati reali (vedi TASKS.md).
+// dati reali (vedi docs/tasks-archivio.md).
 describe('righeOSollevaErrore', () => {
   it('restituisce data quando non c\'è errore', () => {
     const righe = [{ id: '1' }, { id: '2' }];

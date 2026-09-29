@@ -60,7 +60,7 @@ name: CI
 #     DB. Il gruppo è unico per tutto il repo: nessun altro workflow deve
 #     usare lo stesso nome, o cancellerebbe/accoderebbe questi job.
 #
-# Issue #98 — PR "non codice" (solo docs/**, specs/**, TASKS.md, README.md,
+# Issue #98 — PR "non codice" (solo docs/**, specs/**, README.md,
 # CHANGELOG.md, o un bump puro di versione in package.json/package-lock.json):
 # il workflow parte SEMPRE e il check obbligatorio `verifica` c'è SEMPRE
 # (niente `paths`/`paths-ignore`: renderebbero il check "non eseguito"
