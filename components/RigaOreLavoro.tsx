@@ -1,7 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { ETICHETTE_STATO_ORE_LAVORO, sonoQuartiDora, type StatoGiornoOreLavoro } from '@/lib/oreLavoro';
+import {
+  ETICHETTE_STATO_ORE_LAVORO,
+  sonoQuartiDora,
+  totaleOreErogate,
+  type StatoGiornoOreLavoro,
+} from '@/lib/oreLavoro';
+import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
 
 export type ValoriGiornoOreLavoro = {
   data: string;
@@ -69,7 +75,7 @@ export function RigaOreLavoro({
   const testoNormalizzato = differenzaTesto.trim().replace(',', '.');
   const differenza = testoNormalizzato === '' ? 0 : Number(testoNormalizzato);
   const differenzaValida = Number.isFinite(differenza);
-  const totale = differenzaValida ? arrotonda(ordinarie + differenza) : null;
+  const totale = differenzaValida ? totaleOreErogate(ordinarie, differenza) : null;
   const inRegola = differenzaValida && differenza === 0;
   const fuoriRegola = differenzaValida && differenza !== 0;
   const problema = !differenzaValida
@@ -85,14 +91,7 @@ export function RigaOreLavoro({
     setDifferenzaTesto(String(arrotonda(base + passo)));
   };
 
-  const classeCard =
-    stato !== 'lavorativo'
-      ? 'border-stone-200 bg-white'
-      : inRegola
-        ? 'border-emerald-400 bg-emerald-50'
-        : fuoriRegola
-          ? 'border-red-400 bg-red-50'
-          : 'border-stone-200 bg-white';
+  const classeCard = stato !== 'lavorativo' ? classeCardOreLavoro(null) : classeCardOreLavoro(differenzaValida ? differenza : null);
 
   return (
     <div className={`rounded-xl border p-3 shadow-sm ${classeCard}`}>
@@ -120,19 +119,8 @@ export function RigaOreLavoro({
       {stato === 'lavorativo' && (
         <div className="mt-2 space-y-3">
           <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
-            {/* Ore ordinarie: solo testo, non modificabili (specs/18). Il
-                riferimento "Previsto" è statico, mai dentro un campo. */}
-            <div className="text-xs text-stone-600">
-              Ore ordinarie
-              <p className="text-base font-medium text-stone-900" data-ore-ordinarie>
-                {ordinarie}h
-              </p>
-              <p className="text-xs text-stone-700">
-                {orePreviste === null
-                  ? "Nessun profilo orario assegnato: chiedi all'admin di assegnarlo. Le ore fatte vanno scritte come differenza."
-                  : `Previsto: ${orePreviste}h`}
-              </p>
-            </div>
+            {/* Ore ordinarie: solo testo, non modificabili (specs/18). */}
+            <OrePreviste orePreviste={orePreviste} />
 
             <div className={CLASSE_LABEL}>
               <label htmlFor={`differenza-${valori.data}`}>Differenza ore (in più + / in meno −)</label>
@@ -187,16 +175,7 @@ export function RigaOreLavoro({
             </label>
           )}
 
-          <div role="status" aria-label={`Totale ore erogate ${etichettaGiorno}`} className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-xs text-stone-600">Totale ore erogate</span>
-            <span className="text-3xl font-semibold text-stone-900">{totale === null ? '—' : `${totale}h`}</span>
-            {inRegola && <span className="text-sm font-medium text-emerald-800">✓ Ore come previsto</span>}
-            {fuoriRegola && (
-              <span className="text-sm font-medium text-red-800">
-                ⚠ {arrotonda(Math.abs(differenza))}h {differenza > 0 ? 'in più' : 'in meno'} del previsto
-              </span>
-            )}
-          </div>
+          <TotaleOreErogate etichettaGiorno={etichettaGiorno} totale={totale} differenza={differenzaValida ? differenza : null} />
         </div>
       )}
 

@@ -238,6 +238,29 @@ export function arrotondaAQuartiDora(valore: number): number {
   return Math.floor(valore * 4 + 0.5) / 4 + 0;
 }
 
+function arrotondaDueDecimali(valore: number): number {
+  return Math.round(valore * 100) / 100;
+}
+
+// Totale ore erogate di un giorno lavorativo (specs/18): ore previste +
+// differenza, ripulito dai residui della virgola mobile. Usato dalla
+// card modificabile e dalla vista di sola lettura. Funzione pura.
+export function totaleOreErogate(orePreviste: number, differenza: number): number {
+  return arrotondaDueDecimali(orePreviste + differenza);
+}
+
+// Testo di stato della card di un giorno lavorativo (specs/18): "✓ Ore
+// come previsto" con differenza 0, altrimenti "⚠ Xh in più/in meno del
+// previsto" — un testo oltre al colore (specs/01). Condiviso da card
+// modificabile e vista di sola lettura. Funzione pura.
+export function descrizioneDifferenzaOre(differenza: number): { inRegola: boolean; testo: string } {
+  if (differenza === 0) return { inRegola: true, testo: '✓ Ore come previsto' };
+  return {
+    inRegola: false,
+    testo: `⚠ ${arrotondaDueDecimali(Math.abs(differenza))}h ${differenza > 0 ? 'in più' : 'in meno'} del previsto`,
+  };
+}
+
 // Scostamento di un giorno rispetto all'orario dovuto (specs/18,
 // specs/52 - PDF mensile ore di lavoro): ore ordinarie effettuate meno
 // ore dovute (dal profilo orario, `oreOrdinariePreviste`), più le ore
