@@ -305,6 +305,32 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   sessione utente. Se non estrae nessuna richiesta, esce con
   codice 2 (parser rotto). Localmente: stesso comando con le due
   variabili impostate sul progetto di test.
+- **RLS-check (issue #131)**: passo 6c del job `e2e`, subito dopo il
+  grant-check, stessa Management API e stessi secret (nessuno nuovo, ref solo
+  da `SUPABASE_TEST_PROJECT_REF`, mai la produzione, sola SELECT).
+  `scripts/rls-check.mts` (logica pura in `lib/rlsCheck.ts`) legge `pg_class`
+  e fallisce se una tabella di `public` con privilegi per `authenticated` o
+  `anon` ha `relrowsecurity = false`: il grant-check non lo vede. Il
+  rimedio è abilitare la RLS e definire le policy in una migration, **mai**
+  togliere il grant per far passare il check. Tabelle volutamente esposte
+  senza RLS: `ALLOW_LIST_SENZA_RLS` in `lib/rlsCheck.ts`, oggi **vuota**;
+  ogni voce va motivata e rivista da rls-guardian. Non verifica che le
+  policy esistano o siano corrette (solo che la RLS sia attiva) né i grant
+  in eccesso. Fail-closed: esce con codice 2 se una riga ha `grantee` né
+  array né stringa o `rls` non booleano, se non legge tabelle o se manca
+  `public.bambini` (DB non migrato o ref sbagliato). Conta anche i grant
+  solo su colonne (`has_any_column_privilege`). **Limiti**:
+  - una RLS attiva senza policy blocca tutto (fail-closed), ma una policy
+    `USING (true)` passa il check: la correttezza delle policy resta a
+    rls-guardian e alle e2e per ruolo;
+  - viste, viste materializzate e tabelle esterne non sono coperte (una
+    vista senza `security_invoker` scavalca la RLS; follow-up in issue);
+  - solo lo schema `public` e i ruoli `anon`/`authenticated`; le funzioni
+    `SECURITY DEFINER` esposte via RPC (es. `puo_richiedere_reset_password`)
+    restano fuori;
+  - privilegi TRUNCATE, REFERENCES e TRIGGER esclusi;
+  - gira solo sul DB di test resettato: non vede la produzione (es.
+    modifiche fatte dal pannello).
 - **Coda del DB di test (issue #105, ADR-0008)**: `ci.yml` ha tre job,
   `statico` (passi 0-5) → `e2e` (passi 6-8) → `verifica`. Solo `e2e`
   usa il DB, e sta in un gruppo di concorrenza globale
