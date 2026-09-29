@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import {
   estraiRichieste,
   formattaViolazioni,
+  guardiaRichieste,
   verificaGrant,
   type GrantDb,
   type Richiesta,
@@ -50,6 +51,12 @@ for (const dir of CARTELLE) {
   for (const f of fileSorgenti(dir)) {
     richieste.push(...estraiRichieste(f, readFileSync(f, 'utf8')));
   }
+}
+
+const guardia = guardiaRichieste(richieste);
+if (guardia) {
+  console.error(guardia);
+  process.exit(2);
 }
 
 const query = `select grantee, table_name, privilege_type
