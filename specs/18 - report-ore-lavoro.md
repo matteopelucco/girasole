@@ -28,41 +28,83 @@ profilo orario assegnato (vedi
 Quando apro "Ore di lavoro"
 Allora vedo una tabella con una riga per ciascun giorno della settimana
 corrente, da lunedì a domenica
-E per i giorni lunedì-venerdì il campo "Ore ordinarie" è precompilato
-con le ore previste dal mio profilo orario per quel giorno della
-settimana; per sabato e domenica (non previsti dal profilo, vedi
-specs/54) parte da 0
-E vedo anche un campo "Ore straordinarie", a 0 di default
+E per i giorni lunedì-venerdì le "Ore ordinarie" mostrate sono le ore
+previste dal mio profilo orario per quel giorno della settimana; per
+sabato e domenica (non previsti dal profilo, vedi specs/54) sono 0
+E vedo anche un campo "Differenza ore", a 0 di default, e il "Totale
+ore erogate" del giorno (uguale alle ore ordinarie finché la
+differenza è 0)
 
 ## Scenario: senza profilo orario assegnato le ore ordinarie partono da zero
 Dato che sono abilitata al report ore ma non ho un profilo orario
 assegnato
 Quando apro "Ore di lavoro"
-Allora il campo "Ore ordinarie" di ogni giorno parte da 0, comunque
-modificabile a mano
+Allora le "Ore ordinarie" di ogni giorno sono 0 (non modificabili) e
+per registrare le ore fatte inserisco una "Differenza ore" positiva,
+con il motivo obbligatorio (vedi lo scenario sulla differenza)
+E vedo un suggerimento a chiedere all'admin di assegnarmi un profilo
+orario
 
 ## Scenario: il profilo orario resta sempre visibile come riferimento statico
 Dato che sono autenticata come personale abilitato al report ore, con un
 profilo orario assegnato
 Quando apro "Ore di lavoro", per qualunque giorno lavorativo della
 settimana (corrente o passata, modificabile o in sola lettura)
-Allora vedo, accanto al campo/valore "Ore ordinarie", un testo statico
+Allora vedo, accanto al valore "Ore ordinarie", un testo statico
 "Previsto: Xh" con le ore previste dal profilo orario per quel giorno
 della settimana — non è mai dentro un campo di input, resta un
-riferimento anche dopo che ho modificato il valore effettivo
+riferimento anche dopo che ho modificato la differenza
 E se non ho un profilo orario assegnato vedo invece "Nessun profilo
 orario assegnato"
 
-## Scenario: copiare le ore previste dal profilo orario con un tap
-Dato che sto compilando il campo "Ore ordinarie" di un giorno con un
-profilo orario assegnato, e quel giorno prevede più di 0 ore
-Quando tocco il pulsante "Copia" accanto al campo
-Allora il campo "Ore ordinarie" di quel giorno viene impostato al valore
-previsto dal profilo orario per quel giorno, sovrascrivendo quanto
-avevo digitato — senza inviare il form (il salvataggio resta un'azione
-separata, "Salva modifiche")
-E se non ho un profilo orario assegnato, o il giorno prevede 0 ore, il
-pulsante "Copia" non è mostrato (non c'è nulla da copiare)
+## Scenario: le ore ordinarie non sono modificabili e non c'è il pulsante "Copia"
+Dato che sto compilando un giorno lavorativo
+Quando guardo le "Ore ordinarie"
+Allora sono mostrate ma non modificabili (nessun campo di input), pari
+alle ore previste dal profilo orario per quel giorno (0 senza profilo)
+E non esiste alcun pulsante "Copia": le ore ordinarie sono già quelle
+previste, l'unico campo che modifico è la "Differenza ore"
+
+## Scenario: la differenza ore aggiorna il totale erogato e il colore della card
+Dato che sto compilando un giorno lavorativo
+Quando la "Differenza ore" è 0
+Allora il "Totale ore erogate" (in evidenza, non modificabile) è uguale
+alle ore ordinarie, e la card è verde con un testo che dice che le ore
+sono quelle previste
+E quando inserisco una differenza diversa da 0 (positiva o negativa) il
+totale diventa ore ordinarie + differenza, la card diventa rossa e un
+testo (non solo il colore) indica quante ore in più o in meno rispetto
+al previsto
+E l'intestazione della card (giorno e selettore di stato) e le viste
+"Malattia" e "Assenza" non cambiano
+
+## Scenario: una differenza diversa da zero richiede un motivo
+Quando per un giorno inserisco una differenza ore diversa da 0 (in più o
+in meno) senza indicarne il motivo, e premo "Salva modifiche"
+Allora vedo un messaggio d'errore che richiede il motivo
+E nessuna modifica di quel salvataggio viene registrata
+E con differenza 0 il campo "Motivo" non è mostrato e non è richiesto
+
+## Scenario: le ore ammettono solo multipli di un quarto d'ora e il totale non è mai negativo
+Quando inserisco una differenza che non è multiplo di 0,25 (es. 0,2) o
+che porterebbe il totale sotto zero (differenza inferiore a −ore
+ordinarie), e premo "Salva modifiche"
+Allora vedo un messaggio d'errore in italiano semplice che spiega il
+problema, e nessuna modifica di quel salvataggio viene registrata
+E differenze come 1, 2,5, −0,5, −1,25 sono accettate
+E la stessa regola è applicata dal server, non solo dal campo
+
+## Scenario: la differenza è salvata nei dati esistenti senza cambiare monte ore e report
+Quando salvo un giorno con differenza positiva, negativa o nulla
+Allora i dati salvati restano ore ordinarie, ore straordinarie e motivo
+(nessuna nuova colonna): differenza > 0 ⇒ ordinarie = previste e
+straordinarie = differenza; differenza < 0 ⇒ ordinarie = previste +
+differenza e straordinarie = 0; differenza 0 ⇒ ordinarie = previste e
+straordinarie = 0
+E riaprendo la pagina la differenza mostrata è (ordinarie +
+straordinarie) − previste, la stessa formula usata da report e monte
+ore, quindi i dati storici restano compatibili e monte ore e report
+non cambiano
 
 ## Scenario: salvare le ore della settimana
 Quando modifico le ore di uno o più giorni e premo "Salva modifiche"
@@ -95,12 +137,6 @@ accaduti (con i loro valori precaricati/di default) non fanno fallire
 il salvataggio: il vincolo di "mai una settimana futura" riguarda la
 settimana nel suo complesso, non i singoli giorni non ancora accaduti
 dentro una settimana comunque ammessa
-
-## Scenario: le ore straordinarie richiedono un motivo
-Quando per un giorno inserisco delle ore straordinarie senza indicarne
-il motivo, e premo "Salva modifiche"
-Allora vedo un messaggio d'errore che richiede il motivo
-E nessuna modifica di quel salvataggio viene registrata
 
 ## Scenario: segnare un giorno di malattia
 Quando per un giorno scelgo lo stato "Malattia" e indico il codice
@@ -228,7 +264,7 @@ modifiche" (a differenza di quando la stessa settimana confermata è
 aperta dal diretto interessato, che la vede in sola lettura — vedi
 "una settimana confermata non è più modificabile dal personale")
 E posso modificare uno o più giorni e salvare, con le stesse
-validazioni (motivo/codice/nota) già in vigore per chiunque
+validazioni (motivo/quarti d'ora/codice/nota) già in vigore per chiunque
 E il messaggio "Settimana confermata il ..." resta visibile, per
 sapere che si tratta di una correzione su dati già confermati
 
@@ -270,13 +306,19 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   dal medico) o **assenza** (richiede una nota giustificativa). Passare
   a malattia o assenza azzera le ore ordinarie/straordinarie di quel
   giorno; passare a lavorativo azzera codice malattia/nota assenza.
-- Le ore ordinarie di un giorno sono precaricate dal profilo orario
-  assegnato all'utente (campo del giorno della settimana corrispondente,
-  specs/54), ma restano modificabili prima della conferma: il personale
-  "verifica" il precaricato, non lo subisce. Il valore previsto dal
-  profilo resta comunque visibile come testo statico accanto al campo
-  (mai dentro un campo di input) per tutta la durata della modifica, con
-  un pulsante "Copia" per reimpostarlo con un tap in qualunque momento.
+- Le ore ordinarie di un giorno lavorativo sono quelle previste dal
+  profilo orario assegnato all'utente (campo del giorno della settimana
+  corrispondente, specs/54; 0 senza profilo) e **non sono modificabili**.
+  Il personale registra solo la **differenza ore** (positiva o
+  negativa, multipli di 0,25 h, default 0) rispetto al previsto, con un
+  **motivo obbligatorio** se è diversa da 0. Il **totale ore erogate**
+  (ordinarie + differenza, mai negativo) è calcolato e in evidenza; la
+  card è verde se la differenza è 0, rossa altrimenti (sempre con un
+  testo, mai solo il colore). Mappatura sui dati esistenti, nessuna
+  migration: vedi lo scenario "la differenza è salvata nei dati
+  esistenti". Il valore previsto resta visibile come testo statico
+  ("Previsto: Xh", mai dentro un campo di input). La validazione è
+  lato server (`validaGiornoOreLavoro`), oltre ai vincoli del campo.
 - Le ore ordinarie e straordinarie erogate, confrontate con le ore
   dovute dal profilo orario, concorrono al calcolo del monte ore del
   personale, aggiornato automaticamente alla conferma di ogni
@@ -313,7 +355,7 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   dipende solo dal ruolo admin e dal fatto che l'utente indicato sia a
   sua volta abilitato.
 - Nessuna scrittura silenziosa: un salvataggio che fallisce la
-  validazione (motivo/codice/nota mancante) non salva nessuno dei giorni
+  validazione (motivo/quarti d'ora/codice/nota) non salva nessuno dei giorni
   di quel submit, nemmeno quelli validi — il personale corregge il
   giorno segnalato e reinvia (stesso pattern "errore ⇒ dati preservati"
   di specs/05 - feedback.md, i campi già compilati restano tali).
