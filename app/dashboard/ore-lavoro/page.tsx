@@ -17,6 +17,7 @@ import {
 } from '@/lib/date';
 import {
   oreOrdinariePreviste,
+  arrotondaAQuartiDora,
   differenzaGiornoOreLavoro,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
@@ -180,10 +181,14 @@ export default async function OreLavoroPage({
       // "Lavorativo", non da -previste.
       differenzaOre:
         salvata && salvata.stato === 'lavorativo'
-          ? differenzaGiornoOreLavoro(
-              oreOrdinariePreviste(profiloOrario, data),
-              Number(salvata.ore_ordinarie),
-              Number(salvata.ore_straordinarie)
+          ? // Dati storici non a quarti d'ora: mostrati arrotondati (solo
+            // in lettura, il dato cambia se si salva la card).
+            arrotondaAQuartiDora(
+              differenzaGiornoOreLavoro(
+                oreOrdinariePreviste(profiloOrario, data),
+                Number(salvata.ore_ordinarie),
+                Number(salvata.ore_straordinarie)
+              )
             )
           : 0,
       codiceMalattia: salvata?.codice_malattia ?? '',

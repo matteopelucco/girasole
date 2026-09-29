@@ -227,6 +227,17 @@ export function differenzaGiornoOreLavoro(orePreviste: number, oreOrdinarie: num
   return Math.round(deltaGiornoOreLavoro(orePreviste, oreOrdinarie, oreStraordinarie) * 100) / 100;
 }
 
+// Arrotonda `valore` al quarto d'ora più vicino, con la metà strada
+// verso +infinito (0.125 => 0.25, -0.125 => 0). Usata solo in LETTURA
+// per mostrare/precaricare la differenza dei dati storici non a quarti
+// d'ora (specs/18): il dato salvato non cambia finché non si salva la
+// card. Le operazioni sui multipli di 0.25 sono esatte in virgola
+// mobile. Funzione pura.
+export function arrotondaAQuartiDora(valore: number): number {
+  // "+ 0" normalizza -0 in 0.
+  return Math.floor(valore * 4 + 0.5) / 4 + 0;
+}
+
 // Scostamento di un giorno rispetto all'orario dovuto (specs/18,
 // specs/52 - PDF mensile ore di lavoro): ore ordinarie effettuate meno
 // ore dovute (dal profilo orario, `oreOrdinariePreviste`), più le ore

@@ -187,6 +187,13 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(alertApp(page)).toContainText('negativo');
 
+        // Scenario "i dati storici non a quarti d'ora sono mostrati
+        // arrotondati e non vengono modificati finché non si salva": non
+        // simulabile via UI (il server rifiuta i valori non a quarti
+        // d'ora e l'e2e non ha accesso al DB con dati arbitrari); la
+        // logica di arrotondamento è coperta da lib/oreLavoro.test.ts
+        // (arrotondaAQuartiDora) e la pagina la applica in lettura.
+
         // Differenza negativa valida: salvata come ordinarie ridotte,
         // riletta come stessa differenza (scenario "la differenza è
         // salvata nei dati esistenti senza cambiare monte ore e report").
