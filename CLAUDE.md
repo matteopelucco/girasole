@@ -32,7 +32,9 @@ Per ogni task, leggere **solo** il file `specs/` della feature in corso;
 lo richiede.
 
 ## Workflow
-- Trunk-based, commit atomici in italiano.
+- Trunk-based, commit atomici, **in inglese**, formato Conventional Commits
+  (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`; `!` per
+  i breaking change). Dettagli in `docs/sviluppo-dettagli.md`.
 - Backlog e storia sono issue e PR; `docs/tasks-archivio.md` è solo
   storico, da leggere se serve.
 - Requisiti: `specs/`, numerati per scenario. Aggiornare `00 - overview.md`

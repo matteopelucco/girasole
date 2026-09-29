@@ -20,7 +20,9 @@ da te via /next-task), quindi puoi permetterti Sonnet come default.
    - Aggiorna/aggiungi i test se la checklist lo richiede.
 5. Verifica localmente prima di pushare: lint, type-check, build, test
    (usa gli script del `package.json`, es. `npm run lint && npm run build`).
-6. Commit atomici con messaggi chiari; nel corpo `Refs #<n>`.
+6. Commit atomici, messaggi **in inglese** in formato Conventional Commits
+   (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`); nel
+   corpo `Refs #<n>`.
 7. Apri una **draft PR** con `gh pr create --draft`, titolo che referenzia la
    issue e corpo con: cosa cambia, checklist spuntata, note per il reviewer.
    Usa `Closes #<n>` così alla merge la issue si chiude.
