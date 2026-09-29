@@ -91,9 +91,13 @@ export function oreOrdinariePreviste(profiloOrario: ProfiloOrario | null | undef
 export type InputGiornoOreLavoro = {
   data: string;
   stato: string;
-  oreOrdinarie: number;
-  oreStraordinarie: number;
-  motivoStraordinario: string;
+  // Ore previste dal profilo orario per `data` (oreOrdinariePreviste,
+  // 0 senza profilo): calcolate dal server, mai fidandosi del client.
+  orePreviste: number;
+  // Ore in più (+) o in meno (-) rispetto al previsto, l'unico valore
+  // che l'insegnante modifica (specs/18).
+  differenzaOre: number;
+  motivo: string;
   codiceMalattia: string;
   notaAssenza: string;
 };
@@ -114,7 +118,8 @@ export type EsitoValidazioneGiorno =
 
 // Valida e normalizza i dati di un giorno del report ore (specs/18 -
 // report-ore-lavoro.md): malattia richiede il codice, assenza richiede
-// una nota, ore straordinarie richiedono un motivo. Passare a
+// una nota, una differenza ore diversa da 0 richiede un motivo (e deve
+// essere un multiplo di 0.25 con totale non negativo). Passare a
 // malattia/assenza azzera le ore; passare a lavorativo azzera
 // codice/nota. Funzione pura, nessun I/O: chi chiama (la server action)
 // valida così ogni giorno del submit prima di scrivere qualunque cosa
@@ -162,13 +167,25 @@ export function validaGiornoOreLavoro(input: InputGiornoOreLavoro): EsitoValidaz
     };
   }
 
-  const oreOrdinarie = Math.max(0, Number(input.oreOrdinarie) || 0);
-  const oreStraordinarie = Math.max(0, Number(input.oreStraordinarie) || 0);
-  const motivoStraordinario = input.motivoStraordinario.trim();
-  if (oreStraordinarie > 0 && !motivoStraordinario) {
-    return { ok: false, errore: `Indica il motivo delle ore straordinarie di ${etichettaGiorno}.` };
+  const differenza = Number(input.differenzaOre);
+  if (!Number.isFinite(differenza) || !sonoQuartiDora(differenza)) {
+    return {
+      ok: false,
+      errore: `Le ore di ${etichettaGiorno} devono essere multipli di un quarto d'ora (es. 1, 2,5, 0,25).`,
+    };
+  }
+  if (differenza < -input.orePreviste) {
+    return {
+      ok: false,
+      errore: `La differenza di ${etichettaGiorno} non può superare le ore ordinarie (${input.orePreviste}h): il totale non può essere negativo.`,
+    };
+  }
+  const motivo = input.motivo.trim();
+  if (differenza !== 0 && !motivo) {
+    return { ok: false, errore: `Indica il motivo della differenza ore di ${etichettaGiorno}.` };
   }
 
+  const { oreOrdinarie, oreStraordinarie } = oreDaDifferenza(input.orePreviste, differenza);
   return {
     ok: true,
     giorno: {
@@ -176,11 +193,38 @@ export function validaGiornoOreLavoro(input: InputGiornoOreLavoro): EsitoValidaz
       stato,
       oreOrdinarie,
       oreStraordinarie,
-      motivoStraordinario: oreStraordinarie > 0 ? motivoStraordinario : null,
+      motivoStraordinario: differenza !== 0 ? motivo : null,
       codiceMalattia: null,
       notaAssenza: null,
     },
   };
+}
+
+// true se `valore` è un multiplo di un quarto d'ora (0.25), anche
+// negativo o zero (specs/18). Le moltiplicazioni per 4 di multipli di
+// 0.25 sono esatte in virgola mobile, quindi il confronto è sicuro.
+export function sonoQuartiDora(valore: number): boolean {
+  return Number.isFinite(valore) && Number.isInteger(valore * 4);
+}
+
+// Conversione differenza -> colonne esistenti (specs/18, nessuna
+// migration): differenza > 0 => ordinarie = previste e straordinarie =
+// differenza; < 0 => ordinarie = previste + differenza, straordinarie
+// 0; = 0 => ordinarie = previste. Funzione pura.
+export function oreDaDifferenza(
+  orePreviste: number,
+  differenza: number
+): { oreOrdinarie: number; oreStraordinarie: number } {
+  if (differenza > 0) return { oreOrdinarie: orePreviste, oreStraordinarie: differenza };
+  return { oreOrdinarie: orePreviste + differenza, oreStraordinarie: 0 };
+}
+
+// Differenza mostrata in lettura: (ordinarie + straordinarie) -
+// previste, la stessa formula di deltaGiornoOreLavoro (report, monte
+// ore), arrotondata a due decimali contro i residui della virgola
+// mobile. Compatibile con lo storico. Funzione pura.
+export function differenzaGiornoOreLavoro(orePreviste: number, oreOrdinarie: number, oreStraordinarie: number): number {
+  return Math.round(deltaGiornoOreLavoro(orePreviste, oreOrdinarie, oreStraordinarie) * 100) / 100;
 }
 
 // Scostamento di un giorno rispetto all'orario dovuto (specs/18,
