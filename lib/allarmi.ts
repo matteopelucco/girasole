@@ -250,6 +250,7 @@ export type AllarmeDipendente = {
 // confermata). Fa I/O con la sessione normale dell'admin, che ha già
 // visibilità RLS su tutte le sezioni/bambini/presenze/pasti/settimane
 // ore di chiunque — nessuna service_role key necessaria.
+// grant-check: authenticated
 export async function allarmiPerDipendenti(
   supabase: SupabaseClient,
   data: string,

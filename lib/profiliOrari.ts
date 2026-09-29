@@ -28,6 +28,7 @@ export function totaleOreSettimanali(profilo: ProfiloOrario): number {
 // report-ore-lavoro.md, precarica le ore ordinarie del report
 // settimanale), null se `profiloOrarioId` è null o non esiste più (fa
 // I/O, resta coperta solo da e2e — vedi CLAUDE.md, criterio unit test).
+// grant-check: authenticated
 export async function recuperaProfiloOrario(
   supabase: SupabaseClient,
   profiloOrarioId: string | null | undefined
@@ -50,6 +51,7 @@ export type ProfiloOrarioConNome = ProfiloOrario & { nome: string };
 // "il profilo orario di riferimento" va identificato per nome, non solo
 // per ore) — funzione distinta perché il resto dell'app non ha mai
 // bisogno del nome, solo delle ore per il precaricamento (specs/18).
+// grant-check: service_role
 export async function recuperaProfiloOrarioConNome(
   supabase: SupabaseClient,
   profiloOrarioId: string | null | undefined

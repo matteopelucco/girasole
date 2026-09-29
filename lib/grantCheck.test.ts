@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   estraiRichieste,
+  guardiaRichieste,
   formattaViolazioni,
   verificaGrant,
   type GrantDb,
@@ -83,6 +84,70 @@ export async function f() {
     expect(r).toEqual(['bambini:DELETE', 'profili:INSERT', 'profili:UPDATE', 'sezioni:INSERT']);
   });
 
+  it('un parametro SupabaseClient generico richiede il grant per entrambi i ruoli', () => {
+    const src = `
+export async function chiusuraPerData(supabase: SupabaseClient, data: string) {
+  const { data: r } = await supabase.from('giorni_chiusura').select('*');
+}
+`;
+    const r = estraiRichieste('g.ts', src);
+    expect(r).toContainEqual({ file: 'g.ts', ruolo: 'authenticated', tabella: 'giorni_chiusura', privilegio: 'SELECT' });
+    expect(r).toContainEqual({ file: 'g.ts', ruolo: 'service_role', tabella: 'giorni_chiusura', privilegio: 'SELECT' });
+    expect(r).toHaveLength(2);
+  });
+
+  it('un parametro SupabaseClient<Database> generico conta per entrambi i ruoli', () => {
+    const src = `
+async function f(sb: SupabaseClient<Database>) {
+  await sb.from('pasti').select();
+}
+`;
+    expect(estraiRichieste('g2.ts', src).map((x) => x.ruolo).sort()).toEqual(['authenticated', 'service_role']);
+  });
+
+  it('l\'annotazione grant-check: service_role attribuisce la funzione solo a service_role', () => {
+    const src = `
+export async function utente(supabase: SupabaseClient) {
+  await supabase.from('bambini').select();
+}
+
+// grant-check: service_role
+export async function soloCron(supabase: SupabaseClient) {
+  await supabase.from('allarmi').insert({});
+}
+
+export async function altra(supabase: SupabaseClient) {
+  await supabase.from('profili').select();
+}
+`;
+    const r = estraiRichieste('h.ts', src);
+    expect(r.filter((x) => x.tabella === 'allarmi')).toEqual([
+      { file: 'h.ts', ruolo: 'service_role', tabella: 'allarmi', privilegio: 'INSERT' },
+    ]);
+    expect(r.filter((x) => x.tabella === 'bambini')).toHaveLength(2);
+    expect(r.filter((x) => x.tabella === 'profili')).toHaveLength(2);
+  });
+
+  it('l\'annotazione grant-check: authenticated attribuisce la funzione solo ad authenticated', () => {
+    const src = `
+// grant-check: authenticated
+async function soloUtente(supabase: SupabaseClient) {
+  await supabase.from('presenze').upsert({});
+}
+`;
+    expect(estraiRichieste('j.ts', src).map((x) => x.ruolo)).toEqual(['authenticated', 'authenticated']);
+  });
+
+  it('la stessa annotazione vale anche con async arrow const', () => {
+    const src = `
+// grant-check: service_role
+export const cron = async (supabase: SupabaseClient) => {
+  await supabase.from('allarmi').select();
+};
+`;
+    expect(estraiRichieste('i.ts', src).map((x) => x.ruolo)).toEqual(['service_role']);
+  });
+
   it('ignora i commenti e Array.from/Buffer.from', () => {
     const src = `
 // supabase.from('finta').select()
@@ -137,5 +202,31 @@ export async function f() {
   it('deduplica le richieste identiche', () => {
     const doppie = [...richieste, ...richieste];
     expect(verificaGrant(doppie, [])).toHaveLength(2);
+  });
+});
+
+
+describe('formattaViolazioni: rimedio', () => {
+  it('indica di attribuire il client a service_role, non di concedere ad authenticated', () => {
+    const v = verificaGrant(
+      [{ file: 'a.ts', ruolo: 'authenticated', tabella: 't', privilegio: 'SELECT' }],
+      [],
+    );
+    const msg = formattaViolazioni(v);
+    expect(msg).toContain('grant-check: service_role');
+    expect(msg).toContain('NON');
+    expect(msg).toContain('verifica RLS');
+    expect(msg).toContain('anti permission-denied');
+  });
+});
+
+describe('guardiaRichieste', () => {
+  it('segnala un elenco vuoto (parser rotto)', () => {
+    expect(guardiaRichieste([])).toMatch(/nessuna richiesta/i);
+  });
+  it('ok se ci sono richieste', () => {
+    expect(
+      guardiaRichieste([{ file: 'a.ts', ruolo: 'authenticated', tabella: 't', privilegio: 'SELECT' }]),
+    ).toBeNull();
   });
 });
