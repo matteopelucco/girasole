@@ -65,14 +65,14 @@ settimana è stata considerata
 ## Scenario: vedere in anteprima l'effetto sul monte ore prima di confermare
 Dato che sto compilando una settimana di ore di lavoro, non ancora
 confermata
-Quando guardo la tabellina di riepilogo sotto i giorni ("Ore dovute",
-"Ore ordinarie erogate", "Ore straordinarie erogate")
+Quando guardo la tabellina di riepilogo sotto i giorni ("Ore previste",
+"Differenza ore")
 Allora vedo anche una riga aggiuntiva che anticipa l'effetto sul monte
 ore a settimana confermata (es. "4,5h in meno sul monte ore", "3h in
 più sul monte ore", o "nessuna variazione del monte ore"), calcolata
 con la stessa formula del movimento automatico
-E questa anteprima si aggiorna ogni volta che salvo una modifica ai
-giorni della settimana (non serve confermare per vederla)
+E questa anteprima si aggiorna subito a ogni modifica dei giorni della
+settimana, anche prima di salvare (non serve confermare per vederla)
 E una volta che la settimana è confermata, l'anteprima non compare più:
 il movimento reale è già nello storico del monte ore
 

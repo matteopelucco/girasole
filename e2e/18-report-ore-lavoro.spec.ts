@@ -170,14 +170,30 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByLabel('Motivo Lunedì')).toHaveCount(0);
         await expect(page.getByLabel('Stato Lunedì')).toBeVisible();
 
-        // La scheda mostra ore dovute/ordinarie/straordinarie erogate,
-        // in un riquadro separato dai singoli giorni (scenario "la
-        // scheda della settimana mostra ore dovute, ore ordinarie e
-        // straordinarie erogate") — valori letti, non fissati: dipendono
-        // dallo storico della settimana sull'account di test condiviso.
-        await expect(page.getByText('Ore dovute:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
-        await expect(page.getByText('Ore ordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
-        await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText(/\d+(\.\d+)?h/);
+        // La scheda mostra ore previste e differenza ore, in un riquadro
+        // separato dai singoli giorni (scenario "la scheda della
+        // settimana mostra ore previste e differenza ore") — valori
+        // letti, non fissati: dipendono dallo storico della settimana
+        // sull'account di test condiviso. Nessuna distinzione
+        // ordinarie/straordinarie.
+        await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/d+(.d+)?h/);
+        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?d+(.d+)?h/);
+        await expect(page.getByText('Ore ordinarie erogate:', { exact: false })).toHaveCount(0);
+        await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toHaveCount(0);
+
+        // Scenario "il riepilogo si aggiorna con quanto digitato, prima
+        // di salvare": la differenza della settimana segue la card.
+        const differenzaSettimana = async () =>
+          Number(
+            ((await page.getByText('Differenza ore:', { exact: false }).textContent()) ?? '').match(
+              /Differenza ore:s*([+-]?d+(?:.d+)?)h/
+            )![1]
+          );
+        const differenzaPrima = await differenzaSettimana();
+        await page.getByLabel('Differenza ore Lunedì').fill('1.5');
+        await expect.poll(differenzaSettimana).toBe(differenzaPrima + 1.5);
+        await page.getByLabel('Differenza ore Lunedì').fill('0');
+        await expect.poll(differenzaSettimana).toBe(differenzaPrima);
 
         // specs/19, "vedere in anteprima l'effetto sul monte ore prima
         // di confermare": presente finché la settimana non è
@@ -238,7 +254,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Motivo Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(alertApp(page)).toHaveCount(0);
-        await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toContainText('2h', {
+        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText('+2h', {
           timeout: 20_000,
         });
 
@@ -287,7 +303,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // alterano il monte ore": giovedì (7h previste) in Ferie non ha
         // campi e toglie 7h dalle ore dovute della settimana.
         const oreDovuteLette = async () =>
-          Number(((await page.getByText('Ore dovute:', { exact: false }).textContent()) ?? '').match(/(\d+(?:\.\d+)?)h/)![1]);
+          Number(((await page.getByText('Ore previste:', { exact: false }).textContent()) ?? '').match(/(\d+(?:\.\d+)?)h/)![1]);
         const dovutePrima = await oreDovuteLette();
         await page.getByLabel('Stato Giovedì').selectOption('ferie');
         await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
@@ -476,9 +492,9 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
-        // Il riquadro ore dovute/erogate è visibile anche da qui
+        // Il riquadro ore previste/differenza è visibile anche da qui
         // (specs/18: "per ogni vista"), non solo dalla vista personale.
-        await expect(page.getByText('Ore dovute:', { exact: false })).toBeVisible();
+        await expect(page.getByText('Ore previste:', { exact: false })).toBeVisible();
 
         const url = new URL(page.url());
         const utenteId = url.searchParams.get('utente')!;
