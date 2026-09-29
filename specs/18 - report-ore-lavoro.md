@@ -190,6 +190,16 @@ Dato che la settimana corrente è già stata confermata
 Quando apro "Ore di lavoro"
 Allora vedo i dati della settimana in sola lettura (nessun campo
 modificabile, nessun pulsante "Salva modifiche" o "Conferma settimana")
+E ogni giorno lavorativo è mostrato con lo stesso linguaggio della card
+modificabile, ma senza campi: le ore previste, la differenza ore con
+segno (+/−, in quarti d'ora, arrotondata in lettura come nella card
+modificabile), il "Totale ore erogate" in evidenza, la card verde con
+"✓ Ore come previsto" se la differenza è 0 oppure rossa con "⚠ Xh in
+più/in meno del previsto" (un testo, non solo il colore), e il motivo
+quando la differenza è diversa da 0; l'intestazione e le viste
+"Malattia" e "Assenza" non cambiano, e non compare più la dicitura
+"Ordinarie / Straordinarie" per giorno. Nessun dato, calcolo o
+validazione cambia: solo cosa si legge
 
 ## Scenario: il personale può registrare ore anche nei giorni di chiusura scolastica
 Dato che un giorno della settimana corrente è un giorno di chiusura

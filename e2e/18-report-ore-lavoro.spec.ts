@@ -27,6 +27,17 @@ import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertA
 const oreOrdinarieGiorno = (page: Page, indice: number) => page.locator('[data-ore-ordinarie]').nth(indice);
 const totaleErogato = (page: Page, giorno: string) => page.getByRole('status', { name: `Totale ore erogate ${giorno}` });
 
+// Scenario "una settimana confermata non è più modificabile dal
+// personale": in sola lettura ogni giorno lavorativo mostra il totale
+// erogato con il testo di stato (non più "Ordinarie / Straordinarie").
+async function verificaCardSolaLettura(page: Page) {
+  const totali = page.getByRole('status', { name: /^Totale ore erogate/ });
+  expect(await totali.count()).toBeGreaterThan(0);
+  await expect(totali.first()).toContainText(/✓ Ore come previsto|⚠ .*(in più|in meno) del previsto/);
+  await expect(page.getByText('Straordinarie:', { exact: false })).toHaveCount(0);
+  await expect(page.locator('input[name^="differenza_ore"]')).toHaveCount(0);
+}
+
 // Il campo "Differenza ore" ha step 0.25: il browser bloccherebbe da sé
 // l'invio di valori non validi. Per verificare la validazione LATO
 // SERVER (fonte di verità, specs/18) disattivo quella nativa.
@@ -72,6 +83,7 @@ test.describe('18 — Report ore di lavoro', () => {
           // il resto del test presuppone di poter ancora modificare.
           await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
+          await verificaCardSolaLettura(page);
           await nessunaViolazioneA11yGrave(page);
           return;
         }
@@ -291,6 +303,7 @@ test.describe('18 — Report ore di lavoro', () => {
           // precedente risulta già confermata.
           await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
           await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
+          await verificaCardSolaLettura(page);
         } else {
           // Scenario "modificare o confermare una settimana passata non
           // ancora confermata": stesso comportamento della settimana

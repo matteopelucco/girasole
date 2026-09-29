@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   deltaGiornoOreLavoro,
   arrotondaAQuartiDora,
+  descrizioneDifferenzaOre,
+  totaleOreErogate,
   differenzaGiornoOreLavoro,
   oreDaDifferenza,
   sonoQuartiDora,
@@ -422,5 +424,34 @@ describe('arrotondaAQuartiDora', () => {
     for (const v of [0.1, 0.125, 0.2, 0.37, 0.4, -0.2, -0.125, 3.3, 1e6 + 0.13]) {
       expect(sonoQuartiDora(arrotondaAQuartiDora(v))).toBe(true);
     }
+  });
+});
+
+describe('descrizioneDifferenzaOre', () => {
+  it('differenza 0: ore come previsto', () => {
+    expect(descrizioneDifferenzaOre(0)).toEqual({ inRegola: true, testo: '✓ Ore come previsto' });
+  });
+  it('differenza positiva: in più', () => {
+    expect(descrizioneDifferenzaOre(1.5)).toEqual({ inRegola: false, testo: '⚠ 1.5h in più del previsto' });
+  });
+  it('differenza negativa: in meno, valore assoluto', () => {
+    expect(descrizioneDifferenzaOre(-0.25)).toEqual({ inRegola: false, testo: '⚠ 0.25h in meno del previsto' });
+  });
+  it('ripulisce i residui della virgola mobile', () => {
+    expect(descrizioneDifferenzaOre(0.1 + 0.2).testo).toBe('⚠ 0.3h in più del previsto');
+  });
+});
+
+describe('totaleOreErogate', () => {
+  it('previste + differenza', () => {
+    expect(totaleOreErogate(7, 0)).toBe(7);
+    expect(totaleOreErogate(7, 1.5)).toBe(8.5);
+    expect(totaleOreErogate(7, -0.25)).toBe(6.75);
+  });
+  it('senza profilo', () => {
+    expect(totaleOreErogate(0, 4)).toBe(4);
+  });
+  it('ripulisce i residui della virgola mobile', () => {
+    expect(totaleOreErogate(3.3, 0.2)).toBe(3.5);
   });
 });
