@@ -3,6 +3,8 @@ import {
   ALLOW_LIST_SENZA_RLS,
   formattaSenzaRls,
   guardiaTabelle,
+  normalizzaRighe,
+  QUERY_RLS,
   trovaSenzaRls,
   type TabellaRls,
 } from './rlsCheck';
@@ -42,7 +44,10 @@ describe('guardiaTabelle', () => {
     expect(guardiaTabelle([])).toMatch(/non affidabile/);
   });
   it('null se ci sono tabelle', () => {
-    expect(guardiaTabelle([t('a', true, [])])).toBeNull();
+    expect(guardiaTabelle([t('bambini', true, [])])).toBeNull();
+  });
+  it('errore se manca una tabella nota (DB non migrato o ref sbagliato)', () => {
+    expect(guardiaTabelle([t('a', true, [])])).toMatch(/bambini/);
   });
 });
 
@@ -55,5 +60,36 @@ describe('formattaSenzaRls', () => {
     expect(msg).toMatch(/ENABLE ROW LEVEL SECURITY/);
     expect(msg).toMatch(/policy/);
     expect(msg).toMatch(/NON togliere il grant/);
+  });
+});
+
+describe('QUERY_RLS', () => {
+  it('considera anche i grant solo su colonne', () => {
+    expect(QUERY_RLS).toContain('has_any_column_privilege');
+    expect(QUERY_RLS).toContain('has_table_privilege');
+  });
+});
+
+describe('normalizzaRighe (fail-closed)', () => {
+  it('accetta grantee array e forma testuale', () => {
+    const r = normalizzaRighe([
+      { tabella: 'a', rls: true, grantee: ['anon'] },
+      { tabella: 'b', rls: false, grantee: '{anon,authenticated}' },
+    ]);
+    expect(r).toEqual({
+      tabelle: [t('a', true, ['anon']), t('b', false, ['anon', 'authenticated'])],
+    });
+  });
+  it('errore se grantee non e ne array ne stringa', () => {
+    expect(normalizzaRighe([{ tabella: 'a', rls: true }])).toHaveProperty('errore');
+    expect(normalizzaRighe([{ tabella: 'a', rls: true, grantee: null }])).toHaveProperty('errore');
+  });
+  it('errore se rls non e booleano', () => {
+    expect(normalizzaRighe([{ tabella: 'a', rls: 'true', grantee: [] }])).toHaveProperty('errore');
+    expect(normalizzaRighe([{ tabella: 'a', grantee: [] }])).toHaveProperty('errore');
+  });
+  it('errore se la risposta non e un array o la tabella non e una stringa', () => {
+    expect(normalizzaRighe({})).toHaveProperty('errore');
+    expect(normalizzaRighe([{ tabella: 1, rls: true, grantee: [] }])).toHaveProperty('errore');
   });
 });
