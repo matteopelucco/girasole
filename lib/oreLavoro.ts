@@ -2,7 +2,7 @@ import { formattaDataItaliana, giornoSettimanaIso, lunediSettimana } from '@/lib
 import { isGiornoChiuso, trovaChiusura, type GiornoChiusura } from '@/lib/calendarioScolastico';
 import type { ProfiloOrario } from '@/lib/profiliOrari';
 
-export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza';
+export type StatoGiornoOreLavoro = 'lavorativo' | 'malattia' | 'assenza' | 'chiusura' | 'ferie';
 
 // Etichette in italiano dello stato di un giorno (specs/18): definite
 // qui, non nel componente client RigaOreLavoro, perché la vista di sola
@@ -16,7 +16,26 @@ export const ETICHETTE_STATO_ORE_LAVORO: Record<StatoGiornoOreLavoro, string> = 
   lavorativo: 'Lavorativo',
   malattia: 'Malattia',
   assenza: 'Assenza',
+  chiusura: 'Chiusura',
+  ferie: 'Ferie',
 };
+
+// Chiusura e Ferie (specs/18) sono giorni "di vacanza": nessun campo, ore
+// a 0 e nessun effetto su ore dovute, differenza e monte ore — come se il
+// dipendente avesse fatto tutto quello che doveva. Funzione pura.
+export function isStatoNeutroOreLavoro(stato: string): boolean {
+  return stato === 'chiusura' || stato === 'ferie';
+}
+
+// Testo mostrato al posto dei campi per un giorno di Chiusura/Ferie.
+export const TESTO_GIORNO_DI_VACANZA = 'Giorno di vacanza: non conta nel calcolo del monte ore.';
+
+// Stato di un giorno non ancora salvato (specs/18): "chiusura" se l'asilo
+// è chiuso (weekend o intervallo del calendario scolastico, specs/53),
+// altrimenti "lavorativo". L'utente può cambiarlo. Funzione pura.
+export function statoPredefinitoGiornoOreLavoro(data: string, chiusure: GiornoChiusura[]): StatoGiornoOreLavoro {
+  return isGiornoChiuso(data, chiusure) ? 'chiusura' : 'lavorativo';
+}
 
 // Lunedì della settimana da mostrare/modificare in "Ore di lavoro"
 // (specs/18): quello richiesto (query string `?settimana=`, o campo
@@ -126,8 +145,25 @@ export type EsitoValidazioneGiorno =
 // (nessun salvataggio parziale su un errore, specs/05 - feedback.md).
 export function validaGiornoOreLavoro(input: InputGiornoOreLavoro): EsitoValidazioneGiorno {
   const stato: StatoGiornoOreLavoro =
-    input.stato === 'malattia' || input.stato === 'assenza' ? input.stato : 'lavorativo';
+    input.stato === 'malattia' || input.stato === 'assenza' || isStatoNeutroOreLavoro(input.stato)
+      ? (input.stato as StatoGiornoOreLavoro)
+      : 'lavorativo';
   const etichettaGiorno = formattaDataItaliana(input.data);
+
+  if (isStatoNeutroOreLavoro(stato)) {
+    return {
+      ok: true,
+      giorno: {
+        data: input.data,
+        stato,
+        oreOrdinarie: 0,
+        oreStraordinarie: 0,
+        motivoStraordinario: null,
+        codiceMalattia: null,
+        notaAssenza: null,
+      },
+    };
+  }
 
   if (stato === 'malattia') {
     const codiceMalattia = input.codiceMalattia.trim();
@@ -269,6 +305,20 @@ export function descrizioneDifferenzaOre(differenza: number): { inRegola: boolea
 // sempre 0). Funzione pura.
 export function deltaGiornoOreLavoro(oreDovute: number, oreOrdinarie: number, oreStraordinarie: number): number {
   return oreOrdinarie - oreDovute + oreStraordinarie;
+}
+
+// Scostamento di un giorno tenendo conto dello stato (specs/18): 0 per
+// chiusura/ferie (neutri, il giorno non conta), altrimenti
+// deltaGiornoOreLavoro (malattia/assenza risultano in meno del previsto
+// nel PDF). Funzione pura.
+export function deltaGiornoPerStatoOreLavoro(
+  stato: string,
+  oreDovute: number,
+  oreOrdinarie: number,
+  oreStraordinarie: number
+): number {
+  if (isStatoNeutroOreLavoro(stato)) return 0;
+  return deltaGiornoOreLavoro(oreDovute, oreOrdinarie, oreStraordinarie);
 }
 
 // Formatta un numero di ore con il segno esplicito se positivo (es.

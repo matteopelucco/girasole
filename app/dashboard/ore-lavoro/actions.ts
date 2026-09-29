@@ -3,9 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { requireStaff, requireAdmin, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oggi, giorniSettimana } from '@/lib/date';
+import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import {
   validaGiornoOreLavoro,
   oreOrdinariePreviste,
+  statoPredefinitoGiornoOreLavoro,
+  isStatoNeutroOreLavoro,
   settimanaOreLavoroRichiesta,
   utenteBersaglioOreLavoro,
 } from '@/lib/oreLavoro';
@@ -179,15 +182,22 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
 
   const profiloOrario = await profiloOrarioDelBersaglio(supabase, user.id, profilo?.profilo_orario_id, utenteId);
 
+  // Un giorno non ancora salvato in un giorno di chiusura scolastica si
+  // completa come "Chiusura" (ore a 0, neutro per il monte ore), gli
+  // altri con le ore previste dal profilo (specs/18).
+  const chiusure = await chiusurePerPeriodo(supabase, giorni[0], giorni[giorni.length - 1]);
   const daCompletare = giorni
     .filter((data) => !dateEsistenti.has(data))
-    .map((data) => ({
-      utente_id: utenteId,
-      data,
-      stato: 'lavorativo',
-      ore_ordinarie: oreOrdinariePreviste(profiloOrario, data),
-      ore_straordinarie: 0,
-    }));
+    .map((data) => {
+      const stato = statoPredefinitoGiornoOreLavoro(data, chiusure);
+      return {
+        utente_id: utenteId,
+        data,
+        stato,
+        ore_ordinarie: isStatoNeutroOreLavoro(stato) ? 0 : oreOrdinariePreviste(profiloOrario, data),
+        ore_straordinarie: 0,
+      };
+    });
 
   if (daCompletare.length) {
     const { error: erroreCompletamento } = await supabase.from('ore_lavoro_giorni').insert(daCompletare);
