@@ -1,0 +1,11 @@
+-- Grant mancante trovato dal grant-check in CI (issue #28).
+--
+-- Il cron del PDF mensile delle ore di lavoro (specs/52) legge
+-- `profili_orari` con il client admin (`createAdminClient`, ruolo
+-- `service_role`, vedi `recuperaProfiloOrarioConNome` in
+-- lib/profiliOrari.ts), ma la 0024 concede la tabella solo ad
+-- `authenticated`: senza questo grant il cron riceverebbe "permission
+-- denied". `service_role` bypassa la RLS, ma non i GRANT.
+--
+-- Solo lettura, nessun grant nuovo ad `authenticated`/`anon`.
+grant select on public.profili_orari to service_role;
