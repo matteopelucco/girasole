@@ -1,3 +1,4 @@
+import { formattaGeneratoIl } from '@/lib/date';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 
 // Generazione PDF dei report notturni (specs/52 - report-email-automatico.md).
@@ -83,10 +84,21 @@ export type GestorePagine = {
   nuovaPagina(): void;
 };
 
-export function creaGestorePagine(doc: PDFDocument): GestorePagine {
+// `perOgniPagina` (opzionale) è chiamato per ogni pagina appena creata,
+// compresa la prima, per disegnare elementi ricorrenti (es. la riga
+// "Generato il ...") senza toccare `y`, quindi senza spostare il contenuto.
+export function creaGestorePagine(
+  doc: PDFDocument,
+  perOgniPagina?: (pagina: PDFPage) => void
+): GestorePagine {
+  const aggiungiPagina = () => {
+    const pagina = doc.addPage([LARGHEZZA_PAGINA, ALTEZZA_PAGINA]);
+    perOgniPagina?.(pagina);
+    return pagina;
+  };
   const gestore: GestorePagine = {
     doc,
-    pagina: doc.addPage([LARGHEZZA_PAGINA, ALTEZZA_PAGINA]),
+    pagina: aggiungiPagina(),
     y: ALTEZZA_PAGINA - MARGINE,
     nuovaPaginaSeServe(righeNecessarie: number) {
       if (gestore.y - righeNecessarie * ALTEZZA_RIGA < MARGINE) {
@@ -94,11 +106,37 @@ export function creaGestorePagine(doc: PDFDocument): GestorePagine {
       }
     },
     nuovaPagina() {
-      gestore.pagina = doc.addPage([LARGHEZZA_PAGINA, ALTEZZA_PAGINA]);
+      gestore.pagina = aggiungiPagina();
       gestore.y = ALTEZZA_PAGINA - MARGINE;
     },
   };
   return gestore;
+}
+
+// Punto unico di creazione di ogni PDF del progetto: crea documento,
+// font e gestore pagine e stampa in alto a destra di OGNI pagina
+// "Generato il gg/mm/aaaa alle hh:mm" (Europe/Rome, specs/52). Chi genera
+// un nuovo PDF parte da qui e ottiene la data senza altro codice. La data
+// è un parametro (nessun new Date() nascosto): la passa il chiamante.
+export async function creaDocumentoPdf(generatoIl: Date) {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontGrassetto = await doc.embedFont(StandardFonts.HelveticaBold);
+  const testo = formattaGeneratoIl(generatoIl);
+  const size = 8;
+  const x = LARGHEZZA_PAGINA - MARGINE - font.widthOfTextAtSize(testo, size);
+  // Sopra il margine superiore (y del contenuto parte da ALTEZZA - MARGINE):
+  // non si sovrappone a titolo/tabella e non sposta nulla.
+  const g = creaGestorePagine(doc, (pagina) =>
+    pagina.drawText(testo, {
+      x,
+      y: ALTEZZA_PAGINA - MARGINE + 18,
+      size,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    })
+  );
+  return { doc, font, fontGrassetto, g };
 }
 
 // Genera un PDF A4 con una tabella per ogni sezione/classe passata,
@@ -113,13 +151,10 @@ export async function generaPdfTabellare(
   titolo: string,
   sottotitolo: string,
   sezioni: SezionePdf[],
+  generatoIl: Date,
   comunicazionePasti?: ComunicazionePastiPdf
 ): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontGrassetto = await doc.embedFont(StandardFonts.HelveticaBold);
-
-  const g = creaGestorePagine(doc);
+  const { doc, font, fontGrassetto, g } = await creaDocumentoPdf(generatoIl);
 
   g.pagina.drawText(titolo, { x: MARGINE, y: g.y, size: 16, font: fontGrassetto, color: rgb(0, 0, 0) });
   g.y -= 22;

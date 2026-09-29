@@ -1,11 +1,11 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { rgb } from 'pdf-lib';
 import {
   MARGINE,
   ALTEZZA_RIGA,
   DIMENSIONE_TESTO,
   larghezzeColonnePesate,
   disegnaRiga,
-  creaGestorePagine,
+  creaDocumentoPdf,
 } from '@/lib/pdfReport';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
 
@@ -47,13 +47,10 @@ const PESI_COLONNE = [1.2, 1.1, 1.2, 1.0, 1.3, 0.9, 3.5];
 
 export async function generaPdfOreLavoroMensile(
   titoloMese: string,
-  persone: PersonaPdfOreLavoro[]
+  persone: PersonaPdfOreLavoro[],
+  generatoIl: Date
 ): Promise<Uint8Array> {
-  const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const fontGrassetto = await doc.embedFont(StandardFonts.HelveticaBold);
-
-  const g = creaGestorePagine(doc);
+  const { doc, font, fontGrassetto, g } = await creaDocumentoPdf(generatoIl);
   const larghezze = larghezzeColonnePesate(PESI_COLONNE);
 
   persone.forEach((persona, indice) => {
