@@ -14,15 +14,26 @@ describe('data di generazione nei PDF', () => {
     expect(testo).toContain('martedì 29 settembre 2026');
   });
 
-  it('la riga compare una sola volta anche con più pagine (solo la prima)', async () => {
-    const righe = Array.from({ length: 80 }, (_, i) => [`Bambino ${i}`, '1']);
+  it('la riga compare su ogni pagina create dall\'interruzione automatica', async () => {
+    const righe = Array.from({ length: 200 }, (_, i) => [`Bambino ${i}`, '1']);
     const bytes = await generaPdfTabellare('Report', 'sottotitolo', [
       { nome: 'Girasoli', intestazioni: ['Bambino', 'Presenze'], righe },
     ], GENERATO_IL);
     const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBeGreaterThan(1);
+    expect(doc.getPageCount()).toBeGreaterThan(2);
+    for (let i = 0; i < doc.getPageCount(); i++) {
+      const testo = await testoPagina(bytes, i);
+      expect(testo).toContain('Generato il 29/09/2026 alle 08:15');
+      expect(testo.match(/Generato il/g)).toHaveLength(1);
+    }
+  });
+
+  it('nuovaPagina() esplicita del gestore disegna la riga sulla nuova pagina', async () => {
+    const { g } = await creaDocumentoPdf(GENERATO_IL);
+    g.nuovaPagina();
+    const bytes = await g.doc.save();
     expect(await testoPagina(bytes, 0)).toContain('Generato il');
-    expect(await testoPagina(bytes, 1)).not.toContain('Generato il');
+    expect(await testoPagina(bytes, 1)).toContain('Generato il 29/09/2026 alle 08:15');
   });
 
   it('creaDocumentoPdf (primitivo condiviso) disegna la riga sulla prima pagina', async () => {

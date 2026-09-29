@@ -25,9 +25,10 @@ describe('generaPdfOreLavoroMensile', () => {
     expect(testo).toContain('settembre 2026');
   });
 
-  it('con più persone la riga compare solo sulla prima pagina', async () => {
+  it('con più persone la riga compare su ogni pagina (una per persona)', async () => {
     const bytes = await generaPdfOreLavoroMensile('settembre 2026', [persona('A'), persona('B')], GENERATO_IL);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
-    expect(await testoPagina(bytes, 1)).not.toContain('Generato il');
+    expect(await testoPagina(bytes, 0)).toContain('Generato il 29/09/2026 alle 08:15');
+    expect(await testoPagina(bytes, 1)).toContain('Generato il 29/09/2026 alle 08:15');
   });
 });
