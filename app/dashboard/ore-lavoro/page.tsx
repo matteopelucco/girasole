@@ -17,6 +17,7 @@ import {
 } from '@/lib/date';
 import {
   oreOrdinariePreviste,
+  differenzaGiornoOreLavoro,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
   ETICHETTE_STATO_ORE_LAVORO,
@@ -173,6 +174,18 @@ export default async function OreLavoroPage({
       oreOrdinarie: salvata ? salvata.ore_ordinarie : oreOrdinariePreviste(profiloOrario, data),
       oreStraordinarie: salvata?.ore_straordinarie ?? 0,
       motivoStraordinario: salvata?.motivo_straordinario ?? '',
+      // Differenza rispetto al previsto (specs/18): stessa formula del
+      // delta di report e monte ore, quindi compatibile con lo storico.
+      // Un giorno malattia/assenza (ore a 0) riparte da 0 se si torna a
+      // "Lavorativo", non da -previste.
+      differenzaOre:
+        salvata && salvata.stato === 'lavorativo'
+          ? differenzaGiornoOreLavoro(
+              oreOrdinariePreviste(profiloOrario, data),
+              Number(salvata.ore_ordinarie),
+              Number(salvata.ore_straordinarie)
+            )
+          : 0,
       codiceMalattia: salvata?.codice_malattia ?? '',
       notaAssenza: salvata?.nota_assenza ?? '',
     };
@@ -289,9 +302,8 @@ export default async function OreLavoroPage({
                 valori={{
                   data: r.data,
                   stato: r.stato,
-                  oreOrdinarie: r.oreOrdinarie,
-                  oreStraordinarie: r.oreStraordinarie,
-                  motivoStraordinario: r.motivoStraordinario,
+                  differenzaOre: r.differenzaOre,
+                  motivo: r.motivoStraordinario,
                   codiceMalattia: r.codiceMalattia,
                   notaAssenza: r.notaAssenza,
                 }}
