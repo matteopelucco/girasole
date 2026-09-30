@@ -137,19 +137,21 @@ un profilo assegnato o se nessun giorno è lavorativo) e "Differenza ore"
 somma delle differenze dei giorni lavorativi, es. "+5h")
 E la differenza è sempre "erogate − previste": non compare più la
 distinzione tra ore ordinarie e straordinarie erogate
-E la differenza ore si applica direttamente al monte ore, senza alcuna
-approvazione dell'admin (vedi [19 - monte-ore.md](19%20-%20monte-ore.md))
+E la differenza ore è solo un calcolo informativo: il monte ore è gestito
+a mano dall'admin e non cambia mai da solo (vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md))
 
 ## Scenario: il riepilogo si aggiorna con quanto digitato, prima di salvare
 Dato che la settimana non è confermata
 Quando cambio la differenza o lo stato di un giorno, senza ancora
 premere "Salva modifiche"
-Allora "Ore previste", "Differenza ore" e l'effetto sul monte ore si
-aggiornano subito, coerenti con le card dei giorni mostrate
+Allora "Ore previste" e "Differenza ore" si aggiornano subito, coerenti
+con le card dei giorni mostrate
 E lo stesso vale per una settimana già confermata che l'admin corregge:
 "Differenza ore" è sempre la somma delle differenze dei giorni lavorativi
 mostrati nelle card (mai un valore congelato alla conferma), così il
 riquadro non diverge dalle card dopo una correzione
+
 ## Scenario: salvare le ore anche a metà settimana
 Dato che sono sulla settimana corrente e oggi non è l'ultimo giorno
 della settimana (alcuni giorni successivi non sono ancora accaduti)
@@ -190,6 +192,8 @@ E nessuna modifica di quel salvataggio viene registrata
 Quando, dopo aver verificato le ore, premo "Conferma settimana" e
 confermo l'azione
 Allora la settimana risulta confermata, con la data/ora della conferma
+(la conferma blocca la modifica autonoma delle ore, e non registra alcun
+movimento di monte ore)
 mostrate a schermo
 E ogni giorno non ancora salvato esplicitamente viene comunque
 registrato, con le ore precaricate dal profilo orario (o 0 se nessun
@@ -239,13 +243,12 @@ ricaricamento
 Quando per un giorno qualunque scelgo lo stato "Ferie" e premo "Salva
 modifiche"
 Allora quel giorno risulta segnato come ferie, senza campi da compilare
-E non è considerato nel calcolo delle ore dovute e del monte ore (stesso
-comportamento di "Chiusura"): le ore dovute della settimana e la
-variazione del monte ore non lo contano né in più né in meno
+E non è considerato nel calcolo delle ore previste e della differenza
+(stesso comportamento di "Chiusura"): non conta né in più né in meno
 
-## Scenario: Chiusura e Ferie non alterano il monte ore
+## Scenario: Chiusura e Ferie non alterano il calcolo delle ore
 Dato che in una settimana ho un giorno in stato "Chiusura" o "Ferie"
-Quando guardo il riepilogo della settimana e la variazione del monte ore
+Quando guardo il riepilogo della settimana e il calcolo mese per mese
 Allora quel giorno non aggiunge né toglie ore: né dovute, né erogate,
 né differenza, come se fosse stato lavorato esattamente come previsto
 
@@ -428,10 +431,11 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   esistenti". Il valore previsto resta visibile come testo statico
   ("Previsto: Xh", mai dentro un campo di input). La validazione è
   lato server (`validaGiornoOreLavoro`), oltre ai vincoli del campo.
-- Le ore ordinarie e straordinarie erogate, confrontate con le ore
-  dovute dal profilo orario, concorrono al calcolo del monte ore del
-  personale, aggiornato automaticamente alla conferma di ogni
-  settimana — vedi [19 - monte-ore.md](19%20-%20monte-ore.md).
+- Le ore erogate, confrontate con le ore previste dal profilo orario,
+  alimentano il calcolo mese per mese mostrato nella scheda ore; il
+  monte ore invece è gestito a mano dall'admin e la conferma della
+  settimana non lo modifica — vedi
+  [19 - monte-ore.md](19%20-%20monte-ore.md).
 - La settimana è "confermata" quando esiste una riga corrispondente
   nella tabella `ore_lavoro_settimane` (stesso pattern di
   `report_giornalieri_inviati`/`report_periodici_inviati`, specs/52:

@@ -12,8 +12,9 @@ function persona(nome: string): PersonaPdfOreLavoro {
     profiloOrarioDettaglio: null,
     giorni: [],
     settimaneNonConfermate: [],
-    variazioneMese: 0,
     saldoAttuale: 0,
+    movimenti: [],
+    calcoloMensile: [],
   };
 }
 
@@ -23,6 +24,33 @@ describe('generaPdfOreLavoroMensile', () => {
     const testo = await testoPagina(bytes, 0);
     expect(testo).toContain('Generato il 29/09/2026 alle 08:15');
     expect(testo).toContain('settembre 2026');
+  });
+
+  it('riporta la situazione completa del monte ore: saldo, movimenti e calcolo mese per mese', async () => {
+    const conMonteOre: PersonaPdfOreLavoro = {
+      ...persona('Persona A'),
+      saldoAttuale: 4.5,
+      movimenti: [{ data: 'mar 1/9/26', variazione: -2, nota: 'Recupero concordato' }],
+      calcoloMensile: [
+        { mese: 'agosto 2026', orePreviste: 140, differenza: 3, movimenti: 0, saldo: 0 },
+        { mese: 'settembre 2026', orePreviste: 100, differenza: -2, movimenti: -2, saldo: -2 },
+      ],
+    };
+    const bytes = await generaPdfOreLavoroMensile('settembre 2026', [conMonteOre], GENERATO_IL);
+    const testo = await testoPagina(bytes, 0);
+    expect(testo).toContain('Saldo attuale: 4.5h');
+    expect(testo).toContain('Recupero concordato');
+    expect(testo).toContain('-2h');
+    expect(testo).toContain('Calcolo mese per mese');
+    expect(testo).toContain('agosto 2026');
+    expect(testo).toContain('+3h');
+  });
+
+  it('senza movimenti né calcolo lo dice esplicitamente', async () => {
+    const bytes = await generaPdfOreLavoroMensile('settembre 2026', [persona('Persona A')], GENERATO_IL);
+    const testo = await testoPagina(bytes, 0);
+    expect(testo).toContain('Nessun movimento registrato.');
+    expect(testo).toContain('Nessun dato.');
   });
 
   it('con più persone la riga compare su ogni pagina (una per persona)', async () => {

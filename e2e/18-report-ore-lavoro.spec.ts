@@ -195,14 +195,11 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Differenza ore Lunedì').fill('0');
         await expect.poll(differenzaSettimana).toBe(differenzaPrima);
 
-        // specs/19, "vedere in anteprima l'effetto sul monte ore prima
-        // di confermare": presente finché la settimana non è
-        // confermata (siamo in questo ramo perché non lo è), con uno
-        // dei tre esiti possibili — il valore esatto dipende dallo
-        // storico condiviso dell'account di test, non lo fissiamo.
-        await expect(page.getByText('A settimana confermata:', { exact: false })).toContainText(
-          /(\d+(\.\d+)? in (più|meno) sul monte ore|nessuna variazione del monte ore)/
-        );
+        // specs/19, "la conferma della settimana non tocca il monte ore":
+        // il monte ore è gestito a mano dall'admin, quindi non compare
+        // più alcuna anteprima del suo effetto.
+        await expect(page.getByText('A settimana confermata:', { exact: false })).toHaveCount(0);
+        await expect(page.getByText('sul monte ore', { exact: false })).toHaveCount(0);
 
         // Differenza senza motivo: rifiutata, nessuna scrittura
         // (scenario "una differenza diversa da zero richiede un motivo").

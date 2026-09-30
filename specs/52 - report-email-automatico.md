@@ -124,11 +124,12 @@ mese già confermate (vedi [18](18%20-%20report-ore-lavoro.md))
 E se una o più settimane del mese non sono ancora state confermate, il
 PDF lo segnala esplicitamente per quella persona (intervallo di date
 escluso, non semplicemente omesso in silenzio)
-E in fondo alla pagina di ciascuna persona compare il riepilogo del
-mese: variazione di monte ore nel mese (somma dei movimenti
-`settimanale` e `straordinario_residuo` — vedi
-[19 - monte-ore.md](19%20-%20monte-ore.md) — la cui settimana inizia in
-quel mese) e saldo di monte ore a fine mese
+E in fondo alla pagina di ciascuna persona compare la sezione "Monte
+ore" con la **situazione completa** (vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md), gestito a mano dall'admin):
+il saldo attuale, l'elenco di tutti i movimenti registrati (data,
+variazione con segno, nota) e la tabella "calcolo mese per mese" (mese,
+ore previste, differenza ore, movimenti del mese, saldo a fine mese)
 
 ## Regole
 - Destinatario configurabile, non hardcoded: variabile d'ambiente
