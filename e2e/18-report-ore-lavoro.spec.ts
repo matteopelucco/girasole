@@ -556,6 +556,18 @@ test.describe('18 — Report ore di lavoro', () => {
           await page.getByRole('button', { name: 'Annulla' }).click();
         }
 
+        // Scenario "il riepilogo si aggiorna con quanto digitato" (anche
+        // per una settimana confermata e corretta dall'admin, #151):
+        // "Differenza ore" del riquadro è la somma delle differenze dei
+        // giorni mostrati nelle card, mai un valore congelato alla
+        // conferma.
+        const campiDifferenza = page.getByLabel(/^Differenza ore (Lunedì|Martedì|Mercoledì|Giovedì|Venerdì|Sabato|Domenica)$/);
+        const valoriDifferenza = await campiDifferenza.evaluateAll((els) => els.map((el) => Number((el as HTMLInputElement).value)));
+        const sommaDifferenze = Math.round(valoriDifferenza.reduce((t, v) => t + v, 0) * 100) / 100;
+        const testoDifferenza = (await page.getByText('Differenza ore:', { exact: false }).textContent()) ?? '';
+        const differenzaRiquadro = Number(testoDifferenza.match(/Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/)![1]);
+        expect(differenzaRiquadro).toBe(sommaDifferenze);
+
         // Scenario: l'admin naviga tra le settimane di un dipendente —
         // resta sulle ore della stessa persona (il parametro `utente`
         // resta nell'URL).
