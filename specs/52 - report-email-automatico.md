@@ -131,6 +131,24 @@ il saldo attuale, l'elenco di tutti i movimenti registrati (data,
 variazione con segno, nota) e la tabella "calcolo mese per mese" (mese,
 ore previste, differenza ore, movimenti del mese, saldo a fine mese)
 
+## Scenario: testo lungo nelle celle delle tabelle PDF
+Dato che una cella di una tabella di un PDF (presenze, pasti, ore di
+lavoro) contiene un testo più largo della sua colonna (es. il dettaglio
+"Pre-asilo al posto di Lucia (1.5) + 3h SARA: da definire", o un nome
+molto lungo)
+Quando il PDF viene generato
+Allora il testo va a capo entro la larghezza della colonna, su più
+righe, e non esce dal margine destro della pagina
+E la riga della tabella cresce in altezza quanto serve, e le altre celle
+della stessa riga restano allineate in alto
+E l'interruzione di pagina tiene conto dell'altezza della riga: una
+riga alta non viene mai tagliata a fondo pagina, passa per intero alla
+pagina successiva
+E una singola parola più larga della colonna viene spezzata invece di
+uscire dal margine
+E un carattere non codificabile dal font del PDF (es. un'emoji) viene
+sostituito da "?" senza far fallire la generazione
+
 ## Regole
 - Destinatario configurabile, non hardcoded: variabile d'ambiente
   `REPORT_EMAIL_DESTINATARIO`, con `info@asilosartorio.it` come valore

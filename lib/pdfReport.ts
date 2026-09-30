@@ -1,5 +1,12 @@
 import { formattaGeneratoIl } from '@/lib/date';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import {
+  ALTEZZA_RIGA_TABELLA,
+  INTERLINEA_TABELLA,
+  altezzaRigaTabella,
+  righeDiTesto,
+  sostituisciNonCodificabili,
+} from '@/lib/testoACapo';
 
 // Generazione PDF dei report notturni (specs/52 - report-email-automatico.md).
 // Usa pdf-lib (libreria pura JS, nessun binario nativo — vedi la scelta
@@ -30,7 +37,9 @@ export type ComunicazionePastiPdf = { righe: string[]; totale: string };
 export const MARGINE = 40;
 export const LARGHEZZA_PAGINA = 595.28; // A4 verticale, punti
 export const ALTEZZA_PAGINA = 841.89;
-export const ALTEZZA_RIGA = 16;
+export const ALTEZZA_RIGA = ALTEZZA_RIGA_TABELLA;
+// Spazio lasciato tra il testo di una cella e la colonna successiva.
+const GAP_COLONNA = 4;
 export const DIMENSIONE_TESTO = 9;
 
 export function larghezzeColonne(numeroColonne: number): number[] {
@@ -51,26 +60,57 @@ export function larghezzeColonnePesate(pesi: number[]): number[] {
   return pesi.map((peso) => (disponibile * peso) / totalePesi);
 }
 
+// Caratteri che il font sa codificare, calcolati una volta per font
+// (getCharacterSet è lento): serve a non far fallire il PDF su un carattere
+// non codificabile (es. un'emoji con Helvetica/WinAnsi).
+const caratteriPerFont = new WeakMap<PDFFont, Set<number>>();
+function testoCodificabile(font: PDFFont, testo: string): string {
+  let supportati = caratteriPerFont.get(font);
+  if (!supportati) {
+    supportati = new Set(font.getCharacterSet());
+    caratteriPerFont.set(font, supportati);
+  }
+  return sostituisciNonCodificabili(testo, (codePoint) => supportati.has(codePoint));
+}
+
+// Disegna una riga di celle con il testo a capo entro la larghezza di ogni
+// colonna (specs/52, "testo lungo nelle celle"): la riga cresce in altezza
+// quanto la sua cella più alta, le altre celle restano allineate in alto.
+// L'interruzione di pagina tiene conto dell'altezza calcolata, quindi una
+// riga alta non viene mai tagliata a fondo pagina: passa intera alla
+// pagina dopo. Aggiorna g.y.
 export function disegnaRiga(
-  page: PDFPage,
+  g: GestorePagine,
   font: PDFFont,
   fontGrassetto: PDFFont,
   celle: string[],
   larghezze: number[],
-  y: number,
   grassetto: boolean
 ) {
+  const fontRiga = grassetto ? fontGrassetto : font;
+  const righePerCella = celle.map((cella, i) => {
+    const testo = testoCodificabile(fontRiga, cella ?? '');
+    const disponibile = Math.max(1, larghezze[i] - GAP_COLONNA);
+    return righeDiTesto(testo, disponibile, (t) => fontRiga.widthOfTextAtSize(t, DIMENSIONE_TESTO));
+  });
+  const altezza = altezzaRigaTabella(Math.max(1, ...righePerCella.map((righe) => righe.length)));
+
+  if (g.y - altezza < MARGINE) g.nuovaPagina();
+
   let x = MARGINE;
-  for (let i = 0; i < celle.length; i++) {
-    page.drawText(celle[i] ?? '', {
-      x,
-      y,
-      size: DIMENSIONE_TESTO,
-      font: grassetto ? fontGrassetto : font,
-      color: rgb(0.1, 0.1, 0.1),
+  righePerCella.forEach((righe, i) => {
+    righe.forEach((riga, k) => {
+      g.pagina.drawText(riga, {
+        x,
+        y: g.y - k * INTERLINEA_TABELLA,
+        size: DIMENSIONE_TESTO,
+        font: fontRiga,
+        color: rgb(0.1, 0.1, 0.1),
+      });
     });
     x += larghezze[i];
-  }
+  });
+  g.y -= altezza;
 }
 
 // Stato mutabile "pagina corrente / posizione y" incapsulato con la sua
@@ -178,14 +218,9 @@ export async function generaPdfTabellare(
     }
 
     const larghezze = larghezzeColonne(sezione.intestazioni.length);
-    g.nuovaPaginaSeServe(1);
-    disegnaRiga(g.pagina, font, fontGrassetto, sezione.intestazioni, larghezze, g.y, true);
-    g.y -= ALTEZZA_RIGA;
-
+    disegnaRiga(g, font, fontGrassetto, sezione.intestazioni, larghezze, true);
     for (const riga of sezione.righe) {
-      g.nuovaPaginaSeServe(1);
-      disegnaRiga(g.pagina, font, fontGrassetto, riga, larghezze, g.y, false);
-      g.y -= ALTEZZA_RIGA;
+      disegnaRiga(g, font, fontGrassetto, riga, larghezze, false);
     }
 
     g.y -= 12;

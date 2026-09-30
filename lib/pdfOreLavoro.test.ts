@@ -73,3 +73,27 @@ describe('nomeFilePdfOreLavoroMensile', () => {
     expect(nomeFilePdfOreLavoroMensile('2026-09')).toBe('ore-lavoro-2026-09.pdf');
   });
 });
+
+describe('dettaglio lungo nella tabella dei giorni (specs/52, issue #142)', () => {
+  const DETTAGLIO = 'Pre-asilo al posto di Lucia (1.5) + 3h SARA: da definire';
+
+  it('il dettaglio del giorno va a capo e nessuna parola viene persa', async () => {
+    const conDettaglio: PersonaPdfOreLavoro = {
+      ...persona('Persona A'),
+      giorni: [
+        {
+          data: 'mer 9/9/26',
+          stato: 'lavorativo',
+          oreDovute: '7h',
+          oreOrdinarie: '7h',
+          oreStraordinarie: '4.5h',
+          delta: '+4.5h',
+          dettaglio: DETTAGLIO,
+        },
+      ],
+    };
+    const bytes = await generaPdfOreLavoroMensile('settembre 2026', [conDettaglio], GENERATO_IL);
+    const testo = await testoPagina(bytes, 0);
+    for (const parola of DETTAGLIO.split(' ')) expect(testo).toContain(parola);
+  });
+});
