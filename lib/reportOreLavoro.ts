@@ -7,6 +7,8 @@ import {
   formattaIntervalloItaliano,
   primoGiornoMese,
   ultimoGiornoMese,
+  formattaMeseItaliano,
+  oggi,
 } from '@/lib/date';
 import {
   totaliSettimanaOreLavoro,
@@ -17,7 +19,9 @@ import {
   ETICHETTE_STATO_ORE_LAVORO,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
-import { saldoMonteOre, saldiPerUtente } from '@/lib/monteOre';
+import { saldiPerUtente } from '@/lib/monteOre';
+import { dataDiMovimento } from '@/lib/monteOreMensile';
+import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
 import { righeOSollevaErrore, STILE_TABELLA, STILE_CELLA, STILE_CELLA_NUMERO } from '@/lib/reportPresenze';
 import type { PersonaPdfOreLavoro, GiornoPdfOreLavoro } from '@/lib/pdfOreLavoro';
@@ -125,7 +129,11 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
       .select('utente_id, settimana_inizio')
       .in('utente_id', idPersonale)
       .in('settimana_inizio', settimane),
-    supabase.from('monte_ore_movimenti').select('utente_id, variazione, tipo, settimana_inizio').in('utente_id', idPersonale),
+    supabase
+      .from('monte_ore_movimenti')
+      .select('utente_id, variazione, nota, created_at')
+      .in('utente_id', idPersonale)
+      .order('created_at', { ascending: true }),
   ]);
   const confermate = righeOSollevaErrore(rConfermate, 'lettura settimane ore di lavoro confermate');
   const movimenti = righeOSollevaErrore(rMovimenti, 'lettura movimenti monte ore');
@@ -169,11 +177,15 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
         });
     }
 
-    const variazioneMese = saldoMonteOre(
-      movimenti.filter(
-        (m) => m.utente_id === persona.id && m.tipo === 'settimanale' && settimane.includes(m.settimana_inizio as string)
-      )
-    );
+    // Situazione completa del monte ore (specs/19, specs/52): gestito a
+    // mano dall'admin — movimenti registrati e calcolo mese per mese.
+    const movimentiPersona = movimenti.filter((m) => m.utente_id === persona.id);
+    const calcoloMensile = await calcoloMensilePerUtente(supabase, {
+      utenteId: persona.id,
+      profiloOrario,
+      oggiData: oggi(),
+      movimenti: movimentiPersona,
+    });
 
     risultati.push({
       nome: `${persona.nome} ${persona.cognome}`.trim(),
@@ -183,8 +195,13 @@ export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaP
         : null,
       giorni: giorniPersona,
       settimaneNonConfermate: settimaneNonConfermate.map((s) => formattaIntervalloItaliano(s, sommaGiorni(s, 6))),
-      variazioneMese,
       saldoAttuale: saldiAttuali.get(persona.id) ?? 0,
+      movimenti: movimentiPersona.map((m) => ({
+        data: formattaDataCorta(dataDiMovimento(m.created_at)),
+        variazione: Number(m.variazione),
+        nota: m.nota ?? '',
+      })),
+      calcoloMensile: calcoloMensile.map((r) => ({ ...r, mese: formattaMeseItaliano(r.mese) })),
     });
   }
 

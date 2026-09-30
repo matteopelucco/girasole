@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { descrizioneEffettoMonteOre, riepilogoSettimanaDaDifferenze } from '@/lib/monteOre';
+import { riepilogoSettimanaDaDifferenze } from '@/lib/monteOre';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
 
 // Valori di un giorno come mostrati nella sua card (specs/18): anche le
@@ -53,12 +53,12 @@ export function useAggiornaGiornoRiepilogo() {
 }
 
 // Riquadro riassuntivo della settimana (specs/18, specs/19): "Ore
-// previste" e "Differenza ore" (erogate − previste, con segno), più
-// l'effetto sul monte ore. Legge sempre le card dei giorni (anche non
-// salvate), per ogni settimana — anche confermata e corretta dall'admin,
-// così non diverge mai da quanto mostrato sopra (#151). Va dentro
-// `SettimanaOreLavoroProvider`.
-export function RiepilogoSettimanaOreLavoro({ mostraEffettoMonteOre }: { mostraEffettoMonteOre: boolean }) {
+// previste" e "Differenza ore" (erogate − previste, con segno): un calcolo
+// informativo, il monte ore è gestito a mano dall'admin. Legge sempre le
+// card dei giorni (anche non salvate), per ogni settimana — anche
+// confermata e corretta dall'admin, così non diverge mai da quanto
+// mostrato sopra (#151). Va dentro `SettimanaOreLavoroProvider`.
+export function RiepilogoSettimanaOreLavoro() {
   const contesto = useContext(ContestoRiepilogo);
   const riepilogo = riepilogoSettimanaDaDifferenze(Object.values(contesto?.giorni ?? {}));
 
@@ -70,11 +70,6 @@ export function RiepilogoSettimanaOreLavoro({ mostraEffettoMonteOre }: { mostraE
       <p>
         Differenza ore: <strong>{formattaOreConSegno(riepilogo.differenza)}h</strong>
       </p>
-      {mostraEffettoMonteOre && (
-        <p className="mt-2 border-t border-stone-100 pt-2 text-purple-800">
-          A settimana confermata: <strong>{descrizioneEffettoMonteOre(riepilogo.variazioneMonteOre)}</strong>
-        </p>
-      )}
     </div>
   );
 }

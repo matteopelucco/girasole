@@ -25,7 +25,15 @@ import {
   riepilogoMeseOreLavoro,
   settimaneDelMese,
 } from '@/lib/oreLavoroMese';
-import { descrizioneEffettoMonteOre, saldoMonteOre } from '@/lib/monteOre';
+import { saldoMonteOre } from '@/lib/monteOre';
+import { MonteOre } from '@/components/MonteOre';
+import { CalcoloMensileMonteOre } from '@/components/CalcoloMensileMonteOre';
+import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
+import {
+  aggiungiMovimentoMonteOre,
+  eliminaMovimentoMonteOre,
+  modificaMovimentoMonteOre,
+} from '../actions';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 
 export const dynamic = 'force-dynamic';
@@ -76,7 +84,11 @@ export default async function OreLavoroMesePage({
       .eq('utente_id', persona.id)
       .in('settimana_inizio', settimane),
     chiusurePerPeriodo(supabase, inizio, fine),
-    supabase.from('monte_ore_movimenti').select('variazione').eq('utente_id', persona.id),
+    supabase
+      .from('monte_ore_movimenti')
+      .select('id, tipo, settimana_inizio, variazione, nota, created_at')
+      .eq('utente_id', persona.id)
+      .order('created_at', { ascending: false }),
   ]);
 
   const righe = righeMeseOreLavoro({
@@ -88,7 +100,12 @@ export default async function OreLavoroMesePage({
   });
   const riepilogo = riepilogoMeseOreLavoro(righe);
   const settimaneConfermate = new Set((confermate ?? []).map((c) => c.settimana_inizio));
-  const saldo = saldoMonteOre(movimenti ?? []);
+  const calcoloMensile = await calcoloMensilePerUtente(supabase, {
+    utenteId: persona.id,
+    profiloOrario,
+    oggiData,
+    movimenti: movimenti ?? [],
+  });
 
   const nome = `${persona.nome} ${persona.cognome}`.trim();
   const suffissoUtente = `utente=${persona.id}`;
@@ -142,13 +159,19 @@ export default async function OreLavoroMesePage({
           <p>
             Differenza ore: <strong>{formattaOreConSegno(riepilogo.differenza)}h</strong>
           </p>
-          <p className="mt-2 border-t border-stone-100 pt-2 text-purple-800">
-            Monte ore attuale: <strong>{saldo}h</strong>{' '}
-            <span className="text-stone-600">
-              (differenza del mese: {descrizioneEffettoMonteOre(riepilogo.variazioneMonteOre)})
-            </span>
-          </p>
         </div>
+
+        <MonteOre
+          saldo={saldoMonteOre(movimenti ?? [])}
+          movimenti={movimenti ?? []}
+          modalitaAdmin
+          utenteId={persona.id}
+          aggiungiMovimento={aggiungiMovimentoMonteOre}
+          modificaMovimento={modificaMovimentoMonteOre}
+          eliminaMovimento={eliminaMovimentoMonteOre}
+        />
+
+        <CalcoloMensileMonteOre righe={calcoloMensile} />
 
         <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-sm">
           <h2 className="font-medium text-stone-800">Settimane del mese</h2>

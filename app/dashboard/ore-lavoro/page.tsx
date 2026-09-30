@@ -36,6 +36,8 @@ import { RiepilogoSettimanaOreLavoro, SettimanaOreLavoroProvider } from '@/compo
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { MonteOre } from '@/components/MonteOre';
+import { CalcoloMensileMonteOre } from '@/components/CalcoloMensileMonteOre';
+import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import { StraordinarioResiduo } from '@/components/StraordinarioResiduo';
 import { SelettoreVistaOreLavoro } from '@/components/SelettoreVistaOreLavoro';
 import {
@@ -43,6 +45,7 @@ import {
   confermaSettimanaOreLavoro,
   aggiungiMovimentoMonteOre,
   eliminaMovimentoMonteOre,
+  modificaMovimentoMonteOre,
   decidiStraordinarioResiduo,
 } from './actions';
 
@@ -228,6 +231,15 @@ export default async function OreLavoroPage({
   const inizialeLive = Object.fromEntries(righe.map((r, i) => [r.data, giorniRiepilogo[i]]));
   const straordinarioResiduo = confermata ? Number(settimana!.straordinario_residuo) : 0;
 
+  // Calcolo completo mese per mese (specs/19): sempre completo, non dipende
+  // dalla settimana mostrata.
+  const calcoloMensile = await calcoloMensilePerUtente(supabase, {
+    utenteId: utenteTarget.id,
+    profiloOrario,
+    oggiData: oggi(),
+    movimenti: movimentiMonteOre ?? [],
+  });
+
   return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <SettimanaOreLavoroProvider iniziale={inizialeLive}>
@@ -346,7 +358,7 @@ export default async function OreLavoroPage({
           </FormConEsito>
         )}
 
-        <RiepilogoSettimanaOreLavoro mostraEffettoMonteOre={!confermata} />
+        <RiepilogoSettimanaOreLavoro />
 
         {confermata && (
           <StraordinarioResiduo
@@ -366,8 +378,11 @@ export default async function OreLavoroPage({
           modalitaAdmin={modalitaAdmin}
           utenteId={utenteTarget.id}
           aggiungiMovimento={aggiungiMovimentoMonteOre}
+          modificaMovimento={modificaMovimentoMonteOre}
           eliminaMovimento={eliminaMovimentoMonteOre}
         />
+
+        <CalcoloMensileMonteOre righe={calcoloMensile} />
 
         {!confermata && (
           <ConfermaAzione

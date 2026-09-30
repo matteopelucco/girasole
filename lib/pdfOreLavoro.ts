@@ -33,8 +33,21 @@ export type PersonaPdfOreLavoro = {
   profiloOrarioDettaglio: string | null;
   giorni: GiornoPdfOreLavoro[];
   settimaneNonConfermate: string[];
-  variazioneMese: number;
+  // Situazione completa del monte ore (specs/19, specs/52): gestito a mano
+  // dall'admin, il saldo è la somma dei movimenti.
   saldoAttuale: number;
+  movimenti: MovimentoPdfMonteOre[];
+  calcoloMensile: RigaCalcoloMensilePdf[];
+};
+
+export type MovimentoPdfMonteOre = { data: string; variazione: number; nota: string };
+
+export type RigaCalcoloMensilePdf = {
+  mese: string; // già formattato (es. "settembre 2026")
+  orePreviste: number;
+  differenza: number;
+  movimenti: number;
+  saldo: number;
 };
 
 // Colonna "Data" già in formato corto con giorno della settimana
@@ -44,6 +57,10 @@ export type PersonaPdfOreLavoro = {
 // colonna e sconfinava nella successiva).
 const INTESTAZIONI = ['Data', 'Stato', 'Ore dovute', 'Ore ord.', 'Ore straord.', 'Delta', 'Dettaglio'];
 const PESI_COLONNE = [1.2, 1.1, 1.2, 1.0, 1.3, 0.9, 3.5];
+const INTESTAZIONI_MOVIMENTI = ['Data', 'Variazione', 'Nota'];
+const PESI_MOVIMENTI = [1.4, 1.2, 6];
+const INTESTAZIONI_CALCOLO = ['Mese', 'Ore previste', 'Differenza', 'Movimenti', 'Saldo'];
+const PESI_CALCOLO = [2, 1.3, 1.3, 1.3, 1.1];
 
 export async function generaPdfOreLavoroMensile(
   titoloMese: string,
@@ -52,6 +69,8 @@ export async function generaPdfOreLavoroMensile(
 ): Promise<Uint8Array> {
   const { doc, font, fontGrassetto, g } = await creaDocumentoPdf(generatoIl);
   const larghezze = larghezzeColonnePesate(PESI_COLONNE);
+  const larghezzeMovimenti = larghezzeColonnePesate(PESI_MOVIMENTI);
+  const larghezzeCalcolo = larghezzeColonnePesate(PESI_CALCOLO);
 
   persone.forEach((persona, indice) => {
     if (indice > 0) g.nuovaPagina();
@@ -106,13 +125,71 @@ export async function generaPdfOreLavoroMensile(
       g.y -= ALTEZZA_RIGA + 8;
     }
 
-    g.nuovaPaginaSeServe(2);
+    // Monte ore: situazione completa (gestito a mano dall'admin).
+    g.nuovaPaginaSeServe(3);
     g.pagina.drawText('Monte ore', { x: MARGINE, y: g.y, size: 12, font: fontGrassetto });
+    g.y -= ALTEZZA_RIGA + 2;
+    g.pagina.drawText(`Saldo attuale: ${persona.saldoAttuale}h (gestito a mano dall'admin)`, {
+      x: MARGINE,
+      y: g.y,
+      size: DIMENSIONE_TESTO,
+      font: fontGrassetto,
+    });
+    g.y -= ALTEZZA_RIGA + 4;
+
+    g.pagina.drawText('Movimenti', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font: fontGrassetto });
     g.y -= ALTEZZA_RIGA;
-    g.pagina.drawText(
-      `Variazione del mese: ${formattaOreConSegno(persona.variazioneMese)}h — Saldo attuale: ${persona.saldoAttuale}h`,
-      { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font }
-    );
+    if (!persona.movimenti.length) {
+      g.pagina.drawText('Nessun movimento registrato.', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font });
+      g.y -= ALTEZZA_RIGA;
+    } else {
+      disegnaRiga(g.pagina, font, fontGrassetto, INTESTAZIONI_MOVIMENTI, larghezzeMovimenti, g.y, true);
+      g.y -= ALTEZZA_RIGA;
+      for (const movimento of persona.movimenti) {
+        g.nuovaPaginaSeServe(1);
+        disegnaRiga(
+          g.pagina,
+          font,
+          fontGrassetto,
+          [movimento.data, `${formattaOreConSegno(movimento.variazione)}h`, movimento.nota],
+          larghezzeMovimenti,
+          g.y,
+          false
+        );
+        g.y -= ALTEZZA_RIGA;
+      }
+    }
+    g.y -= 6;
+
+    g.nuovaPaginaSeServe(3);
+    g.pagina.drawText('Calcolo mese per mese', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font: fontGrassetto });
+    g.y -= ALTEZZA_RIGA;
+    if (!persona.calcoloMensile.length) {
+      g.pagina.drawText('Nessun dato.', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font });
+      g.y -= ALTEZZA_RIGA;
+    } else {
+      disegnaRiga(g.pagina, font, fontGrassetto, INTESTAZIONI_CALCOLO, larghezzeCalcolo, g.y, true);
+      g.y -= ALTEZZA_RIGA;
+      for (const riga of persona.calcoloMensile) {
+        g.nuovaPaginaSeServe(1);
+        disegnaRiga(
+          g.pagina,
+          font,
+          fontGrassetto,
+          [
+            riga.mese,
+            `${riga.orePreviste}h`,
+            `${formattaOreConSegno(riga.differenza)}h`,
+            `${formattaOreConSegno(riga.movimenti)}h`,
+            `${riga.saldo}h`,
+          ],
+          larghezzeCalcolo,
+          g.y,
+          false
+        );
+        g.y -= ALTEZZA_RIGA;
+      }
+    }
   });
 
   return doc.save();

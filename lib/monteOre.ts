@@ -18,10 +18,6 @@ export type ControlloSettimanaOreLavoro = {
   oreDovute: number;
   oreOrdinarieErogate: number;
   oreStraordinarieErogate: number;
-  // Variazione del movimento automatico "settimanale" (specs/19): può
-  // essere negativa (scala il monte ore) da quando la formula è a
-  // netto pieno — vedi sotto.
-  variazioneMonteOre: number;
 };
 
 // Controllo di una settimana di ore di lavoro alla conferma (specs/19 -
@@ -33,18 +29,10 @@ export type ControlloSettimanaOreLavoro = {
 // collaterale dei dati). Riusa oreOrdinariePreviste (stessa fonte di
 // verità del precaricamento in specs/18, CLAUDE.md/jscpd).
 //
-// Netto pieno: variazioneMonteOre = ore dovute − ore ordinarie erogate
-// − ore straordinarie erogate. Positiva = il monte ore aumenta (ha
-// lavorato meno del dovuto); negativa = il monte ore scala (ha
-// lavorato più del dovuto, ordinario e straordinario insieme). Nessuna
-// decisione dell'admin richiesta: il movimento automatico copre da solo
-// sia la carenza sia l'eventuale eccedenza (a differenza del modello
-// precedente con "straordinario residuo" in attesa di decisione, ormai
-// solo per lo storico — vedi
-// app/dashboard/ore-lavoro/actions.ts:decidiStraordinarioResiduo,
-// components/StraordinarioResiduo.tsx, che restano per risolvere le
-// settimane confermate PRIMA di questo cambio, ma non se ne generano
-// più di nuove). Funzione pura, nessun I/O.
+// Il monte ore è gestito a mano dall'admin (specs/19): questo controllo
+// serve solo a registrare lo snapshot della settimana alla conferma
+// (ore dovute ed erogate), non genera alcun movimento. Funzione pura,
+// nessun I/O.
 export function controlloSettimanaOreLavoro(
   giorni: GiornoPerMonteOre[],
   profiloOrario: ProfiloOrario | null | undefined
@@ -65,24 +53,18 @@ export function controlloSettimanaOreLavoro(
   oreOrdinarieErogate = arrotonda(oreOrdinarieErogate);
   oreStraordinarieErogate = arrotonda(oreStraordinarieErogate);
 
-  const variazioneMonteOre = arrotonda(oreDovute - oreOrdinarieErogate - oreStraordinarieErogate);
-
-  return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate, variazioneMonteOre };
+  return { oreDovute, oreOrdinarieErogate, oreStraordinarieErogate };
 }
 
 export type RiepilogoSettimanaOreLavoro = {
   orePreviste: number;
   // Ore fatte in più (+) o in meno (−) rispetto al previsto (specs/18).
   differenza: number;
-  // Effetto sul monte ore, applicato direttamente (specs/19, netto pieno):
-  // opposto della differenza.
-  variazioneMonteOre: number;
 };
 
 function riepilogo(orePreviste: number, differenza: number): RiepilogoSettimanaOreLavoro {
-  const diff = arrotonda(differenza);
   // "+ 0" normalizza -0 in 0.
-  return { orePreviste: arrotonda(orePreviste), differenza: diff, variazioneMonteOre: arrotonda(-diff) + 0 };
+  return { orePreviste: arrotonda(orePreviste), differenza: arrotonda(differenza) + 0 };
 }
 
 // Riepilogo "a vivo" della settimana (specs/18): usa le differenze mostrate
@@ -102,47 +84,11 @@ export function riepilogoSettimanaDaDifferenze(
   return riepilogo(orePreviste, differenza);
 }
 
-// Descrizione in italiano dell'effetto di una variazione di monte ore
-// (specs/19): stessa frase riusata sia nell'anteprima mostrata prima
-// della conferma ("Ore di lavoro", tabellina del riepilogo settimanale)
-// sia nella nota del movimento registrato alla conferma — un solo posto
-// che decide come esprimere "positiva"/"negativa"/"zero" (CLAUDE.md,
-// jscpd). Funzione pura.
-export function descrizioneEffettoMonteOre(variazioneMonteOre: number): string {
-  if (variazioneMonteOre > 0) return `${variazioneMonteOre}h in più sul monte ore`;
-  if (variazioneMonteOre < 0) return `${Math.abs(variazioneMonteOre)}h in meno sul monte ore`;
-  return 'nessuna variazione del monte ore';
-}
-
-// Nota descrittiva del movimento automatico settimanale, mostrata nello
-// storico (specs/19): la data della settimana è già nella colonna
-// settimana_inizio del movimento, qui solo il dettaglio del calcolo.
-// Funzione pura.
-export function notaMovimentoSettimanale(controllo: ControlloSettimanaOreLavoro): string {
-  return (
-    `Calcolo automatico: ${controllo.oreDovute}h dovute, ${controllo.oreOrdinarieErogate}h ordinarie erogate, ` +
-    `${controllo.oreStraordinarieErogate}h straordinarie erogate — ${descrizioneEffettoMonteOre(controllo.variazioneMonteOre)}.`
-  );
-}
-
 // Nota descrittiva del movimento di scalo dal monte ore dello
 // straordinario residuo, registrato solo quando l'admin sceglie
 // "Scala dal monte ore" (specs/19). Funzione pura.
 export function notaMovimentoStraordinarioResiduo(straordinarioResiduo: number): string {
   return `Straordinario residuo scalato dal monte ore su decisione dell'admin: ${straordinarioResiduo}h.`;
-}
-
-// Solo un movimento manuale (`precarico`) è eliminabile (specs/19,
-// "l'admin elimina un movimento manuale inserito per errore"): i
-// movimenti automatici (`settimanale`, `straordinario_residuo`) restano
-// immutabili, legati alla conferma di una settimana o a una decisione
-// già presa. Stessa regola usata sia per mostrare/nascondere il
-// pulsante "Elimina" (components/MonteOre.tsx) sia come controllo
-// difensivo lato server (app/dashboard/ore-lavoro/actions.ts) — la RLS
-// (supabase/migrations/0044_elimina_movimento_precarico.sql) resta
-// comunque la difesa primaria. Funzione pura, nessun I/O.
-export function movimentoEliminabile(tipo: string): boolean {
-  return tipo === 'precarico';
 }
 
 export type MovimentoMonteOre = { variazione: number | string };

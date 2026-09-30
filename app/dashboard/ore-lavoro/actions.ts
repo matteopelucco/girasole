@@ -14,8 +14,6 @@ import {
 } from '@/lib/oreLavoro';
 import {
   controlloSettimanaOreLavoro,
-  movimentoEliminabile,
-  notaMovimentoSettimanale,
   notaMovimentoStraordinarioResiduo,
 } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
@@ -147,7 +145,7 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
     return { ok: false, messaggio: 'Impossibile salvare le ore della settimana.', dettaglio: error.message };
   }
 
-  revalidatePath('/dashboard/ore-lavoro');
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
 }
 
@@ -250,32 +248,9 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
     return { ok: false, messaggio: 'Impossibile confermare la settimana.', dettaglio: error.message };
   }
 
-  // Movimento automatico di monte ore della settimana appena confermata
-  // (specs/19): netto pieno fra ore dovute ed erogate (ordinarie +
-  // straordinarie), può essere negativo (scala il monte ore) — a
-  // differenza del modello precedente, nessuna decisione dell'admin è
-  // più richiesta. La conferma resta valida anche se questo insert
-  // fallisse (è già stata registrata sopra), ma segnaliamo
-  // esplicitamente l'anomalia invece di lasciare un saldo silenziosamente
-  // incompleto — serve una correzione manuale dell'admin (movimento
-  // "precarico").
-  const { error: erroreMovimento } = await supabase.from('monte_ore_movimenti').insert({
-    utente_id: utenteId,
-    tipo: 'settimanale',
-    settimana_inizio: settimanaInizio,
-    variazione: controllo.variazioneMonteOre,
-    nota: notaMovimentoSettimanale(controllo),
-  });
-  if (erroreMovimento) {
-    return {
-      ok: false,
-      messaggio:
-        'La settimana è stata confermata, ma non è stato possibile registrare il movimento di monte ore. Contatta l\'admin per una correzione manuale.',
-      dettaglio: erroreMovimento.message,
-    };
-  }
-
-  revalidatePath('/dashboard/ore-lavoro');
+  // Il monte ore è gestito a mano dall'admin (specs/19): la conferma blocca
+  // solo la modifica autonoma delle ore, non registra alcun movimento.
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
 }
 
@@ -342,7 +317,7 @@ export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: 
     }
   }
 
-  revalidatePath('/dashboard/ore-lavoro');
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
 }
 
@@ -381,36 +356,62 @@ export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: F
     return { ok: false, messaggio: 'Impossibile registrare il movimento di monte ore.', dettaglio: error.message };
   }
 
-  revalidatePath('/dashboard/ore-lavoro');
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
 }
 
-// specs/19 - monte-ore.md, scenario "l'admin elimina un movimento
-// manuale inserito per errore": solo un movimento `precarico` è
-// eliminabile (movimentoEliminabile, lib/monteOre.ts) — i movimenti
-// automatici (`settimanale`, `straordinario_residuo`) restano
-// immutabili, legati alla conferma di una settimana o a una decisione
-// già presa. Il controllo qui è difensivo (stesso messaggio d'errore
-// se qualcuno aggirasse la UI): la RLS
-// (supabase/migrations/0044_elimina_movimento_precarico.sql) è la
-// difesa primaria, rifiuta comunque la delete lato database.
+// specs/19 - monte-ore.md, scenario "l'admin elimina un movimento di monte
+// ore": la gestione è manuale, quindi l'admin può eliminare qualunque
+// movimento, anche storico. La RLS
+// (supabase/migrations/0055_monte_ore_manuale.sql) è la difesa primaria:
+// solo l'admin può cancellare.
 export async function eliminaMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
 
   const id = (formData.get('id') as string) || '';
   if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
 
-  const { data: movimento } = await supabase.from('monte_ore_movimenti').select('tipo').eq('id', id).maybeSingle();
-  if (!movimento) return { ok: false, messaggio: 'Movimento non trovato.' };
-  if (!movimentoEliminabile(movimento.tipo)) {
-    return { ok: false, messaggio: 'Solo un movimento manuale può essere eliminato.' };
-  }
-
-  const { error } = await supabase.from('monte_ore_movimenti').delete().eq('id', id);
+  const { data, error } = await supabase.from('monte_ore_movimenti').delete().eq('id', id).select('id');
   if (error) {
     return { ok: false, messaggio: 'Impossibile eliminare il movimento.', dettaglio: error.message };
   }
+  // Nessuna riga cancellata (id inesistente, o RLS che rifiuta): non è un successo.
+  if (!data?.length) return { ok: false, messaggio: 'Movimento non trovato.' };
 
-  revalidatePath('/dashboard/ore-lavoro');
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
+  return { ok: true };
+}
+
+// specs/19 - monte-ore.md, scenario "l'admin modifica un movimento di
+// monte ore": cambia ore, verso (aumenta/riduce) e nota di qualunque
+// movimento, mantenendone la data di registrazione. Stesse regole di
+// validazione dell'inserimento (ore > 0, nota obbligatoria).
+export async function modificaMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const id = (formData.get('id') as string) || '';
+  const segno = (formData.get('segno') as string) === 'riduce' ? -1 : 1;
+  const ore = Number(formData.get('ore'));
+  const nota = ((formData.get('nota') as string) || '').trim();
+
+  if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
+  if (!Number.isFinite(ore) || ore <= 0) {
+    return { ok: false, messaggio: 'Indica un numero di ore maggiore di zero.' };
+  }
+  if (!nota) {
+    return { ok: false, messaggio: 'Indica una nota che motivi il movimento di monte ore.' };
+  }
+
+  const { data, error } = await supabase
+    .from('monte_ore_movimenti')
+    .update({ variazione: segno * ore, nota })
+    .eq('id', id)
+    .select('id');
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile modificare il movimento.', dettaglio: error.message };
+  }
+  if (!data?.length) return { ok: false, messaggio: 'Movimento non trovato.' };
+
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
 }
