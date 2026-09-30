@@ -386,6 +386,28 @@ Allora resto sulle ore della stessa persona, non torno alle mie
 E valgono le stesse regole di navigazione già in vigore per chiunque
 (mai una settimana futura, nessun limite verso il passato)
 
+## Scenario: l'admin genera e scarica il PDF mensile del personale
+Dato che sono autenticato come admin
+E sono su `/admin/ore-lavoro`
+Quando, appena sotto l'elenco del personale, scelgo un mese e premo
+"Genera PDF mensile"
+Allora il browser scarica direttamente il file PDF, senza inviare alcuna
+email: lo stesso PDF che il job notturno allega alla mail del report
+mensile (vedi [52 - report-email-automatico.md](52%20-%20report-email-automatico.md)),
+una pagina per persona con il dettaglio giorno per giorno, il monte ore
+completo e il calcolo mese per mese
+E il nome del file è `ore-lavoro-AAAA-MM.pdf`
+E il mese proposto di default è quello corrente; posso scegliere i 12 mesi
+più recenti, mai un mese futuro
+E un `mese` non valido o futuro passato direttamente nell'indirizzo
+produce il PDF del mese corrente
+
+## Scenario: il PDF mensile è riservato all'admin
+Dato che non sono admin
+Quando apro l'indirizzo del PDF (`/admin/ore-lavoro/pdf`)
+Allora vengo riportato alla dashboard e nessun PDF viene generato: il file
+contiene dati di tutto il personale
+
 ## Scenario: un parametro `utente` non valido, o usato da chi non è admin, viene ignorato
 Quando apro `/dashboard/ore-lavoro?utente=...` con un id che non
 corrisponde a nessun profilo abilitato al report ore, oppure sono

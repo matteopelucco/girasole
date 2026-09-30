@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { generaPdfOreLavoroMensile, type PersonaPdfOreLavoro } from './pdfOreLavoro';
+import { generaPdfOreLavoroMensile, nomeFilePdfOreLavoroMensile, type PersonaPdfOreLavoro } from './pdfOreLavoro';
 import { testoPagina } from './pdfTestUtils';
 
 const GENERATO_IL = new Date('2026-09-29T06:15:00Z');
@@ -58,5 +58,11 @@ describe('generaPdfOreLavoroMensile', () => {
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
     expect(await testoPagina(bytes, 0)).toContain('Generato il 29/09/2026 alle 08:15');
     expect(await testoPagina(bytes, 1)).toContain('Generato il 29/09/2026 alle 08:15');
+  });
+});
+
+describe('nomeFilePdfOreLavoroMensile', () => {
+  it('ore-lavoro-AAAA-MM.pdf, lo stesso nome dell\'allegato del cron', () => {
+    expect(nomeFilePdfOreLavoroMensile('2026-09')).toBe('ore-lavoro-2026-09.pdf');
   });
 });

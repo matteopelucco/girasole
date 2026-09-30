@@ -445,6 +445,13 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
+    // Scenario "il PDF mensile è riservato all'admin".
+    test('il PDF mensile del personale reindirizza alla dashboard', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      await page.goto('/admin/ore-lavoro/pdf');
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
+    });
+
     // Scenario "la vista mensile è riservata all'admin".
     test('la vista mensile reindirizza alla dashboard', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
@@ -470,6 +477,27 @@ test.describe('18 — Report ore di lavoro', () => {
         !hasCredenziali('admin') || !hasCredenziali('maestra'),
         'richiede E2E_ADMIN_EMAIL/PASSWORD e E2E_MAESTRA_EMAIL/PASSWORD'
       );
+    });
+
+    // Scenario "l'admin genera e scarica il PDF mensile del personale":
+    // il file viene scaricato direttamente (nessuna email) ed è un PDF vero.
+    test('genera e scarica il PDF mensile del personale sotto l\'elenco', async ({ page }) => {
+      await page.goto('/admin/ore-lavoro');
+      await expect(page.getByRole('button', { name: 'Genera PDF mensile' })).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 60_000 }),
+        page.getByRole('button', { name: 'Genera PDF mensile' }).click(),
+      ]);
+      expect(download.suggestedFilename()).toMatch(/^ore-lavoro-[0-9]{4}-[0-9]{2}[.]pdf$/);
+
+      const flusso = await download.createReadStream();
+      const pezzi: Buffer[] = [];
+      for await (const pezzo of flusso) pezzi.push(pezzo as Buffer);
+      const contenuto = Buffer.concat(pezzi);
+      expect(contenuto.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      expect(contenuto.length).toBeGreaterThan(1000);
     });
 
     test('elenco, apertura, navigazione e correzione delle ore di un dipendente abilitato', async ({ page }) => {

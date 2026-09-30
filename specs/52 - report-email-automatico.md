@@ -200,3 +200,9 @@ ore previste, differenza ore, movimenti del mese, saldo a fine mese)
   e un generatore PDF `lib/pdfOreLavoro.ts` che riusa i primitivi di
   disegno già presenti in `lib/pdfReport.ts` (gestione pagina/
   interruzione, disegno riga) invece di duplicarli.
+- Lo stesso PDF mensile ore di lavoro è generato anche su richiesta
+  dell'admin, scaricato direttamente e senza invio email, da
+  `/admin/ore-lavoro` (vedi [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md),
+  scenario "l'admin genera e scarica il PDF mensile del personale"):
+  `lib/reportOreLavoro.ts:pdfOreLavoroMensile` è l'unica fonte sia per
+  l'allegato del cron sia per il download.

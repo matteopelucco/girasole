@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   meseOreLavoroRichiesto,
+  mesiSelezionabiliPdf,
   righeMeseOreLavoro,
   riepilogoMeseOreLavoro,
   settimaneDelMese,
@@ -186,5 +187,19 @@ describe('riepilogoMeseOreLavoro', () => {
     expect(tot.differenza).toBe(0);
     // Agosto 2026: 21 giorni feriali, 4 venerdì (4h) e 17 altri (7h).
     expect(tot.orePreviste).toBe(17 * 7 + 4 * 4);
+  });
+});
+
+describe('mesiSelezionabiliPdf', () => {
+  it('elenca il mese corrente e i precedenti, dal più recente, mai futuri', () => {
+    const mesi = mesiSelezionabiliPdf(OGGI);
+    expect(mesi).toHaveLength(12);
+    expect(mesi[0]).toBe('2026-09');
+    expect(mesi[1]).toBe('2026-08');
+    expect(mesi[11]).toBe('2025-10');
+  });
+
+  it('attraversa il cambio d\'anno e rispetta il numero richiesto', () => {
+    expect(mesiSelezionabiliPdf('2026-01-15', 3)).toEqual(['2026-01', '2025-12', '2025-11']);
   });
 });
