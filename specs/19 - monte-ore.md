@@ -181,10 +181,10 @@ momento la decisione presa, non più i pulsanti
   erogate in più); **negativa** = ore da recuperare (ancora da erogare),
   come descritto in Obiettivo. Ha lo stesso segno della differenza ore del
   calcolo mensile (ore fatte in più = differenza positiva), che l'admin può
-  riflettere con un movimento positivo. La migration
-  `supabase/migrations/0056_segno_monte_ore.sql` ha invertito il segno dei
-  movimenti registrati prima di questa convenzione (prima positivo = debito):
-  va applicata una sola volta.
+  riflettere con un movimento positivo. Nessuna migration: i movimenti
+  inseriti a mano dall'admin seguono già questa convenzione; quelli storici
+  generati dal vecchio calcolo automatico (segno opposto) sono stati rimossi a
+  mano, e comunque ora l'admin può correggerli o eliminarli dalla scheda.
 - Il calcolo mese per mese (`lib/monteOre.ts`,
   `calcoloMensileMonteOre`) usa le stesse funzioni pure della vista
   mensile di [18] (`lib/oreLavoroMese.ts`): per ogni mese, previste e
