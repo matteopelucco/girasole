@@ -126,6 +126,9 @@ test.describe('19 — Monte ore', () => {
         await formAggiungi(page).locator('input[name="nota"]').fill('Senza verso E2E');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toContainText('Scegli');
+        // Il form non si azzera su un errore: svuoto la nota per il passo
+        // successivo ("senza nota").
+        await formAggiungi(page).locator('input[name="nota"]').fill('');
 
         // Scenario: un movimento manuale senza nota viene rifiutato.
         await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
