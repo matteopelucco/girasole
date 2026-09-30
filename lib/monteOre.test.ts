@@ -4,6 +4,11 @@ import {
   notaMovimentoStraordinarioResiduo,
   saldiPerUtente,
   saldoMonteOre,
+  significatoSaldoMonteOre,
+  descrizioneSaldoMonteOre,
+  saldoMonteOreBreve,
+  LEGENDA_MONTE_ORE,
+  segnoVersoMovimentoMonteOre,
   riepilogoSettimanaDaDifferenze,
 } from './monteOre';
 
@@ -124,9 +129,9 @@ describe('controlloSettimanaOreLavoro', () => {
 });
 
 describe('notaMovimentoStraordinarioResiduo', () => {
-  it('descrive lo scalo dello straordinario residuo in italiano', () => {
+  it("descrive l'accredito dello straordinario residuo in italiano", () => {
     expect(notaMovimentoStraordinarioResiduo(3)).toBe(
-      "Straordinario residuo scalato dal monte ore su decisione dell'admin: 3h."
+      "Straordinario residuo accreditato sul monte ore su decisione dell'admin: 3h."
     );
   });
 });
@@ -216,5 +221,47 @@ describe('riepilogoSettimanaDaDifferenze', () => {
       { stato: 'lavorativo', orePreviste: 7, differenza: 0.2 },
     ]);
     expect(r.differenza).toBe(0.3);
+  });
+});
+
+describe('convenzione del segno del monte ore (specs/19)', () => {
+  it('positivo = a credito, negativo = da recuperare, zero = in pari', () => {
+    expect(significatoSaldoMonteOre(3)).toBe('a credito');
+    expect(significatoSaldoMonteOre(-3)).toBe('da recuperare');
+    expect(significatoSaldoMonteOre(0)).toBe('in pari');
+  });
+
+  it('la descrizione ha sempre segno esplicito e significato', () => {
+    expect(descrizioneSaldoMonteOre(3)).toBe('+3h a credito (ore già erogate in più)');
+    expect(descrizioneSaldoMonteOre(-3.5)).toBe('-3.5h da recuperare (ore ancora da erogare)');
+    expect(descrizioneSaldoMonteOre(0)).toBe('0h in pari');
+  });
+
+  it('la versione breve per elenchi e tabelle', () => {
+    expect(saldoMonteOreBreve(1)).toBe('+1h a credito');
+    expect(saldoMonteOreBreve(-2)).toBe('-2h da recuperare');
+    expect(saldoMonteOreBreve(0)).toBe('0h in pari');
+  });
+
+  it('ripulisce i residui della virgola mobile (0.1 + 0.2)', () => {
+    expect(descrizioneSaldoMonteOre(0.1 + 0.2)).toBe('+0.3h a credito (ore già erogate in più)');
+  });
+
+  it('la legenda spiega entrambi i versi', () => {
+    expect(LEGENDA_MONTE_ORE).toContain('a credito');
+    expect(LEGENDA_MONTE_ORE).toContain('da recuperare');
+  });
+
+  it('il verso del form: credito +1, debito −1, altro non valido', () => {
+    expect(segnoVersoMovimentoMonteOre('credito')).toBe(1);
+    expect(segnoVersoMovimentoMonteOre('debito')).toBe(-1);
+    expect(segnoVersoMovimentoMonteOre('aumenta')).toBeNull();
+    expect(segnoVersoMovimentoMonteOre('')).toBeNull();
+  });
+
+  it('la nota dello straordinario residuo parla di accredito, non di scalo', () => {
+    const nota = notaMovimentoStraordinarioResiduo(2);
+    expect(nota).toContain('accreditato');
+    expect(nota).not.toContain('scalato');
   });
 });

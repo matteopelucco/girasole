@@ -79,7 +79,8 @@ della maestra, `5x` amministrazione.
   malattia/assenza per la settimana corrente, e la conferma
 - [19 - monte-ore.md](19%20-%20monte-ore.md) — contatore di ore per
   persona, gestito completamente a mano dall'admin (movimenti inseriti,
-  modificati, eliminati); la scheda ore mostra sempre il calcolo
+  modificati, eliminati), con segno unico: + ore a credito (già erogate in
+  più), − ore da recuperare (ancora da erogare); la scheda ore mostra sempre il calcolo
   completo mese per mese; la conferma della settimana non lo modifica
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
