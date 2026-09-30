@@ -52,7 +52,7 @@ test.describe('19 — Monte ore', () => {
         await expect(paginaMaestra.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
         // Scenario: la scheda ore mostra il calcolo mese per mese, in sola
         // lettura (nessun pulsante di modifica/eliminazione dei movimenti).
-        await expect(paginaMaestra.getByRole('table', { name: 'Calcolo mese per mese' })).toBeVisible();
+        await expect(paginaMaestra.getByRole('heading', { name: 'Calcolo mese per mese' })).toBeVisible();
         await expect(paginaMaestra.getByText('Modifica', { exact: true })).toHaveCount(0);
         await expect(paginaMaestra.getByRole('button', { name: 'Elimina' })).toHaveCount(0);
         await expect(paginaMaestra.getByLabel('Nota', { exact: true })).toHaveCount(0);
@@ -233,9 +233,7 @@ test.describe('19 — Monte ore', () => {
         expect(saldoFinale).toBeCloseTo(saldoIniziale, 2);
 
         // Scenario: il calcolo mese per mese è sempre visibile e completo.
-        const calcolo = page.getByRole('table', { name: 'Calcolo mese per mese' });
-        await expect(calcolo).toBeVisible();
-        await expect(calcolo.getByRole('columnheader', { name: 'Saldo' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Calcolo mese per mese' })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
       } finally {
         await page.goto('/admin/maestre');

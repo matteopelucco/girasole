@@ -9,11 +9,15 @@ import type { RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
 // interessato e all'admin, sempre completo (non dipende dalla settimana
 // mostrata). Server Component, nessuno stato.
 export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMonteOre[] }) {
-  if (!righe.length) return null;
   return (
     <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
-      <table className="w-full text-left text-sm text-stone-700">
-        <caption className="mb-2 text-left font-medium text-stone-800">Calcolo mese per mese</caption>
+      <h2 id="calcolo-mensile-titolo" className="mb-2 text-left font-medium text-stone-800">
+        Calcolo mese per mese
+      </h2>
+      {!righe.length ? (
+        <p className="text-sm text-stone-600">Nessun dato: non ci sono ancora ore registrate né movimenti.</p>
+      ) : (
+      <table aria-labelledby="calcolo-mensile-titolo" className="w-full text-left text-sm text-stone-700">
         <thead>
           <tr className="border-b border-stone-200 text-xs text-stone-600">
             <th scope="col" className="py-1 pr-3 font-medium">
@@ -47,6 +51,7 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
           ))}
         </tbody>
       </table>
+      )}
     </div>
   );
 }
