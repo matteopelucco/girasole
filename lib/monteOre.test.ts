@@ -8,7 +8,6 @@ import {
   saldiPerUtente,
   saldoMonteOre,
   riepilogoSettimanaDaDifferenze,
-  riepilogoDaTotali,
 } from './monteOre';
 
 // Tutte funzioni pure (nessun I/O): specs/19 - monte-ore.md.
@@ -251,6 +250,13 @@ describe('riepilogoSettimanaDaDifferenze', () => {
     expect(r).toEqual({ orePreviste: 7, differenza: -2, variazioneMonteOre: 2 });
   });
 
+  it('somma le differenze dei giorni di una settimana corretta dopo la conferma (#151)', () => {
+    const profiloOre = [7, 7, 4, 7, 7, 0, 0];
+    const differenze = [0.5, 2.5, 2, 0, -3, 0, 0];
+    const giorni = profiloOre.map((orePreviste, i) => ({ stato: 'lavorativo', orePreviste, differenza: differenze[i] }));
+    expect(riepilogoSettimanaDaDifferenze(giorni)).toEqual({ orePreviste: 32, differenza: 2, variazioneMonteOre: -2 });
+  });
+
   it('zero: nessuna variazione, senza -0', () => {
     const r = riepilogoSettimanaDaDifferenze([{ stato: 'lavorativo', orePreviste: 7, differenza: 0 }]);
     expect(Object.is(r.variazioneMonteOre, 0)).toBe(true);
@@ -276,12 +282,5 @@ describe('riepilogoSettimanaDaDifferenze', () => {
       { stato: 'lavorativo', orePreviste: 7, differenza: 0.2 },
     ]);
     expect(r.differenza).toBe(0.3);
-  });
-});
-
-describe('riepilogoDaTotali (settimana confermata)', () => {
-  it('differenza = ordinarie + straordinarie − dovute', () => {
-    expect(riepilogoDaTotali(32, 32, 5)).toEqual({ orePreviste: 32, differenza: 5, variazioneMonteOre: -5 });
-    expect(riepilogoDaTotali(32, 28, 0)).toEqual({ orePreviste: 32, differenza: -4, variazioneMonteOre: 4 });
   });
 });

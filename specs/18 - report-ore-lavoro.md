@@ -146,8 +146,10 @@ Quando cambio la differenza o lo stato di un giorno, senza ancora
 premere "Salva modifiche"
 Allora "Ore previste", "Differenza ore" e l'effetto sul monte ore si
 aggiornano subito, coerenti con le card dei giorni mostrate
-E una settimana confermata mostra invece i valori registrati alla
-conferma
+E lo stesso vale per una settimana già confermata che l'admin corregge:
+"Differenza ore" è sempre la somma delle differenze dei giorni lavorativi
+mostrati nelle card (mai un valore congelato alla conferma), così il
+riquadro non diverge dalle card dopo una correzione
 ## Scenario: salvare le ore anche a metà settimana
 Dato che sono sulla settimana corrente e oggi non è l'ultimo giorno
 della settimana (alcuni giorni successivi non sono ancora accaduti)

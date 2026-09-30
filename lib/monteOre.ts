@@ -102,16 +102,6 @@ export function riepilogoSettimanaDaDifferenze(
   return riepilogo(orePreviste, differenza);
 }
 
-// Stesso riepilogo a partire dai totali registrati alla conferma (specs/19):
-// differenza = ordinarie + straordinarie − dovute. Funzione pura.
-export function riepilogoDaTotali(
-  oreDovute: number,
-  oreOrdinarieErogate: number,
-  oreStraordinarieErogate: number
-): RiepilogoSettimanaOreLavoro {
-  return riepilogo(oreDovute, oreOrdinarieErogate + oreStraordinarieErogate - oreDovute);
-}
-
 // Descrizione in italiano dell'effetto di una variazione di monte ore
 // (specs/19): stessa frase riusata sia nell'anteprima mostrata prima
 // della conferma ("Ore di lavoro", tabellina del riepilogo settimanale)
