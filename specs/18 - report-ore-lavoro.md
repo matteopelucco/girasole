@@ -126,20 +126,28 @@ Allora i valori inseriti sono salvati e restano tali riaprendo la pagina
 E vedo il totale delle ore della settimana (ordinarie + straordinarie)
 aggiornato di conseguenza
 
-## Scenario: la scheda della settimana mostra ore dovute, ordinarie e straordinarie erogate
+## Scenario: la scheda della settimana mostra ore previste e differenza ore
 Quando sono su "Ore di lavoro", per qualunque settimana (modificabile o
 in sola lettura)
-Allora vedo, in un riquadro riassuntivo separato dai singoli giorni, tre
-valori distinti: "Ore dovute" (il totale delle ore previste dal profilo
-orario per i soli giorni in stato lavorativo di quella settimana, 0 se
-non ho un profilo assegnato o se nessun giorno è lavorativo), "Ore
-ordinarie erogate" (somma di quanto ho effettivamente registrato) e "Ore
-straordinarie erogate" (somma degli straordinari registrati)
-E queste ore possono liberamente differire dalle ore dovute, in più o in
-meno: il personale registra le ore realmente lavorate, il profilo orario
-resta solo un riferimento (vedi [19 - monte-ore.md](19%20-%20monte-ore.md)
-per come lo scostamento viene gestito alla conferma)
+Allora vedo, in un riquadro riassuntivo separato dai singoli giorni, due
+valori: "Ore previste" (il totale delle ore previste dal profilo orario
+per i soli giorni in stato lavorativo di quella settimana, 0 se non ho
+un profilo assegnato o se nessun giorno è lavorativo) e "Differenza ore"
+(con segno: quante ore ho fatto in più o in meno rispetto al previsto,
+somma delle differenze dei giorni lavorativi, es. "+5h")
+E la differenza è sempre "erogate − previste": non compare più la
+distinzione tra ore ordinarie e straordinarie erogate
+E la differenza ore si applica direttamente al monte ore, senza alcuna
+approvazione dell'admin (vedi [19 - monte-ore.md](19%20-%20monte-ore.md))
 
+## Scenario: il riepilogo si aggiorna con quanto digitato, prima di salvare
+Dato che la settimana non è confermata
+Quando cambio la differenza o lo stato di un giorno, senza ancora
+premere "Salva modifiche"
+Allora "Ore previste", "Differenza ore" e l'effetto sul monte ore si
+aggiornano subito, coerenti con le card dei giorni mostrate
+E una settimana confermata mostra invece i valori registrati alla
+conferma
 ## Scenario: salvare le ore anche a metà settimana
 Dato che sono sulla settimana corrente e oggi non è l'ultimo giorno
 della settimana (alcuni giorni successivi non sono ancora accaduti)

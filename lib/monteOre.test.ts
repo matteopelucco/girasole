@@ -7,6 +7,8 @@ import {
   notaMovimentoStraordinarioResiduo,
   saldiPerUtente,
   saldoMonteOre,
+  riepilogoSettimanaDaDifferenze,
+  riepilogoDaTotali,
 } from './monteOre';
 
 // Tutte funzioni pure (nessun I/O): specs/19 - monte-ore.md.
@@ -223,5 +225,63 @@ describe('saldiPerUtente', () => {
 
   it('un elenco vuoto produce una mappa vuota', () => {
     expect(saldiPerUtente([]).size).toBe(0);
+  });
+});
+
+describe('riepilogoSettimanaDaDifferenze', () => {
+  // Settimana dello screenshot di #144: previste 7/7/4/7/7 = 32h.
+  const settimana = [
+    { stato: 'lavorativo', orePreviste: 7, differenza: 0.5 },
+    { stato: 'lavorativo', orePreviste: 7, differenza: 0 },
+    { stato: 'lavorativo', orePreviste: 4, differenza: 4.5 },
+    { stato: 'lavorativo', orePreviste: 7, differenza: 0 },
+    { stato: 'lavorativo', orePreviste: 7, differenza: 0 },
+  ];
+
+  it('previste = somma delle previste, differenza = somma delle differenze (+5h)', () => {
+    expect(riepilogoSettimanaDaDifferenze(settimana)).toEqual({
+      orePreviste: 32,
+      differenza: 5,
+      variazioneMonteOre: -5,
+    });
+  });
+
+  it('una differenza in meno aumenta subito il monte ore', () => {
+    const r = riepilogoSettimanaDaDifferenze([{ stato: 'lavorativo', orePreviste: 7, differenza: -2 }]);
+    expect(r).toEqual({ orePreviste: 7, differenza: -2, variazioneMonteOre: 2 });
+  });
+
+  it('zero: nessuna variazione, senza -0', () => {
+    const r = riepilogoSettimanaDaDifferenze([{ stato: 'lavorativo', orePreviste: 7, differenza: 0 }]);
+    expect(Object.is(r.variazioneMonteOre, 0)).toBe(true);
+  });
+
+  it('esclude gli stati non lavorativi (malattia, assenza, chiusura, ferie)', () => {
+    const giorni = ['malattia', 'assenza', 'chiusura', 'ferie'].map((stato) => ({
+      stato,
+      orePreviste: 7,
+      differenza: 3,
+    }));
+    expect(riepilogoSettimanaDaDifferenze(giorni)).toEqual({ orePreviste: 0, differenza: 0, variazioneMonteOre: 0 });
+  });
+
+  it('una differenza non valida (null) conta come zero', () => {
+    const r = riepilogoSettimanaDaDifferenze([{ stato: 'lavorativo', orePreviste: 7, differenza: null }]);
+    expect(r).toEqual({ orePreviste: 7, differenza: 0, variazioneMonteOre: 0 });
+  });
+
+  it('ripulisce i residui della virgola mobile', () => {
+    const r = riepilogoSettimanaDaDifferenze([
+      { stato: 'lavorativo', orePreviste: 7, differenza: 0.1 },
+      { stato: 'lavorativo', orePreviste: 7, differenza: 0.2 },
+    ]);
+    expect(r.differenza).toBe(0.3);
+  });
+});
+
+describe('riepilogoDaTotali (settimana confermata)', () => {
+  it('differenza = ordinarie + straordinarie − dovute', () => {
+    expect(riepilogoDaTotali(32, 32, 5)).toEqual({ orePreviste: 32, differenza: 5, variazioneMonteOre: -5 });
+    expect(riepilogoDaTotali(32, 28, 0)).toEqual({ orePreviste: 32, differenza: -4, variazioneMonteOre: 4 });
   });
 });

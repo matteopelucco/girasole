@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ETICHETTE_STATO_ORE_LAVORO,
   isStatoNeutroOreLavoro,
@@ -10,6 +10,7 @@ import {
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
 import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
+import { useAggiornaGiornoRiepilogo } from '@/components/RiepilogoSettimanaOreLavoro';
 
 export type ValoriGiornoOreLavoro = {
   data: string;
@@ -87,6 +88,15 @@ export function RigaOreLavoro({
       : totale !== null && totale < 0
         ? `La differenza non può superare le ore ordinarie (${ordinarie}h): il totale non può essere negativo.`
         : null;
+
+  // Comunica al riepilogo della settimana i valori correnti della card,
+  // anche non salvati (specs/18).
+  const aggiornaRiepilogo = useAggiornaGiornoRiepilogo();
+  const dataGiorno = valori.data;
+  const differenzaPerRiepilogo = differenzaValida ? differenza : null;
+  useEffect(() => {
+    aggiornaRiepilogo?.(dataGiorno, { stato, orePreviste: ordinarie, differenza: differenzaPerRiepilogo });
+  }, [aggiornaRiepilogo, dataGiorno, stato, ordinarie, differenzaPerRiepilogo]);
 
   const cambiaDifferenza = (passo: number) => {
     const base = differenzaValida ? differenza : 0;
