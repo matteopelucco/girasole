@@ -53,6 +53,13 @@ describe('generaPdfOreLavoroMensile', () => {
     expect(testo).toContain('Nessun dato.');
   });
 
+  it('senza personale abilitato lo dice esplicitamente', async () => {
+    const bytes = await generaPdfOreLavoroMensile('settembre 2026', [], GENERATO_IL);
+    const testo = await testoPagina(bytes, 0);
+    expect(testo).toContain('Nessun membro del personale è abilitato al report ore.');
+    expect(testo).toContain('settembre 2026');
+  });
+
   it('con più persone la riga compare su ogni pagina (una per persona)', async () => {
     const bytes = await generaPdfOreLavoroMensile('settembre 2026', [persona('A'), persona('B')], GENERATO_IL);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);

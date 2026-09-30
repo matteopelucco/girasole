@@ -78,6 +78,18 @@ export async function generaPdfOreLavoroMensile(
   const larghezzeMovimenti = larghezzeColonnePesate(PESI_MOVIMENTI);
   const larghezzeCalcolo = larghezzeColonnePesate(PESI_CALCOLO);
 
+  // Nessuna persona abilitata: il PDF lo dice, invece di restare vuoto.
+  if (!persone.length) {
+    g.pagina.drawText(`Ore di lavoro — ${titoloMese}`, { x: MARGINE, y: g.y, size: 16, font: fontGrassetto });
+    g.y -= 28;
+    g.pagina.drawText('Nessun membro del personale è abilitato al report ore.', {
+      x: MARGINE,
+      y: g.y,
+      size: DIMENSIONE_TESTO,
+      font,
+    });
+  }
+
   persone.forEach((persona, indice) => {
     if (indice > 0) g.nuovaPagina();
 

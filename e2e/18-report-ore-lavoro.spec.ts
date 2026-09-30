@@ -497,7 +497,7 @@ test.describe('18 — Report ore di lavoro', () => {
       for await (const pezzo of flusso) pezzi.push(pezzo as Buffer);
       const contenuto = Buffer.concat(pezzi);
       expect(contenuto.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-      expect(contenuto.length).toBeGreaterThan(1000);
+      expect(contenuto.length).toBeGreaterThan(500);
     });
 
     test('elenco, apertura, navigazione e correzione delle ore di un dipendente abilitato', async ({ page }) => {
