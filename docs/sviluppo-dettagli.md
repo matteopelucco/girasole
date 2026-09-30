@@ -372,6 +372,23 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   - La data di build non va più tracciata a mano: `DATA_BUILD` la deriva
     da sé ad ogni `next build`/`next dev` (vedi `next.config.mjs`).
 
+## Review automatica di Claude in CI: interruttore (issue #160)
+- Il job `review` di `claude-board.yml` (review di ogni PR con Sonnet) è
+  **spento di default** per costo: parte solo se la variabile di repository
+  `CLAUDE_REVIEW_ENABLED` vale `true`. Senza la variabile il job risulta
+  **skipped** (non rosso) e non chiama Anthropic.
+- Riattivarla: GitHub → Settings → Secrets and variables → Actions →
+  **Variables** → New repository variable `CLAUDE_REVIEW_ENABLED` =
+  `true`. Spegnerla di nuovo: eliminare la variabile o metterla a
+  qualunque altro valore. Non serve modificare il codice.
+- Richiede un `ANTHROPIC_API_KEY` valido e con credito (con la chiave non
+  valida il job fallisce subito, `is_error: true`, senza chiamare il
+  modello).
+- Il job `triage` (Haiku, su issue aperta) e `chiusura-issue` (nessun
+  modello) non sono toccati.
+- Al posto della review automatica: review a richiesta in locale (issue
+  #161, comando `/task-review`).
+
 ## Token e cache delle esecuzioni Claude in CI (issue #119)
 - Ogni job `triage`/`review` di `claude-board.yml` scrive nel **job
   summary** (pagina del run su GitHub Actions, sezione "Summary") una

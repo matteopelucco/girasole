@@ -3,7 +3,13 @@ name: Claude Board
 # UNICA action economica del setup ibrido:
 #   - issue aperta  -> TRIAGE con Haiku (label + tier + ready/needs-info)
 #   - PR aperta      -> REVIEW veloce con Sonnet (l'implementazione la lanci
-#                       tu in locale con /next-task, non qui)
+#                       tu in locale con /next-task, non qui) — DISATTIVATA
+#                       di default (issue #160): parte solo se la variabile di
+#                       repository CLAUDE_REVIEW_ENABLED vale "true"
+#                       (Settings -> Secrets and variables -> Actions ->
+#                       Variables). Senza la variabile il job risulta "skipped",
+#                       non rosso, e non chiama Anthropic. La review a richiesta
+#                       si fa in locale (issue #161, /task-review).
 #   - issue chiusa "completed" -> label status:* sostituita da status:done
 #                       (nessun modello Claude, solo `gh issue edit`: costo zero)
 #
@@ -93,11 +99,14 @@ jobs:
   # -------------------------------------------------------------------------
   review:
     if: >
+      vars.CLAUDE_REVIEW_ENABLED == 'true' &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]' &&
       github.event.pull_request.draft == false &&
       !contains(github.event.pull_request.labels.*.name, 'skip-review')
+    # ^ interruttore (issue #160): spenta per costo finché CLAUDE_REVIEW_ENABLED
+    #   non è "true". Riattivarla non richiede di toccare questo file.
     # ^ fork-safety: le PR da fork non hanno accesso ai secret (0 crediti spesi).
     # ^ niente review per Dependabot (issue #68, causa 3): claude-code-action
     #   rifiuta gli attori bot, e su un bump di dipendenze la review
