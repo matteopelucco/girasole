@@ -101,7 +101,11 @@ test.describe('19 — Monte ore', () => {
         await expect(rigaDipendente).toContainText(/Monte ore: -?\d+(\.\d+)?h/);
 
         await rigaDipendente.getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\?utente=.+/);
+        // L'elenco apre la vista mensile (specs/18); movimenti e storico
+        // del monte ore si gestiscono dalla vista settimanale.
+        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+        await page.getByRole('navigation', { name: 'Vista ore di lavoro' }).getByRole('link', { name: 'Settimana' }).click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\?settimana=[0-9]{4}-[0-9]{2}-[0-9]{2}&utente=.+/);
         await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
@@ -186,7 +190,11 @@ test.describe('19 — Monte ore', () => {
         await page.goto('/admin/ore-lavoro');
         const rigaDipendente = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
         await rigaDipendente.getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\?utente=.+/);
+        // L'elenco apre la vista mensile (specs/18); movimenti e storico
+        // del monte ore si gestiscono dalla vista settimanale.
+        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+        await page.getByRole('navigation', { name: 'Vista ore di lavoro' }).getByRole('link', { name: 'Settimana' }).click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\?settimana=[0-9]{4}-[0-9]{2}-[0-9]{2}&utente=.+/);
 
         const testoSaldo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
         const saldoIniziale = Number(testoSaldo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
