@@ -447,6 +447,13 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.goto('/dashboard/ore-lavoro');
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
+
+    // Scenario "la vista mensile è riservata all'admin".
+    test('la vista mensile reindirizza alla dashboard', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      await page.goto('/dashboard/ore-lavoro/mese');
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
+    });
   });
 
   // Amministrazione (specs/18, sezione "Amministrazione"): l'admin può
@@ -483,13 +490,42 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(rigaDipendente).toContainText(/Settimana corrente (non )?confermata/);
         await nessunaViolazioneA11yGrave(page);
 
-        // Scenario: l'admin apre le ore di un dipendente — vale anche
-        // se il profilo admin non è personalmente abilitato (nessun
-        // redirect alla dashboard).
+        // Scenario: l'admin apre un dipendente e vede per prima la vista
+        // mensile — vale anche se il profilo admin non è personalmente
+        // abilitato (nessun redirect alla dashboard).
         await rigaDipendente.getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\?utente=.+/);
+        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
         await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
         await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
+        const selettore = page.getByRole('navigation', { name: 'Vista ore di lavoro' });
+        await expect(selettore.getByRole('link', { name: 'Mese' })).toHaveAttribute('aria-current', 'page');
+
+        // Scenario: la vista mensile mostra i giorni del mese e i totali.
+        const giorniMese = page.getByRole('list', { name: 'Giorni del mese' }).getByRole('listitem');
+        expect(await giorniMese.count()).toBeGreaterThanOrEqual(28);
+        await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/[0-9]+([.][0-9]+)?h/);
+        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?[0-9]+([.][0-9]+)?h/);
+        await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
+        await expect(page.getByText('Settimane del mese')).toBeVisible();
+        await nessunaViolazioneA11yGrave(page);
+
+        // Scenario: navigare tra i mesi — l'utente resta nell'URL e sul
+        // mese corrente non c'è "Mese successivo".
+        const utenteInUrl = new URL(page.url()).searchParams.get('utente')!;
+        await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
+        await page.getByRole('link', { name: 'Mese precedente' }).click();
+        await page.waitForURL(/mese=[0-9]{4}-[0-9]{2}&utente=.+/);
+        await expect(page.getByRole('link', { name: 'Mese successivo' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+
+        // Un mese futuro in query string mostra il mese corrente.
+        await page.goto(`/dashboard/ore-lavoro/mese?mese=2099-01&utente=${utenteInUrl}`);
+        await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
+
+        // Scenario: passare tra vista mensile e settimanale, e ritorno.
+        await page.getByRole('navigation', { name: 'Vista ore di lavoro' }).getByRole('link', { name: 'Settimana' }).click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\?settimana=[0-9]{4}-[0-9]{2}-[0-9]{2}&utente=.+/);
+        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
         await nessunaViolazioneA11yGrave(page);
 
         // Il riquadro ore previste/differenza è visibile anche da qui

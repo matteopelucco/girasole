@@ -302,17 +302,56 @@ Allora vedo un elenco di tutto il personale abilitato al report ore
 risulta già confermata o no
 E ciascuna riga porta alle ore di quella persona
 
-## Scenario: l'admin apre le ore di un dipendente
+## Scenario: l'admin apre un dipendente e vede per prima la vista mensile
 Dato che sono autenticato come admin
 E su `/admin/ore-lavoro` tocco una persona abilitata
 Quando arrivo su "Ore di lavoro"
-Allora vedo la stessa identica schermata che vedrebbe quella persona
-per la settimana corrente (tabella dei 7 giorni, ore precaricate dal
-suo profilo orario, totale settimana), con in più un'intestazione che
-indica di chi sono le ore che sto guardando
+Allora vedo per default la **vista mensile** del mese corrente, con
+un'intestazione che indica di chi sono le ore, e un selettore per
+passare alla **vista settimanale** (quella descritta negli altri
+scenari, invariata)
 E questo vale anche se il mio profilo non è personalmente abilitato al
 report ore: l'accesso qui dipende dal mio ruolo admin, non dalla mia
 abilitazione personale
+
+## Scenario: la vista mensile mostra i giorni del mese e i totali
+Dato che sono sulla vista mensile di un dipendente
+Allora vedo un riga per ogni giorno del mese, con lo stato (Lavorativo,
+Malattia, Assenza, Chiusura, Ferie), le ore previste dal profilo, le ore
+erogate, la differenza con segno e il dettaglio (motivo, codice
+malattia o nota)
+E in un riquadro riassuntivo i totali del mese: "Ore previste" e
+"Differenza ore" (con segno), calcolati come nella vista settimanale sui
+soli giorni lavorativi già trascorsi, più il saldo attuale del monte ore
+E i giorni non ancora accaduti del mese corrente sono mostrati ma non
+entrano nei totali
+E i giorni in stato Chiusura o Ferie sono mostrati come "di vacanza" e
+non entrano nei totali (neutri)
+E per ogni settimana del mese vedo se è confermata
+
+## Scenario: navigare tra i mesi nella vista mensile
+Dato che sono sulla vista mensile di un dipendente
+Quando premo "Mese precedente" o "Mese successivo"
+Allora vedo lo stesso dipendente sul mese scelto (il parametro `utente`
+resta nell'URL: `?mese=AAAA-MM&utente=<id>`)
+E non è mai possibile andare a un mese futuro: "Mese successivo" non è
+disponibile sul mese corrente, e un `mese` non valido o futuro in
+query string mostra silenziosamente il mese corrente
+
+## Scenario: passare tra vista mensile e vista settimanale
+Dato che sono su una delle due viste di un dipendente
+Quando uso il selettore "Mese / Settimana", oppure tocco un giorno (o
+una settimana) nella vista mensile
+Allora arrivo alla vista settimanale della relativa settimana, per
+correggere le ore, con la stessa persona
+E dalla vista settimanale posso tornare alla vista mensile del mese di
+quella settimana
+
+## Scenario: la vista mensile è riservata all'admin
+Dato che non sono admin
+Quando apro la vista mensile (`/dashboard/ore-lavoro/mese`)
+Allora vengo riportato alla dashboard: il personale continua a usare la
+vista settimanale delle proprie ore
 
 ## Scenario: l'admin modifica le ore di un dipendente, anche se la settimana è già confermata
 Dato che sono sulle ore di un dipendente (via `/admin/ore-lavoro`), per
