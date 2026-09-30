@@ -62,6 +62,12 @@ const PESI_MOVIMENTI = [1.4, 1.2, 6];
 const INTESTAZIONI_CALCOLO = ['Mese', 'Ore previste', 'Differenza', 'Movimenti', 'Saldo'];
 const PESI_CALCOLO = [2, 1.3, 1.3, 1.3, 1.1];
 
+// Nome del file PDF mensile delle ore di lavoro: lo stesso per l'allegato
+// del cron notturno e per il download dell'admin (specs/18, specs/52).
+export function nomeFilePdfOreLavoroMensile(mese: string): string {
+  return `ore-lavoro-${mese}.pdf`;
+}
+
 export async function generaPdfOreLavoroMensile(
   titoloMese: string,
   persone: PersonaPdfOreLavoro[],
@@ -71,6 +77,18 @@ export async function generaPdfOreLavoroMensile(
   const larghezze = larghezzeColonnePesate(PESI_COLONNE);
   const larghezzeMovimenti = larghezzeColonnePesate(PESI_MOVIMENTI);
   const larghezzeCalcolo = larghezzeColonnePesate(PESI_CALCOLO);
+
+  // Nessuna persona abilitata: il PDF lo dice, invece di restare vuoto.
+  if (!persone.length) {
+    g.pagina.drawText(`Ore di lavoro — ${titoloMese}`, { x: MARGINE, y: g.y, size: 16, font: fontGrassetto });
+    g.y -= 28;
+    g.pagina.drawText('Nessun membro del personale è abilitato al report ore.', {
+      x: MARGINE,
+      y: g.y,
+      size: DIMENSIONE_TESTO,
+      font,
+    });
+  }
 
   persone.forEach((persona, indice) => {
     if (indice > 0) g.nuovaPagina();

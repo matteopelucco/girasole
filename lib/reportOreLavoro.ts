@@ -24,7 +24,12 @@ import { dataDiMovimento } from '@/lib/monteOreMensile';
 import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
 import { righeOSollevaErrore, STILE_TABELLA, STILE_CELLA, STILE_CELLA_NUMERO } from '@/lib/reportPresenze';
-import type { PersonaPdfOreLavoro, GiornoPdfOreLavoro } from '@/lib/pdfOreLavoro';
+import {
+  generaPdfOreLavoroMensile,
+  nomeFilePdfOreLavoroMensile,
+  type PersonaPdfOreLavoro,
+  type GiornoPdfOreLavoro,
+} from '@/lib/pdfOreLavoro';
 
 // Aggregazione delle ore di lavoro del personale per il report notturno
 // (specs/52 - report-email-automatico.md, specs/19 - monte-ore.md): il
@@ -103,6 +108,21 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(finoAData: string): 
     `<th style="${STILE_CELLA_NUMERO}">Monte ore</th>` +
     `</tr></thead><tbody>${righe}</tbody></table>`
   );
+}
+
+// PDF mensile delle ore di lavoro del personale, completo di nome file
+// (specs/52, specs/18): l'unica fonte sia per l'allegato del cron notturno
+// sia per il download diretto dell'admin da `/admin/ore-lavoro/pdf`.
+// `mese` nel formato 'AAAA-MM'. Usa la service_role key: chi chiama deve
+// aver già verificato il ruolo (il cron con il suo secret, la route di
+// download con requireAdmin).
+export async function pdfOreLavoroMensile(
+  mese: string,
+  generatoIl: Date
+): Promise<{ filename: string; content: Uint8Array }> {
+  const persone = await personePdfOreLavoroMensile(mese);
+  const content = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
+  return { filename: nomeFilePdfOreLavoroMensile(mese), content };
 }
 
 // Dati per il PDF mensile delle ore di lavoro (specs/52, scenario "PDF

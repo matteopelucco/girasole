@@ -11,8 +11,7 @@ import {
 import { generaPdfTabellare, type SezionePdf, type ComunicazionePastiPdf } from '@/lib/pdfReport';
 import { rigaComunicazione, totalePasti, type ComunicazionePasto } from '@/lib/comunicazionePasti';
 import type { RigaReportBambino } from '@/lib/report';
-import { generaRiepilogoOreLavoroSettimanaHtml, personePdfOreLavoroMensile } from '@/lib/reportOreLavoro';
-import { generaPdfOreLavoroMensile } from '@/lib/pdfOreLavoro';
+import { generaRiepilogoOreLavoroSettimanaHtml, pdfOreLavoroMensile } from '@/lib/reportOreLavoro';
 import {
   oggi,
   sommaGiorni,
@@ -109,10 +108,8 @@ async function allegatoGiornaliero(data: string, generatoIl: Date): Promise<Alle
 // "PDF mensile delle ore del personale in allegato"; specs/19 -
 // monte-ore.md): allegato insieme al report mensile di presenze/pasti,
 // stessa idempotenza (nessun tracciamento separato — vedi Regole).
-async function allegatoOreLavoroMensile(mese: string, generatoIl: Date): Promise<AllegatoEmail> {
-  const persone = await personePdfOreLavoroMensile(mese);
-  const pdf = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
-  return { filename: `ore-lavoro-${mese}.pdf`, content: pdf };
+function allegatoOreLavoroMensile(mese: string, generatoIl: Date): Promise<AllegatoEmail> {
+  return pdfOreLavoroMensile(mese, generatoIl);
 }
 
 // Vercel Cron chiama questa route una volta al giorno poco dopo la

@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { requireAdmin } from '@/lib/auth';
-import { oggi, lunediSettimana } from '@/lib/date';
+import { oggi, lunediSettimana, formattaMeseItaliano } from '@/lib/date';
+import { mesiSelezionabiliPdf } from '@/lib/oreLavoroMese';
 import { saldiPerUtente } from '@/lib/monteOre';
 
 const ETICHETTE_RUOLO: Record<string, string> = {
@@ -24,6 +25,7 @@ export default async function OreLavoroAdminPage() {
   const { supabase, user, profilo } = await requireAdmin();
 
   const settimanaCorrenteInizio = lunediSettimana(oggi());
+  const mesiPdf = mesiSelezionabiliPdf(oggi());
 
   const { data: profili } = await supabase
     .from('profili')
@@ -90,6 +92,36 @@ export default async function OreLavoroAdminPage() {
             <li className="text-sm text-stone-600">Nessun altro utente è abilitato al report ore.</li>
           )}
         </ul>
+
+        <form
+          action="/admin/ore-lavoro/pdf"
+          method="get"
+          className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-200 bg-white p-3 shadow-sm"
+        >
+          <label className="text-sm font-medium text-stone-800">
+            Mese
+            <select
+              name="mese"
+              defaultValue={mesiPdf[0]}
+              className="mt-1 block rounded-lg border border-stone-300 px-2 py-2 text-base capitalize outline-none focus:border-stone-500"
+            >
+              {mesiPdf.map((mese) => (
+                <option key={mese} value={mese}>
+                  {formattaMeseItaliano(mese)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="submit"
+            className="h-11 rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800"
+          >
+            Genera PDF mensile
+          </button>
+          <p className="w-full text-xs text-stone-600">
+            Scarica il report mensile delle ore del personale, lo stesso che il job notturno allega alla email.
+          </p>
+        </form>
       </main>
     </NavHeader>
   );

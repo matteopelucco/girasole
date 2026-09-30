@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { generaPdfOreLavoroMensile, type PersonaPdfOreLavoro } from './pdfOreLavoro';
+import { generaPdfOreLavoroMensile, nomeFilePdfOreLavoroMensile, type PersonaPdfOreLavoro } from './pdfOreLavoro';
 import { testoPagina } from './pdfTestUtils';
 
 const GENERATO_IL = new Date('2026-09-29T06:15:00Z');
@@ -53,10 +53,23 @@ describe('generaPdfOreLavoroMensile', () => {
     expect(testo).toContain('Nessun dato.');
   });
 
+  it('senza personale abilitato lo dice esplicitamente', async () => {
+    const bytes = await generaPdfOreLavoroMensile('settembre 2026', [], GENERATO_IL);
+    const testo = await testoPagina(bytes, 0);
+    expect(testo).toContain('Nessun membro del personale è abilitato al report ore.');
+    expect(testo).toContain('settembre 2026');
+  });
+
   it('con più persone la riga compare su ogni pagina (una per persona)', async () => {
     const bytes = await generaPdfOreLavoroMensile('settembre 2026', [persona('A'), persona('B')], GENERATO_IL);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(2);
     expect(await testoPagina(bytes, 0)).toContain('Generato il 29/09/2026 alle 08:15');
     expect(await testoPagina(bytes, 1)).toContain('Generato il 29/09/2026 alle 08:15');
+  });
+});
+
+describe('nomeFilePdfOreLavoroMensile', () => {
+  it('ore-lavoro-AAAA-MM.pdf, lo stesso nome dell\'allegato del cron', () => {
+    expect(nomeFilePdfOreLavoroMensile('2026-09')).toBe('ore-lavoro-2026-09.pdf');
   });
 });
