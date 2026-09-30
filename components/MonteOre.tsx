@@ -1,4 +1,5 @@
 import { formattaDataItaliana, formattaDataOraItaliana } from '@/lib/date';
+import { descrizioneSaldoMonteOre, LEGENDA_MONTE_ORE, saldoMonteOreBreve } from '@/lib/monteOre';
 import { FormConEsito, type EsitoAzione } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 
@@ -38,8 +39,9 @@ export function MonteOre({
   return (
     <div className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">
       <p>
-        Monte ore attuale: <strong>{saldo}h</strong>
+        Monte ore attuale: <strong>{descrizioneSaldoMonteOre(saldo)}</strong>
       </p>
+      <p className="mt-1 text-xs text-purple-800">{LEGENDA_MONTE_ORE}</p>
 
       {modalitaAdmin && (
         <div className="mt-3 space-y-3">
@@ -56,13 +58,15 @@ export function MonteOre({
               />
             </label>
             <label className="text-xs font-medium text-purple-900">
-              Movimento
+              Verso del movimento
               <select
-                name="segno"
+                name="verso"
+                defaultValue=""
                 className="mt-1 block rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-none focus:border-purple-500"
               >
-                <option value="aumenta">Aumenta il monte ore</option>
-                <option value="riduce">Riduce il monte ore</option>
+                <option value="">Scegli…</option>
+                <option value="credito">Il dipendente ha erogato ore in più (+)</option>
+                <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
               </select>
             </label>
             <label className="min-w-[12rem] flex-1 text-xs font-medium text-purple-900">
@@ -85,10 +89,7 @@ export function MonteOre({
                 <li key={m.id} className="flex flex-wrap items-center gap-2 text-xs text-purple-900">
                   <span>
                     {formattaDataOraItaliana(m.created_at)} —{' '}
-                    <strong>
-                      {Number(m.variazione) > 0 ? '+' : ''}
-                      {m.variazione}h
-                    </strong>
+                    <strong>{saldoMonteOreBreve(Number(m.variazione))}</strong>
                     {m.tipo === 'precarico'
                       ? ' (manuale)'
                       : m.settimana_inizio
@@ -113,15 +114,15 @@ export function MonteOre({
                         />
                       </label>
                       <label className="text-xs font-medium text-purple-900">
-                        Movimento
+                        Verso del movimento
                         <select
-                          name="segno"
-                          defaultValue={Number(m.variazione) < 0 ? 'riduce' : 'aumenta'}
+                          name="verso"
+                          defaultValue={Number(m.variazione) < 0 ? 'debito' : 'credito'}
                           aria-label={`Verso movimento ${m.id}`}
                           className="mt-1 block rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-none focus:border-purple-500"
                         >
-                          <option value="aumenta">Aumenta il monte ore</option>
-                          <option value="riduce">Riduce il monte ore</option>
+                          <option value="credito">Il dipendente ha erogato ore in più (+)</option>
+                          <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
                         </select>
                       </label>
                       <label className="min-w-[12rem] flex-1 text-xs font-medium text-purple-900">

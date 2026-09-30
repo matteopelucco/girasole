@@ -1,4 +1,4 @@
-import { oreOrdinariePreviste } from '@/lib/oreLavoro';
+import { formattaOreConSegno, oreOrdinariePreviste } from '@/lib/oreLavoro';
 import type { ProfiloOrario } from '@/lib/profiliOrari';
 
 // Arrotonda a 2 decimali (stessa precisione di numeric(6,2) nel
@@ -84,11 +84,55 @@ export function riepilogoSettimanaDaDifferenze(
   return riepilogo(orePreviste, differenza);
 }
 
-// Nota descrittiva del movimento di scalo dal monte ore dello
+// Nota descrittiva del movimento che accredita sul monte ore lo
 // straordinario residuo, registrato solo quando l'admin sceglie
-// "Scala dal monte ore" (specs/19). Funzione pura.
+// "Aggiungi al monte ore (a credito)" (specs/19). Funzione pura.
 export function notaMovimentoStraordinarioResiduo(straordinarioResiduo: number): string {
-  return `Straordinario residuo scalato dal monte ore su decisione dell'admin: ${straordinarioResiduo}h.`;
+  return `Straordinario residuo accreditato sul monte ore su decisione dell'admin: ${straordinarioResiduo}h.`;
+}
+
+// Convenzione unica del segno del monte ore (specs/19): positivo = ore già
+// erogate in più (a credito), negativo = ore ancora da erogare (da
+// recuperare), zero = in pari.
+export type SignificatoSaldoMonteOre = 'a credito' | 'da recuperare' | 'in pari';
+
+export function significatoSaldoMonteOre(saldo: number): SignificatoSaldoMonteOre {
+  if (saldo > 0) return 'a credito';
+  if (saldo < 0) return 'da recuperare';
+  return 'in pari';
+}
+
+// Saldo con segno esplicito e significato, sempre insieme (specs/19): mai
+// un numero nudo. Es. "+3h a credito (ore già erogate in più)",
+// "-3h da recuperare (ore ancora da erogare)", "0h in pari". Funzione pura.
+export function descrizioneSaldoMonteOre(saldo: number): string {
+  const valore = `${formattaOreConSegno(saldo)}h`;
+  switch (significatoSaldoMonteOre(saldo)) {
+    case 'a credito':
+      return `${valore} a credito (ore già erogate in più)`;
+    case 'da recuperare':
+      return `${valore} da recuperare (ore ancora da erogare)`;
+    default:
+      return `${valore} in pari`;
+  }
+}
+
+// Versione breve per elenchi e tabelle (es. "+3h a credito").
+export function saldoMonteOreBreve(saldo: number): string {
+  return `${formattaOreConSegno(saldo)}h ${significatoSaldoMonteOre(saldo)}`;
+}
+
+export const LEGENDA_MONTE_ORE =
+  'Positivo (+): ore già erogate in più, a credito. Negativo (-): ore ancora da erogare, da recuperare.';
+
+// Verso di un movimento scelto nel form dell'admin (specs/19): "credito" =
+// il dipendente ha erogato ore in più (+1), "debito" = deve ancora
+// erogare ore (−1). Qualunque altro valore è non valido (null): niente
+// default silenzioso. Funzione pura.
+export function segnoVersoMovimentoMonteOre(verso: string): 1 | -1 | null {
+  if (verso === 'credito') return 1;
+  if (verso === 'debito') return -1;
+  return null;
 }
 
 export type MovimentoMonteOre = { variazione: number | string };

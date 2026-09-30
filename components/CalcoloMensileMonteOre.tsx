@@ -1,5 +1,6 @@
 import { formattaMeseItaliano } from '@/lib/date';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
+import { saldoMonteOreBreve } from '@/lib/monteOre';
 import type { RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
 
 // Calcolo completo del monte ore "mese per mese" (specs/19): ore previste,
@@ -30,10 +31,10 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
               Differenza ore
             </th>
             <th scope="col" className="py-1 pr-3 text-right font-medium">
-              Movimenti
+              Movimenti (+ a credito / − da recuperare)
             </th>
             <th scope="col" className="py-1 text-right font-medium">
-              Saldo
+              Saldo a fine mese
             </th>
           </tr>
         </thead>
@@ -46,7 +47,7 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
               <td className="py-1 pr-3 text-right">{r.orePreviste}h</td>
               <td className="py-1 pr-3 text-right">{formattaOreConSegno(r.differenza)}h</td>
               <td className="py-1 pr-3 text-right">{formattaOreConSegno(r.movimenti)}h</td>
-              <td className="py-1 text-right font-medium">{r.saldo}h</td>
+              <td className="py-1 text-right font-medium">{saldoMonteOreBreve(r.saldo)}</td>
             </tr>
           ))}
         </tbody>

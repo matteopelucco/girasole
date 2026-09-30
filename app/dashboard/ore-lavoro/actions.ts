@@ -15,6 +15,7 @@ import {
 import {
   controlloSettimanaOreLavoro,
   notaMovimentoStraordinarioResiduo,
+  segnoVersoMovimentoMonteOre,
 } from '@/lib/monteOre';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
@@ -257,7 +258,7 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
 // Decisione dell'admin sullo straordinario residuo di una settimana già
 // confermata (specs/19 - monte-ore.md): "pagamento_mensile" non tocca il
 // monte ore (pagato fuori da quest'app), "monte_ore" registra un
-// secondo movimento negativo (il monte ore scala). Solo l'admin può
+// movimento positivo (ore già erogate, a credito). Solo l'admin può
 // decidere, solo una volta per settimana (decisione immutabile una
 // volta presa — stesso principio dei movimenti, mai un update
 // successivo su questo campo se non tramite questa azione).
@@ -304,7 +305,7 @@ export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: 
       utente_id: utenteId,
       tipo: 'straordinario_residuo',
       settimana_inizio: settimanaInizio,
-      variazione: -settimana.straordinario_residuo,
+      variazione: settimana.straordinario_residuo,
       nota: notaMovimentoStraordinarioResiduo(settimana.straordinario_residuo),
     });
     if (erroreMovimento) {
@@ -323,21 +324,24 @@ export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: 
 
 // Movimento manuale di monte ore (specs/19 - monte-ore.md): solo
 // l'admin può registrarlo, per qualunque utente abilitato, sempre con
-// una nota obbligatoria (non è un dato calcolato, va motivato). `segno`
-// è 'aumenta' o 'riduce': la UI chiede sempre un numero di ore
-// positivo, è questa funzione a tradurlo nella `variazione` con segno
-// corretto (positiva = il monte ore aumenta, negativa = scala — stessa
-// convenzione dei movimenti automatici).
+// una nota obbligatoria (non è un dato calcolato, va motivato). `verso`
+// è 'credito' (il dipendente ha erogato ore in più, +) o 'debito' (deve
+// ancora erogare ore, −): la UI chiede sempre un numero di ore positivo,
+// è questa funzione a tradurlo nella `variazione` con il segno della
+// convenzione di specs/19.
 export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
 
   const utenteId = (formData.get('utente_id') as string) || '';
-  const segno = (formData.get('segno') as string) === 'riduce' ? -1 : 1;
+  const segno = segnoVersoMovimentoMonteOre((formData.get('verso') as string) || '');
   const ore = Number(formData.get('ore'));
   const nota = ((formData.get('nota') as string) || '').trim();
 
   if (!utenteId) {
     return { ok: false, messaggio: 'Utente non valido.' };
+  }
+  if (segno === null) {
+    return { ok: false, messaggio: 'Scegli se il dipendente ha erogato ore in più o deve ancora erogare ore.' };
   }
   if (!Number.isFinite(ore) || ore <= 0) {
     return { ok: false, messaggio: 'Indica un numero di ore maggiore di zero.' };
@@ -383,18 +387,21 @@ export async function eliminaMovimentoMonteOre(_stato: EsitoAzione, formData: Fo
 }
 
 // specs/19 - monte-ore.md, scenario "l'admin modifica un movimento di
-// monte ore": cambia ore, verso (aumenta/riduce) e nota di qualunque
+// monte ore": cambia ore, verso (credito/debito) e nota di qualunque
 // movimento, mantenendone la data di registrazione. Stesse regole di
 // validazione dell'inserimento (ore > 0, nota obbligatoria).
 export async function modificaMovimentoMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
 
   const id = (formData.get('id') as string) || '';
-  const segno = (formData.get('segno') as string) === 'riduce' ? -1 : 1;
+  const segno = segnoVersoMovimentoMonteOre((formData.get('verso') as string) || '');
   const ore = Number(formData.get('ore'));
   const nota = ((formData.get('nota') as string) || '').trim();
 
   if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
+  if (segno === null) {
+    return { ok: false, messaggio: 'Scegli se il dipendente ha erogato ore in più o deve ancora erogare ore.' };
+  }
   if (!Number.isFinite(ore) || ore <= 0) {
     return { ok: false, messaggio: 'Indica un numero di ore maggiore di zero.' };
   }

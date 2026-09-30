@@ -3,7 +3,7 @@ import { NavHeader } from '@/components/NavHeader';
 import { requireAdmin } from '@/lib/auth';
 import { oggi, lunediSettimana, formattaMeseItaliano } from '@/lib/date';
 import { mesiSelezionabiliPdf } from '@/lib/oreLavoroMese';
-import { saldiPerUtente } from '@/lib/monteOre';
+import { saldiPerUtente, saldoMonteOreBreve } from '@/lib/monteOre';
 
 const ETICHETTE_RUOLO: Record<string, string> = {
   admin: 'Admin',
@@ -83,7 +83,7 @@ export default async function OreLavoroAdminPage() {
                   <span className={`text-xs ${idConfermati.has(p.id) ? 'text-emerald-700' : 'text-amber-700'}`}>
                     {idConfermati.has(p.id) ? 'Settimana corrente confermata' : 'Settimana corrente non confermata'}
                   </span>
-                  <span className="text-xs text-purple-800">Monte ore: {saldi.get(p.id) ?? 0}h</span>
+                  <span className="text-xs text-purple-800">Monte ore: {saldoMonteOreBreve(saldi.get(p.id) ?? 0)}</span>
                 </span>
               </Link>
             </li>
