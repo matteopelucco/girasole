@@ -176,8 +176,8 @@ test.describe('18 — Report ore di lavoro', () => {
         // letti, non fissati: dipendono dallo storico della settimana
         // sull'account di test condiviso. Nessuna distinzione
         // ordinarie/straordinarie.
-        await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/d+(.d+)?h/);
-        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?d+(.d+)?h/);
+        await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/[0-9]+([.][0-9]+)?h/);
+        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?[0-9]+([.][0-9]+)?h/);
         await expect(page.getByText('Ore ordinarie erogate:', { exact: false })).toHaveCount(0);
         await expect(page.getByText('Ore straordinarie erogate:', { exact: false })).toHaveCount(0);
 
@@ -186,7 +186,7 @@ test.describe('18 — Report ore di lavoro', () => {
         const differenzaSettimana = async () =>
           Number(
             ((await page.getByText('Differenza ore:', { exact: false }).textContent()) ?? '').match(
-              /Differenza ore:s*([+-]?d+(?:.d+)?)h/
+              /Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/
             )![1]
           );
         const differenzaPrima = await differenzaSettimana();
