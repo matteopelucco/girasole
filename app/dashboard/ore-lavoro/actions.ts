@@ -371,10 +371,12 @@ export async function eliminaMovimentoMonteOre(_stato: EsitoAzione, formData: Fo
   const id = (formData.get('id') as string) || '';
   if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
 
-  const { error } = await supabase.from('monte_ore_movimenti').delete().eq('id', id);
+  const { data, error } = await supabase.from('monte_ore_movimenti').delete().eq('id', id).select('id');
   if (error) {
     return { ok: false, messaggio: 'Impossibile eliminare il movimento.', dettaglio: error.message };
   }
+  // Nessuna riga cancellata (id inesistente, o RLS che rifiuta): non è un successo.
+  if (!data?.length) return { ok: false, messaggio: 'Movimento non trovato.' };
 
   revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
