@@ -1,4 +1,11 @@
-import { giorniInRange, lunediSettimana, meseDaData, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
+import {
+  giorniInRange,
+  lunediSettimana,
+  meseDaData,
+  mesePrecedente,
+  primoGiornoMese,
+  ultimoGiornoMese,
+} from '@/lib/date';
 import type { GiornoChiusura } from '@/lib/calendarioScolastico';
 import {
   arrotondaAQuartiDora,
@@ -20,6 +27,19 @@ export function meseOreLavoroRichiesto(richiesta: string | undefined, oggiData: 
   const corrente = meseDaData(oggiData);
   if (!richiesta || !/^\d{4}-(0[1-9]|1[0-2])$/.test(richiesta)) return corrente;
   return richiesta > corrente ? corrente : richiesta;
+}
+
+// Mesi tra cui scegliere per il PDF mensile del personale (specs/18): il
+// mese corrente e i precedenti, dal più recente, mai nel futuro. Funzione
+// pura.
+export function mesiSelezionabiliPdf(oggiData: string, quanti = 12): string[] {
+  const mesi: string[] = [];
+  let mese = meseDaData(oggiData);
+  for (let i = 0; i < quanti; i++) {
+    mesi.push(mese);
+    mese = mesePrecedente(mese);
+  }
+  return mesi;
 }
 
 // Lunedì delle settimane che toccano il mese, in ordine (per il rimando

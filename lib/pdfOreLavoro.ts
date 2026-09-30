@@ -62,6 +62,12 @@ const PESI_MOVIMENTI = [1.4, 1.2, 6];
 const INTESTAZIONI_CALCOLO = ['Mese', 'Ore previste', 'Differenza', 'Movimenti', 'Saldo'];
 const PESI_CALCOLO = [2, 1.3, 1.3, 1.3, 1.1];
 
+// Nome del file PDF mensile delle ore di lavoro: lo stesso per l'allegato
+// del cron notturno e per il download dell'admin (specs/18, specs/52).
+export function nomeFilePdfOreLavoroMensile(mese: string): string {
+  return `ore-lavoro-${mese}.pdf`;
+}
+
 export async function generaPdfOreLavoroMensile(
   titoloMese: string,
   persone: PersonaPdfOreLavoro[],
