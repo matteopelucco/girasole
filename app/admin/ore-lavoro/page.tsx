@@ -15,9 +15,11 @@ export const dynamic = 'force-dynamic';
 // Elenco del personale abilitato al report ore, per l'admin (specs/18 -
 // report-ore-lavoro.md, sezione "Amministrazione"): punto d'ingresso
 // per rivedere/correggere le ore di chiunque, anche una settimana già
-// confermata — la pagina vera e propria è la stessa vista personale di
-// `/dashboard/ore-lavoro`, solo con `?utente=<id>` impostato (nessuna
-// pagina duplicata, CLAUDE.md/jscpd).
+// confermata: si apre prima la vista mensile
+// (`/dashboard/ore-lavoro/mese?utente=<id>`, di default), da cui si passa
+// alla vista settimanale — la stessa vista personale di
+// `/dashboard/ore-lavoro` con `?utente=<id>` (nessuna pagina duplicata,
+// CLAUDE.md/jscpd).
 export default async function OreLavoroAdminPage() {
   const { supabase, user, profilo } = await requireAdmin();
 
@@ -66,7 +68,7 @@ export default async function OreLavoroAdminPage() {
         <ul className="space-y-2">
           {personale.map((p) => (
             <li key={p.id} className="rounded-xl border border-stone-200 bg-white p-3 shadow-sm">
-              <Link href={`/dashboard/ore-lavoro?utente=${p.id}`} className="flex items-center justify-between gap-2">
+              <Link href={`/dashboard/ore-lavoro/mese?utente=${p.id}`} className="flex items-center justify-between gap-2">
                 <span>
                   <span className="font-medium">
                     {p.nome} {p.cognome}

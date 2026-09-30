@@ -15,6 +15,7 @@ import {
   formattaIntervalloItaliano,
   formattaDataBreve,
   formattaDataOraItaliana,
+  meseDaData,
 } from '@/lib/date';
 import {
   oreOrdinariePreviste,
@@ -36,6 +37,7 @@ import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import { isGiornoChiuso, chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { MonteOre } from '@/components/MonteOre';
 import { StraordinarioResiduo } from '@/components/StraordinarioResiduo';
+import { SelettoreVistaOreLavoro } from '@/components/SelettoreVistaOreLavoro';
 import {
   salvaSettimanaOreLavoro,
   confermaSettimanaOreLavoro,
@@ -249,6 +251,14 @@ export default async function OreLavoroPage({
             Ore di lavoro{modalitaAdmin && <span className="font-normal text-stone-600"> — {utenteTarget.nome}</span>}
           </h1>
         </div>
+
+        {modalitaAdmin && (
+          <SelettoreVistaOreLavoro
+            vista="settimana"
+            hrefMese={`/dashboard/ore-lavoro/mese?mese=${meseDaData(lunedi)}&utente=${utenteTarget.id}`}
+            hrefSettimana={`/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteTarget.id}`}
+          />
+        )}
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
           <Link
