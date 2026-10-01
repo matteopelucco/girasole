@@ -10,10 +10,10 @@
 // (fullyParallel: true, stessa cautela di
 // 16-comunicazione-pasti-rojac.spec.ts).
 //
-// La suite NON preme mai per davvero "Sì" su "Conferma settimana":
-// confermare è irreversibile fino al lunedì successivo (nessuna
-// "riapertura" in questa fase, specs/18) e bloccherebbe la scrittura
-// sull'account di test condiviso per il resto della settimana — stessa
+// La suite NON preme "Sì" su "Conferma settimana" per la settimana
+// corrente: confermare bloccherebbe la scrittura sull'account di test
+// condiviso per il resto della settimana (solo lo scenario di riapertura,
+// issue #90, conferma e poi riapre una settimana lontana nel passato) — stessa
 // cautela già presa per "Pasti comunicati a Rojac" in
 // 16-comunicazione-pasti-rojac.spec.ts. Lo scenario "settimana
 // confermata non è più modificabile" si attiva da solo (altrimenti
@@ -703,6 +703,77 @@ test.describe('18 — Report ore di lavoro', () => {
           await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
           await page.getByRole('button', { name: 'Sì' }).click();
         }
+      }
+    });
+
+    // Scenari "l'admin riapre una settimana già confermata" e "solo l'admin
+    // può riaprire una settimana" (issue #90). Usa una settimana lontana
+    // nel passato (10 settimane fa), per non toccare quella corrente su cui
+    // lavorano gli altri test, e la lascia riaperta (non confermata).
+    test("l'admin riapre una settimana confermata; la maestra non può e torna a poterla modificare", async ({
+      page,
+      browser,
+      baseURL,
+    }) => {
+      const dieciSettimaneFa = new Date();
+      dieciSettimaneFa.setUTCDate(dieciSettimaneFa.getUTCDate() - 70);
+      dieciSettimaneFa.setUTCDate(dieciSettimaneFa.getUTCDate() - ((dieciSettimaneFa.getUTCDay() + 6) % 7));
+      const lunedi = dieciSettimaneFa.toISOString().slice(0, 10);
+
+      await page.goto('/admin/maestre');
+      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAbilita.getByLabel('Ore di lavoro').check();
+      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
+      await page.waitForTimeout(1000);
+
+      try {
+        await page.goto('/admin/ore-lavoro');
+        await page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! }).getByRole('link').click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+        const utenteId = new URL(page.url()).searchParams.get('utente')!;
+        const urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
+        const urlMaestra = `/dashboard/ore-lavoro?settimana=${lunedi}`;
+
+        // Parto da una settimana confermata (la confermo se serve).
+        await page.goto(urlAdmin);
+        if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) === 0) {
+          await page.getByRole('button', { name: 'Conferma settimana' }).click();
+          await page.getByRole('button', { name: 'Sì', exact: true }).click();
+        }
+        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
+        await nessunaViolazioneA11yGrave(page);
+
+        // La maestra la vede di sola lettura, senza alcun "Riapri settimana".
+        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra'), baseURL });
+        const paginaMaestra = await contestoMaestra.newPage();
+        await paginaMaestra.goto(urlMaestra);
+        await expect(paginaMaestra.getByText('Settimana confermata il', { exact: false })).toBeVisible();
+        await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
+        await expect(paginaMaestra.getByRole('button', { name: 'Riapri settimana' })).toHaveCount(0);
+
+        // L'admin riapre: prima chiede conferma (Annulla non cambia nulla)...
+        await page.getByRole('button', { name: 'Riapri settimana' }).click();
+        await expect(page.getByText('Riaprire la settimana', { exact: false })).toBeVisible();
+        await page.getByRole('button', { name: 'Annulla' }).click();
+        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible();
+
+        // ...poi riapre davvero.
+        await page.getByRole('button', { name: 'Riapri settimana' }).click();
+        await page.getByRole('button', { name: 'Sì, riapri' }).click();
+        await expect(page.getByText('Settimana confermata il', { exact: false })).toHaveCount(0, { timeout: 20_000 });
+        await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
+
+        // La maestra può di nuovo modificarla (e deve riconfermarla).
+        await paginaMaestra.goto(urlMaestra);
+        await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+        await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
+        await contestoMaestra.close();
+      } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
       }
     });
 

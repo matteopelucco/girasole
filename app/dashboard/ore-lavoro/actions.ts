@@ -255,6 +255,41 @@ export async function confermaSettimanaOreLavoro(_stato: EsitoAzione, formData: 
   return { ok: true };
 }
 
+// Riapre una settimana già confermata (specs/18, "l'admin riapre una
+// settimana già confermata", issue #90): la conferma è l'esistenza della
+// riga in `ore_lavoro_settimane`, quindi riaprire = eliminarla. Solo
+// l'admin (requireAdmin qui e policy di delete admin-only in
+// 0025_report_ore_lavoro.sql: nessuna migration nuova). Le ore salvate e il
+// monte ore (gestito a mano, specs/19) non cambiano; il dipendente può di
+// nuovo modificare la settimana e deve riconfermarla.
+export async function riapriSettimanaOreLavoro(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const utenteId = (formData.get('utente_id') as string) || '';
+  const settimanaInizio = (formData.get('settimana_inizio') as string) || '';
+  if (!utenteId || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(settimanaInizio)) {
+    return { ok: false, messaggio: 'Settimana o dipendente non validi.' };
+  }
+
+  // .select() per distinguere "riaperta" da "nessuna riga eliminata": con
+  // la RLS un delete non permesso o su una riga inesistente non dà errore.
+  const { data, error } = await supabase
+    .from('ore_lavoro_settimane')
+    .delete()
+    .eq('utente_id', utenteId)
+    .eq('settimana_inizio', settimanaInizio)
+    .select('id');
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile riaprire la settimana.', dettaglio: error.message };
+  }
+  if (!data?.length) {
+    return { ok: false, messaggio: 'Questa settimana non risulta confermata.' };
+  }
+
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
+  return { ok: true };
+}
+
 // Decisione dell'admin sullo straordinario residuo di una settimana già
 // confermata (specs/19 - monte-ore.md): "pagamento_mensile" non tocca il
 // monte ore (pagato fuori da quest'app), "monte_ore" registra un
