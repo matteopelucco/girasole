@@ -46,5 +46,9 @@ upsert "tier:haiku"  "c2e0c6" "Banale: classificazione, testi, fix minimi (Haiku
 upsert "tier:sonnet" "fef2c0" "Standard: la maggior parte del lavoro (Sonnet)"
 upsert "tier:opus"   "f9d0c4" "Difficile o sensibile: RLS/auth/decisioni (Opus)"
 
+echo "== AUTONOMIA (ciclo /run-tasks: chi può mergiare) =="
+upsert "ai-driven"          "0e8a16" "Eseguibile e mergiabile in autonomia dall'agente"
+upsert "human-in-the-loop"  "d93f0b" "Serve l'umano: la PR resta aperta per la sua review"
+
 echo ""
 echo "Fatto. Verifica su: Settings → Labels, oppure 'gh label list'."
