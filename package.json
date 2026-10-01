@@ -1,6 +1,6 @@
 {
   "name": "girasole",
-  "version": "0.50.0",
+  "version": "0.50.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "check:dup": "jscpd",
-    "analyze": "npm run lint && npm run test:unit && npm run check:dup",
+    "check:e2e-salva": "node --experimental-strip-types scripts/controlla-click-salva.mts",
+    "analyze": "npm run lint && npm run test:unit && npm run check:dup && npm run check:e2e-salva",
     "prepare": "git config core.hooksPath .githooks",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
