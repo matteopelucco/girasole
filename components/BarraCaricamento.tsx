@@ -50,7 +50,15 @@ export function BarraCaricamento() {
     }
 
     document.addEventListener('click', gestisciClick, true);
-    return () => document.removeEventListener('click', gestisciClick, true);
+    // Segnale di "listener installato" (cioè pagina idratata): prima di
+    // questo momento un click su un link è una navigazione nativa a
+    // pagina intera e la barra non può comparire. Lo legge il test e2e
+    // per non cliccare troppo presto (issue #155).
+    document.body.dataset.barraCaricamentoPronta = 'true';
+    return () => {
+      document.removeEventListener('click', gestisciClick, true);
+      delete document.body.dataset.barraCaricamentoPronta;
+    };
   }, []);
 
   useEffect(() => {
