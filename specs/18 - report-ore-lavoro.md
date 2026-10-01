@@ -394,19 +394,36 @@ Quando, appena sotto l'elenco del personale, scelgo un mese e premo
 Allora il browser scarica direttamente il file PDF, senza inviare alcuna
 email: lo stesso PDF che il job notturno allega alla mail del report
 mensile (vedi [52 - report-email-automatico.md](52%20-%20report-email-automatico.md)),
-una pagina per persona con il dettaglio giorno per giorno, il monte ore
-completo e il calcolo mese per mese
+una pagina per persona con riepilogo del mese, prospetto delle settimane,
+elenco dei giorni, totale e saldo del monte ore
 E il nome del file è `ore-lavoro-AAAA-MM.pdf`
 E il mese proposto di default è quello corrente; posso scegliere i 12 mesi
 più recenti, mai un mese futuro
 E un `mese` non valido o futuro passato direttamente nell'indirizzo
 produce il PDF del mese corrente
 
+## Scenario: l'admin scarica il PDF del mese di un singolo dipendente
+Dato che sono autenticato come admin
+E sono sulla vista mensile di un dipendente
+(`/dashboard/ore-lavoro/mese?utente=...`)
+Quando premo "Scarica PDF", nella barra del mese, a destra
+Allora il browser scarica direttamente un PDF con **solo** quella persona,
+per il mese mostrato: lo stesso PDF, prodotto dallo stesso codice, del
+report del personale e dell'allegato del job notturno (vedi
+[52 - report-email-automatico.md](52%20-%20report-email-automatico.md)),
+senza alcun invio via email
+E il nome del file è `ore-lavoro-AAAA-MM-cognome-nome.pdf`
+E il pulsante si raggiunge da tastiera e da telefono (bersaglio di almeno
+44px)
+E un `utente` non valido, o non abilitato al report ore, non produce
+alcun PDF (risposta "non trovato")
+
 ## Scenario: il PDF mensile è riservato all'admin
 Dato che non sono admin
-Quando apro l'indirizzo del PDF (`/admin/ore-lavoro/pdf`)
+Quando apro l'indirizzo del PDF (`/admin/ore-lavoro/pdf`), con o senza
+il parametro `utente`
 Allora vengo riportato alla dashboard e nessun PDF viene generato: il file
-contiene dati di tutto il personale
+contiene dati del personale
 
 ## Scenario: un parametro `utente` non valido, o usato da chi non è admin, viene ignorato
 Quando apro `/dashboard/ore-lavoro?utente=...` con un id che non

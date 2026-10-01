@@ -112,26 +112,35 @@ ore di lavoro del personale del mese "a tutt'oggi" (calcolato allo
 stesso modo del report mensile di presenze/pasti — vedi Regole)
 E il PDF riporta anche la riga "Generato il gg/mm/aaaa alle hh:mm" su
 ogni pagina (vedi scenario "invio notturno")
-E il PDF contiene una pagina per ciascuna persona abilitata al report
-ore, con: il suo nome, il mese solare a cui si riferisce, il profilo
-orario di riferimento assegnato (nome e ore per giorno), e una tabella
-con un giorno per riga (data in formato corto con il giorno della
-settimana abbreviato, es. "lun 23/9/26", stato, ore dovute secondo il
-profilo orario per quel giorno, ore ordinarie effettuate, ore
-straordinarie, il delta — ore ordinarie effettuate meno ore dovute più
-le ore straordinarie — ed eventuale dettaglio: motivo straordinario,
-codice malattia o nota assenza) limitatamente alle settimane di quel
-mese già confermate (vedi [18](18%20-%20report-ore-lavoro.md))
-E se una o più settimane del mese non sono ancora state confermate, il
-PDF lo segnala esplicitamente per quella persona (intervallo di date
-escluso, non semplicemente omesso in silenzio)
-E in fondo alla pagina di ciascuna persona compare la sezione "Monte
-ore" con la **situazione completa** (vedi
-[19 - monte-ore.md](19%20-%20monte-ore.md), gestito a mano dall'admin):
-il saldo attuale (con segno e significato: a credito / da recuperare /
-in pari), l'elenco di tutti i movimenti registrati (data,
-variazione con segno, nota) e la tabella "calcolo mese per mese" (mese,
-ore previste, differenza ore, movimenti del mese, saldo a fine mese)
+E il PDF contiene una pagina (o più, se serve) per ciascuna persona
+abilitata al report ore, con, in quest'ordine:
+1. il nome della persona e il mese solare a cui si riferisce, con il
+   profilo orario di riferimento assegnato (nome e ore per giorno);
+2. il **riepilogo del mese**: ore dovute, ore erogate e differenza
+   (in più o in meno, con segno), calcolati come nella vista mensile
+   (vedi [18](18%20-%20report-ore-lavoro.md)): contano solo i giorni
+   lavorativi già trascorsi;
+3. il **prospetto delle settimane del mese**: per ciascuna l'intervallo
+   (dal ... al ...) e lo stato, "confermata" oppure "da confermare";
+4. l'**elenco dei giorni del mese**, uno per riga: giorno in formato
+   corto con il giorno della settimana (es. "lun 23/9/26"), stato, ore
+   dovute, ore erogate, differenza oraria e l'eventuale commento
+   inserito dal dipendente (motivo della differenza, codice malattia o
+   nota di assenza). I giorni di Chiusura, Ferie, malattia e assenza
+   riportano lo stato e nessuna ora dovuta né differenza. I giorni di una
+   settimana non ancora confermata compaiono comunque, con lo stato
+   segnato "da confermare";
+5. in fondo alla tabella, il **totale riassuntivo del mese** (ore dovute,
+   erogate, differenza);
+6. il **prospetto monte ore**: il saldo attuale in ore, con la sua
+   descrizione e la legenda del segno (negativo = ore che il dipendente
+   deve ancora erogare, positivo = ore già erogate in più, vedi
+   [19 - monte-ore.md](19%20-%20monte-ore.md))
+E questo è lo stesso PDF, prodotto dallo stesso codice, che l'admin
+scarica da `/admin/ore-lavoro` (tutto il personale) e dalla vista
+mensile del singolo dipendente (solo quella persona, vedi
+[18](18%20-%20report-ore-lavoro.md)): il layout della pagina di una
+persona è identico nei tre casi
 
 ## Scenario: testo lungo nelle celle delle tabelle PDF
 Dato che una cella di una tabella di un PDF (presenze, pasti, ore di

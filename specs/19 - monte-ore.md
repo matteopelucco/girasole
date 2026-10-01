@@ -125,12 +125,14 @@ Dato che l'admin registra movimenti che portano il saldo sotto zero
 Allora il saldo può scendere sotto zero, senza alcun blocco: rappresenta
 ore che il dipendente deve ancora erogare ("da recuperare")
 
-## Scenario: il monte ore completo nei PDF dei report
-Dato che il cron invia il riepilogo settimanale (email giornaliera) o il
-PDF mensile delle ore del personale
-Allora per ogni dipendente riportano la situazione completa del monte
-ore: saldo attuale, movimenti registrati dall'admin e calcolo mese per
-mese (vedi [52 - report-email-automatico.md](52%20-%20report-email-automatico.md))
+## Scenario: il saldo del monte ore nei report
+Dato che il cron invia il riepilogo settimanale (email giornaliera) o che
+l'admin scarica il PDF mensile delle ore (del personale o di un
+dipendente)
+Allora per ogni dipendente riportano il saldo attuale del monte ore, con
+la convenzione del segno di questa pagina e la sua legenda (vedi
+[52 - report-email-automatico.md](52%20-%20report-email-automatico.md)):
+movimenti e calcolo mese per mese restano nella pagina "Ore di lavoro"
 
 ## Settimane storiche con straordinario residuo
 Solo per le settimane confermate prima del calcolo "a netto pieno", con
@@ -208,7 +210,7 @@ momento la decisione presa, non più i pulsanti
   conferma; ogni nuova conferma scrive `straordinario_residuo = 0`.
 - Il riepilogo ore della settimana corrente nel corpo dell'email
   giornaliera e il PDF mensile delle ore del personale, entrambi con il
-  monte ore completo, sono descritti in
+  saldo del monte ore, sono descritti in
   [52 - report-email-automatico.md](52%20-%20report-email-automatico.md).
 
 ## Fuori scope in questa fase

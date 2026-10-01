@@ -1,34 +1,16 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import {
-  lunediSettimana,
-  sommaGiorni,
-  giorniSettimana,
-  formattaDataCorta,
-  formattaIntervalloItaliano,
-  primoGiornoMese,
-  ultimoGiornoMese,
-  formattaMeseItaliano,
-  oggi,
-} from '@/lib/date';
-import {
-  totaliSettimanaOreLavoro,
-  oreOrdinariePreviste,
-  deltaGiornoPerStatoOreLavoro,
-  isStatoNeutroOreLavoro,
-  formattaOreConSegno,
-  ETICHETTE_STATO_ORE_LAVORO,
-  type StatoGiornoOreLavoro,
-} from '@/lib/oreLavoro';
+import { lunediSettimana, formattaIntervalloItaliano, primoGiornoMese, ultimoGiornoMese, formattaMeseItaliano, oggi } from '@/lib/date';
+import { totaliSettimanaOreLavoro } from '@/lib/oreLavoro';
 import { saldiPerUtente, saldoMonteOreBreve } from '@/lib/monteOre';
-import { dataDiMovimento } from '@/lib/monteOreMensile';
-import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
+import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
+import { righeMeseOreLavoro, settimaneDelMese } from '@/lib/oreLavoroMese';
+import { personaPdfOreLavoro, nomeFilePdfOreLavoroPersona } from '@/lib/pdfOreLavoroDati';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
 import { righeOSollevaErrore, STILE_TABELLA, STILE_CELLA, STILE_CELLA_NUMERO } from '@/lib/reportPresenze';
 import {
   generaPdfOreLavoroMensile,
   nomeFilePdfOreLavoroMensile,
   type PersonaPdfOreLavoro,
-  type GiornoPdfOreLavoro,
 } from '@/lib/pdfOreLavoro';
 
 // Aggregazione delle ore di lavoro del personale per il report notturno
@@ -40,13 +22,19 @@ import {
 
 type PersonaAbilitata = { id: string; nome: string; cognome: string; profilo_orario_id: string | null };
 
-async function personaleAbilitatoOreLavoro(supabase: ReturnType<typeof createAdminClient>): Promise<PersonaAbilitata[]> {
-  const r = await supabase
+// `utenteId` (opzionale) restringe a una sola persona: è il PDF del singolo
+// dipendente, che resta vuoto se quella persona non è abilitata.
+async function personaleAbilitatoOreLavoro(
+  supabase: ReturnType<typeof createAdminClient>,
+  utenteId?: string
+): Promise<PersonaAbilitata[]> {
+  let query = supabase
     .from('profili')
     .select('id, nome, cognome, profilo_orario_id')
     .eq('abilitato_ore_lavoro', true)
     .order('cognome');
-  return righeOSollevaErrore(r, 'lettura personale abilitato al report ore');
+  if (utenteId) query = query.eq('id', utenteId);
+  return righeOSollevaErrore(await query, 'lettura personale abilitato al report ore');
 }
 
 // Corpo HTML del riepilogo ore della settimana corrente per il report
@@ -110,120 +98,102 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(finoAData: string): 
   );
 }
 
-// PDF mensile delle ore di lavoro del personale, completo di nome file
-// (specs/52, specs/18): l'unica fonte sia per l'allegato del cron notturno
-// sia per il download diretto dell'admin da `/admin/ore-lavoro/pdf`.
-// `mese` nel formato 'AAAA-MM'. Usa la service_role key: chi chiama deve
-// aver già verificato il ruolo (il cron con il suo secret, la route di
-// download con requireAdmin).
-export async function pdfOreLavoroMensile(
+// PDF mensile delle ore di lavoro, completo di nome file (specs/52,
+// specs/18): l'unica fonte sia per l'allegato del cron notturno sia per i
+// download dell'admin. `mese` nel formato 'AAAA-MM'. Usa la service_role
+// key: chi chiama deve aver già verificato il ruolo (il cron con il suo
+// secret, le route di download con requireAdmin).
+type PdfOreLavoro = { filename: string; content: Uint8Array };
+
+// Tutto il personale abilitato: allegato del cron e download da
+// `/admin/ore-lavoro/pdf`.
+export async function pdfOreLavoroMensile(mese: string, generatoIl: Date): Promise<PdfOreLavoro> {
+  const personale = await personaleAbilitatoOreLavoro(createAdminClient());
+  return {
+    filename: nomeFilePdfOreLavoroMensile(mese),
+    content: await pdfDelPersonale(mese, generatoIl, personale),
+  };
+}
+
+// Una sola persona, dalla sua vista mensile (`/admin/ore-lavoro/pdf?utente=`):
+// stesso codice e stesso layout del PDF del personale. null se la persona
+// non esiste o non è abilitata al report ore.
+export async function pdfOreLavoroMensileDipendente(
   mese: string,
-  generatoIl: Date
-): Promise<{ filename: string; content: Uint8Array }> {
-  const persone = await personePdfOreLavoroMensile(mese);
-  const content = await generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
-  return { filename: nomeFilePdfOreLavoroMensile(mese), content };
+  generatoIl: Date,
+  utenteId: string
+): Promise<PdfOreLavoro | null> {
+  const [persona] = await personaleAbilitatoOreLavoro(createAdminClient(), utenteId);
+  if (!persona) return null;
+  return {
+    filename: nomeFilePdfOreLavoroPersona(mese, persona.cognome, persona.nome),
+    content: await pdfDelPersonale(mese, generatoIl, [persona]),
+  };
+}
+
+async function pdfDelPersonale(mese: string, generatoIl: Date, personale: PersonaAbilitata[]): Promise<Uint8Array> {
+  const persone = await personePdfOreLavoroMensile(mese, personale);
+  return generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
 }
 
 // Dati per il PDF mensile delle ore di lavoro (specs/52, scenario "PDF
-// mensile delle ore del personale in allegato"): una voce per persona
-// abilitata, limitata alle settimane del mese già confermate (specs/18).
-// `mese` nel formato 'YYYY-MM' (lib/date.ts).
-export async function personePdfOreLavoroMensile(mese: string): Promise<PersonaPdfOreLavoro[]> {
-  const supabase = createAdminClient();
-  const personale = await personaleAbilitatoOreLavoro(supabase);
+// mensile delle ore del personale in allegato"): una voce per persona con
+// gli stessi dati della vista mensile admin (lib/oreLavoroMese.ts), tutti i
+// giorni del mese e lo stato di conferma di ogni settimana. `mese` nel
+// formato 'YYYY-MM' (lib/date.ts).
+async function personePdfOreLavoroMensile(mese: string, personale: PersonaAbilitata[]): Promise<PersonaPdfOreLavoro[]> {
   if (!personale.length) return [];
+  const supabase = createAdminClient();
 
   const inizioMese = primoGiornoMese(mese);
   const fineMese = ultimoGiornoMese(mese);
-
-  const settimane: string[] = [];
-  for (let lunedi = lunediSettimana(inizioMese); lunedi <= fineMese; lunedi = sommaGiorni(lunedi, 7)) {
-    settimane.push(lunedi);
-  }
-
+  const settimane = settimaneDelMese(mese);
+  const oggiData = oggi();
   const idPersonale = personale.map((p) => p.id);
-  const [rConfermate, rMovimenti] = await Promise.all([
+
+  const [rGiorni, rConfermate, rMovimenti, chiusure] = await Promise.all([
+    supabase
+      .from('ore_lavoro_giorni')
+      .select('utente_id, data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
+      .in('utente_id', idPersonale)
+      .gte('data', inizioMese)
+      .lte('data', fineMese),
     supabase
       .from('ore_lavoro_settimane')
       .select('utente_id, settimana_inizio')
       .in('utente_id', idPersonale)
       .in('settimana_inizio', settimane),
-    supabase
-      .from('monte_ore_movimenti')
-      .select('utente_id, variazione, nota, created_at')
-      .in('utente_id', idPersonale)
-      .order('created_at', { ascending: true }),
+    supabase.from('monte_ore_movimenti').select('utente_id, variazione').in('utente_id', idPersonale),
+    chiusurePerPeriodo(supabase, inizioMese, fineMese),
   ]);
+  const giorni = righeOSollevaErrore(rGiorni, 'lettura giorni ore di lavoro');
   const confermate = righeOSollevaErrore(rConfermate, 'lettura settimane ore di lavoro confermate');
   const movimenti = righeOSollevaErrore(rMovimenti, 'lettura movimenti monte ore');
 
   const confermateSet = new Set(confermate.map((c) => `${c.utente_id}|${c.settimana_inizio}`));
-  const saldiAttuali = saldiPerUtente(movimenti);
+  const saldi = saldiPerUtente(movimenti);
 
   const risultati: PersonaPdfOreLavoro[] = [];
   for (const persona of personale) {
-    const settimaneConfermate = settimane.filter((s) => confermateSet.has(`${persona.id}|${s}`));
-    const settimaneNonConfermate = settimane.filter((s) => !confermateSet.has(`${persona.id}|${s}`));
-
     const profiloOrario = await recuperaProfiloOrarioConNome(supabase, persona.profilo_orario_id);
-
-    let giorniPersona: GiornoPdfOreLavoro[] = [];
-    if (settimaneConfermate.length) {
-      const dateSettimane = settimaneConfermate.flatMap((s) => giorniSettimana(s));
-      const rGiorni = await supabase
-        .from('ore_lavoro_giorni')
-        .select('data, stato, ore_ordinarie, ore_straordinarie, motivo_straordinario, codice_malattia, nota_assenza')
-        .eq('utente_id', persona.id)
-        .in('data', dateSettimane)
-        .order('data', { ascending: true });
-      const righeGiorni = righeOSollevaErrore(rGiorni, 'lettura giorni ore di lavoro');
-
-      giorniPersona = righeGiorni
-        .filter((r) => r.data >= inizioMese && r.data <= fineMese)
-        .map((r) => {
-          const oreDovute = isStatoNeutroOreLavoro(r.stato) ? 0 : oreOrdinariePreviste(profiloOrario, r.data);
-          const oreOrdinarie = Number(r.ore_ordinarie);
-          const oreStraordinarie = Number(r.ore_straordinarie);
-          return {
-            data: formattaDataCorta(r.data),
-            stato: ETICHETTE_STATO_ORE_LAVORO[r.stato as StatoGiornoOreLavoro] ?? r.stato,
-            oreDovute: String(oreDovute),
-            oreOrdinarie: String(oreOrdinarie),
-            oreStraordinarie: String(oreStraordinarie),
-            delta: formattaOreConSegno(deltaGiornoPerStatoOreLavoro(r.stato, oreDovute, oreOrdinarie, oreStraordinarie)),
-            dettaglio: r.motivo_straordinario || r.codice_malattia || r.nota_assenza || '',
-          };
-        });
-    }
-
-    // Situazione completa del monte ore (specs/19, specs/52): gestito a
-    // mano dall'admin — movimenti registrati e calcolo mese per mese.
-    const movimentiPersona = movimenti.filter((m) => m.utente_id === persona.id);
-    const calcoloMensile = await calcoloMensilePerUtente(supabase, {
-      utenteId: persona.id,
-      profiloOrario,
-      oggiData: oggi(),
-      movimenti: movimentiPersona,
-    });
-
-    risultati.push({
-      nome: `${persona.nome} ${persona.cognome}`.trim(),
-      profiloOrarioNome: profiloOrario?.nome ?? null,
-      profiloOrarioDettaglio: profiloOrario
-        ? `Lun ${profiloOrario.ore_lunedi}h · Mar ${profiloOrario.ore_martedi}h · Mer ${profiloOrario.ore_mercoledi}h · Gio ${profiloOrario.ore_giovedi}h · Ven ${profiloOrario.ore_venerdi}h`
-        : null,
-      giorni: giorniPersona,
-      settimaneNonConfermate: settimaneNonConfermate.map((s) => formattaIntervalloItaliano(s, sommaGiorni(s, 6))),
-      saldoAttuale: saldiAttuali.get(persona.id) ?? 0,
-      movimenti: movimentiPersona.map((m) => ({
-        data: formattaDataCorta(dataDiMovimento(m.created_at)),
-        variazione: Number(m.variazione),
-        nota: m.nota ?? '',
-      })),
-      calcoloMensile: calcoloMensile.map((r) => ({ ...r, mese: formattaMeseItaliano(r.mese) })),
-    });
+    risultati.push(
+      personaPdfOreLavoro({
+        nome: `${persona.nome} ${persona.cognome}`.trim(),
+        profiloOrarioNome: profiloOrario?.nome ?? null,
+        profiloOrarioDettaglio: profiloOrario
+          ? `Lun ${profiloOrario.ore_lunedi}h · Mar ${profiloOrario.ore_martedi}h · Mer ${profiloOrario.ore_mercoledi}h · Gio ${profiloOrario.ore_giovedi}h · Ven ${profiloOrario.ore_venerdi}h`
+          : null,
+        righe: righeMeseOreLavoro({
+          mese,
+          oggiData,
+          salvati: giorni.filter((g) => g.utente_id === persona.id),
+          profiloOrario,
+          chiusure,
+        }),
+        settimane: settimane.map((lunedi) => ({ lunedi, confermata: confermateSet.has(`${persona.id}|${lunedi}`) })),
+        saldoAttuale: saldi.get(persona.id) ?? 0,
+      })
+    );
   }
-
   return risultati;
 }
