@@ -95,8 +95,8 @@ della maestra, `5x` amministrazione.
   giorni chiusi, weekend inclusi
 - [54 - profili-orari.md](54%20-%20profili-orari.md) — definizione
   (admin) di profili orari settimanali e loro assegnazione al
-  personale, propedeutica alla futura registrazione delle ore di
-  lavoro
+  personale, che può consultare il proprio in sola lettura
+  (`/dashboard/profilo-orario`)
 - [55 - costi-bambino.md](55%20-%20costi-bambino.md) — sezione "Costi"
   sulla scheda bambino: prezzo retta, prezzo buono pasto, abbonamento
   pre-asilo/post-asilo, email di promemoria — primo passo di Fase 2
