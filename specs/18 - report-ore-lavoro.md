@@ -379,6 +379,26 @@ Allora la settimana risulta confermata, con data/ora della conferma
 mostrate a schermo — esattamente come se l'avesse confermata la persona
 stessa
 
+## Scenario: l'admin riapre una settimana già confermata
+Dato che sono autenticato come admin
+E sono sulle ore di un dipendente, per una settimana già confermata
+Quando premo "Riapri settimana" e confermo l'azione ("Sì, riapri")
+Allora la settimana risulta di nuovo non confermata: scompare il messaggio
+"Settimana confermata il ..." e compare di nuovo "Conferma settimana"
+E il dipendente può di nuovo modificare le ore di quella settimana
+(stessa vista e stesse regole di una settimana non ancora confermata) e
+deve riconfermarla
+E le ore già salvate restano invariate; il monte ore non cambia (è gestito
+a mano, vedi [19 - monte-ore.md](19%20-%20monte-ore.md))
+
+## Scenario: solo l'admin può riaprire una settimana
+Dato che sto guardando le mie ore di una settimana già confermata
+E non sono admin
+Allora non esiste alcun pulsante "Riapri settimana" e la settimana resta
+di sola lettura
+E nemmeno inviando direttamente l'azione la settimana viene riaperta: il
+controllo di ruolo avviene sul server
+
 ## Scenario: l'admin naviga tra le settimane di un dipendente
 Dato che sono sulle ore di un dipendente
 Quando premo "←" o "→" per cambiare settimana
@@ -543,6 +563,3 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   `data` stessa con la data odierna.
 
 ## Fuori scope in questa fase
-- "Riaprire" una settimana già confermata (renderla di nuovo
-  modificabile dal personale): nessuna azione la offre in questa fase.
-  Backlog: issue [#90](https://github.com/matteopelucco/girasole/issues/90).
