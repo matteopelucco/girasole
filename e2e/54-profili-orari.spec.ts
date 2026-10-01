@@ -7,7 +7,7 @@
 // sull'account admin viene ripristinata a "Nessun profilo orario"
 // (try/finally, stesso pattern di 17-ore-di-lavoro.spec.ts).
 import { test, expect, type Browser, type Page } from '@playwright/test';
-import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 test.describe('54 — Profili orari', () => {
   test.describe('come admin', () => {
@@ -121,8 +121,7 @@ test.describe('54 — Profili orari', () => {
         await page.goto('/admin/maestre');
         const rigaPropria = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await rigaPropria.getByLabel('Profilo orario').selectOption({ label: nome });
-        await rigaPropria.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaPropria.getByRole('button', { name: 'Aggiorna' }));
         await page.reload();
         // L'opzione selezionata resta quella scelta anche dopo il
         // ricaricamento (non torna a "Nessun profilo orario").
@@ -133,8 +132,7 @@ test.describe('54 — Profili orari', () => {
         // Rimozione dell'assegnazione.
         const rigaDaAggiornare = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await rigaDaAggiornare.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
-        await rigaDaAggiornare.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaDaAggiornare.getByRole('button', { name: 'Aggiorna' }));
         await page.reload();
         await expect(
           page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Profilo orario')

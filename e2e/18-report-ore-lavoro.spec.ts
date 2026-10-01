@@ -20,7 +20,7 @@
 // test.skip) solo se qualcuno l'ha già confermata manualmente questa
 // settimana.
 import { test, expect, type Page } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
 
 // Ore ordinarie mostrate (testo, non un campo: specs/18) del giorno
 // `indice` della settimana (0 = lunedì ... 5 = sabato).
@@ -70,8 +70,7 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         await page.goto('/dashboard/ore-lavoro');
@@ -132,8 +131,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.goto('/admin/maestre');
         const rigaAssegna = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await rigaAssegna.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
-        await rigaAssegna.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaAssegna.getByRole('button', { name: 'Aggiorna' }));
 
         await page.goto('/dashboard/ore-lavoro');
         await expect(oreOrdinarieGiorno(page, 0)).toHaveText('7h');
@@ -230,7 +228,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // salvata nei dati esistenti senza cambiare monte ore e report").
         await page.getByLabel('Differenza ore Lunedì').fill('-0.5');
         await page.getByLabel('Motivo Lunedì').fill('Uscita anticipata E2E');
-        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await expect(alertApp(page)).toHaveCount(0);
         await page.waitForTimeout(1000);
         await page.reload();
@@ -263,8 +261,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Con il codice: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
         await page.getByLabel('Codice malattia Martedì').fill('COD-E2E');
-        await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await page.reload();
         await expect(page.getByLabel('Stato Martedì')).toHaveValue('malattia');
         await expect(page.getByLabel('Codice malattia Martedì')).toHaveValue('COD-E2E');
@@ -277,8 +274,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Con la nota: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Mercoledì').selectOption('assenza');
         await page.getByLabel('Nota assenza Mercoledì').fill('Visita E2E');
-        await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await page.reload();
         await expect(page.getByLabel('Stato Mercoledì')).toHaveValue('assenza');
         await expect(page.getByLabel('Nota assenza Mercoledì')).toHaveValue('Visita E2E');
@@ -290,8 +286,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Stato Sabato').selectOption('lavorativo');
         await page.getByLabel('Differenza ore Sabato').fill('3');
         await page.getByLabel('Motivo Sabato').fill('Pulizie E2E');
-        await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await page.reload();
         await expect(page.getByLabel('Stato Sabato')).toHaveValue('lavorativo');
         await expect(page.getByLabel('Differenza ore Sabato')).toHaveValue('3');
@@ -305,8 +300,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Stato Giovedì').selectOption('ferie');
         await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
         await expect(page.getByText('non conta nel calcolo del monte ore', { exact: false }).first()).toBeVisible();
-        await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await page.reload();
         await expect(page.getByLabel('Stato Giovedì')).toHaveValue('ferie');
         await expect(page.getByLabel('Differenza ore Giovedì')).toHaveCount(0);
@@ -353,8 +347,7 @@ test.describe('18 — Report ore di lavoro', () => {
           const motivoPrecedente = await page.getByLabel('Motivo Lunedì').count() ? await page.getByLabel('Motivo Lunedì').inputValue() : '';
           await page.getByLabel('Differenza ore Lunedì').fill('1');
           await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
-          await page.getByRole('button', { name: 'Salva modifiche' }).click();
-          await page.waitForTimeout(1000);
+          await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
           await page.reload();
           await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('1');
 
@@ -421,8 +414,7 @@ test.describe('18 — Report ore di lavoro', () => {
         if ((await rigaRipristina.getByLabel('Profilo orario').count()) > 0) {
           await rigaRipristina.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
         }
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaRipristina.getByRole('button', { name: 'Aggiorna' }));
 
         await page.goto('/admin/profili-orari');
         const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
@@ -510,8 +502,7 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         // Scenario: l'admin apre l'elenco del personale abilitato.
@@ -671,8 +662,7 @@ test.describe('18 — Report ore di lavoro', () => {
       const rigaAssegna = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAssegna.getByLabel('Ore di lavoro').check();
       await rigaAssegna.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
-      await rigaAssegna.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAssegna.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
@@ -692,8 +682,7 @@ test.describe('18 — Report ore di lavoro', () => {
         const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
         await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
         await rigaRipristina.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaRipristina.getByRole('button', { name: 'Aggiorna' }));
 
         await page.goto('/admin/profili-orari');
         const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
@@ -723,8 +712,7 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         await page.goto('/admin/ore-lavoro');
@@ -781,8 +769,7 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });

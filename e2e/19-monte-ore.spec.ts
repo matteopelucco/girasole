@@ -41,8 +41,7 @@ test.describe('19 — Monte ore', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
@@ -90,8 +89,7 @@ test.describe('19 — Monte ore', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         // Scenario: l'admin vede il monte ore di ciascuna persona
@@ -194,8 +192,7 @@ test.describe('19 — Monte ore', () => {
       await page.goto('/admin/maestre');
       const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await rigaAbilita.getByRole('button', { name: 'Aggiorna' }).click();
-      await page.waitForTimeout(1000);
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         await page.goto('/admin/ore-lavoro');
