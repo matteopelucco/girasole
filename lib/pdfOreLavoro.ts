@@ -115,22 +115,17 @@ export async function generaPdfOreLavoroMensile(
       });
       g.y -= ALTEZZA_RIGA + 8;
     } else {
-      g.nuovaPaginaSeServe(1);
-      disegnaRiga(g.pagina, font, fontGrassetto, INTESTAZIONI, larghezze, g.y, true);
-      g.y -= ALTEZZA_RIGA;
+      disegnaRiga(g, font, fontGrassetto, INTESTAZIONI, larghezze, true);
 
       for (const giorno of persona.giorni) {
-        g.nuovaPaginaSeServe(1);
         disegnaRiga(
-          g.pagina,
+          g,
           font,
           fontGrassetto,
           [giorno.data, giorno.stato, giorno.oreDovute, giorno.oreOrdinarie, giorno.oreStraordinarie, giorno.delta, giorno.dettaglio],
           larghezze,
-          g.y,
           false
         );
-        g.y -= ALTEZZA_RIGA;
       }
       g.y -= 8;
     }
@@ -170,20 +165,16 @@ export async function generaPdfOreLavoroMensile(
       g.pagina.drawText('Nessun movimento registrato.', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font });
       g.y -= ALTEZZA_RIGA;
     } else {
-      disegnaRiga(g.pagina, font, fontGrassetto, INTESTAZIONI_MOVIMENTI, larghezzeMovimenti, g.y, true);
-      g.y -= ALTEZZA_RIGA;
+      disegnaRiga(g, font, fontGrassetto, INTESTAZIONI_MOVIMENTI, larghezzeMovimenti, true);
       for (const movimento of persona.movimenti) {
-        g.nuovaPaginaSeServe(1);
         disegnaRiga(
-          g.pagina,
+          g,
           font,
           fontGrassetto,
           [movimento.data, saldoMonteOreBreve(movimento.variazione), movimento.nota],
           larghezzeMovimenti,
-          g.y,
           false
         );
-        g.y -= ALTEZZA_RIGA;
       }
     }
     g.y -= 6;
@@ -195,12 +186,10 @@ export async function generaPdfOreLavoroMensile(
       g.pagina.drawText('Nessun dato.', { x: MARGINE, y: g.y, size: DIMENSIONE_TESTO, font });
       g.y -= ALTEZZA_RIGA;
     } else {
-      disegnaRiga(g.pagina, font, fontGrassetto, INTESTAZIONI_CALCOLO, larghezzeCalcolo, g.y, true);
-      g.y -= ALTEZZA_RIGA;
+      disegnaRiga(g, font, fontGrassetto, INTESTAZIONI_CALCOLO, larghezzeCalcolo, true);
       for (const riga of persona.calcoloMensile) {
-        g.nuovaPaginaSeServe(1);
         disegnaRiga(
-          g.pagina,
+          g,
           font,
           fontGrassetto,
           [
@@ -211,10 +200,8 @@ export async function generaPdfOreLavoroMensile(
             saldoMonteOreBreve(riga.saldo),
           ],
           larghezzeCalcolo,
-          g.y,
           false
         );
-        g.y -= ALTEZZA_RIGA;
       }
     }
   });
