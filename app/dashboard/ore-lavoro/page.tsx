@@ -43,6 +43,7 @@ import { SelettoreVistaOreLavoro } from '@/components/SelettoreVistaOreLavoro';
 import {
   salvaSettimanaOreLavoro,
   confermaSettimanaOreLavoro,
+  riapriSettimanaOreLavoro,
   aggiungiMovimentoMonteOre,
   eliminaMovimentoMonteOre,
   modificaMovimentoMonteOre,
@@ -383,6 +384,17 @@ export default async function OreLavoroPage({
         />
 
         <CalcoloMensileMonteOre righe={calcoloMensile} />
+
+        {confermata && modalitaAdmin && (
+          <ConfermaAzione
+            azione={riapriSettimanaOreLavoro}
+            campiNascosti={{ settimana_inizio: lunedi, utente_id: utenteTarget.id }}
+            etichetta="Riapri settimana"
+            messaggioConferma={`Riaprire la settimana per ${utenteTarget.nome}? Potrà di nuovo modificare le ore e dovrà riconfermarla.`}
+            etichettaConferma="Sì, riapri"
+            tono="neutro"
+          />
+        )}
 
         {!confermata && (
           <ConfermaAzione
