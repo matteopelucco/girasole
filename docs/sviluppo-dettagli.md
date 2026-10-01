@@ -179,6 +179,14 @@ finché non risulta tutto verde.
 - Le credenziali degli account di test (`E2E_*`) vanno in `.env.local`
   (mai committate). Un ruolo mancante fa saltare solo i test che lo
   richiedono: la suite resta comunque eseguibile parzialmente.
+- **Quali test e2e sono saltati, e perché (issue #176)**: nella pagina del
+  run di CI, job `e2e`, sezione *Summary*, il riepilogo "Test e2e saltati"
+  elenca file, titolo e motivo di ogni skip più il totale per motivo. In CI
+  Playwright scrive anche `playwright-json/report.json` (reporter `json`);
+  lo legge `scripts/riepilogo-skip-e2e.mts` (logica pura in
+  `lib/playwright-skip-riepilogo.ts`). Lo step è informativo e non fa mai
+  fallire il job. Il motivo è la descrizione di `test.skip(cond, 'motivo')`:
+  scrivila sempre, o comparirà "motivo non indicato".
 - Ogni salvataggio seguito da `reload`/`goto`/lettura di un valore
   calcolato dal server deve usare `clickEAttendiAzione`
   (`e2e/helpers.ts`); i valori calcolati dal server si leggono con
