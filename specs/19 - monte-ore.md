@@ -15,6 +15,21 @@ calcolo automatico lo modifica**, nemmeno alla conferma di una settimana
 (che serve solo a bloccare la modifica autonoma delle ore da parte del
 personale, vedi [18]).
 
+**Convenzione del segno (unica, in tutta l'app e nei PDF).** Il saldo e i
+movimenti sono sempre espressi in ore **con il segno esplicito**:
+- **positivo (+)** = ore che il dipendente **ha già erogato** in più, cioè
+  ore **a credito**;
+- **negativo (−)** = ore che il dipendente **deve ancora erogare**, cioè
+  ore **da recuperare**;
+- **zero** = **in pari**.
+
+È lo stesso significato della "Differenza ore" di [18] (erogate − previste:
++5h = 5 ore fatte in più). Sono ore di lavoro, non importi: nulla a che
+vedere con il credito/debito economico delle rette ([58]). Le etichette
+dicono sempre il significato, non solo il segno: "+3h a credito (ore già
+erogate in più)", "−3h da recuperare (ore ancora da erogare)", "0h in pari"
+(`descrizioneSaldoMonteOre`, `lib/monteOre.ts`).
+
 Accanto al saldo, la scheda ore di ogni persona mostra sempre il
 **calcolo completo, mese per mese**: ore previste dal profilo orario,
 differenza (ore fatte in più o in meno rispetto al previsto) e
@@ -66,10 +81,11 @@ al nome
 
 ## Scenario: l'admin registra un movimento manuale di monte ore
 Dato che sono sulle ore di un dipendente (`/dashboard/ore-lavoro?utente=<id>`)
-Quando scelgo se aumentare o ridurre il monte ore, indico un numero di
-ore e una nota, e confermo
-Allora viene registrato un movimento manuale con quella variazione e
-quella nota
+Quando scelgo il verso — "Il dipendente ha erogato ore in più (+)" oppure
+"Il dipendente deve ancora erogare ore (−)" — indico un numero di ore e una
+nota, e confermo
+Allora viene registrato un movimento manuale con quella variazione (con
+segno) e quella nota
 E il saldo mostrato si aggiorna di conseguenza
 E vedo lo storico dei movimenti di quella persona, dal più recente
 
@@ -83,7 +99,7 @@ E nessun movimento viene registrato
 Dato che sono sulle ore di un dipendente come admin, e lo storico
 mostra un movimento (manuale, o storico automatico)
 Quando premo "Modifica" sulla sua riga, cambio le ore, il verso
-(aumenta/riduce) o la nota, e confermo
+(+ a credito / − da recuperare) o la nota, e confermo
 Allora il movimento riporta i nuovi valori, mantenendo la data di
 registrazione
 E il saldo mostrato si aggiorna di conseguenza
@@ -107,7 +123,7 @@ che non venga da un admin
 ## Scenario: il monte ore può risultare negativo
 Dato che l'admin registra movimenti che portano il saldo sotto zero
 Allora il saldo può scendere sotto zero, senza alcun blocco: rappresenta
-un margine di ore già restituite in anticipo
+ore che il dipendente deve ancora erogare ("da recuperare")
 
 ## Scenario: il monte ore completo nei PDF dei report
 Dato che il cron invia il riepilogo settimanale (email giornaliera) o il
@@ -130,7 +146,7 @@ sono in attesa di una decisione dell'admin, senza alcun modo di
 deciderlo lui stesso
 E quando l'admin apre la stessa settimana (dalla propria vista o da
 `/dashboard/ore-lavoro?utente=<id>`) vede lo stesso avviso, con due
-pulsanti per decidere: "Metti a pagamento mensile" e "Scala dal monte
+pulsanti per decidere: "Metti a pagamento mensile" e "Aggiungi al monte
 ore"
 
 ### Scenario: l'admin mette lo straordinario residuo storico a pagamento mensile
@@ -143,14 +159,13 @@ considerato pagato fuori da quest'app, in busta paga)
 E l'avviso in sola lettura per il diretto interessato mostra da quel
 momento la decisione presa, non più i pulsanti
 
-### Scenario: l'admin scala lo straordinario residuo storico dal monte ore
+### Scenario: l'admin aggiunge lo straordinario residuo storico al monte ore
 Dato che l'admin è su una di queste settimane storiche, con straordinario
 residuo non ancora deciso
-Quando preme "Scala dal monte ore"
+Quando preme "Aggiungi al monte ore (a credito)"
 Allora la decisione viene registrata (con data/ora e chi l'ha presa)
 E viene registrato un movimento di monte ore per quella settimana,
-negativo, pari allo straordinario residuo (il monte ore scala, si riduce
-il debito)
+positivo, pari allo straordinario residuo (ore già erogate, a credito)
 E l'avviso in sola lettura per il diretto interessato mostra da quel
 momento la decisione presa, non più i pulsanti
 
@@ -162,12 +177,14 @@ momento la decisione presa, non più i pulsanti
   generati da nessuna azione).
 - Il saldo attuale di una persona è la somma di tutte le sue
   `variazione`: nessun campo separato da tenere sincronizzato a mano.
-- Convenzione di segno di `variazione`: **positiva** = il monte ore
-  aumenta (cresce il debito verso la struttura); **negativa** = il monte
-  ore scala (si riduce il debito, o va in margine sotto zero). La
-  differenza ore del calcolo mensile ha segno opposto (ore fatte in più
-  = differenza positiva, che l'admin può riflettere con un movimento
-  negativo).
+- Convenzione di segno di `variazione`: **positiva** = ore a credito (già
+  erogate in più); **negativa** = ore da recuperare (ancora da erogare),
+  come descritto in Obiettivo. Ha lo stesso segno della differenza ore del
+  calcolo mensile (ore fatte in più = differenza positiva), che l'admin può
+  riflettere con un movimento positivo. Nessuna migration: i movimenti
+  inseriti a mano dall'admin seguono già questa convenzione; quelli storici
+  generati dal vecchio calcolo automatico (segno opposto) sono stati rimossi a
+  mano, e comunque ora l'admin può correggerli o eliminarli dalla scheda.
 - Il calcolo mese per mese (`lib/monteOre.ts`,
   `calcoloMensileMonteOre`) usa le stesse funzioni pure della vista
   mensile di [18] (`lib/oreLavoroMese.ts`): per ogni mese, previste e

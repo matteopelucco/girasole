@@ -38,7 +38,8 @@ describe('generaPdfOreLavoroMensile', () => {
     };
     const bytes = await generaPdfOreLavoroMensile('settembre 2026', [conMonteOre], GENERATO_IL);
     const testo = await testoPagina(bytes, 0);
-    expect(testo).toContain('Saldo attuale: 4.5h');
+    expect(testo).toContain('Saldo attuale: +4.5h a credito (ore già erogate in più)');
+    expect(testo).toContain('da recuperare');
     expect(testo).toContain('Recupero concordato');
     expect(testo).toContain('-2h');
     expect(testo).toContain('Calcolo mese per mese');

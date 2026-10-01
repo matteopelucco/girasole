@@ -95,7 +95,8 @@ abilitata al report ore (vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)) — con nome, ore
 ordinarie e straordinarie registrate nella settimana che contiene il
 giorno appena concluso (fino a quel giorno incluso, "a tutt'oggi"), il
-totale, e il saldo di monte ore attuale (vedi
+totale, e il saldo di monte ore attuale con il segno e l'etichetta che
+ne dice il significato, es. "+3h a credito" o "-3h da recuperare" (vedi
 [19 - monte-ore.md](19%20-%20monte-ore.md))
 E se nessuna persona è abilitata al report ore, la sezione mostra
 esplicitamente che non c'è personale abilitato, invece di essere omessa
@@ -127,7 +128,8 @@ escluso, non semplicemente omesso in silenzio)
 E in fondo alla pagina di ciascuna persona compare la sezione "Monte
 ore" con la **situazione completa** (vedi
 [19 - monte-ore.md](19%20-%20monte-ore.md), gestito a mano dall'admin):
-il saldo attuale, l'elenco di tutti i movimenti registrati (data,
+il saldo attuale (con segno e significato: a credito / da recuperare /
+in pari), l'elenco di tutti i movimenti registrati (data,
 variazione con segno, nota) e la tabella "calcolo mese per mese" (mese,
 ore previste, differenza ore, movimenti del mese, saldo a fine mese)
 

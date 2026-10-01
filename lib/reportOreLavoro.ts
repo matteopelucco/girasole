@@ -19,7 +19,7 @@ import {
   ETICHETTE_STATO_ORE_LAVORO,
   type StatoGiornoOreLavoro,
 } from '@/lib/oreLavoro';
-import { saldiPerUtente } from '@/lib/monteOre';
+import { saldiPerUtente, saldoMonteOreBreve } from '@/lib/monteOre';
 import { dataDiMovimento } from '@/lib/monteOreMensile';
 import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
@@ -93,7 +93,7 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(finoAData: string): 
         `<td style="${STILE_CELLA_NUMERO}">${totali.ordinarie}</td>` +
         `<td style="${STILE_CELLA_NUMERO}">${totali.straordinarie}</td>` +
         `<td style="${STILE_CELLA_NUMERO}">${totali.totale}</td>` +
-        `<td style="${STILE_CELLA_NUMERO}">${saldo}</td></tr>`
+        `<td style="${STILE_CELLA_NUMERO}">${saldoMonteOreBreve(saldo)}</td></tr>`
       );
     })
     .join('');

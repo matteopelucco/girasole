@@ -98,7 +98,9 @@ test.describe('19 — Monte ore', () => {
         // nell'elenco del personale abilitato.
         await page.goto('/admin/ore-lavoro');
         const rigaDipendente = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await expect(rigaDipendente).toContainText(/Monte ore: -?\d+(\.\d+)?h/);
+        // Convenzione del segno (specs/19): saldo con segno esplicito e
+        // significato, mai un numero nudo.
+        await expect(rigaDipendente).toContainText(/Monte ore: [+-]?[0-9]+([.][0-9]+)?h (a credito|da recuperare|in pari)/);
 
         await rigaDipendente.getByRole('link').click();
         // L'elenco apre la vista mensile (specs/18), dove l'admin gestisce
@@ -117,16 +119,27 @@ test.describe('19 — Monte ore', () => {
         const saldoIniziale = await leggiSaldo();
         expect(Number.isFinite(saldoIniziale)).toBe(true);
 
+        // Label non equivoche: legenda del segno e nessun verso preselezionato.
+        await expect(page.getByText('Positivo (+): ore già erogate in più, a credito', { exact: false })).toBeVisible();
+        await expect(formAggiungi(page).locator('select[name="verso"]')).toHaveValue('');
+        await formAggiungi(page).locator('input[name="ore"]').fill('1');
+        await formAggiungi(page).locator('input[name="nota"]').fill('Senza verso E2E');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+        await expect(alertApp(page)).toContainText('Scegli');
+        // Il form non si azzera su un errore: svuoto la nota per il passo
+        // successivo ("senza nota").
+        await formAggiungi(page).locator('input[name="nota"]').fill('');
+
         // Scenario: un movimento manuale senza nota viene rifiutato.
         await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('aumenta');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toContainText('nota');
 
         // Con la nota: accettato, il saldo aumenta di 1.5h e compare
         // nello storico.
         await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('aumenta');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
         await formAggiungi(page).locator('input[name="nota"]').fill('Movimento E2E');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
@@ -139,7 +152,7 @@ test.describe('19 — Monte ore', () => {
         // blocco — una riduzione ben più grande di qualunque saldo
         // realistico (5000h) porta il saldo sotto zero senza errori.
         await formAggiungi(page).locator('input[name="ore"]').fill('5000');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('riduce');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('debito');
         await formAggiungi(page).locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
@@ -150,14 +163,14 @@ test.describe('19 — Monte ore', () => {
         // uguali e opposti (+5000h, poi -1.5h) riportano il saldo
         // esattamente al valore di partenza.
         await formAggiungi(page).locator('input[name="ore"]').fill('5000');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('aumenta');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
         await formAggiungi(page).locator('input[name="nota"]').fill('Correzione E2E (riduzione ampia)');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
         await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5, 2);
 
         await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('riduce');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('debito');
         await formAggiungi(page).locator('input[name="nota"]').fill('Correzione E2E');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         await expect(alertApp(page)).toHaveCount(0);
@@ -199,7 +212,7 @@ test.describe('19 — Monte ore', () => {
         // saldo si aggiorna e la riga riporta i nuovi valori.
         const notaMovimento = `Movimento E2E da eliminare ${Date.now()}`;
         await formAggiungi(page).locator('input[name="ore"]').fill('2');
-        await formAggiungi(page).locator('select[name="segno"]').selectOption('aumenta');
+        await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
         await formAggiungi(page).locator('input[name="nota"]').fill(notaMovimento);
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
         const rigaMovimento = page.locator('li', { hasText: notaMovimento });

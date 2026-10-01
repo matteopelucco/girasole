@@ -4,7 +4,7 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 
 const ETICHETTE_DECISIONE: Record<string, string> = {
   pagamento_mensile: 'messo a pagamento mensile',
-  monte_ore: 'scalato dal monte ore',
+  monte_ore: 'aggiunto al monte ore (a credito)',
 };
 
 // Straordinario residuo di una settimana confermata (specs/19 - monte-ore.md):
@@ -60,7 +60,7 @@ export function StraordinarioResiduo({
                 <input type="hidden" name="settimana_inizio" value={settimanaInizio} />
                 <input type="hidden" name="decisione" value="monte_ore" />
                 <PulsanteInvio className="rounded-lg border border-sky-300 bg-white px-3 py-1.5 text-sm font-medium text-sky-900 hover:bg-sky-100">
-                  Scala dal monte ore
+                  Aggiungi al monte ore (a credito)
                 </PulsanteInvio>
               </FormConEsito>
             </div>

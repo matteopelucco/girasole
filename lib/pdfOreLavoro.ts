@@ -8,6 +8,7 @@ import {
   creaDocumentoPdf,
 } from '@/lib/pdfReport';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
+import { descrizioneSaldoMonteOre, LEGENDA_MONTE_ORE, saldoMonteOreBreve } from '@/lib/monteOre';
 
 // PDF mensile delle ore di lavoro del personale (specs/52 -
 // report-email-automatico.md, specs/19 - monte-ore.md): una pagina per
@@ -147,11 +148,19 @@ export async function generaPdfOreLavoroMensile(
     g.nuovaPaginaSeServe(3);
     g.pagina.drawText('Monte ore', { x: MARGINE, y: g.y, size: 12, font: fontGrassetto });
     g.y -= ALTEZZA_RIGA + 2;
-    g.pagina.drawText(`Saldo attuale: ${persona.saldoAttuale}h (gestito a mano dall'admin)`, {
+    g.pagina.drawText(`Saldo attuale: ${descrizioneSaldoMonteOre(persona.saldoAttuale)}`, {
       x: MARGINE,
       y: g.y,
       size: DIMENSIONE_TESTO,
       font: fontGrassetto,
+    });
+    g.y -= ALTEZZA_RIGA;
+    g.pagina.drawText(`${LEGENDA_MONTE_ORE} Gestito a mano dall'admin.`, {
+      x: MARGINE,
+      y: g.y,
+      size: DIMENSIONE_TESTO - 1,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
     });
     g.y -= ALTEZZA_RIGA + 4;
 
@@ -169,7 +178,7 @@ export async function generaPdfOreLavoroMensile(
           g.pagina,
           font,
           fontGrassetto,
-          [movimento.data, `${formattaOreConSegno(movimento.variazione)}h`, movimento.nota],
+          [movimento.data, saldoMonteOreBreve(movimento.variazione), movimento.nota],
           larghezzeMovimenti,
           g.y,
           false
@@ -198,8 +207,8 @@ export async function generaPdfOreLavoroMensile(
             riga.mese,
             `${riga.orePreviste}h`,
             `${formattaOreConSegno(riga.differenza)}h`,
-            `${formattaOreConSegno(riga.movimenti)}h`,
-            `${riga.saldo}h`,
+            saldoMonteOreBreve(riga.movimenti),
+            saldoMonteOreBreve(riga.saldo),
           ],
           larghezzeCalcolo,
           g.y,
