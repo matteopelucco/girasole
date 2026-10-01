@@ -96,6 +96,13 @@ test.describe('01 — UX/UI', () => {
       const linkGiornata = page.getByRole('link', { name: 'Presenze e pasti' });
       test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
 
+      // Il click prima dell'idratazione sarebbe una navigazione nativa a
+      // pagina intera (il listener della barra non esiste ancora) e la
+      // barra non comparirebbe mai: in CI, con `next start`, succedeva a
+      // caso al primo tentativo (issue #155). Attendo il segnale che il
+      // componente espone quando ha installato il listener.
+      await expect(page.locator('body')).toHaveAttribute('data-barra-caricamento-pronta', 'true');
+
       await linkGiornata.click();
       await expect(barra).toBeVisible();
 
