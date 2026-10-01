@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { totaleOreSettimanali, rigaOSollevaErrore } from './profiliOrari';
+import { totaleOreSettimanali, oreGiorniFeriali, rigaOSollevaErrore } from './profiliOrari';
 
 // totaleOreSettimanali è pura (nessun I/O): copre i casi limite del
 // calcolo del totale ore settimanali di specs/54 - profili-orari.md.
@@ -52,5 +52,25 @@ describe('rigaOSollevaErrore', () => {
     expect(() =>
       rigaOSollevaErrore({ data: null, error: { message: 'permission denied for table profili_orari' } }, 'lettura profilo orario')
     ).toThrow('lettura profilo orario: permission denied for table profili_orari');
+  });
+});
+
+// oreGiorniFeriali alimenta il pannello /dashboard/profilo-orario
+// (specs/54): elenco lunedì-venerdì in ordine, ore normalizzate a number.
+describe('oreGiorniFeriali', () => {
+  it('elenca i 5 giorni feriali in ordine con le ore del profilo', () => {
+    const profilo = { ore_lunedi: 7, ore_martedi: 6, ore_mercoledi: 5, ore_giovedi: 4, ore_venerdi: 3 };
+    expect(oreGiorniFeriali(profilo)).toEqual([
+      { giorno: 'Lunedì', ore: 7 },
+      { giorno: 'Martedì', ore: 6 },
+      { giorno: 'Mercoledì', ore: 5 },
+      { giorno: 'Giovedì', ore: 4 },
+      { giorno: 'Venerdì', ore: 3 },
+    ]);
+  });
+
+  it('normalizza a number i valori numeric arrivati come stringa da PostgREST', () => {
+    const profilo = { ore_lunedi: '7.50', ore_martedi: '0', ore_mercoledi: 7, ore_giovedi: '7', ore_venerdi: '4.5' };
+    expect(oreGiorniFeriali(profilo).map((g) => g.ore)).toEqual([7.5, 0, 7, 7, 4.5]);
   });
 });
