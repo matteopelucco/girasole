@@ -259,6 +259,8 @@ test.describe('54 — Profili orari', () => {
       await page.getByPlaceholder('Telefono').first().fill('3331234567');
       await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
       await page.getByLabel('Conferma password').fill(PASSWORD);
+      // Il ruolo predefinito è genitore (nessun accesso allo staff): serve un ruolo staff.
+      await formCreazione.getByLabel('Ruolo').selectOption('maestra');
       if (opzioni.abilitato) await formCreazione.getByLabel('Ore di lavoro').check();
       if (opzioni.profilo) await formCreazione.getByLabel('Profilo orario').selectOption({ label: opzioni.profilo });
       await page.getByRole('button', { name: 'Crea utente' }).click();
@@ -351,7 +353,9 @@ test.describe('54 — Profili orari', () => {
         const { contesto, pagina } = await paginaComeUtente(browser, baseURL, email);
         try {
           await pagina.goto('/dashboard/profilo-orario');
-          await pagina.waitForURL('/dashboard', { timeout: 20_000 });
+          // goto attende già i redirect: l'URL finale deve essere la dashboard, non il pannello.
+          await expect(pagina).toHaveURL(/\/dashboard$/);
+          await expect(pagina.getByRole('heading', { name: 'Il mio profilo orario' })).toHaveCount(0);
         } finally {
           await contesto.close();
         }
