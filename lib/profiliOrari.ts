@@ -24,6 +24,19 @@ export function totaleOreSettimanali(profilo: ProfiloOrario): number {
     .reduce((totale, ore) => totale + ore, 0);
 }
 
+// Ore previste per ciascun giorno feriale (lunedì-venerdì, in ordine),
+// per il pannello di sola lettura del personale
+// (/dashboard/profilo-orario, specs/54). Funzione pura, nessun I/O.
+export function oreGiorniFeriali(profilo: ProfiloOrario): { giorno: string; ore: number }[] {
+  return [
+    { giorno: 'Lunedì', ore: Number(profilo.ore_lunedi) },
+    { giorno: 'Martedì', ore: Number(profilo.ore_martedi) },
+    { giorno: 'Mercoledì', ore: Number(profilo.ore_mercoledi) },
+    { giorno: 'Giovedì', ore: Number(profilo.ore_giovedi) },
+    { giorno: 'Venerdì', ore: Number(profilo.ore_venerdi) },
+  ];
+}
+
 // Se la query è fallita (es. grant mancante, permessi) solleva un errore
 // invece di trattarla come "nessuna riga": un errore scartato produceva
 // "Nessun profilo orario assegnato" e ore dovute a 0 nel report (bug in

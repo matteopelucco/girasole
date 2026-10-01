@@ -255,6 +255,13 @@ export default async function OreLavoroPage({
           <h1 className="mt-2 text-lg font-medium">
             Ore di lavoro{modalitaAdmin && <span className="font-normal text-stone-600"> — {utenteTarget.nome}</span>}
           </h1>
+          {!modalitaAdmin && (
+            <p className="mt-1">
+              <Link href="/dashboard/profilo-orario" className="text-sm text-stone-700 underline hover:text-stone-900">
+                Il mio profilo orario
+              </Link>
+            </p>
+          )}
         </div>
 
         {modalitaAdmin && (
