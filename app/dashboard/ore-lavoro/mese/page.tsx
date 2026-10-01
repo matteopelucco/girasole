@@ -150,6 +150,14 @@ export default async function OreLavoroMesePage({
               →
             </Link>
           )}
+          {/* PDF del solo dipendente per il mese mostrato (specs/18): stesso file
+              del report del personale, scaricato direttamente. */}
+          <a
+            href={`/admin/ore-lavoro/pdf?mese=${mese}&${suffissoUtente}`}
+            className="ml-auto inline-flex h-11 items-center rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800"
+          >
+            Scarica PDF
+          </a>
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-sm">

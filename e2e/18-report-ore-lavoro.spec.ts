@@ -445,10 +445,16 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
-    // Scenario "il PDF mensile è riservato all'admin".
+    // Scenario "il PDF mensile è riservato all'admin" (anche con `utente`).
     test('il PDF mensile del personale reindirizza alla dashboard', async ({ page }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       await page.goto('/admin/ore-lavoro/pdf');
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
+    });
+
+    test('il PDF di un singolo dipendente reindirizza alla dashboard', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      await page.goto('/admin/ore-lavoro/pdf?utente=00000000-0000-0000-0000-000000000000');
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
@@ -534,9 +540,28 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByText('Settimane del mese')).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
+        // Scenario: l'admin scarica il PDF del mese di un singolo dipendente
+        // (pulsante "Scarica PDF" nella barra del mese, bersaglio >= 44px).
+        const utenteInUrl = new URL(page.url()).searchParams.get('utente')!;
+        const scarica = page.getByRole('link', { name: 'Scarica PDF' });
+        await expect(scarica).toBeVisible();
+        expect((await scarica.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        const [downloadSingolo] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), scarica.click()]);
+        expect(downloadSingolo.suggestedFilename()).toMatch(/^ore-lavoro-[0-9]{4}-[0-9]{2}-[a-z0-9-]+[.]pdf$/);
+        const pezziSingolo: Buffer[] = [];
+        for await (const pezzo of await downloadSingolo.createReadStream()) pezziSingolo.push(pezzo as Buffer);
+        const pdfSingolo = Buffer.concat(pezziSingolo);
+        expect(pdfSingolo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+        expect(pdfSingolo.length).toBeGreaterThan(500);
+
+        // Un 'utente' non valido, o non abilitato, non produce alcun PDF.
+        const nonValido = await page.request.get('/admin/ore-lavoro/pdf?utente=non-un-uuid');
+        expect(nonValido.status()).toBe(404);
+        const inesistente = await page.request.get('/admin/ore-lavoro/pdf?utente=00000000-0000-0000-0000-000000000000');
+        expect(inesistente.status()).toBe(404);
+
         // Scenario: navigare tra i mesi — l'utente resta nell'URL e sul
         // mese corrente non c'è "Mese successivo".
-        const utenteInUrl = new URL(page.url()).searchParams.get('utente')!;
         await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
         await page.getByRole('link', { name: 'Mese precedente' }).click();
         await page.waitForURL(/mese=[0-9]{4}-[0-9]{2}&utente=.+/);
