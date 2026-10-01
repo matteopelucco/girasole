@@ -1,7 +1,8 @@
 # 54 — Profili orari
 
 ## Attori
-Admin.
+Admin (definisce e assegna i profili orari); personale abilitato al report
+ore (consulta il proprio profilo assegnato).
 
 ## Obiettivo
 Dare all'admin uno strumento per definire, in un pannello dedicato,
@@ -14,7 +15,9 @@ quante ore dovrebbe lavorare ogni giorno. Questo riferimento precarica
 le ore ordinarie nel report ore di lavoro (vedi
 [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md)) ed è il
 confronto usato per calcolare il monte ore (vedi
-[19 - monte-ore.md](19%20-%20monte-ore.md)).
+[19 - monte-ore.md](19%20-%20monte-ore.md)). Ogni membro del personale
+abilitato può inoltre consultare, in sola lettura, il proprio profilo
+orario assegnato in un pannello dedicato (`/dashboard/profilo-orario`).
 
 ## Scenario: creare un profilo orario
 Dato che sono autenticato come admin
@@ -61,6 +64,29 @@ Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/profili-orari`
 Allora vengo reindirizzato alla dashboard
 
+## Scenario: il personale abilitato consulta il proprio profilo orario
+Dato che sono autenticato come utente abilitato al report ore (vedi
+[17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md)) con un profilo orario
+assegnato
+Quando dalla sezione "Ore di lavoro" premo "Il mio profilo orario"
+Allora apro `/dashboard/profilo-orario`
+E vedo il nome del mio profilo, le ore previste per lunedì, martedì,
+mercoledì, giovedì e venerdì e il totale ore settimanali (somma dei 5
+giorni)
+E la pagina è in sola lettura: nessun pulsante per modificare o eliminare
+
+## Scenario: il personale abilitato senza profilo orario vede un messaggio chiaro
+Dato che sono autenticato come utente abilitato al report ore senza alcun
+profilo orario assegnato
+Quando apro `/dashboard/profilo-orario`
+Allora leggo "Nessun profilo orario assegnato" e il suggerimento di
+chiedere all'admin di assegnarmene uno
+
+## Scenario: accesso al pannello negato a chi non è abilitato al report ore
+Dato che sono autenticato come utente non abilitato al report ore
+Quando provo ad aprire `/dashboard/profilo-orario`
+Allora vengo reindirizzato alla dashboard
+
 ## Regole
 - Un profilo orario ha un nome libero (`profili_orari.nome`, nessun
   formato imposto: l'admin può scrivere "35 ore settimanali" o
@@ -90,14 +116,16 @@ Allora vengo reindirizzato alla dashboard
   nel report ore di lavoro (vedi
   [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md), scenario
   "aprire la sezione mostra la settimana corrente con le ore
-  precaricate"), non è ancora mostrato in un pannello dedicato allo
-  staff (vedi Obiettivo).
+  precaricate") e per il pannello `/dashboard/profilo-orario`.
 - Eliminare un profilo orario assegnato a uno o più utenti non è
   bloccato: l'assegnazione di quegli utenti torna semplicemente vuota
   (`on delete set null`), stesso pattern già usato per
   `sezioni.anno_scolastico_id` (vedi
   [04 - data-types.md](04%20-%20data-types.md)).
-- Fuori scope in questa fase: un pannello dedicato allo staff che mostri
-  il proprio profilo orario assegnato al di fuori del precaricamento
-  nel report ore di lavoro (vedi [18](18%20-%20report-ore-lavoro.md)).
-  Backlog: issue [#92](https://github.com/matteopelucco/girasole/issues/92).
+- Il pannello `/dashboard/profilo-orario` è riservato a chi è abilitato al
+  report ore (`profili.abilitato_ore_lavoro`, nessun bypass nemmeno per
+  l'admin, come per `/dashboard/ore-lavoro`); ognuno vede solo il proprio
+  profilo (mai quello di un altro utente, nessun parametro per sceglierlo),
+  indipendentemente dal precaricamento nel report ore. Il totale
+  settimanale è sempre la somma dei 5 giorni. Si raggiunge dalla sezione
+  "Ore di lavoro" (pulsante "Il mio profilo orario").
