@@ -1,0 +1,96 @@
+name: Release
+
+# Issue #32 (A31) — tag `vX.Y.Z` e GitHub Release a ogni merge su main che
+# cambia la `version` di package.json (CLAUDE.md: ogni PR bumpa la versione).
+# Le note della release sono generate dai commit convenzionali
+# (lib/rilascio.ts, scripts/rilascio.mts): è il changelog, consultabile da
+# Releases. Nessun CHANGELOG.md versionato: scriverlo richiederebbe un commit
+# diretto su main, che il ruleset non permette (vedi docs/sviluppo-dettagli.md,
+# "Rilasci e tag").
+#
+# Separato da ci.yml di proposito: parte DOPO il merge (push su main), non fa
+# parte del gate `CI / verifica` e non può né rallentarlo né farlo fallire.
+# Un fallimento di questo workflow non blocca il deploy (Vercel deploya su
+# push a main per conto suo): al massimo manca il tag, che si recupera a mano
+# (workflow_dispatch con `forza`, vedi docs/sviluppo-dettagli.md).
+#
+# Permessi: nessuno di default; `contents: write` solo sul job `rilascio`, e
+# serve unicamente a `gh release create` (crea il tag + la release via API,
+# senza `git push`). Solo azioni già usate nel repo, nessun secret.
+
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+    inputs:
+      forza:
+        description: >-
+          Recupero: crea tag e release per la versione attuale di package.json
+          anche se non è cambiata (es. il tag manca). Idempotente: se la
+          release esiste già non fa nulla.
+        type: boolean
+        default: false
+
+permissions: {}
+
+# Un rilascio alla volta; mai cancellare quello in corso (tag a metà).
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  rilascio:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      # Commit prima del push; su workflow_dispatch non esiste, si usa il
+      # genitore di HEAD. Passati come env, mai interpolati nello script.
+      BEFORE_SHA: ${{ github.event.before || format('{0}^', github.sha) }}
+      HEAD_SHA: ${{ github.sha }}
+      FORZA: ${{ github.event_name == 'workflow_dispatch' && inputs.forza && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0          # servono tutti i tag e la storia per l'intervallo delle note
+
+      # Node 22+ esegue nativamente scripts/rilascio.mts (stesso schema di
+      # classifica-pr.mts): nessuna dipendenza nuova.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Decide il tag e prepara le note
+        id: prepara
+        run: |
+          set -eu
+          flag=""
+          if [ "$FORZA" = "true" ]; then flag="--forza"; fi
+          node --no-warnings --experimental-strip-types scripts/rilascio.mts \
+            "$BEFORE_SHA" "$HEAD_SHA" "$RUNNER_TEMP/note-rilascio.md" $flag
+
+      - name: Nessun rilascio (versione invariata)
+        if: steps.prepara.outputs.tag == ''
+        run: echo "::notice::La versione di package.json non è cambiata, nessun tag da creare."
+
+      - name: Crea tag e release
+        if: steps.prepara.outputs.tag != ''
+        env:
+          TAG: ${{ steps.prepara.outputs.tag }}
+        run: |
+          set -eu
+          # Idempotente: un re-run o un recupero non duplica né fallisce.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::La release $TAG esiste già, niente da fare."
+            exit 0
+          fi
+          gh release create "$TAG" \
+            --target "$HEAD_SHA" \
+            --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/note-rilascio.md"
+          echo "::notice::Creata la release $TAG."

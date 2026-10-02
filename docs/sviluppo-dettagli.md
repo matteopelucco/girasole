@@ -59,6 +59,35 @@ Contesto operativo per Claude Code su questo progetto.
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
+### Rilasci e tag (issue #32)
+- **Cosa succede da solo**: a ogni merge su `main` che cambia `version` in
+  `package.json` (cioè ogni PR, vedi bump di versione in CLAUDE.md), il
+  workflow `.github/workflows/release.yml` crea il tag `vX.Y.Z` e una
+  **GitHub Release** con le note generate dai commit convenzionali
+  (raggruppati: breaking change, feat, fix, ...). Il changelog è la pagina
+  *Releases* del repo. Nessun intervento manuale.
+- **Come**: `scripts/rilascio.mts` legge la `version` a `github.event.before`
+  e a `github.sha`; la logica pura (`decidiTag`, `generaNoteRilascio`) è in
+  `lib/rilascio.ts`, con unit test. Le note coprono i commit dall'ultimo tag
+  `v*` (o, al primo rilascio, dal solo push corrente): un merge senza bump
+  non perde le sue modifiche, finiscono nella release successiva. I commit
+  non convenzionali (storia precedente) finiscono sotto "Altro".
+- **Permessi**: il workflow parte senza permessi; solo il job `rilascio` ha
+  `contents: write`, usato da `gh release create` (tag + release via API, nessun
+  `git push` e nessun commit su main). È un workflow a parte, dopo il merge:
+  non fa parte del gate `CI / verifica` e non lo rallenta.
+- **Perché non un `CHANGELOG.md` versionato**: aggiornarlo richiede un commit
+  su `main` dopo il merge, che il ruleset (PR obbligatoria) impedisce e che
+  non va aggirato; generarlo dentro ogni PR darebbe conflitti continui (tutte
+  le PR toccano lo stesso punto del file). Se in futuro servisse, il file è già
+  nell'allow-list "non codice" di `lib/pr-classificazione.ts`.
+- **Se il tag manca** (workflow fallito o saltato): Actions → *Release* →
+  *Run workflow* su `main` con `forza` attivo (crea la release per la versione
+  attuale; è idempotente), oppure da terminale
+  `gh workflow run release.yml --ref main -f forza=true`. Per una versione
+  non più in testa: `gh release create vX.Y.Z --target <sha> --generate-notes`.
+  Il tag non si ricrea mai a mano con `git tag` + `git push` su `main`.
+
 ## Analisi statica prima di ogni push
 - Un git hook `pre-push` (`.githooks/pre-push`, attivato in automatico
   da `npm install` tramite lo script `prepare` in `package.json`, che
