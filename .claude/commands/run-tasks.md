@@ -143,7 +143,22 @@ Guarda il diff della PR (`gh pr diff <pr> --name-only`). Se tocca
 Riclassifica a `human-in-the-loop` anche se il diff reale ha sforato i criteri
 di 3.1 (workflow CI, dipendenze major, dimensione) pur essendo partito `ai-driven`.
 
-### 3.5 CI
+### 3.5 Rebase e CI
+**Rebase automatico**: se la branch della PR è indietro rispetto a `main` o la
+PR risulta `CONFLICTING` (tipico: bump di versione in `package.json` /
+`package-lock.json` identico in due PR), procedi senza chiedere:
+`git fetch origin && git rebase origin/main` sulla branch della PR (mai su `main`).
+- Conflitti banali (solo il campo `version` di `package.json` /
+  `package-lock.json`): tieni il contenuto di `main` e rifai il bump
+  (`npm version patch --no-git-tag-version`, `minor` per feature) così che la
+  versione risulti maggiore di quella su `main`.
+- Altri conflitti: risolvi solo se la risoluzione è inequivoca e non cambia il
+  significato di nessuna delle due modifiche; altrimenti `git rebase --abort`,
+  lascia la PR com'è e segnala il conflitto all'umano.
+- Dopo il rebase: `git push --force-with-lease` **solo** sulla branch della PR
+  (mai `--force` nudo, mai su `main`); il hook pre-push ripete i controlli e
+  riparte la CI.
+
 Attendi la CI con **un solo** comando bloccante in background:
 `gh pr checks <pr> --watch --fail-fast` (`run_in_background`). Non fare cicli
 di `sleep` né scheduler: ti riattivi quando il comando termina. Il check
@@ -189,7 +204,11 @@ il contesto della sessione. Fermati e riporta se:
 ## Fase 4 — Report finale e avviso
 Tabella breve, una riga per task: n° issue · classificazione · esito
 (`mergiata` / `PR aperta: serve te` / `needs-info` / `fallita` / `saltata`)
-· link PR. Poi: budget prima/dopo (% 5 ore e settimanale, reset), motivo
+· link PR. Subito sotto la tabella, **un paragrafo descrittivo** (in prosa,
+non un elenco, 4-8 righe) di cosa è stato fatto nel ciclo: che cosa è
+cambiato per l'app o per il processo, quali task sono andati in porto da soli e
+quali no e perché, se ci sono state scomposizioni, giri di fix o rebase, e
+cosa resta da fare. Pensato per chi legge solo quel paragrafo. Poi: budget prima/dopo (% 5 ore e settimanale, reset), motivo
 della fermata, e la lista esplicita di **cosa deve fare l'umano** (PR da
 revisionare, migration da applicare, dubbi di classificazione commentati,
 domande rimaste su `needs-info`).
