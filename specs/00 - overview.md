@@ -76,7 +76,8 @@ della maestra, `5x` amministrazione.
   registrazione delle ore di lavoro/assenze del personale retribuito
 - [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md) — il
   personale abilitato registra ore ordinarie/straordinarie o
-  malattia/assenza per la settimana corrente, e la conferma
+  malattia/assenza per la settimana corrente, e la conferma; navigazione
+  libera tra le settimane passate (frecce e selettore di data)
 - [19 - monte-ore.md](19%20-%20monte-ore.md) — contatore di ore per
   persona, gestito completamente a mano dall'admin (movimenti inseriti,
   modificati, eliminati), con segno unico: + ore a credito (già erogate in

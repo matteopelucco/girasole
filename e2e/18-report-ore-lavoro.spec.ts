@@ -319,6 +319,33 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
         await expect(oreOrdinarieGiorno(page, 0)).toHaveText('7h');
 
+        // Scenario "il selettore di data non offre settimane future": la
+        // data massima scelta è oggi (fuso Europe/Rome), e il campo con il
+        // pulsante "Vai" ha bersagli di almeno 44px.
+        const oggiRoma = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date());
+        const campoSettimana = page.getByLabel('Vai alla settimana del');
+        await expect(campoSettimana).toHaveAttribute('max', oggiRoma);
+        const vai = page.getByRole('button', { name: 'Vai', exact: true });
+        expect((await campoSettimana.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        expect((await vai.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+        // Scenario "saltare a una settimana qualunque con il selettore di
+        // data": un mercoledì qualunque porta al lunedì della sua
+        // settimana (2024-03-13 -> 2024-03-11), e il campo mostra quel lunedì.
+        await campoSettimana.fill('2024-03-13');
+        await vai.click();
+        await page.waitForURL(/settimana=2024-03-11(&|$)/);
+        await expect(campoSettimana).toHaveValue('2024-03-11');
+        await expect(page.getByText(/11 mar\.? – 17 mar/).first()).toBeVisible();
+        await nessunaViolazioneA11yGrave(page);
+
+        // Una data passata non lunedì in query string porta alla sua
+        // settimana; una data non valida mostra la settimana corrente.
+        await page.goto('/dashboard/ore-lavoro?settimana=2024-03-13');
+        await page.waitForURL(/settimana=2024-03-11(&|$)/);
+        await page.goto('/dashboard/ore-lavoro?settimana=2024-02-31');
+        await expect(page.getByRole('link', { name: 'Settimana successiva' })).toHaveCount(0);
+
         // "←" porta alla settimana precedente, con gli stessi dati
         // (precaricati dal profilo orario dove non ho ancora salvato
         // nulla per quella settimana) — scenario "navigare a una
@@ -615,6 +642,14 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByRole('link', { name: 'Settimana precedente' }).click();
         await page.waitForURL(new RegExp(`settimana=\\d{4}-\\d{2}-\\d{2}&utente=${utenteId}`));
         await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+
+        // Scenario: l'admin naviga con il selettore di data — `utente`
+        // resta nell'indirizzo, stessa persona.
+        await page.getByLabel('Vai alla settimana del').fill('2024-03-13');
+        await page.getByRole('button', { name: 'Vai', exact: true }).click();
+        await page.waitForURL(new RegExp(`settimana=2024-03-11&utente=${utenteId}`));
+        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+        await expect(page.getByLabel('Vai alla settimana del')).toHaveValue('2024-03-11');
 
         // Scenario: un parametro `utente` non valido viene ignorato —
         // torno a vedere le mie proprie ore (che, essendo io admin non

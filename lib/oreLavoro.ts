@@ -54,6 +54,26 @@ export function settimanaOreLavoroRichiesta(richiesta: string | undefined, oggiD
   return richiesta;
 }
 
+// Selettore di data (specs/18, "saltare a una settimana qualunque"):
+// una data qualunque scelta dall'utente (`?settimana=` inviato da un
+// <input type="date">) viene portata al lunedì della sua settimana, mai
+// oltre la settimana corrente. Restituisce null se `richiesta` non è una
+// data di calendario valida (YYYY-MM-DD): la pagina userà allora la
+// settimana corrente senza redirect. Resta separata da
+// settimanaOreLavoroRichiesta, che le server action usano per validare in
+// modo rigido un lunedì inviato dal form. Funzione pura.
+export function normalizzaSettimanaScelta(richiesta: string | undefined, oggiData: string): string | null {
+  if (!richiesta || !/^\d{4}-\d{2}-\d{2}$/.test(richiesta)) return null;
+  // Scarta le date di calendario inesistenti (es. 2024-02-31), che
+  // new Date(...) riporterebbe silenziosamente al mese successivo.
+  const [anno, mese, giorno] = richiesta.split('-').map(Number);
+  const d = new Date(Date.UTC(anno, mese - 1, giorno, 12));
+  if (d.getUTCFullYear() !== anno || d.getUTCMonth() !== mese - 1 || d.getUTCDate() !== giorno) return null;
+  const inizioCorrente = lunediSettimana(oggiData);
+  const lunedi = lunediSettimana(richiesta);
+  return lunedi > inizioCorrente ? inizioCorrente : lunedi;
+}
+
 // Utente su cui una server action di "Ore di lavoro" deve scrivere
 // (specs/18, sezione "Amministrazione"): l'admin può correggere le ore
 // di chiunque sia abilitato indicando un campo nascosto `utente_id` nel

@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { SelettoreSettimanaOreLavoro } from '@/components/SelettoreSettimanaOreLavoro';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
@@ -25,6 +27,7 @@ import {
   totaleOreErogate,
   notaGiornoChiusoOreLavoro,
   settimanaOreLavoroRichiesta,
+  normalizzaSettimanaScelta,
   ETICHETTE_STATO_ORE_LAVORO,
   isStatoNeutroOreLavoro,
   statoPredefinitoGiornoOreLavoro,
@@ -101,6 +104,13 @@ export default async function OreLavoroPage({
 
   const nomeVisualizzato = profilo?.nome || user.email || '';
   const inizioSettimanaCorrente = lunediSettimana(oggi());
+  // Selettore di data (specs/18): una data valida che non è già il
+  // lunedì canonico (non-lunedì, o futura) porta all'indirizzo
+  // `?settimana=<lunedì>`, mantenendo `utente` in modalità admin.
+  const settimanaScelta = normalizzaSettimanaScelta(searchParams.settimana, oggi());
+  if (settimanaScelta && settimanaScelta !== searchParams.settimana) {
+    redirect(`/dashboard/ore-lavoro?settimana=${settimanaScelta}${modalitaAdmin ? `&utente=${utenteTarget.id}` : ''}`);
+  }
   const lunedi = settimanaOreLavoroRichiesta(searchParams.settimana, oggi());
   const giorni = giorniSettimana(lunedi);
   const domenica = giorni[giorni.length - 1];
@@ -290,6 +300,14 @@ export default async function OreLavoroPage({
               →
             </Link>
           )}
+          <div className="w-full">
+            <SelettoreSettimanaOreLavoro
+              basePath="/dashboard/ore-lavoro"
+              lunedi={lunedi}
+              oggiData={oggi()}
+              utenteId={modalitaAdmin ? utenteTarget.id : undefined}
+            />
+          </div>
         </div>
 
         {confermata && (
