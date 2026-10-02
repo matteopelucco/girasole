@@ -21,6 +21,18 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Il mese successivo a quello corrente, "YYYY-MM", calcolato sul mese di
+// "oggi" nel fuso Europe/Rome (non sull'orario locale del runner, che in CI
+// è UTC): tra le 22:00 e le 24:00 UTC dell'ultimo giorno del mese Roma è già
+// nel mese nuovo e i due valori differirebbero di un mese (issue #163).
+// Gestisce dicembre -> gennaio. Equivale a meseSuccessivo(meseDaData(oggi()))
+// di lib/date.ts (già coperto da lib/date.test.ts), duplicato qui per lo
+// stesso motivo di dataOggiRoma.
+export function meseSuccessivoRoma(): string {
+  const [anno, mese] = dataOggiRoma().split('-').map(Number);
+  return new Date(Date.UTC(anno, mese, 1, 12)).toISOString().slice(0, 7);
+}
+
 // L'ultimo giorno APERTO prima di oggi (fuso Europe/Rome): salta sabato e
 // domenica, chiusura implicita (specs/53). Serve ai test "sola lettura su
 // una data diversa da oggi" (specs/13, specs/14): su un giorno chiuso la
