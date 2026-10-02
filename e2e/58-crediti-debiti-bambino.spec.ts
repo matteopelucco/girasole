@@ -4,7 +4,7 @@
 // crediti_debiti_bambini sul progetto Supabase di test (stesso pattern
 // di 55-costi-bambino.spec.ts).
 import { test, expect } from '@playwright/test';
-import { dataOggiRoma, formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
+import { dataOggiRoma, meseSuccessivoRoma, formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp } from './helpers';
 
 test.describe('58 — Crediti e debiti di un bambino', () => {
   test.use({ storageState: statoAutenticazione('admin') });
@@ -38,11 +38,8 @@ test.describe('58 — Crediti e debiti di un bambino', () => {
 
   test('il mese di competenza è precompilato con la prossima retta utile', async ({ page }) => {
     await creaBambinoDiProva(page);
-    const oggi = new Date();
-    const meseSuggerito = new Date(Date.UTC(oggi.getFullYear(), oggi.getMonth() + 1, 1))
-      .toISOString()
-      .slice(0, 7);
-    await expect(page.getByLabel('Mese di competenza')).toHaveValue(meseSuggerito);
+    // Mese successivo a quello corrente nel fuso Europe/Rome, come l'app (#163).
+    await expect(page.getByLabel('Mese di competenza')).toHaveValue(meseSuccessivoRoma());
   });
 
   test('aggiungere un debito lo mostra nell\'elenco "da conteggiare"', async ({ page }) => {

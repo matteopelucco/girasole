@@ -21,6 +21,18 @@ export function dataIeriRoma(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Il mese successivo a quello corrente, "YYYY-MM", calcolato sul mese di
+// "oggi" nel fuso Europe/Rome (non sull'orario locale del runner, che in CI
+// è UTC): tra le 22:00 e le 24:00 UTC dell'ultimo giorno del mese Roma è già
+// nel mese nuovo e i due valori differirebbero di un mese (issue #163).
+// Gestisce dicembre -> gennaio. Equivale a meseSuccessivo(meseDaData(oggi()))
+// di lib/date.ts (già coperto da lib/date.test.ts), duplicato qui per lo
+// stesso motivo di dataOggiRoma.
+export function meseSuccessivoRoma(): string {
+  const [anno, mese] = dataOggiRoma().split('-').map(Number);
+  return new Date(Date.UTC(anno, mese, 1, 12)).toISOString().slice(0, 7);
+}
+
 // L'ultimo giorno APERTO prima di oggi (fuso Europe/Rome): salta sabato e
 // domenica, chiusura implicita (specs/53). Serve ai test "sola lettura su
 // una data diversa da oggi" (specs/13, specs/14): su un giorno chiuso la
@@ -190,6 +202,21 @@ export async function segnaAssenteOMalattia(
   }
   await bottone.click();
   await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Conferma e azzera' }));
+}
+
+// Vero se la pagina corrente (Presenze e pasti, ore di lavoro...) mostra
+// l'avviso di chiusura scolastica (specs/53): "L'asilo è chiuso..." per
+// sabato/domenica, "Giorno di chiusura scolastica..." per un giorno
+// registrato in `giorni_chiusura` (lib/calendarioScolastico.ts:
+// messaggioChiusura). In un giorno chiuso le card dei bambini ci sono
+// ancora ma senza i pulsanti di presenza/pasto: apriGiornata() ritorna true
+// comunque (i test di specs/53 ne dipendono), quindi i test che si aspettano
+// un giorno scrivibile usano questa funzione per saltarsi invece di fallire
+// il sabato. Da chiamare dopo apriGiornata(): la pagina è renderizzata dal
+// server, l'avviso è già nel DOM.
+export async function giornoDiChiusura(page: Page): Promise<boolean> {
+  const avviso = page.getByText(/L'asilo è chiuso|Giorno di chiusura scolastica/);
+  return (await avviso.count()) > 0;
 }
 
 // Messaggi con role="alert" mostrati dall'app (errori dei form, banner),

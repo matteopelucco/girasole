@@ -20,7 +20,7 @@
 // test.skip) solo se qualcuno l'ha già confermata manualmente questa
 // settimana.
 import { test, expect, type Page } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione, dataOggiRoma, dataFraGiorni } from './helpers';
 
 // Ore ordinarie mostrate (testo, non un campo: specs/18) del giorno
 // `indice` della settimana (0 = lunedì ... 5 = sabato).
@@ -322,7 +322,7 @@ test.describe('18 — Report ore di lavoro', () => {
         // Scenario "il selettore di data non offre settimane future": la
         // data massima scelta è oggi (fuso Europe/Rome), e il campo con il
         // pulsante "Vai" ha bersagli di almeno 44px.
-        const oggiRoma = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(new Date());
+        const oggiRoma = dataOggiRoma();
         const campoSettimana = page.getByLabel('Vai alla settimana del');
         await expect(campoSettimana).toHaveAttribute('max', oggiRoma);
         const vai = page.getByRole('button', { name: 'Vai', exact: true });
@@ -739,8 +739,8 @@ test.describe('18 — Report ore di lavoro', () => {
       browser,
       baseURL,
     }) => {
-      const dieciSettimaneFa = new Date();
-      dieciSettimaneFa.setUTCDate(dieciSettimaneFa.getUTCDate() - 70);
+      // "Oggi" nel fuso Europe/Rome, non UTC (#163).
+      const dieciSettimaneFa = new Date(`${dataFraGiorni(-70)}T12:00:00Z`);
       dieciSettimaneFa.setUTCDate(dieciSettimaneFa.getUTCDate() - ((dieciSettimaneFa.getUTCDay() + 6) % 7));
       const lunedi = dieciSettimaneFa.toISOString().slice(0, 10);
 
