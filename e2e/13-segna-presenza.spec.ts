@@ -317,6 +317,66 @@ test.describe('13 — Segna presenza', () => {
       // Ripristino (vedi il test sull'assenza sopra).
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
+
+    test('i dati di presenza manomessi dal client non vengono usati', async ({ page }) => {
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
+
+      // Base nota: presente, senza pre-asilo né post-asilo.
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await page.reload();
+
+      // Falsifico la riga attuale inviata dal browser (argomento legato con
+      // .bind() alla Server Action): post-asilo già attivo. Senza la
+      // rilettura dal database l'azione scriverebbe pre-asilo E post-asilo.
+      // Il corpo multipart contiene anche i campi nascosti `$ACTION_n:1` di
+      // OGNI pulsante del form (fallback senza JavaScript): gli argomenti
+      // realmente usati dalla chiamata sono solo nella parte `name="0"`, in
+      // fondo, ed è lì (e solo lì) che si manomette.
+      let manomessa = false;
+      await page.route('**/*', async (route) => {
+        const richiesta = route.request();
+        const corpo = richiesta.postData();
+        const vero = '"postAsilo":false';
+        // Stessa lunghezza dell'originale (spazio finale, JSON valido): il
+        // Content-Length della richiesta resta corretto.
+        const falso = '"postAsilo":true ';
+        const inizioArgomenti = corpo === null ? -1 : corpo.indexOf('name="0"');
+        if (
+          richiesta.method() === 'POST' &&
+          richiesta.headers()['next-action'] !== undefined &&
+          corpo !== null &&
+          inizioArgomenti >= 0 &&
+          corpo.indexOf(vero, inizioArgomenti) >= 0
+        ) {
+          manomessa = true;
+          const prima = corpo.slice(0, inizioArgomenti);
+          const argomenti = corpo.slice(inizioArgomenti).replace(vero, falso);
+          await route.continue({ postData: prima + argomenti });
+          return;
+        }
+        await route.continue();
+      });
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Pre-asilo' }));
+      expect(manomessa, 'la richiesta della Server Action doveva essere manomessa').toBe(true);
+      await page.unroute('**/*');
+
+      // L'azione è stata rifiutata: compare la schermata di errore (app/error.tsx).
+      // In produzione Next.js omette il messaggio reale e lascia il codice
+      // errore (digest); in sviluppo si vede il messaggio italiano
+      // (MESSAGGIO_DATI_CAMBIATI di lib/presenza.ts).
+      await expect(page.getByRole('heading', { name: 'Qualcosa è andato storto' })).toBeVisible();
+      await expect(page.getByText(/I dati di questo bambino sono cambiati|Codice errore:/).first()).toBeVisible();
+
+      // Nulla è stato scritto: il bambino resta presente, senza pre/post-asilo.
+      await page.reload();
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).not.toHaveClass(/bg-sky-700/);
+      await expect(presenza.getByRole('button', { name: 'Post-asilo' })).not.toHaveClass(/bg-sky-700/);
+    });
   });
 
   test.describe('come assistente, sulla data odierna', () => {

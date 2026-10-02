@@ -3,9 +3,13 @@ import {
   assenzaBloccataDaComunicazione,
   avvisoAzzeramentoPerAssenza,
   datiDaAzzerarePerAssenza,
+  assicuraRigaAttesa,
   messaggioErroreSalvataggioPresenza,
   MESSAGGIO_ASSENZA_BLOCCATA,
+  MESSAGGIO_DATI_CAMBIATI,
+  MESSAGGIO_RIGA_NON_VALIDA,
   prossimaPresenza,
+  rigaPresenzaDaDb,
 } from './presenza';
 
 describe('prossimaPresenza — stati primari', () => {
@@ -240,5 +244,82 @@ describe('avvisoAzzeramentoPerAssenza', () => {
     expect(avvisoAzzeramentoPerAssenza({ pasto: true, preAsilo: true, postAsilo: true })).toBe(
       'Attenzione: per questo bambino risultano già segnati il pasto, il pre-asilo e il post-asilo. Se confermi, verranno azzerati.'
     );
+  });
+});
+
+describe('rigaPresenzaDaDb', () => {
+  it('nessuna riga (inesistente o non visibile): null', () => {
+    expect(rigaPresenzaDaDb(null)).toBeNull();
+    expect(rigaPresenzaDaDb(undefined)).toBeNull();
+  });
+
+  it('converte le colonne del database nel formato dell’applicazione', () => {
+    expect(rigaPresenzaDaDb({ stato: 'presente', pre_asilo: true, post_asilo: false })).toEqual({
+      stato: 'presente',
+      preAsilo: true,
+      postAsilo: false,
+    });
+    expect(rigaPresenzaDaDb({ stato: 'malattia', pre_asilo: false, post_asilo: false })).toEqual({
+      stato: 'malattia',
+      preAsilo: false,
+      postAsilo: false,
+    });
+  });
+
+  it('stato sconosciuto: errore', () => {
+    expect(() => rigaPresenzaDaDb({ stato: 'altro', pre_asilo: false, post_asilo: false })).toThrow(
+      MESSAGGIO_RIGA_NON_VALIDA
+    );
+  });
+
+  it('pre/post-asilo su un bambino non presente: errore (incoerente)', () => {
+    expect(() => rigaPresenzaDaDb({ stato: 'assente', pre_asilo: true, post_asilo: false })).toThrow(
+      MESSAGGIO_RIGA_NON_VALIDA
+    );
+    expect(() => rigaPresenzaDaDb({ stato: 'malattia', pre_asilo: false, post_asilo: true })).toThrow(
+      MESSAGGIO_RIGA_NON_VALIDA
+    );
+  });
+});
+
+describe('assicuraRigaAttesa', () => {
+  const presente = { stato: 'presente' as const, preAsilo: false, postAsilo: false };
+
+  it('riga uguale a quella letta dal database: ok', () => {
+    expect(() => assicuraRigaAttesa(presente, { ...presente })).not.toThrow();
+  });
+
+  it('nessuna riga né sul database né dal client: ok', () => {
+    expect(() => assicuraRigaAttesa(null, null)).not.toThrow();
+    expect(() => assicuraRigaAttesa(null, undefined)).not.toThrow();
+  });
+
+  it('un indicatore diverso: dati cambiati', () => {
+    expect(() => assicuraRigaAttesa(presente, { ...presente, postAsilo: true })).toThrow(
+      MESSAGGIO_DATI_CAMBIATI
+    );
+    expect(() => assicuraRigaAttesa(presente, { ...presente, preAsilo: true })).toThrow(
+      MESSAGGIO_DATI_CAMBIATI
+    );
+  });
+
+  it('stato diverso: dati cambiati', () => {
+    expect(() => assicuraRigaAttesa(presente, { ...presente, stato: 'assente' })).toThrow(
+      MESSAGGIO_DATI_CAMBIATI
+    );
+  });
+
+  it('il client dichiara una riga che nel database non c’è (o non è visibile): dati cambiati', () => {
+    expect(() => assicuraRigaAttesa(null, presente)).toThrow(MESSAGGIO_DATI_CAMBIATI);
+  });
+
+  it('il client dichiara nessuna riga ma nel database c’è: dati cambiati', () => {
+    expect(() => assicuraRigaAttesa(presente, null)).toThrow(MESSAGGIO_DATI_CAMBIATI);
+  });
+
+  it('valori malformati dal client: dati cambiati, senza rivelare la riga letta', () => {
+    const malformata = { stato: 'presente', preAsilo: 'true', postAsilo: 1 } as unknown as typeof presente;
+    expect(() => assicuraRigaAttesa(presente, malformata)).toThrow(MESSAGGIO_DATI_CAMBIATI);
+    expect(MESSAGGIO_DATI_CAMBIATI).not.toMatch(/presente|assente|malattia/i);
   });
 });

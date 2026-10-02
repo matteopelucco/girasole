@@ -133,3 +133,54 @@ export function messaggioErroreSalvataggioPresenza(messaggioDatabase: string): s
   }
   return `Impossibile salvare la presenza: ${messaggioDatabase}`;
 }
+
+// --- Rilettura della riga dal database (issue #124) ---------------------
+// Le azioni di scrittura non si fidano della riga di presenza ricevuta dal
+// browser (gli argomenti legati con `.bind()` alle Server Actions viaggiano
+// nella richiesta e si possono falsificare): la rileggono dal database con
+// la sessione dell'utente (quindi sotto RLS) e decidono su quella. La riga
+// del browser resta solo come controllo di concorrenza ottimistica.
+
+export const MESSAGGIO_DATI_CAMBIATI =
+  'I dati di questo bambino sono cambiati: ricarica la pagina e riprova.';
+
+export const MESSAGGIO_RIGA_NON_VALIDA = 'Impossibile leggere la presenza di questo bambino. Riprova.';
+
+export const MESSAGGIO_PRESENZA_NON_TROVATA =
+  'Segna prima uno stato di presenza per poter salvare una nota.';
+
+const STATI_PRESENZA: readonly string[] = ['presente', 'assente', 'malattia'];
+
+// Colonne di `presenze` lette dal database (select 'stato, pre_asilo, post_asilo').
+export type RigaPresenzaDb = { stato: string; pre_asilo: boolean; post_asilo: boolean };
+
+// Converte la riga letta dal database nel formato dell'applicazione, dopo
+// averne verificato la coerenza (stato noto; pre/post-asilo solo se
+// presente, come il vincolo del database). null = nessuna riga: non
+// esiste, oppure la RLS non la rende visibile a chi legge (le due cose
+// non si distinguono, e va bene così: niente informazioni in più).
+export function rigaPresenzaDaDb(riga: RigaPresenzaDb | null | undefined): RigaPresenza | null {
+  if (!riga) return null;
+  const statoValido = STATI_PRESENZA.includes(riga.stato);
+  const indicatoriCoerenti = riga.stato === 'presente' || (!riga.pre_asilo && !riga.post_asilo);
+  if (!statoValido || !indicatoriCoerenti) throw new Error(MESSAGGIO_RIGA_NON_VALIDA);
+  return { stato: riga.stato as StatoPresenza, preAsilo: riga.pre_asilo, postAsilo: riga.post_asilo };
+}
+
+// Controllo di concorrenza ottimistica: la riga dichiarata dal browser
+// deve coincidere con quella appena letta dal database. Confronto stretto
+// campo per campo (valori malformati non coincidono mai); il messaggio
+// d'errore è generico e non rivela la riga letta.
+export function assicuraRigaAttesa(
+  letta: RigaPresenza | null,
+  attesaDalClient: RigaPresenza | null | undefined
+): void {
+  const attesa = attesaDalClient ?? null;
+  if (letta === null || attesa === null) {
+    if (letta === attesa) return;
+    throw new Error(MESSAGGIO_DATI_CAMBIATI);
+  }
+  const uguali =
+    letta.stato === attesa.stato && letta.preAsilo === attesa.preAsilo && letta.postAsilo === attesa.postAsilo;
+  if (!uguali) throw new Error(MESSAGGIO_DATI_CAMBIATI);
+}
