@@ -276,6 +276,29 @@ E se apro comunque direttamente un indirizzo che punta a una settimana
 futura, vedo la settimana corrente al suo posto (nessun errore, nessuna
 settimana futura mostrata)
 
+## Scenario: saltare a una settimana qualunque con il selettore di data
+Dato che sono su "Ore di lavoro" (qualunque settimana)
+Quando uso il selettore "Vai alla settimana del" (un campo data nativo,
+raggiungibile da tastiera e dal telefono, con il pulsante "Vai" e
+bersagli di almeno 44px) e scelgo una data qualunque della settimana che
+voglio vedere
+Allora arrivo direttamente a quella settimana: l'indirizzo diventa
+`?settimana=` con il **lunedì** della settimana che contiene la data
+scelta (anche se la data scelta non è un lunedì), e la tabella mostra
+quel lunedì-domenica
+E il campo mostra il lunedì della settimana attualmente visualizzata
+E non c'è alcun limite verso il passato (stesso principio di "←")
+
+## Scenario: il selettore di data non offre settimane future
+Quando guardo il selettore "Vai alla settimana del"
+Allora la data massima selezionabile è oggi: il campo non permette di
+scegliere un giorno di una settimana futura
+E se comunque apro un indirizzo con `?settimana=` una data futura, o
+non valida, vedo silenziosamente la settimana corrente (nessun errore,
+stesso principio di "parametro non valido ⇒ valore di default")
+E se apro un indirizzo con `?settimana=` una data valida e passata che
+non è un lunedì, vengo portato alla settimana che la contiene
+
 ## Scenario: modificare o confermare una settimana passata non ancora confermata
 Dato che sto guardando una settimana passata che non ho ancora
 confermato
@@ -405,6 +428,9 @@ Quando premo "←" o "→" per cambiare settimana
 Allora resto sulle ore della stessa persona, non torno alle mie
 E valgono le stesse regole di navigazione già in vigore per chiunque
 (mai una settimana futura, nessun limite verso il passato)
+E lo stesso vale usando il selettore "Vai alla settimana del": il
+parametro `utente` resta nell'indirizzo e continuo a vedere le ore della
+stessa persona
 
 ## Scenario: l'admin genera e scarica il PDF mensile del personale
 Dato che sono autenticato come admin
@@ -536,9 +562,17 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   settimana passata (confermata o no) si comporta esattamente come la
   settimana corrente nello stesso stato — stessa UI, stesse regole di
   salvataggio/conferma — semplicemente riferita a un'altra data.
+- Selettore di settimana: un `<form method="get">` con un
+  `<input type="date" max=oggi>` (controllo nativo, accessibile da
+  tastiera e telefono, funziona anche senza JavaScript) e il pulsante
+  "Vai"; nel caso admin un campo nascosto mantiene `utente`. Una data
+  qualunque è normalizzata al lunedì della sua settimana
+  (`lib/oreLavoro.ts:normalizzaSettimanaScelta`), con redirect
+  all'indirizzo canonico `?settimana=<lunedì>`; nessun limite verso il
+  passato. Le server action restano strette: accettano solo un lunedì.
 - **Vincolo assoluto: non è mai possibile inserire o vedere ore per una
-  settimana futura.** Se il parametro `settimana` non è un lunedì
-  valido, oppure è un lunedì futuro rispetto a oggi (fuso Europe/Rome),
+  settimana futura.** Se il parametro `settimana` non è una data valida,
+  oppure cade in una settimana futura rispetto a oggi (fuso Europe/Rome),
   la pagina mostra silenziosamente la settimana corrente al suo posto
   (nessun errore: stesso principio di "parametro non valido ⇒ valore di
   default" già usato per `?periodo=` nel Report, specs/51). Applicato su

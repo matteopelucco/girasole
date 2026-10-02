@@ -14,6 +14,7 @@ import {
   formattaOreConSegno,
   notaGiornoChiusoOreLavoro,
   oreOrdinariePreviste,
+  normalizzaSettimanaScelta,
   settimanaOreLavoroRichiesta,
   totaliSettimanaOreLavoro,
   utenteBersaglioOreLavoro,
@@ -394,6 +395,40 @@ describe('settimanaOreLavoroRichiesta', () => {
   it('una stringa non valida viene riportata alla settimana corrente, senza errori', () => {
     expect(settimanaOreLavoroRichiesta('non-una-data', OGGI)).toBe('2026-08-31');
     expect(settimanaOreLavoroRichiesta('', OGGI)).toBe('2026-08-31');
+  });
+});
+
+describe('normalizzaSettimanaScelta', () => {
+  const OGGI = '2026-08-31'; // lunedì
+
+  it('una data passata qualunque è portata al lunedì della sua settimana', () => {
+    expect(normalizzaSettimanaScelta('2024-03-13', OGGI)).toBe('2024-03-11'); // mercoledì
+    expect(normalizzaSettimanaScelta('2024-03-17', OGGI)).toBe('2024-03-11'); // domenica
+    expect(normalizzaSettimanaScelta('2024-03-11', OGGI)).toBe('2024-03-11'); // già lunedì
+  });
+
+  it('nessun limite verso il passato', () => {
+    expect(normalizzaSettimanaScelta('2019-01-02', OGGI)).toBe('2018-12-31');
+  });
+
+  it('oggi o un giorno della settimana corrente porta alla settimana corrente', () => {
+    expect(normalizzaSettimanaScelta('2026-08-31', OGGI)).toBe('2026-08-31');
+    expect(normalizzaSettimanaScelta('2026-09-06', OGGI)).toBe('2026-08-31');
+    expect(normalizzaSettimanaScelta('2026-09-02', '2026-09-03')).toBe('2026-08-31');
+  });
+
+  it('una data futura è riportata alla settimana corrente (mai una settimana futura)', () => {
+    expect(normalizzaSettimanaScelta('2026-09-07', OGGI)).toBe('2026-08-31');
+    expect(normalizzaSettimanaScelta('2099-01-05', OGGI)).toBe('2026-08-31');
+  });
+
+  it('un valore mancante o non valido restituisce null (la pagina userà la settimana corrente)', () => {
+    expect(normalizzaSettimanaScelta(undefined, OGGI)).toBeNull();
+    expect(normalizzaSettimanaScelta('', OGGI)).toBeNull();
+    expect(normalizzaSettimanaScelta('non-una-data', OGGI)).toBeNull();
+    expect(normalizzaSettimanaScelta('2024-3-13', OGGI)).toBeNull();
+    expect(normalizzaSettimanaScelta('2024-02-31', OGGI)).toBeNull(); // giorno inesistente
+    expect(normalizzaSettimanaScelta('2024-13-01', OGGI)).toBeNull();
   });
 });
 
