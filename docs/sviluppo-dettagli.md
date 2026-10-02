@@ -361,17 +361,34 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   rimedio è abilitare la RLS e definire le policy in una migration, **mai**
   togliere il grant per far passare il check. Tabelle volutamente esposte
   senza RLS: `ALLOW_LIST_SENZA_RLS` in `lib/rlsCheck.ts`, oggi **vuota**;
-  ogni voce va motivata e rivista da rls-guardian. Non verifica che le
+  ogni voce va motivata e rivista da rls-guardian. Dall'issue #133 il
+  check copre anche gli altri oggetti di `public` (`pg_class.relkind`),
+  sempre con privilegi per `authenticated`/`anon`:
+  - **vista** (`v`): fallisce se non ha `security_invoker = true` in
+    `pg_class.reloptions` (senza, gira coi diritti del proprietario e
+    scavalca la RLS delle tabelle sottostanti); accettati i valori
+    booleani di Postgres (`true`, `on`, `yes`, `1`, …), vale l'ultima
+    occorrenza e ogni altro valore conta come falso;
+  - **vista materializzata** (`m`) e **tabella esterna** (`f`): falliscono
+    sempre, perché non hanno RLS e `security_invoker` non le riguarda;
+  - rimedio: `security_invoker = true` (`CREATE VIEW ... WITH
+    (security_invoker = true)` o `ALTER VIEW ... SET (...)`) oppure
+    togliere il grant (qui sì, perché l'oggetto non può avere RLS); le
+    eccezioni vanno in `ALLOW_LIST_ESPOSTI_SENZA_RLS` (in
+    `lib/rlsCheck.ts`, oggi **vuota**, ogni voce motivata e rivista da
+    rls-guardian). Nessuna migration crea oggi viste: il controllo
+    previene il caso futuro.
+  Non verifica che le
   policy esistano o siano corrette (solo che la RLS sia attiva) né i grant
   in eccesso. Fail-closed: esce con codice 2 se una riga ha `grantee` né
-  array né stringa o `rls` non booleano, se non legge tabelle o se manca
+  array né stringa, `rls` non booleano, `relkind` sconosciuto o `reloptions`
+  illeggibili (`null`/assenti valgono "nessuna opzione", quindi una vista
+  viene segnalata), se non legge oggetti o se manca la tabella
   `public.bambini` (DB non migrato o ref sbagliato). Conta anche i grant
   solo su colonne (`has_any_column_privilege`). **Limiti**:
   - una RLS attiva senza policy blocca tutto (fail-closed), ma una policy
     `USING (true)` passa il check: la correttezza delle policy resta a
     rls-guardian e alle e2e per ruolo;
-  - viste, viste materializzate e tabelle esterne non sono coperte (una
-    vista senza `security_invoker` scavalca la RLS; follow-up in issue);
   - solo lo schema `public` e i ruoli `anon`/`authenticated`; le funzioni
     `SECURITY DEFINER` esposte via RPC (es. `puo_richiedere_reset_password`)
     restano fuori;
