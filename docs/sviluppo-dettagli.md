@@ -249,6 +249,16 @@ finché non risulta tutto verde.
   test:unit:watch` (rilancia ad ogni modifica — utile durante lo
   sviluppo di una funzione in `lib/`).
 
+### pgTAP — policy RLS per ruolo (issue #29/#180)
+- Le RLS si verificano con un Postgres reale: `supabase/tests/database/<tabella>.test.sql`, un file per tabella, tutto in `begin; ... select * from finish(); rollback;` così non resta nessun dato. Modello: `profili_orari.test.sql`.
+- Per aggiungere un test: copia gli helper in testa (`pg_temp.ids_as(uuid)` esegue la select impersonando un `authenticated` con `sub` per `auth.uid()`, o l'anonimo se `null`, poi torna al ruolo di partenza e restituisce il risultato; `pg_temp.write_as(uuid, sql)` fa lo stesso per le scritture e restituisce lo SQLSTATE), crea gli utenti fittizi (`@example.test`) con un `insert into auth.users` (il trigger crea il profilo dal `ruolo` in `raw_user_meta_data`) e confronta i risultati con `is(...)`. Aggiorna `select plan(N)`. Le funzioni pgTAP girano sempre col ruolo di partenza, mai da `authenticated`/`anon`.
+- Un test RLS deve provare anche il "negativo": una RLS che nega non dà errore ma zero righe, quindi asserisci i conteggi esatti (e, per un bug, `drop policy` dentro la transazione e verifica che il risultato cambi).
+- pgTAP sul progetto di test è già installato nello schema `extensions`, che non è nel `search_path` della connessione di `pg_prove`: senza rimedio `plan()`/`is()`/`finish()` danno "function plan(integer) does not exist".
+  Per questo ogni file, dopo `create extension if not exists pgtap with schema extensions`, legge dal catalogo lo schema di pgTAP e fa `set local search_path` (blocco `do` in testa a `profili_orari.test.sql`): copialo così com'è.
+  Il login role temporaneo della CLI remota può non ereditare USAGE su quello schema: il file prova `set local role postgres` e stampa un `DIAG[...]` (ruolo, search_path, schema, USAGE, funzioni `plan`) nel log, utile se `plan()` non si risolve.
+- Non eseguire `supabase test db --linked` a mano: in CI gira nel job `e2e`, step "6a", subito dopo il reset del DB di test (stesso `--project-ref`, mai la produzione).
+- Esito: lo step è rosso se un `ok`/`is` fallisce; nel log del job le righe `not ok N - descrizione` con `Failed test` indicano quale asserzione e perché (atteso/ottenuto). Riga finale `Result: PASS`/`FAIL`.
+
 ## Repo pubblico — regole di sicurezza (non negoziabili)
 Questo repository è pubblico su GitHub: chiunque legga il codice, anche in
 cronologia commit passata, anche dopo un'eventuale rimozione.
