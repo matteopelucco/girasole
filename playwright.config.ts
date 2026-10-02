@@ -29,7 +29,19 @@ export default defineConfig({
   // (issue #70). Fermandosi prima, la CI resta rossa ma il report c'è.
   maxFailures: process.env.CI ? 15 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [['html', { open: 'never' }], ['github']] : 'list',
+  // In CI anche il reporter `json`, da cui lo step "Riepilogo dei test
+  // saltati" del job `e2e` ricava file/titolo/motivo di ogni skip (issue
+  // #176, scripts/riepilogo-skip-e2e.mts). Percorso fuori da
+  // `playwright-report/` (ripulito dal reporter html) e da `test-results/`
+  // (outputDir, svuotato da Playwright all'avvio): una cartella dedicata,
+  // ignorata da git, che nessun altro tocca.
+  reporter: process.env.CI
+    ? [
+        ['html', { open: 'never' }],
+        ['github'],
+        ['json', { outputFile: 'playwright-json/report.json' }],
+      ]
+    : 'list',
 
   use: {
     baseURL: 'http://localhost:3000',

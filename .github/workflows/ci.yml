@@ -321,6 +321,15 @@ jobs:
           E2E_MAESTRA_SENZA_SEZIONE_PASSWORD: ${{ secrets.E2E_MAESTRA_SENZA_SEZIONE_PASSWORD }}
           E2E_UTENTE_DA_PROMUOVERE_EMAIL: ${{ secrets.E2E_UTENTE_DA_PROMUOVERE_EMAIL }}
 
+      # Riepilogo dei test saltati e dei motivi nel job summary (issue #176).
+      # Solo informativo: continue-on-error, e lo script esce 0 anche se il
+      # report JSON manca (job scaduto/annullato prima di scriverlo). Non
+      # riceve né stampa secret (nessun `env:`).
+      - name: Riepilogo dei test e2e saltati (job summary)
+        if: always()
+        continue-on-error: true
+        run: node --no-warnings --experimental-strip-types scripts/riepilogo-skip-e2e.mts >> "$GITHUB_STEP_SUMMARY"
+
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
         # always(): anche a job scaduto per timeout si prova a caricare
         # quel che c'è (issue #70).
