@@ -71,6 +71,24 @@ E quando tutte le presenze mancanti vengono segnate (in una qualunque
 classe, anche non tra quelle assegnate a me) e ricarico la pagina, il
 messaggio sparisce e ricompare il pulsante "Conferma pasti"
 
+## Scenario: la comunicazione è bloccata se i dati sono incoerenti
+Dato che sono autenticata come maestra o admin, ho aperto "Presenze e
+pasti" per la data odierna, i pasti di oggi non sono ancora stati
+comunicati e almeno un bambino attivo, di una qualunque classe
+dell'asilo, ha il pasto "sì" ma risulta assente o in malattia (quindi i
+pasti segnati sono più dei bambini presenti)
+Allora al posto del pulsante "Conferma pasti" vedo un messaggio che mi
+avvisa che non è ancora possibile comunicare i pasti perché ci sono dati
+incoerenti, con il numero di bambini interessati
+E vedo l'elenco con nome e cognome di ciascuno e il motivo
+dell'incoerenza (stessi messaggi di
+[06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)),
+anche se appartiene a una classe non assegnata a me
+E ogni nome di un bambino la cui card è in questa stessa pagina è un
+link alla sua card, per correggere il dato
+E quando i dati sono corretti e ricarico la pagina il messaggio sparisce
+e ricompare il pulsante "Conferma pasti"
+
 ## Scenario: confermare la comunicazione
 Dato che sto guardando il riquadro di conferma comunicazione pasti
 Quando premo "Conferma"
@@ -191,6 +209,23 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   anche a livello di database (trigger su `pasti_comunicati`, stesso
   principio dei trigger già in uso per le altre regole pasti — vedi
   sotto), non solo in UI.
+- La comunicazione richiede anche che i dati dell'intero asilo siano
+  **coerenti** (regole di [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md):
+  in pratica, nessun bambino con pasto "sì" e presenza assente/malattia,
+  il che equivale a pasti ≤ presenti). Un'incoerenza, come una presenza
+  mancante, toglie il pulsante "Conferma pasti" e lo sostituisce con
+  l'elenco dei bambini da correggere (se mancano anche delle presenze, i
+  due messaggi compaiono entrambi). Il controllo è ripetuto lato server
+  alla conferma (la pagina potrebbe essere stata aperta prima di una
+  modifica): se trova un'incoerenza, la comunicazione non viene
+  registrata e viene mostrato un messaggio con i bambini interessati.
+  Motivo: un pasto segnato su un bambino poi risultato assente finiva
+  nel totale comunicato a Rojac (e nella retta del mese dopo). Il caso
+  si previene alla fonte quando si segna Assente/Malattia
+  ([13 - segna-presenza.md](13%20-%20segna-presenza.md), con avviso e
+  azzeramento del pasto); questo controllo copre ciò che sfugge (es.
+  l'assistente, che non vede i pasti, o dati preesistenti). Non è
+  applicato come trigger sul database: solo lato app (pagina e azione).
 - Una sola comunicazione per data, per l'intero asilo: applicato anche
   a livello di database (vincolo di unicità su `data`, non più su
   classe+data).

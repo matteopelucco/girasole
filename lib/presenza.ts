@@ -43,6 +43,47 @@ export function prossimaPresenza(attuale: RigaPresenza | null, azione: AzionePre
   return { stato: 'presente', preAsilo: preAsiloAttuale, postAsilo: !postAsiloAttuale };
 }
 
+// Cosa va azzerato quando un bambino viene segnato Assente/Malattia
+// (specs/13 - segna-presenza.md, issue #186): un bambino assente non
+// mangia e non fa pre/post-asilo, e un pasto "sì" rimasto sul suo nome
+// verrebbe contato nel totale comunicato a Rojac (e nella retta). Serve
+// alla UI per decidere se chiedere conferma; l'azzeramento vero lo fa la
+// server action. Se il bambino è già assente/malato non c'è nulla da
+// azzerare: passare dall'uno all'altro non cambia i pasti (e il trigger
+// di 0012/0017 non permette comunque di scrivere un pasto in quel caso).
+// `mangiato` è undefined per chi non legge i pasti (l'assistente).
+export type DatiDaAzzerare = { pasto: boolean; preAsilo: boolean; postAsilo: boolean };
+
+export function datiDaAzzerarePerAssenza({
+  statoAttuale,
+  mangiato,
+  preAsilo,
+  postAsilo,
+}: {
+  statoAttuale: StatoPresenza | null | undefined;
+  mangiato?: string | null;
+  preAsilo?: boolean | null;
+  postAsilo?: boolean | null;
+}): DatiDaAzzerare {
+  if (statoAttuale === 'assente' || statoAttuale === 'malattia') {
+    return { pasto: false, preAsilo: false, postAsilo: false };
+  }
+  return { pasto: mangiato === 'si', preAsilo: !!preAsilo, postAsilo: !!postAsilo };
+}
+
+// Testo dell'avviso mostrato prima della conferma; null se non c'è nulla
+// da azzerare (nessuna conferma da chiedere).
+export function avvisoAzzeramentoPerAssenza(da: DatiDaAzzerare): string | null {
+  const voci = [da.pasto && 'il pasto', da.preAsilo && 'il pre-asilo', da.postAsilo && 'il post-asilo'].filter(
+    (voce): voce is string => !!voce
+  );
+  if (!voci.length) return null;
+
+  const elenco = voci.length === 1 ? voci[0] : `${voci.slice(0, -1).join(', ')} e ${voci[voci.length - 1]}`;
+  const singolare = voci.length === 1;
+  return `Attenzione: per questo bambino ${singolare ? 'risulta già segnato' : 'risultano già segnati'} ${elenco}. Se confermi, ${singolare ? 'verrà azzerato' : 'verranno azzerati'}.`;
+}
+
 // Blocco di Assente/Malattia dopo la comunicazione dei pasti a Rojac
 // (specs/16 - comunicazione-pasti-rojac.md, issue #100): vero se, per
 // questo bambino e questa data, i pulsanti Assente/Malattia vanno

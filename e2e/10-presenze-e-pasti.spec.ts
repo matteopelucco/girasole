@@ -19,6 +19,7 @@ import {
   nessunaViolazioneA11yGrave,
   nomeBambinoCard,
   primaCardConPulsante,
+  segnaAssenteOMalattia,
   sezioneNota,
   statoAutenticazione,
 } from './helpers';
@@ -298,7 +299,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
         'Assente bloccato (pasto già comunicato a Rojac)'
       );
 
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
+      await segnaAssenteOMalattia(page, presenza, 'Assente');
 
       const pasto = colonnaPasto(stessaCard);
       await expect(pasto.getByText('🚫 Assente')).toBeVisible();

@@ -28,11 +28,15 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
   apriGiornata,
   cardBambini,
+  clickEAttendiAzione,
   colonnaPasto,
   colonnaPresenza,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
+  nomeBambinoCard,
+  primaCardConPulsante,
+  segnaAssenteOMalattia,
   statoAutenticazione,
   sezioneNota,
 } from './helpers';
@@ -96,6 +100,52 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       }
 
       await nessunaViolazioneA11yGrave(page);
+    });
+
+    // Issue #186: pasto "sì" su un bambino assente (pasti > presenti). Da
+    // maestra non si crea più (l'app avvisa e azzera il pasto, specs/13):
+    // lo crea l'assistente, che non vede i pasti, in un contesto di
+    // browser a parte. Il test ripristina il bambino a "presente".
+    test('se un bambino ha il pasto "sì" ma è assente, "Conferma pasti" non compare e il messaggio elenca il bambino con il motivo', async ({
+      page,
+      browser,
+    }) => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+      const card = primaCardConPulsante(page, 'Pasto', 'Sì');
+      test.skip((await card.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      const nome = (await nomeBambinoCard(card).textContent())?.trim();
+      const presenza = colonnaPresenza(card);
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, colonnaPasto(card).getByRole('button', { name: 'Sì' }));
+      await expect(colonnaPasto(card).getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+
+      const contestoAssistente = await browser.newContext({ storageState: statoAutenticazione('assistente') });
+      try {
+        const paginaAssistente = await contestoAssistente.newPage();
+        await apriGiornata(paginaAssistente, dataOggiRoma());
+        const cardAssistente = cardBambini(paginaAssistente).filter({ hasText: nome! }).first();
+        test.skip((await cardAssistente.count()) === 0, "bambino non visibile all'assistente");
+        await segnaAssenteOMalattia(paginaAssistente, colonnaPresenza(cardAssistente), 'Assente');
+
+        await apriGiornata(page, dataOggiRoma());
+        await expect(page.getByText(/bambin\w+ ha(nno)? dati incoerenti/)).toBeVisible();
+        const elenco = page.getByRole('list', { name: 'Bambini con dati incoerenti' });
+        const voce = elenco.getByRole('listitem').filter({ hasText: nome! });
+        await expect(voce).toContainText('Pasto segnato "sì" ma il bambino risulta assente.');
+        // La card è in questa pagina: il nome è un link alla sua card.
+        await expect(voce.getByRole('link', { name: nome! })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Conferma pasti' })).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      } finally {
+        await contestoAssistente.close();
+        // Ripristino: Presente è sempre consentito (anche se il test è fallito a metà).
+        await apriGiornata(page, dataOggiRoma());
+        const cardMaestra = cardBambini(page).filter({ hasText: nome! }).first();
+        await clickEAttendiAzione(page, colonnaPresenza(cardMaestra).getByRole('button', { name: 'Presente' }));
+      }
+
+      await expect(page.getByRole('list', { name: 'Bambini con dati incoerenti' })).toHaveCount(0);
     });
 
     test('il riquadro di conferma mostra numero pasti, telefono Rojac e data; "Annulla" non registra nulla', async ({

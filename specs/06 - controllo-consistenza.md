@@ -98,8 +98,16 @@ già a livello di scrittura:
   presenza in assente/malattia (le due tabelle sono indipendenti,
   scritte da azioni separate — vedi "Presenza e pasto sono indipendenti"
   in [14 - segna-pasto.md](14%20-%20segna-pasto.md)). Questo è il caso
-  reale che il warning intercetta. **Dopo la comunicazione dei pasti a
-  Rojac** il caso non è più raggiungibile per maestra e assistente:
+  reale che il warning intercetta. **Quando si segna Assente/Malattia da
+  "Presenze e pasti"** un bambino con pasto "sì", l'app avvisa e, alla
+  conferma, azzera il pasto (vedi
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md)): per maestra e
+  admin l'incoerenza non si crea più da quella strada. Resta possibile
+  per l'assistente (che non vede i pasti), per l'ordine di correzione
+  fatto altrove (es. SQL) e per dati storici, e resta quindi segnalata
+  qui — e **blocca la comunicazione dei pasti a Rojac** finché non è
+  corretta (vedi [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).
+  **Dopo la comunicazione dei pasti a Rojac** il caso non è più raggiungibile per maestra e assistente:
   segnare "assente"/"malattia" un bambino con pasto "sì" è bloccato
   anche a livello di database (vedi
   [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).
@@ -109,5 +117,8 @@ già a livello di scrittura:
 - Il messaggio del warning è specifico (spiega quale regola è violata),
   non un'etichetta generica, per permettere una correzione rapida senza
   dover indovinare il problema.
-- Il controllo è di sola visualizzazione: non blocca alcuna azione né
-  modifica i dati, si limita a segnalare.
+- Il controllo è di sola visualizzazione: non modifica i dati e non
+  blocca le azioni sulla card, si limita a segnalare. Unica eccezione,
+  fuori da questo requisito: la comunicazione dei pasti a Rojac non è
+  possibile finché c'è un'incoerenza (vedi
+  [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).

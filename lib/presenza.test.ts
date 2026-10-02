@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   assenzaBloccataDaComunicazione,
+  avvisoAzzeramentoPerAssenza,
+  datiDaAzzerarePerAssenza,
   messaggioErroreSalvataggioPresenza,
   MESSAGGIO_ASSENZA_BLOCCATA,
   prossimaPresenza,
@@ -175,6 +177,68 @@ describe('messaggioErroreSalvataggioPresenza', () => {
   it('ogni altro errore resta con il prefisso e il dettaglio tecnico', () => {
     expect(messaggioErroreSalvataggioPresenza('new row violates row-level security policy')).toBe(
       'Impossibile salvare la presenza: new row violates row-level security policy'
+    );
+  });
+});
+
+describe('datiDaAzzerarePerAssenza (specs/13, avviso prima di Assente/Malattia)', () => {
+  const nulla = { pasto: false, preAsilo: false, postAsilo: false };
+
+  it('bambino presente con pasto sì: da azzerare il pasto', () => {
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: 'presente', mangiato: 'si', preAsilo: false, postAsilo: false })).toEqual({
+      ...nulla,
+      pasto: true,
+    });
+  });
+
+  it('bambino senza presenza ancora segnata ma con pasto sì: da azzerare il pasto', () => {
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: undefined, mangiato: 'si' })).toEqual({ ...nulla, pasto: true });
+  });
+
+  it('pre-asilo e post-asilo attivi: da azzerare entrambi', () => {
+    expect(
+      datiDaAzzerarePerAssenza({ statoAttuale: 'presente', mangiato: 'no', preAsilo: true, postAsilo: true })
+    ).toEqual({ pasto: false, preAsilo: true, postAsilo: true });
+  });
+
+  it('tutto insieme', () => {
+    expect(
+      datiDaAzzerarePerAssenza({ statoAttuale: 'presente', mangiato: 'si', preAsilo: true, postAsilo: false })
+    ).toEqual({ pasto: true, preAsilo: true, postAsilo: false });
+  });
+
+  it('pasto no o non segnato, nessun pre/post: niente da azzerare', () => {
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: 'presente', mangiato: 'no' })).toEqual(nulla);
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: 'presente' })).toEqual(nulla);
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: undefined })).toEqual(nulla);
+  });
+
+  it('già assente o malato: niente da azzerare (passare da assente a malattia non cambia i pasti)', () => {
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: 'assente', mangiato: 'si' })).toEqual(nulla);
+    expect(datiDaAzzerarePerAssenza({ statoAttuale: 'malattia', mangiato: 'si' })).toEqual(nulla);
+  });
+});
+
+describe('avvisoAzzeramentoPerAssenza', () => {
+  it('nessun avviso se non c\'è nulla da azzerare', () => {
+    expect(avvisoAzzeramentoPerAssenza({ pasto: false, preAsilo: false, postAsilo: false })).toBeNull();
+  });
+
+  it('un solo elemento: singolare', () => {
+    expect(avvisoAzzeramentoPerAssenza({ pasto: true, preAsilo: false, postAsilo: false })).toBe(
+      'Attenzione: per questo bambino risulta già segnato il pasto. Se confermi, verrà azzerato.'
+    );
+  });
+
+  it('due elementi: plurale con "e"', () => {
+    expect(avvisoAzzeramentoPerAssenza({ pasto: true, preAsilo: true, postAsilo: false })).toBe(
+      'Attenzione: per questo bambino risultano già segnati il pasto e il pre-asilo. Se confermi, verranno azzerati.'
+    );
+  });
+
+  it('tre elementi: elenco con virgola e "e"', () => {
+    expect(avvisoAzzeramentoPerAssenza({ pasto: true, preAsilo: true, postAsilo: true })).toBe(
+      'Attenzione: per questo bambino risultano già segnati il pasto, il pre-asilo e il post-asilo. Se confermi, verranno azzerati.'
     );
   });
 });

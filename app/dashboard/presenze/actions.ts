@@ -5,6 +5,7 @@ import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import {
+  MESSAGGIO_ASSENZA_BLOCCATA,
   messaggioErroreSalvataggioPresenza,
   prossimaPresenza,
   type AzionePresenza,
@@ -39,6 +40,61 @@ async function upsertPresenza(
   if (error) throw new Error(messaggioErroreSalvataggioPresenza(error.message));
 }
 
+// Frammento del messaggio del trigger di 0020 (pasti già comunicati a
+// Rojac): per un non-admin l'azzeramento del pasto viene rifiutato.
+const FRAMMENTO_ERRORE_PASTI_COMUNICATI = 'comunicati a Rojac';
+
+// Azzera il pasto "sì" di un bambino che sta per essere segnato
+// Assente/Malattia (specs/13 - segna-presenza.md, issue #186): un
+// bambino assente non mangia, e un pasto "sì" rimasto lo farebbe contare
+// nel totale comunicato a Rojac. Va fatto PRIMA di scrivere la presenza:
+// dopo, il trigger di 0012/0017 rifiuterebbe ogni scrittura del pasto.
+// Legge il pasto attuale dal database (non quello mostrato in pagina,
+// che potrebbe essere superato). L'assistente non vede né modifica i
+// pasti (RLS): per lei non c'è nulla da azzerare, lo intercetta il
+// controllo alla comunicazione (specs/16). Restituisce true se ha
+// azzerato un pasto, per poterlo ripristinare se la presenza fallisce.
+// Il pasto passa a "no" (la RLS non permette alla maestra di eliminare
+// la riga) e la colonna `note` non viene toccata.
+// grant-check: authenticated
+async function azzeraPastoSeSegnato(
+  supabase: SupabaseClient,
+  userId: string,
+  ruolo: string | null | undefined,
+  bambinoId: string,
+  data: string
+): Promise<boolean> {
+  if (ruolo === 'assistente') return false;
+
+  const { data: pasto, error: erroreLettura } = await supabase
+    .from('pasti')
+    .select('mangiato')
+    .eq('bambino_id', bambinoId)
+    .eq('data', data)
+    .maybeSingle();
+  if (erroreLettura) throw new Error(`Impossibile leggere il pasto: ${erroreLettura.message}`);
+  if (pasto?.mangiato !== 'si') return false;
+
+  const { error } = await supabase
+    .from('pasti')
+    .update({ mangiato: 'no', inserito_da: userId })
+    .eq('bambino_id', bambinoId)
+    .eq('data', data);
+  if (error) {
+    if (error.message.includes(FRAMMENTO_ERRORE_PASTI_COMUNICATI)) throw new Error(MESSAGGIO_ASSENZA_BLOCCATA);
+    throw new Error(`Impossibile azzerare il pasto: ${error.message}`);
+  }
+  return true;
+}
+
+// Rimette il pasto a "sì" se la presenza non è stata salvata dopo
+// l'azzeramento (best-effort: l'errore originale resta quello che
+// importa all'utente).
+// grant-check: authenticated
+async function ripristinaPasto(supabase: SupabaseClient, bambinoId: string, data: string) {
+  await supabase.from('pasti').update({ mangiato: 'si' }).eq('bambino_id', bambinoId).eq('data', data);
+}
+
 // segnaPresenza/segnaPreAsilo/segnaPostAsilo/salvaNotaPresenza sono
 // legate a bottoni diversi dentro allo stesso form (vedi
 // app/dashboard/giornata/ColonnaPresenza.tsx): niente useFormState, il feedback
@@ -57,7 +113,20 @@ async function applicaAzionePresenza(
 
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
   const prossima = prossimaPresenza(rigaAttuale, azione);
-  await upsertPresenza(supabase, user.id, bambinoId, data, prossima, note);
+
+  // Assente/Malattia: il pasto "sì" va azzerato (la UI ha già chiesto
+  // conferma, vedi ColonnaPresenza), pre/post-asilo li azzera già
+  // prossimaPresenza.
+  const azzerato =
+    azione === 'assente' || azione === 'malattia'
+      ? await azzeraPastoSeSegnato(supabase, user.id, profilo?.ruolo, bambinoId, data)
+      : false;
+  try {
+    await upsertPresenza(supabase, user.id, bambinoId, data, prossima, note);
+  } catch (errore) {
+    if (azzerato) await ripristinaPasto(supabase, bambinoId, data);
+    throw errore;
+  }
 
   revalidatePath(PERCORSO_GIORNATA);
 }

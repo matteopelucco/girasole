@@ -19,6 +19,7 @@ import {
   dataOggiRoma,
   hasCredenziali,
   primaCardConPulsante,
+  segnaAssenteOMalattia,
   sezioneNota,
   statoAutenticazione,
 } from './helpers';
@@ -61,7 +62,7 @@ test.describe('13 — Segna presenza', () => {
 
       await sezioneNota(card).getByLabel('Nota (opzionale)').fill('influenza, rientra lunedì');
       const bottoneAssente = presenza.getByRole('button', { name: 'Assente' });
-      await clickEAttendiAzione(page, bottoneAssente);
+      await segnaAssenteOMalattia(page, presenza, 'Assente');
 
       await expect(bottoneAssente).toHaveClass(/bg-stone-600/);
       // Bug reale trovato durante un test con un'insegnante: il
@@ -121,7 +122,7 @@ test.describe('13 — Segna presenza', () => {
       await page.reload();
       await sezioneNota(card).getByLabel('Nota (opzionale)').fill('febbre alta');
       const bottoneMalattia = presenza.getByRole('button', { name: 'Malattia' });
-      await clickEAttendiAzione(page, bottoneMalattia);
+      await segnaAssenteOMalattia(page, presenza, 'Malattia');
 
       await expect(bottoneMalattia).toHaveClass(/bg-rose-600/);
       await expect(presenza.getByRole('button', { name: 'Presente' })).not.toHaveClass(/bg-emerald-700/);
@@ -134,6 +135,100 @@ test.describe('13 — Segna presenza', () => {
       }
 
       // Ripristino (vedi il test sull'assenza sopra).
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+    });
+
+    // Segnare Assente/Malattia con un pasto "sì" o un pre/post-asilo già
+    // segnati: avviso, conferma, azzeramento (specs/13, issue #186).
+    // Ogni test riporta il bambino a "presente" a fine corsa.
+    test('Assente con pre-asilo attivo chiede conferma: Annulla non cambia nulla', async ({ page }) => {
+      const card = primaCardConPulsante(page, 'Presenza', 'Pre-asilo');
+      test.skip((await card.count()) === 0, 'nessun bambino segnabile');
+      const presenza = colonnaPresenza(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
+        'Assente bloccato (pasto già comunicato a Rojac)'
+      );
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Pre-asilo' }));
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+
+      await presenza.getByRole('button', { name: 'Assente' }).click();
+      const avviso = presenza.getByRole('group', { name: 'Conferma azzeramento' });
+      await expect(avviso).toContainText('il pre-asilo');
+      await expect(avviso.getByRole('button', { name: 'Conferma e azzera' })).toBeVisible();
+
+      await avviso.getByRole('button', { name: 'Annulla' }).click();
+      await expect(avviso).toHaveCount(0);
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+      await page.reload();
+      await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
+      await expect(presenza.getByRole('button', { name: 'Presente' })).toHaveClass(/bg-emerald-700/);
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+    });
+
+    test('Assente con pasto "sì" chiede conferma e, confermando, azzera il pasto a "no"', async ({ page }) => {
+      const primaCard = primaCardConPulsante(page, 'Pasto', 'Sì');
+      test.skip((await primaCard.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      // La card va fissata per id: dopo Assente i pulsanti Sì/No spariscono
+      // e un locator "prima card con Sì/No" punterebbe a un altro bambino.
+      const card = page.locator(`li#${await primaCard.getAttribute('id')}`);
+      const presenza = colonnaPresenza(card);
+      const pasto = colonnaPasto(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
+        'Assente bloccato (pasto già comunicato a Rojac)'
+      );
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'Sì' }));
+      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+
+      await presenza.getByRole('button', { name: 'Assente' }).click();
+      const avviso = presenza.getByRole('group', { name: 'Conferma azzeramento' });
+      await expect(avviso).toContainText('il pasto');
+      // Finché non si conferma non cambia nulla.
+      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+
+      await sezioneNota(card).getByLabel('Nota (opzionale)').fill('influenza');
+      await clickEAttendiAzione(page, avviso.getByRole('button', { name: 'Conferma e azzera' }));
+
+      await expect(presenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+      await expect(pasto.getByText('🚫 Assente')).toBeVisible();
+      // Il bambino non è più in incoerenza (pasto azzerato) e la nota è salvata.
+      await expect(card.getByText('Inconsistenza')).toHaveCount(0);
+      await expect(sezioneNota(card).getByLabel('Nota (opzionale)')).toHaveValue('influenza');
+
+      // Tornato presente, il pasto è "no" (azzerato), non più "sì".
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await expect(pasto.getByRole('button', { name: 'No', exact: true })).toHaveClass(/bg-rose-600/);
+      await expect(pasto.getByRole('button', { name: 'Sì' })).not.toHaveClass(/bg-emerald-700/);
+    });
+
+    test('Malattia con pasto "no" e nessun pre/post-asilo non chiede conferma', async ({ page }) => {
+      const primaCard = primaCardConPulsante(page, 'Pasto', 'No');
+      test.skip((await primaCard.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      // Card fissata per id (vedi il test precedente).
+      const card = page.locator(`li#${await primaCard.getAttribute('id')}`);
+      const presenza = colonnaPresenza(card);
+      const pasto = colonnaPasto(card);
+      test.skip(
+        await presenza.getByRole('button', { name: 'Malattia' }).isDisabled(),
+        'Malattia bloccata (pasto già comunicato a Rojac)'
+      );
+
+      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, pasto.getByRole('button', { name: 'No', exact: true }));
+      await expect(pasto.getByRole('button', { name: 'No', exact: true })).toHaveClass(/bg-rose-600/);
+
+      const bottoneMalattia = presenza.getByRole('button', { name: 'Malattia' });
+      await expect(bottoneMalattia).not.toHaveAttribute('aria-expanded');
+      await clickEAttendiAzione(page, bottoneMalattia);
+      await expect(bottoneMalattia).toHaveClass(/bg-rose-600/);
+      await expect(presenza.getByRole('group', { name: 'Conferma azzeramento' })).toHaveCount(0);
+
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
     });
 
@@ -213,7 +308,9 @@ test.describe('13 — Segna presenza', () => {
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Pre-asilo' }));
       await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).toHaveClass(/bg-sky-700/);
 
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
+      // Con pre-asilo attivo, Assente chiede prima conferma (specs/13,
+      // issue #186) e alla conferma azzera il pre/post-asilo.
+      await segnaAssenteOMalattia(page, presenza, 'Assente');
       await expect(presenza.getByRole('button', { name: 'Pre-asilo' })).not.toHaveClass(/bg-sky-700/);
       await expect(presenza.getByRole('button', { name: 'Post-asilo' })).not.toHaveClass(/bg-sky-700/);
 

@@ -17,6 +17,7 @@ import {
   hasCredenziali,
   nessunaViolazioneA11yGrave,
   primaCardConPulsante,
+  segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
 
@@ -110,7 +111,7 @@ test.describe('14 — Segna pasto', () => {
         'Assente bloccato (pasto già comunicato a Rojac)'
       );
 
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
+      await segnaAssenteOMalattia(page, presenza, 'Assente');
       await expect(presenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
 
       const pasto = colonnaPasto(card);
@@ -130,7 +131,7 @@ test.describe('14 — Segna pasto', () => {
         'Malattia bloccata (pasto già comunicato a Rojac)'
       );
 
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Malattia' }));
+      await segnaAssenteOMalattia(page, presenza, 'Malattia');
       await expect(presenza.getByRole('button', { name: 'Malattia' })).toHaveClass(/bg-rose-600/);
 
       const pasto = colonnaPasto(card);

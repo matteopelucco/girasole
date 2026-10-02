@@ -5,7 +5,11 @@ import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { contaPastiSiOggiTuttoAsilo, bambiniSenzaPresenzaOggiTuttoAsilo } from '@/lib/pastiRojac';
+import {
+  contaPastiSiOggiTuttoAsilo,
+  bambiniSenzaPresenzaOggiTuttoAsilo,
+  bambiniConIncoerenzeOggiTuttoAsilo,
+} from '@/lib/pastiRojac';
 import { inviaEmail } from '@/lib/email';
 import { formattaDataItaliana } from '@/lib/date';
 import type { EsitoAzione } from '@/components/FormConEsito';
@@ -82,6 +86,19 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     return {
       ok: false,
       messaggio: `Impossibile comunicare i pasti: ${numeroSenzaPresenza} ${numeroSenzaPresenza === 1 ? 'bambino non ha' : 'bambini non hanno'} ancora la presenza segnata per oggi.`,
+    };
+  }
+
+  // Pasti segnati > presenti (specs/16): la pagina non offre il pulsante
+  // in questo caso, ma potrebbe essere stata aperta prima della modifica
+  // che ha creato l'incoerenza — il controllo è ripetuto qui, prima di
+  // registrare la comunicazione (che è irreversibile).
+  const incoerenti = await bambiniConIncoerenzeOggiTuttoAsilo(data);
+  if (incoerenti.length > 0) {
+    const elenco = incoerenti.map((b) => `${b.nome} ${b.cognome}`).join(', ');
+    return {
+      ok: false,
+      messaggio: `Impossibile comunicare i pasti: ${incoerenti.length === 1 ? 'un bambino ha' : `${incoerenti.length} bambini hanno`} dati incoerenti (${elenco}). Correggi presenza o pasto e riprova.`,
     };
   }
 

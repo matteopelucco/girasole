@@ -35,3 +35,18 @@ export function inconsistenzeGiorno(riga: RigaPerConsistenza): string[] {
 
   return problemi;
 }
+
+export type BambinoConIncoerenze = { id: string; nome: string; cognome: string; problemi: string[] };
+
+// Bambini con almeno un'incoerenza tra un insieme di righe giorno/bambino
+// (specs/16 - comunicazione-pasti-rojac.md): la comunicazione dei pasti
+// a Rojac è bloccata finché ne esiste anche uno (pasti segnati > presenti).
+// Funzione pura: chi chiama (lib/pastiRojac.ts) ha già letto i dati
+// dell'intero asilo; qui solo la regola, riusando inconsistenzeGiorno.
+export function bambiniConIncoerenze(
+  righe: (RigaPerConsistenza & { id: string; nome: string; cognome: string })[]
+): BambinoConIncoerenze[] {
+  return righe
+    .map(({ id, nome, cognome, ...riga }) => ({ id, nome, cognome, problemi: inconsistenzeGiorno(riga) }))
+    .filter((b) => b.problemi.length > 0);
+}
