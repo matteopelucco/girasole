@@ -6,10 +6,14 @@ import { requireProfilo, assicuraScrivibile } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
 import {
   MESSAGGIO_ASSENZA_BLOCCATA,
+  assicuraRigaAttesa,
+  MESSAGGIO_PRESENZA_NON_TROVATA,
   messaggioErroreSalvataggioPresenza,
   prossimaPresenza,
+  rigaPresenzaDaDb,
   type AzionePresenza,
   type RigaPresenza,
+  type RigaPresenzaDb,
 } from '@/lib/presenza';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -95,6 +99,27 @@ async function ripristinaPasto(supabase: SupabaseClient, bambinoId: string, data
   await supabase.from('pasti').update({ mangiato: 'si' }).eq('bambino_id', bambinoId).eq('data', data);
 }
 
+// Rilegge la riga di presenza dal database con il client dell'utente
+// (sotto RLS, mai service_role): è la fonte di verità per decidere cosa
+// scrivere, al posto della riga che il browser invia con `.bind()`
+// (falsificabile, issue #124). null = non esiste o non è visibile
+// all'utente: le due cose non si distinguono, nessun dato rivelato.
+// grant-check: authenticated
+async function leggiRigaPresenza(
+  supabase: SupabaseClient,
+  bambinoId: string,
+  data: string
+): Promise<RigaPresenza | null> {
+  const { data: riga, error } = await supabase
+    .from('presenze')
+    .select('stato, pre_asilo, post_asilo')
+    .eq('bambino_id', bambinoId)
+    .eq('data', data)
+    .maybeSingle<RigaPresenzaDb>();
+  if (error) throw new Error('Impossibile leggere la presenza di questo bambino. Riprova.');
+  return rigaPresenzaDaDb(riga);
+}
+
 // segnaPresenza/segnaPreAsilo/segnaPostAsilo/salvaNotaPresenza sono
 // legate a bottoni diversi dentro allo stesso form (vedi
 // app/dashboard/giornata/ColonnaPresenza.tsx): niente useFormState, il feedback
@@ -103,7 +128,7 @@ async function ripristinaPasto(supabase: SupabaseClient, bambinoId: string, data
 async function applicaAzionePresenza(
   bambinoId: string,
   azione: AzionePresenza,
-  rigaAttuale: RigaPresenza | null,
+  rigaAttesaDalClient: RigaPresenza | null | undefined,
   data: string,
   formData: FormData
 ) {
@@ -112,6 +137,14 @@ async function applicaAzionePresenza(
   await assicuraGiornoApribile(supabase, data);
 
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
+  // Solo i toggle pre/post-asilo dipendono dalla riga attuale: Presente/
+  // Assente/Malattia la sovrascrivono comunque (un record per bambino e
+  // giorno, upsert).
+  let rigaAttuale: RigaPresenza | null = null;
+  if (azione === 'pre_asilo' || azione === 'post_asilo') {
+    rigaAttuale = await leggiRigaPresenza(supabase, bambinoId, data);
+    assicuraRigaAttesa(rigaAttuale, rigaAttesaDalClient);
+  }
   const prossima = prossimaPresenza(rigaAttuale, azione);
 
   // Assente/Malattia: il pasto "sì" va azzerato (la UI ha già chiesto
@@ -137,13 +170,15 @@ export async function segnaPresenza(
   data: string,
   formData: FormData
 ) {
-  await applicaAzionePresenza(bambinoId, stato, null, data, formData);
+  await applicaAzionePresenza(bambinoId, stato, undefined, data, formData);
 }
 
 // Pre-asilo/post-asilo (specs/13 - segna-presenza.md): toggle che
 // dipendono dallo stato attuale (per sapere se attivare o disattivare,
-// e per non perdere l'altro indicatore) — richiede la riga attuale,
-// passata dalla pagina che l'ha già caricata.
+// e per non perdere l'altro indicatore). Il server rilegge la riga
+// attuale dal database: `rigaAttuale` (passata dalla pagina che l'ha già
+// caricata) è solo un controllo di concorrenza ottimistica, mai la fonte
+// di verità (issue #124, specs/13).
 export async function segnaPreAsilo(bambinoId: string, rigaAttuale: RigaPresenza | null, data: string, formData: FormData) {
   await applicaAzionePresenza(bambinoId, 'pre_asilo', rigaAttuale, data, formData);
 }
@@ -158,7 +193,8 @@ export async function segnaPostAsilo(bambinoId: string, rigaAttuale: RigaPresenz
 // non è nullable, quindi non esiste un modo di salvare una nota
 // "orfana" prima di aver segnato almeno una volta Presente/Assente/
 // Malattia/Pre-asilo/Post-asilo — la UI disabilita il pulsante in quel
-// caso.
+// caso. Stato e indicatori da riscrivere vengono riletti dal database,
+// non dal browser (issue #124).
 export async function salvaNotaPresenza(
   bambinoId: string,
   data: string,
@@ -169,12 +205,12 @@ export async function salvaNotaPresenza(
   assicuraScrivibile(profilo?.ruolo, data);
   await assicuraGiornoApribile(supabase, data);
 
-  if (!rigaAttuale) {
-    throw new Error('Segna prima uno stato di presenza per poter salvare una nota.');
-  }
+  const rigaLetta = await leggiRigaPresenza(supabase, bambinoId, data);
+  if (!rigaLetta) throw new Error(MESSAGGIO_PRESENZA_NON_TROVATA);
+  assicuraRigaAttesa(rigaLetta, rigaAttuale);
 
   const note = (formData.get('nota_presenza') as string)?.trim() || null;
-  await upsertPresenza(supabase, user.id, bambinoId, data, rigaAttuale, note);
+  await upsertPresenza(supabase, user.id, bambinoId, data, rigaLetta, note);
 
   revalidatePath(PERCORSO_GIORNATA);
 }

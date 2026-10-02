@@ -177,7 +177,28 @@ Quando guardo l'elenco bambini di una classe
 Allora i pulsanti Presente/Assente/Malattia/Pre-asilo/Post-asilo restano
 attivi e posso modificare lo stato di quella data
 
+## Scenario: i dati di presenza manomessi dal client non vengono usati
+Dato che un bambino è segnato "presente" per oggi, senza pre-asilo né post-asilo
+Quando la richiesta del pulsante "Pre-asilo" viene alterata prima di arrivare
+al server (la riga di presenza attuale inviata dal browser è falsificata,
+es. con post-asilo già attivo)
+Allora il server rilegge la presenza dal database e non usa il valore
+ricevuto dal browser: la richiesta viene rifiutata con un errore in italiano
+("dati cambiati, ricarica la pagina") che non rivela dati della presenza
+E nel database non viene scritto nulla: dopo aver ricaricato la pagina il
+bambino resta "presente" senza pre-asilo né post-asilo
+
 ## Regole
+- Le azioni di scrittura della presenza che dipendono dallo stato attuale
+  (Pre-asilo, Post-asilo, Salva nota) non si fidano mai della riga di
+  presenza ricevuta dal browser: la rileggono dal database con la sessione
+  dell'utente (quindi sotto RLS) e usano quella per decidere cosa scrivere.
+  La riga ricevuta serve solo come controllo di concorrenza ottimistica: se
+  non coincide con quella letta (qualcun altro ha modificato nel
+  frattempo, oppure la richiesta è stata manomessa) l'azione si ferma con
+  "dati cambiati, ricarica la pagina". "Salva nota" richiede una riga
+  esistente e visibile all'utente, altrimenti si ferma con un errore
+  generico. Logica pura in `lib/presenza.ts`.
 - Stati validi: `presente`, `assente`, `malattia`.
 - Un bambino "presente" ha inoltre due indicatori booleani indipendenti,
   `pre_asilo` e `post_asilo` (entrambi falsi di default): validi solo
