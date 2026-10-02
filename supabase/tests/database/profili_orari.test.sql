@@ -177,10 +177,18 @@ update public.profili set profilo_orario_id = 'b0000000-0000-0000-0000-000000000
 -- ---------------------------------------------------------------------
 -- Le policy attese esistono
 -- ---------------------------------------------------------------------
-select policy_exists('public', 'profili_orari', 'profili_orari_admin_all',
-  'esiste la policy profili_orari_admin_all');
-select policy_exists('public', 'profili_orari', 'profili_orari_select_own',
-  'esiste la policy profili_orari_select_own (fix 0030)');
+select ok(
+  exists (select 1 from pg_policies
+           where schemaname = 'public' and tablename = 'profili_orari'
+             and policyname = 'profili_orari_admin_all'),
+  'esiste la policy profili_orari_admin_all'
+);
+select ok(
+  exists (select 1 from pg_policies
+           where schemaname = 'public' and tablename = 'profili_orari'
+             and policyname = 'profili_orari_select_own'),
+  'esiste la policy profili_orari_select_own (fix 0030)'
+);
 
 -- ---------------------------------------------------------------------
 -- Admin: legge tutto
