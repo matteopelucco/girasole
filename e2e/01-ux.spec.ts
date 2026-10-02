@@ -71,21 +71,26 @@ test.describe('01 — UX/UI', () => {
     }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
-      // Rallenta le richieste di navigazione (non gli asset già in
-      // cache) quanto basta perché il test possa osservare in modo
-      // affidabile la barra, invece di dipendere dalla velocità reale
-      // della rete (che la farebbe comparire e sparire troppo in
-      // fretta per un assert deterministico). Con il server di produzione
-      // (CI) Next.js fa anche il prefetch dei link: lo annullo, altrimenti
-      // il click userebbe la pagina già scaricata e la navigazione sarebbe
-      // istantanea. Il route va installato prima di aprire la dashboard,
-      // perché il prefetch parte appena i link sono visibili.
+      // La richiesta di navigazione vera (quella del click, senza header
+      // `next-router-prefetch`) viene tenuta in sospeso e rilasciata
+      // esplicitamente dal test: la barra si osserva finché la richiesta
+      // è ferma, senza dipendere da un ritardo fisso né dalla velocità
+      // del runner. Il prefetch dei link (Next.js in produzione) NON va
+      // abortito: un prefetch fallito resta nella cache del router e il
+      // click successivo diventa una navigazione nativa a pagina intera
+      // (nessuna richiesta `_rsc`), durante la quale `expect` aspetta la
+      // fine della navigazione e trova la nuova pagina senza barra
+      // (issue #196). Lo lascio quindi passare invariato. Il route va
+      // installato prima di aprire la dashboard, perché il prefetch
+      // parte appena i link sono visibili.
+      let rilasciaNavigazione!: () => void;
+      const navigazioneRilasciata = new Promise<void>((resolve) => {
+        rilasciaNavigazione = resolve;
+      });
       await page.route('**/dashboard/giornata**', async (route) => {
-        if (route.request().headers()['next-router-prefetch']) {
-          await route.abort();
-          return;
+        if (!route.request().headers()['next-router-prefetch']) {
+          await navigazioneRilasciata;
         }
-        await new Promise((r) => setTimeout(r, 800));
         await route.continue();
       });
 
@@ -103,9 +108,16 @@ test.describe('01 — UX/UI', () => {
       // componente espone quando ha installato il listener.
       await expect(page.locator('body')).toHaveAttribute('data-barra-caricamento-pronta', 'true');
 
-      await linkGiornata.click();
-      await expect(barra).toBeVisible();
+      try {
+        await linkGiornata.click();
+        // La richiesta è ferma: la barra deve essere visibile.
+        await expect(barra).toBeVisible();
+      } finally {
+        // Anche se l'assert fallisce, non lascio il route in sospeso.
+        rilasciaNavigazione();
+      }
 
+      // Rilasciata la richiesta la nuova pagina arriva e la barra sparisce.
       await page.waitForURL(/\/dashboard\/giornata\?/);
       await expect(barra).toHaveCount(0);
     });
