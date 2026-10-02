@@ -17,10 +17,25 @@
 
 begin;
 
--- No-op se pgTAP è già installato; altrimenti viene creato e poi annullato
--- dal rollback finale.
+-- No-op se pgTAP è già installato (è il caso del progetto di test);
+-- altrimenti viene creato e poi annullato dal rollback finale.
 create extension if not exists pgtap with schema extensions;
-set local search_path to public, extensions;
+
+-- La connessione di pg_prove NON ha lo schema delle estensioni nel
+-- search_path, quindi plan()/is()/finish() non si risolvono ("function
+-- plan(integer) does not exist"). Lo schema dove pgTAP è davvero installato
+-- si legge dal catalogo (di solito `extensions`) e lo si mette nel
+-- search_path solo per questa transazione.
+do $$
+begin
+  execute format(
+    'set local search_path to public, %s, pg_temp',
+    (select quote_ident(n.nspname)
+       from pg_extension e join pg_namespace n on n.oid = e.extnamespace
+      where e.extname = 'pgtap')
+  );
+end;
+$$;
 
 select plan(13);
 
