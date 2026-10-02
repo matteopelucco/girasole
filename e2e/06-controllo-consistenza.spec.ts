@@ -6,7 +6,12 @@
 // prima il pasto "sì" e solo dopo correggono la presenza in "assente"
 // sullo stesso bambino/giorno — lo stesso ordine di eventi reale che il
 // requisito intercetta (vedi specs/06, "Perché il controllo serve
-// comunque").
+// comunque"). Da issue #186, se a segnare "assente" è la maestra l'app
+// avvisa e azzera il pasto (specs/13): l'incoerenza resta raggiungibile
+// da chi non vede i pasti, cioè l'assistente, che qui fa da "secondo
+// attore" in un contesto di browser a parte. L'ultimo test ripristina il
+// bambino a "presente", perché un'incoerenza lasciata nel DB di test
+// bloccherebbe la comunicazione a Rojac (specs/16) per gli altri test.
 import { test, expect } from '@playwright/test';
 import {
   apriGiornata,
@@ -19,6 +24,7 @@ import {
   nomeBambinoCard,
   nessunaViolazioneA11yGrave,
   primaCardConPulsante,
+  segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
 
@@ -66,23 +72,34 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('segnare "assente" sullo stesso bambino crea l\'incoerenza e mostra il warning nella sua card', async ({
+    test('segnare "assente" da chi non vede i pasti (assistente) crea l\'incoerenza e mostra il warning nella card', async ({
       page,
+      browser,
     }) => {
       test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
 
-      await apriGiornata(page, dataOggiRoma());
-      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
-      const presenza = colonnaPresenza(card);
-      test.skip(
-        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
-        'Assente bloccato (pasto già comunicato a Rojac): incoerenza non più raggiungibile per la maestra'
-      );
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Assente' }));
-      await expect(presenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+      const contestoAssistente = await browser.newContext({ storageState: statoAutenticazione('assistente') });
+      try {
+        const paginaAssistente = await contestoAssistente.newPage();
+        await apriGiornata(paginaAssistente, dataOggiRoma());
+        const cardAssistente = cardBambini(paginaAssistente).filter({ hasText: nomeBambino! }).first();
+        test.skip((await cardAssistente.count()) === 0, "bambino non visibile all'assistente");
+        const presenzaAssistente = colonnaPresenza(cardAssistente);
+        test.skip(
+          await presenzaAssistente.getByRole('button', { name: 'Assente' }).isDisabled(),
+          'Assente bloccato (pasto già comunicato a Rojac): incoerenza non più raggiungibile'
+        );
+        await segnaAssenteOMalattia(paginaAssistente, presenzaAssistente, 'Assente');
+        await expect(presenzaAssistente.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+      } finally {
+        await contestoAssistente.close();
+      }
 
       // Una sola card per bambino (specs/10): il warning è nella sua
       // intestazione, e la colonna Pasto mostra l'etichetta "Assente".
+      await apriGiornata(page, dataOggiRoma());
+      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
       await expect(card.getByText('Inconsistenza')).toBeVisible();
       await expect(colonnaPasto(card).getByText('🚫 Assente')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
@@ -114,6 +131,17 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       await expect(rigaOggi.getByText('Inconsistenza')).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
+    });
+
+    // Ripristino: l'incoerenza lasciata nel DB di test bloccherebbe la
+    // comunicazione a Rojac (specs/16) per i test successivi.
+    test('ripristino: il bambino torna presente e il warning sparisce', async ({ page }) => {
+      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+
+      await apriGiornata(page, dataOggiRoma());
+      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
+      await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
+      await expect(card.getByText('Inconsistenza')).toHaveCount(0);
     });
   });
 });

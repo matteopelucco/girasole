@@ -90,6 +90,40 @@ E se il bambino aveva pre-asilo e/o post-asilo attivi, vengono
 disattivati (non ha senso un pre/post-asilo su un bambino malato o
 assente per quel giorno)
 
+## Scenario: segnare Assente o Malattia con un pasto o un pre/post-asilo già segnati chiede conferma
+Dato che un bambino non è ancora assente né malato e ha già, per oggi, il
+pasto segnato "sì", oppure il pre-asilo o il post-asilo attivi
+Quando premo "Assente" (o "Malattia") nella sezione "Presenza" della sua
+card
+Allora non cambia ancora nulla e compare un avviso nella sezione che
+elenca cosa risulta già segnato (pasto, pre-asilo, post-asilo) e spiega
+che verrà azzerato
+E vedo i pulsanti "Conferma e azzera" e "Annulla"
+
+## Scenario: confermando l'avviso, pasto e pre/post-asilo vengono azzerati
+Dato che sto guardando l'avviso del bambino con un pasto "sì" e/o un
+pre/post-asilo già segnati
+Quando premo "Conferma e azzera"
+Allora la presenza diventa "assente" (o "malattia"), con l'eventuale
+nota scritta
+E il pasto del bambino per quella data, se era "sì", torna a "no", e il
+pre-asilo e il post-asilo sono disattivati: il bambino non conta più
+nei pasti da comunicare a Rojac
+E la sezione "Pasto" della card mostra l'etichetta "Assente" (o
+"Malattia") al posto dei pulsanti Sì/No
+
+## Scenario: annullare l'avviso non cambia nulla
+Dato che sto guardando l'avviso del bambino con un pasto "sì" e/o un
+pre/post-asilo già segnati
+Quando premo "Annulla"
+Allora l'avviso si chiude, la presenza, il pasto e il pre/post-asilo
+restano come prima
+
+## Scenario: Assente o Malattia senza nulla da azzerare non chiede conferma
+Dato che un bambino non ha il pasto "sì" né pre/post-asilo attivi
+Quando premo "Assente" (o "Malattia")
+Allora lo stato cambia subito, senza avviso
+
 ## Scenario: segnare un bambino presente al pre-asilo
 Dato che ho aperto "Presenze e pasti" per la data odierna
 Quando premo il pulsante "Pre-asilo" su un bambino
@@ -171,6 +205,21 @@ attivi e posso modificare lo stato di quella data
   `supabase/migrations/0001_init.sql`); l'assistente ha lo stesso
   perimetro di scrittura della maestra su questa tabella (vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)).
+- Passare a "assente" o "malattia" un bambino con il pasto "sì" o un
+  pre/post-asilo attivi (anomalia: un bambino assente non mangia e non
+  fa orario esteso, e il pasto verrebbe contato nel totale comunicato a
+  Rojac) chiede prima una conferma nella card (scenari sopra); alla
+  conferma il pasto "sì" torna a "no" e pre/post-asilo si disattivano.
+  Il pasto è azzerato dall'azione lato server, non solo dalla UI: vale
+  il pasto attuale del bambino letto dal database (non quello mostrato
+  nella pagina, che potrebbe essere superato) e solo se chi agisce può
+  leggerlo e modificarlo — **l'assistente** non ha accesso ai pasti
+  (vedi [14 - segna-pasto.md](14%20-%20segna-pasto.md)), quindi per lei
+  l'avviso riguarda solo pre/post-asilo e un pasto già segnato da altri
+  non viene toccato: quell'incoerenza la intercetta il controllo alla
+  comunicazione a Rojac
+  ([16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)).
+  Se l'azzeramento del pasto fallisce, la presenza non viene salvata.
 - Dopo la comunicazione dei pasti a Rojac, maestra e assistente non
   possono più segnare "assente" o "malattia" un bambino il cui pasto del
   giorno è "sì" (Presente, Pre-asilo, Post-asilo e nota restano

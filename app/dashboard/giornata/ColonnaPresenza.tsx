@@ -3,6 +3,7 @@ import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza, StatoPresenza } from '@/lib/presenza';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo } from '../presenze/actions';
 import { ETICHETTE_PRESENZA, IntestazioneSezione, PulsanteStato } from './comune';
+import { PulsantiAssenzaConAvviso } from './PulsantiAssenzaConAvviso';
 
 export type PresenzaGiorno = {
   stato: StatoPresenza;
@@ -25,19 +26,24 @@ export function rigaPresenzaAttuale(presenza: PresenzaGiorno | undefined): RigaP
 // pasti a Rojac, per un bambino con pasto "sì" Assente/Malattia sono
 // disabilitati con una breve spiegazione (specs/16, `assenzaBloccata`
 // calcolata dalla pagina con lib/presenza.ts:assenzaBloccataDaComunicazione;
-// il trigger di 0052 resta la difesa reale).
+// il trigger di 0052 resta la difesa reale). Se il bambino ha un pasto
+// "sì" o un pre/post-asilo già segnati, Assente/Malattia chiedono prima
+// conferma con l'`avvisoAzzeramento` (specs/13, issue #186, calcolato da
+// CardBambino con lib/presenza.ts:avvisoAzzeramentoPerAssenza).
 export function ColonnaPresenza({
   bambinoId,
   data,
   presenza,
   editable,
   assenzaBloccata,
+  avvisoAzzeramento,
 }: {
   bambinoId: string;
   data: string;
   presenza: PresenzaGiorno | undefined;
   editable: boolean;
   assenzaBloccata: boolean;
+  avvisoAzzeramento: string | null;
 }) {
   const idTitolo = `presenza-${bambinoId}`;
   const idBlocco = `blocco-assenza-${bambinoId}`;
@@ -61,26 +67,37 @@ export function ColonnaPresenza({
             >
               {ETICHETTE_PRESENZA.presente}
             </PulsanteStato>
-            {(['assente', 'malattia'] as const).map((stato) =>
-              assenzaBloccata ? (
-                <button
-                  key={stato}
-                  type="button"
-                  disabled
-                  aria-describedby={idBlocco}
-                  className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
-                >
-                  {ETICHETTE_PRESENZA[stato]}
-                </button>
-              ) : (
-                <PulsanteStato
-                  key={stato}
-                  formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
-                  selezionato={presenza?.stato === stato}
-                  className={classePulsanteStato(stato, presenza?.stato === stato)}
-                >
-                  {ETICHETTE_PRESENZA[stato]}
-                </PulsanteStato>
+            {!assenzaBloccata && avvisoAzzeramento ? (
+              <PulsantiAssenzaConAvviso
+                bambinoId={bambinoId}
+                azioni={{
+                  assente: segnaPresenza.bind(null, bambinoId, 'assente', data),
+                  malattia: segnaPresenza.bind(null, bambinoId, 'malattia', data),
+                }}
+                avviso={avvisoAzzeramento}
+              />
+            ) : (
+              (['assente', 'malattia'] as const).map((stato) =>
+                assenzaBloccata ? (
+                  <button
+                    key={stato}
+                    type="button"
+                    disabled
+                    aria-describedby={idBlocco}
+                    className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
+                  >
+                    {ETICHETTE_PRESENZA[stato]}
+                  </button>
+                ) : (
+                  <PulsanteStato
+                    key={stato}
+                    formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
+                    selezionato={presenza?.stato === stato}
+                    className={classePulsanteStato(stato, presenza?.stato === stato)}
+                  >
+                    {ETICHETTE_PRESENZA[stato]}
+                  </PulsanteStato>
+                )
               )
             )}
             {assenzaBloccata && (

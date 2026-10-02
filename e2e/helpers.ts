@@ -171,6 +171,27 @@ export async function apriGiornata(page: Page, data: string): Promise<boolean> {
   return (await cardBambini(page).count()) > 0;
 }
 
+// Segna Assente o Malattia nella sezione "Presenza" `presenza` di una card
+// (specs/13). Se il bambino ha un pasto "sì" o un pre/post-asilo già
+// segnati, il pulsante non salva subito ma apre l'avviso di conferma
+// (`aria-expanded` presente, issue #186): in quel caso conferma con
+// "Conferma e azzera". Gli altri test condividono lo stesso stato dei
+// bambini, quindi non sanno a priori se serva la conferma. Attende la
+// risposta della Server Action, come clickEAttendiAzione.
+export async function segnaAssenteOMalattia(
+  page: Page,
+  presenza: Locator,
+  stato: 'Assente' | 'Malattia'
+): Promise<void> {
+  const bottone = presenza.getByRole('button', { name: stato });
+  if ((await bottone.getAttribute('aria-expanded')) === null) {
+    await clickEAttendiAzione(page, bottone);
+    return;
+  }
+  await bottone.click();
+  await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Conferma e azzera' }));
+}
+
 // Messaggi con role="alert" mostrati dall'app (errori dei form, banner),
 // escluso l'annunciatore di route di Next.js: un <div role="alert"
 // id="__next-route-announcer__"> vuoto che compare dopo una navigazione

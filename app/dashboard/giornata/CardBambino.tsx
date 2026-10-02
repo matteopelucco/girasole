@@ -2,6 +2,7 @@ import { EtichettaAssente } from '@/components/EtichettaAssente';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
+import { avvisoAzzeramentoPerAssenza, datiDaAzzerarePerAssenza } from '@/lib/presenza';
 import { ColonnaPresenza, type PresenzaGiorno } from './ColonnaPresenza';
 import { ColonnaPasto, type PastoGiorno } from './ColonnaPasto';
 import { SezioneNota } from './SezioneNota';
@@ -48,6 +49,17 @@ export function CardBambino({
     postAsilo: presenza?.post_asilo,
     mangiato: pasto?.mangiato as StatoPasto | undefined,
   });
+  // Pasto "sì" o pre/post-asilo già segnati: segnare Assente/Malattia
+  // chiede prima conferma e li azzera (specs/13, issue #186). Per
+  // l'assistente `pasto` è undefined: l'avviso riguarda solo pre/post.
+  const avvisoAzzeramento = avvisoAzzeramentoPerAssenza(
+    datiDaAzzerarePerAssenza({
+      statoAttuale: presenza?.stato,
+      mangiato: pasto?.mangiato,
+      preAsilo: presenza?.pre_asilo,
+      postAsilo: presenza?.post_asilo,
+    })
+  );
   const stile = stileSesso(sesso);
   const Corpo = editable ? 'form' : 'div';
 
@@ -88,6 +100,7 @@ export function CardBambino({
             presenza={presenza}
             editable={editable}
             assenzaBloccata={assenzaBloccata}
+            avvisoAzzeramento={avvisoAzzeramento}
           />
         </div>
         {conPasti && (

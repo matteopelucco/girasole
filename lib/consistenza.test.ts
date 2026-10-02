@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inconsistenzeGiorno } from './consistenza';
+import { bambiniConIncoerenze, inconsistenzeGiorno } from './consistenza';
 
 describe('inconsistenzeGiorno', () => {
   it('nessun problema per una riga vuota (non segnato)', () => {
@@ -64,5 +64,42 @@ describe('inconsistenzeGiorno', () => {
       mangiato: 'si',
     });
     expect(problemi).toHaveLength(3);
+  });
+});
+
+describe('bambiniConIncoerenze (blocco della comunicazione pasti a Rojac, specs/16)', () => {
+  const anna = { id: 'a', nome: 'Anna', cognome: 'Rossi' };
+  const luca = { id: 'b', nome: 'Luca', cognome: 'Bianchi' };
+
+  it('nessun bambino incoerente: elenco vuoto', () => {
+    expect(
+      bambiniConIncoerenze([
+        { ...anna, stato: 'presente', mangiato: 'si' },
+        { ...luca, stato: 'assente', mangiato: 'no' },
+      ])
+    ).toEqual([]);
+  });
+
+  it('un bambino assente con pasto sì: elencato con il motivo, gli altri esclusi', () => {
+    expect(
+      bambiniConIncoerenze([
+        { ...anna, stato: 'presente', mangiato: 'si' },
+        { ...luca, stato: 'assente', mangiato: 'si' },
+      ])
+    ).toEqual([{ ...luca, problemi: ['Pasto segnato "sì" ma il bambino risulta assente.'] }]);
+  });
+
+  it('un bambino malato con pasto sì: elencato', () => {
+    expect(bambiniConIncoerenze([{ ...anna, stato: 'malattia', mangiato: 'si' }])).toEqual([
+      { ...anna, problemi: ['Pasto segnato "sì" ma il bambino risulta malato.'] },
+    ]);
+  });
+
+  it('un bambino senza presenza e senza pasto non è un\'incoerenza (è una presenza mancante, altro controllo)', () => {
+    expect(bambiniConIncoerenze([{ ...anna }])).toEqual([]);
+  });
+
+  it('nessun bambino: elenco vuoto', () => {
+    expect(bambiniConIncoerenze([])).toEqual([]);
   });
 });
