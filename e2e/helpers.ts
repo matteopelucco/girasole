@@ -204,6 +204,21 @@ export async function segnaAssenteOMalattia(
   await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Conferma e azzera' }));
 }
 
+// Vero se la pagina corrente (Presenze e pasti, ore di lavoro...) mostra
+// l'avviso di chiusura scolastica (specs/53): "L'asilo è chiuso..." per
+// sabato/domenica, "Giorno di chiusura scolastica..." per un giorno
+// registrato in `giorni_chiusura` (lib/calendarioScolastico.ts:
+// messaggioChiusura). In un giorno chiuso le card dei bambini ci sono
+// ancora ma senza i pulsanti di presenza/pasto: apriGiornata() ritorna true
+// comunque (i test di specs/53 ne dipendono), quindi i test che si aspettano
+// un giorno scrivibile usano questa funzione per saltarsi invece di fallire
+// il sabato. Da chiamare dopo apriGiornata(): la pagina è renderizzata dal
+// server, l'avviso è già nel DOM.
+export async function giornoDiChiusura(page: Page): Promise<boolean> {
+  const avviso = page.getByText(/L'asilo è chiuso|Giorno di chiusura scolastica/);
+  return (await avviso.count()) > 0;
+}
+
 // Messaggi con role="alert" mostrati dall'app (errori dei form, banner),
 // escluso l'annunciatore di route di Next.js: un <div role="alert"
 // id="__next-route-announcer__"> vuoto che compare dopo una navigazione

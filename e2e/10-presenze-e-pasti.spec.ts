@@ -14,6 +14,7 @@ import {
   colonnaPresenza,
   dataIeriRoma,
   dataOggiRoma,
+  giornoDiChiusura,
   hasCredenziali,
   intestazioneCard,
   nessunaViolazioneA11yGrave,
@@ -335,6 +336,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
+      test.skip(await giornoDiChiusura(page), 'giorno di chiusura (specs/53)');
 
       const card = cardBambini(page).first();
       await sezioniUnaSottoLAltra(card);
@@ -356,6 +358,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
+      test.skip(await giornoDiChiusura(page), 'giorno di chiusura (specs/53)');
 
       const card = cardBambini(page).first();
       await sezioniUnaSottoLAltra(card);
@@ -370,6 +373,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       await nessunOverflowOrizzontale(page);
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
+      test.skip(await giornoDiChiusura(page), 'giorno di chiusura (specs/53)');
 
       await sezioniUnaSottoLAltra(cardBambini(page).first());
     });
@@ -385,6 +389,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
     test("l'assistente vede solo la sezione presenza, nessun dato pasto", async ({ page }) => {
       const haBambini = await apriGiornata(page, dataOggiRoma());
       test.skip(!haBambini, 'nessun bambino visibile per questo account');
+      test.skip(await giornoDiChiusura(page), 'giorno di chiusura (specs/53)');
 
       await expect(colonnaPresenza(cardBambini(page).first())).toBeVisible();
       await expect(sezioneNota(cardBambini(page).first())).toBeVisible();
