@@ -13,7 +13,7 @@
 // e lo ripristina in `finally` — stesso pattern di
 // 17-ore-di-lavoro.spec.ts e 18-report-ore-lavoro.spec.ts.
 import { test, expect } from '@playwright/test';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 function oraRomaAdesso(): number {
   return Number(
@@ -148,8 +148,7 @@ test.describe('07 — Allarmi', () => {
         await page.goto('/admin/maestre');
         const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await riga.getByLabel('Ore di lavoro').check();
-        await riga.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
 
         try {
           await page.goto('/dashboard');
@@ -185,8 +184,7 @@ test.describe('07 — Allarmi', () => {
         await page.goto('/admin/maestre');
         const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await riga.getByLabel('Ore di lavoro').check();
-        await riga.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
 
         try {
           await page.goto('/dashboard');
@@ -212,8 +210,7 @@ test.describe('07 — Allarmi', () => {
         await page.goto('/admin/maestre');
         const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await riga.getByLabel('Ore di lavoro').check();
-        await riga.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
 
         try {
           await page.goto('/dashboard');

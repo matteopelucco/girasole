@@ -7,7 +7,7 @@
 // sull'unico account admin si contendano lo stesso flag (fullyParallel:
 // true, stessa cautela già presa in 16-comunicazione-pasti-rojac.spec.ts).
 import { test, expect } from '@playwright/test';
-import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 test.describe('17 — Ore di lavoro', () => {
   test.describe('come admin', () => {
@@ -41,8 +41,7 @@ test.describe('17 — Ore di lavoro', () => {
         // malattia/assenza — è testato in dettaglio in
         // 18-report-ore-lavoro.spec.ts, non qui).
         await checkbox.check();
-        await rigaPropria.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaPropria.getByRole('button', { name: 'Aggiorna' }));
         await page.reload();
         await expect(page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Ore di lavoro')).toBeChecked();
 
@@ -61,8 +60,7 @@ test.describe('17 — Ore di lavoro', () => {
         await page.goto('/admin/maestre');
         const rigaDaDisabilitare = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
         await rigaDaDisabilitare.getByLabel('Ore di lavoro').uncheck();
-        await rigaDaDisabilitare.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+        await clickEAttendiAzione(page, rigaDaDisabilitare.getByRole('button', { name: 'Aggiorna' }));
         await page.reload();
         await expect(
           page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Ore di lavoro')
