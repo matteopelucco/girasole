@@ -113,8 +113,17 @@ describe('eNonCodiceCI', () => {
     expect(eNonCodiceCI(file)).toBe(false);
   });
 
-  it('è false per CLAUDE.md', () => {
-    expect(eNonCodiceCI([{ path: 'CLAUDE.md' }])).toBe(false);
+  it('è true per CLAUDE.md (istruzioni, non codice: niente build/e2e)', () => {
+    expect(eNonCodiceCI([{ path: 'CLAUDE.md' }])).toBe(true);
+  });
+
+  it('è false per un file con nome simile a CLAUDE.md (solo il file esatto)', () => {
+    expect(eNonCodiceCI([{ path: 'lib/CLAUDE.md' }])).toBe(false);
+    expect(eNonCodiceCI([{ path: 'CLAUDE.md.bak' }])).toBe(false);
+  });
+
+  it('è false per CLAUDE.md insieme a codice applicativo', () => {
+    expect(eNonCodiceCI([{ path: 'CLAUDE.md' }, { path: 'lib/date.ts' }])).toBe(false);
   });
 
   it('è false per .claude/agents/reviewer.md', () => {
@@ -146,6 +155,10 @@ describe('eNonCodiceReview', () => {
     expect(eNonCodiceReview(file)).toBe(true);
   });
 
+  it('resta false quando la PR tocca CLAUDE.md, anche da solo (sempre review)', () => {
+    expect(eNonCodiceReview([{ path: 'CLAUDE.md' }])).toBe(false);
+  });
+
   it('resta false quando la PR tocca specs/, anche da sola (sempre review)', () => {
     expect(eNonCodiceReview([{ path: 'specs/13 - segna-presenza.md' }])).toBe(false);
   });
@@ -174,6 +187,13 @@ describe('classificaPR — nel dubbio è codice', () => {
 
   it('solo specs: non codice per la CI, codice per la review', () => {
     expect(classificaPR([{ path: 'specs/10 - presenze-e-pasti.md' }])).toEqual({
+      nonCodiceCI: true,
+      nonCodiceReview: false,
+    });
+  });
+
+  it('solo CLAUDE.md: non codice per la CI, codice per la review', () => {
+    expect(classificaPR([{ path: 'CLAUDE.md' }])).toEqual({
       nonCodiceCI: true,
       nonCodiceReview: false,
     });

@@ -10,13 +10,14 @@
 // CLAUDE.md, "Unit (Vitest) — solo logica pura").
 //
 // Due criteri distinti, non uno solo (vedi PR per la motivazione):
-//   - `eNonCodiceCI`: allow-list più ampia, include `specs/**` — usata per
+//   - `eNonCodiceCI`: allow-list più ampia, include `specs/**` e `CLAUDE.md`
+//     (istruzioni per gli agenti, nessun codice da costruire) — usata per
 //     decidere se saltare gli step pesanti della CI (build/reset DB/e2e).
 //     Uno scenario e2e nuovo in una PR "solo specs" verrebbe comunque
 //     rilevato a mano più avanti (nessun codice cambiato da verificare
 //     con la build o l'e2e, che infatti non cambierebbero risultato).
-//   - `eNonCodiceReview`: allow-list più stretta, ESCLUDE `specs/**` — usata
-//     per decidere se saltare la review Claude. Garantisce che ogni
+//   - `eNonCodiceReview`: allow-list più stretta, ESCLUDE `specs/**` e
+//     `CLAUDE.md` — usata per decidere se saltare la review Claude. Garantisce che ogni
 //     modifica a `specs/` (compreso un nuovo `## Scenario:`) riceva
 //     sempre una review, che è il meccanismo che verifica la coerenza
 //     "specs ↔ e2e non divergono" (vedi CLAUDE.md).
@@ -38,6 +39,9 @@ export interface FileCambiatoPR {
 const PREFISSO_DOCS = 'docs/';
 const PREFISSO_SPECS = 'specs/';
 const FILE_NON_CODICE_ESATTI = new Set(['README.md', 'CHANGELOG.md']);
+// Istruzioni per gli agenti, non codice: niente build/e2e. Solo per la CI, come
+// `specs/**`: la review Claude resta attiva (governa il comportamento degli agenti).
+const FILE_NON_CODICE_SOLO_CI = new Set(['CLAUDE.md']);
 const FILE_VERSIONAMENTO = new Set(['package.json', 'package-lock.json']);
 
 function normalizzaPercorso(percorso: string): string {
@@ -95,12 +99,15 @@ export function eSoloBumpDiVersione(
   }
 }
 
-function eNonCodice(file: FileCambiatoPR, includiSpecs: boolean): boolean {
+function eNonCodice(file: FileCambiatoPR, perCI: boolean): boolean {
   const percorso = normalizzaPercorso(file.path);
   if (percorso.startsWith(PREFISSO_DOCS)) {
     return true;
   }
-  if (includiSpecs && percorso.startsWith(PREFISSO_SPECS)) {
+  if (perCI && percorso.startsWith(PREFISSO_SPECS)) {
+    return true;
+  }
+  if (perCI && FILE_NON_CODICE_SOLO_CI.has(percorso)) {
     return true;
   }
   if (FILE_NON_CODICE_ESATTI.has(percorso)) {
@@ -115,7 +122,7 @@ function eNonCodice(file: FileCambiatoPR, includiSpecs: boolean): boolean {
 /**
  * true se TUTTI i file cambiati rientrano nell'allow-list "non codice"
  * ai fini della CI (build/reset DB/e2e possono essere saltati): include
- * `specs/**`. Una lista vuota è trattata come "codice" (false): nel
+ * `specs/**` e `CLAUDE.md`. Una lista vuota è trattata come "codice" (false): nel
  * dubbio, meglio eseguire la suite completa che saltarla per errore.
  */
 export function eNonCodiceCI(file: FileCambiatoPR[]): boolean {
@@ -124,8 +131,9 @@ export function eNonCodiceCI(file: FileCambiatoPR[]): boolean {
 
 /**
  * Come `eNonCodiceCI`, ma ai fini della review Claude: allow-list più
- * stretta, ESCLUDE `specs/**` (ogni modifica alle spec riceve sempre una
- * review, vedi commento in testa al file).
+ * stretta, ESCLUDE `specs/**` e `CLAUDE.md` (ogni modifica alle spec o alle
+ * istruzioni degli agenti riceve sempre una review, vedi commento in testa
+ * al file).
  */
 export function eNonCodiceReview(file: FileCambiatoPR[]): boolean {
   return file.length > 0 && file.every((f) => eNonCodice(f, false));

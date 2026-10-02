@@ -285,7 +285,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   <baseSha> <headSha>`, che
   richiede `fetch-depth: 0` nel checkout) classifica la PR usando la
   logica pura di `lib/pr-classificazione.ts` ed espone l'output
-  `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`,
+  `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`, `CLAUDE.md`,
   `README.md`, `CHANGELOG.md`, o un bump puro del campo `version` in
   `package.json`/`package-lock.json`), la build (passo 5) resta `skipped`
   nel log e il job `e2e` (passi 6-8) non parte, quindi la PR non occupa
