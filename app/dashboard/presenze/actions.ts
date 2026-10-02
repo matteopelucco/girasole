@@ -56,6 +56,7 @@ const FRAMMENTO_ERRORE_PASTI_COMUNICATI = 'comunicati a Rojac';
 // azzerato un pasto, per poterlo ripristinare se la presenza fallisce.
 // Il pasto passa a "no" (la RLS non permette alla maestra di eliminare
 // la riga) e la colonna `note` non viene toccata.
+// grant-check: authenticated
 async function azzeraPastoSeSegnato(
   supabase: SupabaseClient,
   userId: string,
@@ -89,6 +90,7 @@ async function azzeraPastoSeSegnato(
 // Rimette il pasto a "sì" se la presenza non è stata salvata dopo
 // l'azzeramento (best-effort: l'errore originale resta quello che
 // importa all'utente).
+// grant-check: authenticated
 async function ripristinaPasto(supabase: SupabaseClient, bambinoId: string, data: string) {
   await supabase.from('pasti').update({ mangiato: 'si' }).eq('bambino_id', bambinoId).eq('data', data);
 }
