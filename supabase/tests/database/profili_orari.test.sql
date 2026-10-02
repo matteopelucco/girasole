@@ -234,11 +234,17 @@ select is(
   '42501',
   'maestra: non può inserire un profilo orario'
 );
--- UPDATE e DELETE non danno errore: la RLS li riduce a zero righe.
-select pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
+-- UPDATE e DELETE non danno errore: la RLS li riduce a zero righe. Vanno in un
+-- `do`/`perform` e non in un `select`: un `select` stamperebbe la stringa 'ok'
+-- e pg_prove la leggerebbe come un risultato TAP in più ("Bad plan").
+do $do$ begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
   $q$update public.profili_orari set nome = 'pgTAP manomesso'$q$);
-select pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
+end $do$;
+do $do$ begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
   $q$delete from public.profili_orari$q$);
+end $do$;
 
 select is(
   (select count(*)::int from public.profili_orari
