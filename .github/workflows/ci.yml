@@ -268,6 +268,16 @@ jobs:
           # password del database: letto automaticamente dal CLI.
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # Test pgTAP sulle policy RLS (issue #29/#180): file in
+      # supabase/tests/database/, ognuno in `begin; ... rollback;` (nessun
+      # dato resta nel DB di test). Un test rosso fa fallire il job.
+      # `--linked --project-ref` come il reset qui sopra: stesso progetto di
+      # TEST, mai la produzione.
+      - name: 6a. Test pgTAP sulle policy RLS (issue #180)
+        run: supabase test db --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: 6b. Grant-check (A26, issue #28)
         run: node --no-warnings --experimental-strip-types scripts/grant-check.mts
         env:
