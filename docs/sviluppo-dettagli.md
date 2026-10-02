@@ -453,6 +453,19 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
 - Al posto della review automatica: review a richiesta in locale (issue
   #161, comando `/task-review`).
 
+## Review a richiesta in locale: `/task-review` (issue #161)
+Comando di Claude Code (`.claude/commands/task-review.md`), accanto a
+`/next-task` e `/run-tasks`: `/task-review #157` (issue o PR; `--leggera` per PR piccole).
+- **Fa**: trova la PR (da issue: branch `*/issue-N-*`, `Closes #N`, ricerca;
+  da PR: diretta), legge issue, `specs/` pertinenti, diff e CI, lancia l'agente
+  `reviewer` e produce in chat verdetto (OK / OK con rilievi / da correggere),
+  rilievi `[severità] file:riga`, controlli specs ↔ e2e ↔ unit, versione bumpata
+  rispetto a `main` e `Closes #N`. Se il diff tocca RLS/auth/migration/`supabase/`
+  **propone** `rls-guardian` e lo lancia solo dopo conferma.
+- **Non fa**: nessun commento, merge, `gh pr ready` né cambio di label
+  (`status:review` resta scelta umana); il report si posta come commento solo
+  su richiesta esplicita (`--body-file`). Senza PR aperta si ferma.
+
 ## Token e cache delle esecuzioni Claude in CI (issue #119)
 - Ogni job `triage`/`review` di `claude-board.yml` scrive nel **job
   summary** (pagina del run su GitHub Actions, sezione "Summary") una
