@@ -170,8 +170,11 @@ test.describe('13 — Segna presenza', () => {
     });
 
     test('Assente con pasto "sì" chiede conferma e, confermando, azzera il pasto a "no"', async ({ page }) => {
-      const card = primaCardConPulsante(page, 'Pasto', 'Sì');
-      test.skip((await card.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      const primaCard = primaCardConPulsante(page, 'Pasto', 'Sì');
+      test.skip((await primaCard.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      // La card va fissata per id: dopo Assente i pulsanti Sì/No spariscono
+      // e un locator "prima card con Sì/No" punterebbe a un altro bambino.
+      const card = page.locator(`li#${await primaCard.getAttribute('id')}`);
       const presenza = colonnaPresenza(card);
       const pasto = colonnaPasto(card);
       test.skip(
@@ -205,8 +208,10 @@ test.describe('13 — Segna presenza', () => {
     });
 
     test('Malattia con pasto "no" e nessun pre/post-asilo non chiede conferma', async ({ page }) => {
-      const card = primaCardConPulsante(page, 'Pasto', 'No');
-      test.skip((await card.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      const primaCard = primaCardConPulsante(page, 'Pasto', 'No');
+      test.skip((await primaCard.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
+      // Card fissata per id (vedi il test precedente).
+      const card = page.locator(`li#${await primaCard.getAttribute('id')}`);
       const presenza = colonnaPresenza(card);
       const pasto = colonnaPasto(card);
       test.skip(

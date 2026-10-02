@@ -36,6 +36,7 @@ export function PulsantiAssenzaConAvviso({
         <button
           key={stato}
           type="button"
+          aria-pressed={false}
           aria-expanded={scelta === stato}
           aria-controls={scelta === stato ? idAvviso : undefined}
           onClick={() => setScelta(stato)}
