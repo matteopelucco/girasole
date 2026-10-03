@@ -78,8 +78,8 @@ in ogni file — il dettaglio di ciascuna riga resta nel file linkato.
 | Funzionalità | admin | maestra | assistente | genitore |
 | --- | --- | --- | --- | --- |
 | Sezioni/bambini/utenti ([50](50%20-%20amministrazione_base.md)) | crud | — | — | — |
-| Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) — sezione "Presenza" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | crea e modifica (mai elimina), solo oggi, proprie sezioni; dopo la comunicazione a Rojac niente Assente/Malattia sui bambini con pasto "sì" ([16](16%20-%20comunicazione-pasti-rojac.md)) | come la maestra | lettura, solo il proprio figlio (fuori scope UI) |
-| Pasti ([14](14%20-%20segna-pasto.md)) — sezione "Pasto" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | crea e modifica (mai elimina), solo oggi, proprie sezioni; sola lettura dopo la comunicazione a Rojac ([16](16%20-%20comunicazione-pasti-rojac.md)) | **nessun accesso** (colonna non mostrata, dati non letti) | lettura, solo il proprio figlio (fuori scope UI) |
+| Presenze, incl. pre/post-asilo ([13](13%20-%20segna-presenza.md)) — sezione "Presenza" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | legge ogni data; crea e modifica (mai elimina) solo oggi, proprie sezioni; dopo la comunicazione a Rojac niente Assente/Malattia sui bambini con pasto "sì" ([16](16%20-%20comunicazione-pasti-rojac.md)) | come la maestra | lettura, solo il proprio figlio (fuori scope UI) |
+| Pasti ([14](14%20-%20segna-pasto.md)) — sezione "Pasto" di [10](10%20-%20presenze-e-pasti.md) | crud, ogni data | legge ogni data; crea e modifica (mai elimina) solo oggi, proprie sezioni; sola lettura dopo la comunicazione a Rojac ([16](16%20-%20comunicazione-pasti-rojac.md)) | **nessun accesso** (colonna non mostrata, dati non letti) | lettura, solo il proprio figlio (fuori scope UI) |
 | Avvisi ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli avvisi a lui destinati (fuori scope UI) |
 | Report/anagrafica classi ([51](51%20-%20report.md)) | tutte le classi | proprie classi | proprie classi | — |
 
@@ -88,7 +88,8 @@ che la usa per il reset di una giornata ([57](57%20-%20reset-giornata.md));
 maestra e assistente non eliminano mai righe di presenze o pasti, nemmeno
 oggi e nemmeno nella propria sezione (policy `presenze_delete_admin` e
 `pasti_delete_admin`, migration 0040). Quindi "crud" vale per l'admin; per
-maestra e assistente è "cru" ristretto a oggi e alle proprie sezioni.
+la maestra (e l'assistente, sulle sole presenze: ai pasti non ha accesso) è "cru"
+ristretto a oggi e alle proprie sezioni.
 
 Nota: "assistente" è stato assunto con lo stesso perimetro di una maestra
 su avvisi e report (nessuna indicazione contraria nel requisito che
