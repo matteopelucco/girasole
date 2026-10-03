@@ -203,8 +203,11 @@ sezione "Comunicazione pasti" riguarda solo gli allegati PDF
   non è un errore mostrato dopo aver aperto il riquadro di conferma, il
   pulsante stesso non è disponibile finché la condizione non è
   soddisfatta. L'elenco include anche bambini di classi non assegnate a
-  chi guarda (lo stesso dato, calcolato bypassando la RLS, che già oggi
-  determina il conteggio — vedi sotto): serve a far capire *chi*
+  chi guarda (lo stesso dato, calcolato da funzioni Postgres `security
+  definer` richiamate via RPC con la sessione di chi guarda — migration
+  0056 — che già oggi determina il conteggio; riservate ad admin e
+  maestra, la maestra solo per la giornata odierna, l'assistente è
+  respinta — vedi sotto): serve a far capire *chi*
   manca, non solo *quanti*, senza dover chiedere in giro. Applicato
   anche a livello di database (trigger su `pasti_comunicati`, stesso
   principio dei trigger già in uso per le altre regole pasti — vedi

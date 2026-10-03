@@ -106,6 +106,7 @@ export default async function GiornataPage({ searchParams }: { searchParams: { d
   const boxRojac = (capitoloDiCard: boolean) =>
     conPasti ? (
       <BoxComunicazioneRojac
+        supabase={supabase}
         data={data}
         ruolo={ruolo}
         comunicazione={comunicazione}

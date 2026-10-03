@@ -41,3 +41,11 @@ della RLS.
   fatto in `lib/supabase/admin.ts` e `lib/pastiRojac.ts`.
 - La motivazione puntuale di ciascun uso resta nel commento accanto al
   `createAdminClient()` corrispondente, non duplicata qui.
+
+## Aggiornamento (issue #211, sotto-issue di #38)
+Il conteggio e i controlli dei pasti per Rojac (`lib/pastiRojac.ts`) non usano
+più la service_role: sono tre funzioni Postgres `security definer` (migration
+0056) richiamate via RPC con la sessione dell'utente, con il controllo del
+ruolo dentro la funzione. Restano con la service_role la gestione utenti
+(Admin API di Auth), i cron e, fino alla sotto-issue #212, l'INSERT in
+`pasti_comunicati`.

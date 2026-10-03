@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { CardRiepilogo } from '@/components/CardRiepilogo';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { puoScrivereData } from '@/lib/auth';
@@ -7,7 +8,9 @@ import {
   bambiniSenzaPresenzaOggiTuttoAsilo,
   bambiniConIncoerenzeOggiTuttoAsilo,
   TELEFONO_ROJAC,
+  type BambinoSenzaPresenza,
 } from '@/lib/pastiRojac';
+import type { BambinoConIncoerenze } from '@/lib/consistenza';
 import { comunicaPastiRojac } from '../pasti/actions';
 
 export type ComunicazioneGiorno = {
@@ -61,18 +64,21 @@ function BloccoComunicazione({
 // Box di comunicazione pasti a Rojac (specs/16), in cima alla schermata
 // "Presenze e pasti" dentro la card del riepilogo aggregato (specs/10). Un'unica
 // azione al giorno sull'intero asilo, non sulle sole sezioni visibili a
-// chi guarda. Solo maestra e admin: la pagina non lo renderizza (né
+// chi guarda: conteggi e controlli passano da RPC con la sessione di chi
+// guarda (migration 0056), senza service_role. Solo maestra e admin: la pagina non lo renderizza (né
 // legge pasti_comunicati) per l'assistente. Il pulsante "Conferma pasti"
 // compare solo se tutti i bambini attivi hanno una presenza e nessuno ha
 // dati incoerenti (pasti > presenti, specs/16): altrimenti, al suo posto,
 // i messaggi di blocco con l'elenco dei bambini da correggere.
 export async function BoxComunicazioneRojac({
+  supabase,
   data,
   ruolo,
   comunicazione,
   idBambiniInPagina,
   capitoloDiCard,
 }: {
+  supabase: SupabaseClient;
   data: string;
   ruolo: string | null;
   comunicazione: ComunicazioneGiorno | null;
@@ -93,11 +99,28 @@ export async function BoxComunicazioneRojac({
   } else if (!puoScrivereData(ruolo, data)) {
     return null;
   } else {
-    const [bambiniSenzaPresenza, bambiniIncoerenti] = await Promise.all([
-      bambiniSenzaPresenzaOggiTuttoAsilo(data),
-      bambiniConIncoerenzeOggiTuttoAsilo(data),
-    ]);
-    if (bambiniSenzaPresenza.length > 0 || bambiniIncoerenti.length > 0) {
+    // Le RPC rifiutano chi non ha il permesso (o una data non consentita,
+    // es. orologi app/database sfasati a cavallo della mezzanotte): senza i
+    // controlli non si offre il pulsante, invece di mandare in errore
+    // l'intera pagina. Nessun permesso allargato.
+    let controlli: [BambinoSenzaPresenza[], BambinoConIncoerenze[]] | null = null;
+    try {
+      controlli = await Promise.all([
+        bambiniSenzaPresenzaOggiTuttoAsilo(supabase, data),
+        bambiniConIncoerenzeOggiTuttoAsilo(supabase, data),
+      ]);
+    } catch (errore) {
+      console.error('BoxComunicazioneRojac: controlli di comunicazione non disponibili', errore);
+    }
+    const [bambiniSenzaPresenza, bambiniIncoerenti] = controlli ?? [[], []];
+    if (!controlli) {
+      contenuto = (
+        <p className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
+          Al momento non è possibile verificare le presenze e i pasti per la comunicazione a Rojac. Ricarica la
+          pagina.
+        </p>
+      );
+    } else if (bambiniSenzaPresenza.length > 0 || bambiniIncoerenti.length > 0) {
       contenuto = (
         <div className="space-y-3">
           {bambiniSenzaPresenza.length > 0 && (
@@ -119,7 +142,7 @@ export async function BoxComunicazioneRojac({
         </div>
       );
     } else {
-      const numeroPastiOggi = await contaPastiSiOggiTuttoAsilo(data);
+      const numeroPastiOggi = await contaPastiSiOggiTuttoAsilo(supabase, data);
       contenuto = (
         <ConfermaAzione
           azione={comunicaPastiRojac}

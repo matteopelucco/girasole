@@ -50,3 +50,35 @@ export function bambiniConIncoerenze(
     .map(({ id, nome, cognome, ...riga }) => ({ id, nome, cognome, problemi: inconsistenzeGiorno(riga) }))
     .filter((b) => b.problemi.length > 0);
 }
+
+// Riga grezza restituita dalla RPC `bambini_incoerenti_asilo` (migration
+// 0056): un bambino attivo GIÀ incoerente (il filtro SQL replica i casi di
+// inconsistenzeGiorno, vedi la migration), con presenza e pasto della data
+// (null se la riga corrispondente non esiste). I messaggi si compongono
+// qui.
+export type RigaIncoerenzaDb = {
+  id: string;
+  nome: string;
+  cognome: string;
+  stato: StatoPresenza | null;
+  pre_asilo: boolean | null;
+  post_asilo: boolean | null;
+  mangiato: string | null;
+};
+
+// Dalle righe grezze della RPC ai bambini con incoerenze, riusando
+// bambiniConIncoerenze (stessa regola, nessuna duplicazione). Funzione
+// pura, con unit test.
+export function bambiniConIncoerenzeDaRighe(righe: RigaIncoerenzaDb[]): BambinoConIncoerenze[] {
+  return bambiniConIncoerenze(
+    righe.map((r) => ({
+      id: r.id,
+      nome: r.nome,
+      cognome: r.cognome,
+      stato: r.stato ?? undefined,
+      preAsilo: r.pre_asilo ?? undefined,
+      postAsilo: r.post_asilo ?? undefined,
+      mangiato: (r.mangiato as StatoPasto | null) ?? undefined,
+    }))
+  );
+}

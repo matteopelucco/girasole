@@ -1,124 +1,57 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { bambiniConIncoerenze, type BambinoConIncoerenze, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
+import { bambiniConIncoerenzeDaRighe, type BambinoConIncoerenze, type RigaIncoerenzaDb } from '@/lib/consistenza';
 
 // Numero di telefono di Rojac (la mensa esterna), mostrato nel riquadro
 // di conferma della comunicazione pasti (specs/16 -
 // comunicazione-pasti-rojac.md).
 export const TELEFONO_ROJAC = '0331 955630';
 
-// Id di tutti i bambini attivi dell'asilo, condivisa dalle due funzioni
-// sotto: entrambe partono dallo stesso insieme (tutti i bambini attivi,
-// non solo le classi visibili a chi chiama) e poi lo incrociano con una
-// tabella diversa (pasti/presenze).
-async function idBambiniAttivi(supabase: SupabaseClient): Promise<string[]> {
-  const { data: bambiniAttivi, error } = await supabase.from('bambini').select('id').eq('attiva', true);
-  if (error) throw new Error(`lettura bambini: ${error.message}`);
-  return (bambiniAttivi ?? []).map((b) => b.id);
-}
+// Le tre letture qui sotto riguardano TUTTO l'asilo, non solo le classi
+// visibili a chi chiama (una maestra vede via RLS solo le proprie
+// sezioni, mentre la comunicazione a Rojac è un totale unico). Passano da
+// funzioni Postgres `security definer` (migration 0056) richiamate via
+// RPC con il client della sessione dell'utente, NON più con la
+// service_role key: il controllo del ruolo (admin/maestra, e per la
+// maestra solo la giornata odierna) è dentro la funzione, che altrimenti
+// risponde con un errore. Nessun I/O testabile in unità (CLAUDE.md):
+// coperte da pgTAP (supabase/tests/database/rpc_pasti_rojac.test.sql) ed
+// e2e.
 
-// Totale dei pasti "sì" segnati oggi in TUTTO l'asilo, non solo le
-// classi visibili a chi chiama (specs/16): usa la service_role key
-// perché una sessione maestra vede via RLS solo le proprie sezioni,
-// mentre la comunicazione a Rojac riguarda un totale unico per l'intero
-// asilo. Nessun I/O testabile in unità (CLAUDE.md): coperta da e2e.
-export async function contaPastiSiOggiTuttoAsilo(data: string): Promise<number> {
-  const supabase = createAdminClient();
-
-  const idBambini = await idBambiniAttivi(supabase);
-  if (!idBambini.length) return 0;
-
-  const { count, error } = await supabase
-    .from('pasti')
-    .select('id', { count: 'exact', head: true })
-    .eq('data', data)
-    .eq('mangiato', 'si')
-    .in('bambino_id', idBambini);
+// Totale dei pasti "sì" segnati nella data in TUTTO l'asilo (specs/16).
+export async function contaPastiSiOggiTuttoAsilo(supabase: SupabaseClient, data: string): Promise<number> {
+  const { data: totale, error } = await supabase.rpc('pasti_si_oggi_asilo', { p_data: data });
   if (error) throw new Error(`lettura pasti: ${error.message}`);
-
-  return count ?? 0;
+  return (totale as number | null) ?? 0;
 }
 
 export type BambinoSenzaPresenza = { id: string; nome: string; cognome: string };
-
-// Bambini attivi con nome e cognome, ordinati per cognome: punto di
-// partenza comune delle due funzioni sotto che elencano bambini da
-// correggere (presenza mancante, dati incoerenti).
-async function bambiniAttiviConNome(supabase: SupabaseClient): Promise<BambinoSenzaPresenza[]> {
-  const { data, error } = await supabase.from('bambini').select('id, nome, cognome').eq('attiva', true).order('cognome');
-  if (error) throw new Error(`lettura bambini: ${error.message}`);
-  return data ?? [];
-}
 
 // Bambini attivi, in TUTTO l'asilo, senza ancora una presenza segnata
 // per la data data (specs/16: la comunicazione pasti è bloccata finché
 // anche un solo bambino ne è privo, qualunque sia lo stato che gli
 // manca — e il messaggio di blocco elenca chi manca, con un link di
-// scorciatoia alla schermata Presenze). Stessa ragione delle funzioni
-// sopra per l'uso della service_role key: il blocco riguarda l'intero
-// asilo, non solo le classi visibili a chi chiama, quindi anche
-// l'elenco include bambini di classi altrui. Nessun I/O testabile in
-// unità (CLAUDE.md): coperta da e2e.
-export async function bambiniSenzaPresenzaOggiTuttoAsilo(data: string): Promise<BambinoSenzaPresenza[]> {
-  const supabase = createAdminClient();
-
-  const bambiniAttivi = await bambiniAttiviConNome(supabase);
-  if (!bambiniAttivi.length) return [];
-
-  const { data: presenze, error: erroreLetturaPresenze } = await supabase
-    .from('presenze')
-    .select('bambino_id')
-    .eq('data', data)
-    .in(
-      'bambino_id',
-      bambiniAttivi.map((b) => b.id)
-    );
-  if (erroreLetturaPresenze) throw new Error(`lettura presenze: ${erroreLetturaPresenze.message}`);
-
-  const idConPresenza = new Set((presenze ?? []).map((p) => p.bambino_id));
-  return bambiniAttivi.filter((b) => !idConPresenza.has(b.id));
+// scorciatoia alla schermata Presenze). L'elenco include bambini di
+// classi altrui: è il comportamento voluto da specs/16.
+export async function bambiniSenzaPresenzaOggiTuttoAsilo(
+  supabase: SupabaseClient,
+  data: string
+): Promise<BambinoSenzaPresenza[]> {
+  const { data: bambini, error } = await supabase.rpc('bambini_senza_presenza_asilo', { p_data: data });
+  if (error) throw new Error(`lettura presenze: ${error.message}`);
+  return (bambini as BambinoSenzaPresenza[] | null) ?? [];
 }
 
 // Bambini attivi, in TUTTO l'asilo, con dati incoerenti per la data
 // (specs/16, specs/06): in pratica un pasto "sì" su un bambino assente o
 // malato, cioè pasti segnati > bambini presenti. La comunicazione a
-// Rojac è bloccata finché ne esiste uno. Regola in
-// lib/consistenza.ts:bambiniConIncoerenze (pura, con unit test); qui solo
-// la lettura, con la service_role key per la stessa ragione delle
-// funzioni sopra (il blocco riguarda l'intero asilo, anche le classi non
-// visibili a chi guarda). Nessun I/O testabile in unità (CLAUDE.md):
-// coperta da e2e.
-export async function bambiniConIncoerenzeOggiTuttoAsilo(data: string): Promise<BambinoConIncoerenze[]> {
-  const supabase = createAdminClient();
-
-  const bambiniAttivi = await bambiniAttiviConNome(supabase);
-  if (!bambiniAttivi.length) return [];
-
-  const idBambini = bambiniAttivi.map((b) => b.id);
-  const [{ data: presenze, error: errorePresenze }, { data: pasti, error: errorePasti }] = await Promise.all([
-    supabase
-      .from('presenze')
-      .select('bambino_id, stato, pre_asilo, post_asilo')
-      .eq('data', data)
-      .in('bambino_id', idBambini),
-    supabase.from('pasti').select('bambino_id, mangiato').eq('data', data).in('bambino_id', idBambini),
-  ]);
-  if (errorePresenze) throw new Error(`lettura presenze: ${errorePresenze.message}`);
-  if (errorePasti) throw new Error(`lettura pasti: ${errorePasti.message}`);
-
-  const presenzaPerBambino = new Map((presenze ?? []).map((p) => [p.bambino_id, p]));
-  const pastoPerBambino = new Map((pasti ?? []).map((p) => [p.bambino_id, p]));
-
-  return bambiniConIncoerenze(
-    bambiniAttivi.map((b) => {
-      const presenza = presenzaPerBambino.get(b.id);
-      return {
-        ...b,
-        stato: presenza?.stato as StatoPresenza | undefined,
-        preAsilo: presenza?.pre_asilo,
-        postAsilo: presenza?.post_asilo,
-        mangiato: pastoPerBambino.get(b.id)?.mangiato as StatoPasto | undefined,
-      };
-    })
-  );
+// Rojac è bloccata finché ne esiste uno. La RPC restituisce solo le righe dei
+// bambini incoerenti; i messaggi sono composti da lib/consistenza.ts:bambiniConIncoerenzeDaRighe
+// (pura, con unit test).
+export async function bambiniConIncoerenzeOggiTuttoAsilo(
+  supabase: SupabaseClient,
+  data: string
+): Promise<BambinoConIncoerenze[]> {
+  const { data: righe, error } = await supabase.rpc('bambini_incoerenti_asilo', { p_data: data });
+  if (error) throw new Error(`lettura presenze e pasti: ${error.message}`);
+  return bambiniConIncoerenzeDaRighe((righe as RigaIncoerenzaDb[] | null) ?? []);
 }
