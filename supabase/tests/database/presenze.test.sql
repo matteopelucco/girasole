@@ -101,7 +101,7 @@ begin
 end;
 $$;
 
-select plan(43);
+select plan(47);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -264,13 +264,17 @@ alter table public.presenze disable trigger presenze_blocca_se_chiuso;
 --   e0..03 B3 il 2030-03-12            presente
 --   e0..04 B1 oggi_roma()              presente
 --   e0..05 B3 oggi_roma()              presente
+--   e0..06 B1 il 2020-03-10 (martedì, davvero passato)  presente
+--     (bersaglio della prova negativa dell'assistente su data passata; NON
+--     rientra nell'elenco di ids_as, quindi non altera le SELECT sopra)
 -- I bambini sono fittizi e nuovi: nessun conflitto con unique (bambino_id, data).
 insert into public.presenze (id, bambino_id, data, stato) values
   ('e0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001', '2030-03-12', 'presente'),
   ('e0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000002', '2030-03-12', 'assente'),
   ('e0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000003', '2030-03-12', 'presente'),
   ('e0000000-0000-0000-0000-000000000004', 'c0000000-0000-0000-0000-000000000001', public.oggi_roma(), 'presente'),
-  ('e0000000-0000-0000-0000-000000000005', 'c0000000-0000-0000-0000-000000000003', public.oggi_roma(), 'presente');
+  ('e0000000-0000-0000-0000-000000000005', 'c0000000-0000-0000-0000-000000000003', public.oggi_roma(), 'presente'),
+  ('e0000000-0000-0000-0000-000000000006', 'c0000000-0000-0000-0000-000000000001', '2020-03-10', 'presente');
 
 -- ---------------------------------------------------------------------
 -- SELECT per ruolo
@@ -341,6 +345,21 @@ select is(
     $q$insert into public.presenze (bambino_id, data, stato)
        values ('c0000000-0000-0000-0000-000000000002', '2030-03-13', 'presente')$q$),
   '42501', 'maestra: non può inserire su una data diversa da oggi, nemmeno nella propria sezione');
+-- Assistente (S1): stesso perimetro della maestra (0016), prova negativa
+-- esplicita. Il rifiuto atteso è della sola RLS: il trigger di chiusura è
+-- disattivato, B5 (oggi) e B2 (2020-03-10) non hanno righe, quindi nessun
+-- conflitto con unique (bambino_id, data), e il trigger 0052 (AFTER) non
+-- scatta con stato 'presente'.
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000003',
+    $q$insert into public.presenze (bambino_id, data, stato)
+       values ('c0000000-0000-0000-0000-000000000005', public.oggi_roma(), 'presente')$q$),
+  '42501', 'assistente S1: non può inserire la presenza di un bambino di S2 (oggi)');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000003',
+    $q$insert into public.presenze (bambino_id, data, stato)
+       values ('c0000000-0000-0000-0000-000000000002', '2020-03-10', 'presente')$q$),
+  '42501', 'assistente: non può inserire su una data passata, nemmeno nella propria sezione');
 select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000005',
     $q$insert into public.presenze (bambino_id, data, stato)
@@ -400,6 +419,18 @@ select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
     $q$update public.presenze set note = 'manomesso' where id = 'e0000000-0000-0000-0000-000000000001'$q$),
   '0', 'maestra S1: non modifica (0 righe) la presenza di una data passata della propria sezione');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000003',
+    $q$update public.presenze set note = 'manomesso' where id = 'e0000000-0000-0000-0000-000000000006'$q$),
+  '0', 'assistente S1: non modifica (0 righe) la presenza di una data passata della propria sezione');
+-- Controprova con ruolo privilegiato: lo '0' righe vale come prova della RLS
+-- solo se la riga esiste ed è rimasta intatta (non un id sbagliato né un
+-- errore altrove).
+select is(
+  (select count(*)::int from public.presenze
+    where id = 'e0000000-0000-0000-0000-000000000006' and note is null),
+  1,
+  'la riga di data passata esiste ed è intatta: lo 0 righe dell''assistente è della RLS (USING), non di un filtro sbagliato');
 select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
     $q$update public.presenze set data = '2030-03-13' where id = 'e0000000-0000-0000-0000-000000000004'$q$),
