@@ -60,3 +60,11 @@ l'INSERT diretto ad `authenticated`. Restano con la service_role la gestione
 utenti (Admin API di Auth) e i cron (con le loro librerie); il GRANT INSERT a
 service_role di 0021 è ora inutilizzato e va rimosso con una migration
 successiva, dopo il deploy.
+
+## Aggiornamento (issue #213, sotto-issue di #38)
+Il download del PDF mensile delle ore di lavoro (`/admin/ore-lavoro/pdf`) non usa
+più la service_role: `lib/reportOreLavoro.ts` riceve il client dal chiamante.
+La route admin passa il client della sessione dell'admin (dopo `requireAdmin()`),
+le cui policy di lettura per l'admin (`*_select_own_or_admin`, `giorni_chiusura_select_staff`, `profili_orari_admin_all`) leggono già i dati di tutto il personale
+(verificato da `supabase/tests/database/ore_lavoro_report_admin.test.sql`); il
+cron `report-presenze` continua a passare la service_role.
