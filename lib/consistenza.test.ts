@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bambiniConIncoerenze, inconsistenzeGiorno } from './consistenza';
+import { bambiniConIncoerenze, bambiniConIncoerenzeDaRighe, inconsistenzeGiorno } from './consistenza';
 
 describe('inconsistenzeGiorno', () => {
   it('nessun problema per una riga vuota (non segnato)', () => {
@@ -101,5 +101,44 @@ describe('bambiniConIncoerenze (blocco della comunicazione pasti a Rojac, specs/
 
   it('nessun bambino: elenco vuoto', () => {
     expect(bambiniConIncoerenze([])).toEqual([]);
+  });
+});
+
+describe('bambiniConIncoerenzeDaRighe (righe grezze della RPC bambini_incoerenti_asilo)', () => {
+  const anna = { id: 'a', nome: 'Anna', cognome: 'Rossi' };
+  const luca = { id: 'b', nome: 'Luca', cognome: 'Bianchi' };
+
+  it('nessuna riga: elenco vuoto', () => {
+    expect(bambiniConIncoerenzeDaRighe([])).toEqual([]);
+  });
+
+  it('colonne null (nessuna presenza o nessun pasto) non producono incoerenze', () => {
+    expect(
+      bambiniConIncoerenzeDaRighe([
+        { ...anna, stato: null, pre_asilo: null, post_asilo: null, mangiato: 'si' },
+        { ...luca, stato: 'presente', pre_asilo: false, post_asilo: false, mangiato: null },
+      ])
+    ).toEqual([]);
+  });
+
+  it('pasto sì con presenza assente: elencato con il motivo', () => {
+    expect(
+      bambiniConIncoerenzeDaRighe([
+        { ...anna, stato: 'presente', pre_asilo: false, post_asilo: false, mangiato: 'si' },
+        { ...luca, stato: 'assente', pre_asilo: false, post_asilo: false, mangiato: 'si' },
+      ])
+    ).toEqual([{ ...luca, problemi: ['Pasto segnato "sì" ma il bambino risulta assente.'] }]);
+  });
+
+  it('pasto sì con presenza in malattia: elencato con il motivo', () => {
+    expect(
+      bambiniConIncoerenzeDaRighe([{ ...anna, stato: 'malattia', pre_asilo: false, post_asilo: false, mangiato: 'si' }])
+    ).toEqual([{ ...anna, problemi: ['Pasto segnato "sì" ma il bambino risulta malato.'] }]);
+  });
+
+  it('pre-asilo senza presenza (stato null) è incoerente come nel controllo per riga', () => {
+    expect(
+      bambiniConIncoerenzeDaRighe([{ ...anna, stato: null, pre_asilo: true, post_asilo: false, mangiato: null }])
+    ).toEqual([{ ...anna, problemi: ['Pre-asilo segnato ma il bambino non risulta presente.'] }]);
   });
 });
