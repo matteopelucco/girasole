@@ -117,13 +117,24 @@ revoke all on function public.bambini_senza_presenza_asilo(date) from public, an
 grant execute on function public.bambini_senza_presenza_asilo(date) to authenticated;
 
 -- ---------------------------------------------------------------------
--- 3) Righe grezze per il controllo di incoerenza (specs/06, specs/16)
+-- 3) Righe dei soli bambini INCOERENTI (specs/06, specs/16)
 -- ---------------------------------------------------------------------
--- Nessuna regola qui: la logica resta in lib/consistenza.ts. Restituisce,
--- per ogni bambino attivo con almeno una presenza o un pasto nella data,
--- lo stato della presenza, i flag pre/post-asilo e il valore del pasto
--- (null se la riga non esiste). I bambini senza né presenza né pasto non
--- possono avere incoerenze e non sono restituiti.
+-- Restituisce SOLO i bambini attivi che hanno almeno un'incoerenza, con i
+-- campi che servono a lib/consistenza.ts per comporre il messaggio (stato,
+-- flag pre/post-asilo, pasto). Lo stato di presenza di un bambino coerente
+-- (es. malattia) NON esce mai: alla maestra le sezioni altrui sono
+-- precluse da presenze_select, e prima di questa migration vedeva solo
+-- nome, cognome e motivo dei bambini incoerenti (specs/16).
+--
+-- Il predicato SQL deve coprire ALMENO tutti i casi di
+-- lib/consistenza.ts:inconsistenzeGiorno (se ne mancasse uno, il blocco
+-- della comunicazione si aprirebbe per errore):
+--   1) pre-asilo segnato ma stato diverso da 'presente'
+--   2) post-asilo segnato ma stato diverso da 'presente'
+--   3) pasto 'si' con stato 'assente'
+--   4) pasto 'si' con stato 'malattia'
+-- Il testo dei messaggi resta in TypeScript. Se inconsistenzeGiorno cambia,
+-- aggiornare qui il predicato e il test pgTAP rpc_pasti_rojac.test.sql.
 create or replace function public.bambini_incoerenti_asilo(p_data date)
 returns table (
   id uuid,
@@ -148,7 +159,13 @@ begin
     left join public.presenze p on p.bambino_id = b.id and p.data = p_data
     left join public.pasti pa on pa.bambino_id = b.id and pa.data = p_data
     where b.attiva
-      and (p.id is not null or pa.id is not null)
+      and (
+        -- casi 1 e 2 (stato null = nessuna presenza: pre/post sono null)
+        ((coalesce(p.pre_asilo, false) or coalesce(p.post_asilo, false))
+          and p.stato is distinct from 'presente')
+        -- casi 3 e 4
+        or (pa.mangiato = 'si' and p.stato in ('assente', 'malattia'))
+      )
     order by b.cognome, b.nome;
 end;
 $$;

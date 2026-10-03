@@ -6,8 +6,8 @@
 -- dell'utente):
 --   pasti_si_oggi_asilo(date)            -> integer
 --   bambini_senza_presenza_asilo(date)   -> (id, nome, cognome)
---   bambini_incoerenti_asilo(date)       -> righe grezze (id, nome, cognome,
---                                           stato, pre_asilo, post_asilo, mangiato)
+--   bambini_incoerenti_asilo(date)       -> solo i bambini incoerenti (id, nome,
+--                                           cognome, stato, pre_asilo, post_asilo, mangiato)
 -- più il controllo interno assicura_accesso_pasti_asilo(date).
 --
 -- Comportamento fissato:
@@ -103,7 +103,7 @@ begin
 end;
 $$;
 
-select plan(45);
+select plan(47);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -213,7 +213,7 @@ begin
 end;
 $$;
 
--- Righe grezze di bambini_incoerenti_asilo(p_data) per i bambini di
+-- Righe di bambini_incoerenti_asilo(p_data) per i bambini di
 -- fixture, nel formato 'NN|stato|pre|post|pasto'.
 create function pg_temp.incoerenti_as(p_uid uuid, p_data date) returns text[]
 language plpgsql as $$
@@ -380,9 +380,8 @@ select is(pg_temp.senza_as('a0000000-0000-0000-0000-000000000001', date '2030-03
 select is(pg_temp.nome_b4_as('a0000000-0000-0000-0000-000000000001', date '2030-03-12'),
   'PgtapQuattro Fittizio', 'admin: la riga senza presenza riporta nome e cognome');
 select is(pg_temp.incoerenti_as('a0000000-0000-0000-0000-000000000001', date '2030-03-12'),
-  array['01|presente|true|false|si', '02|presente|false|false|si', '03|assente|false|false|si',
-        '06|malattia|false|false|si', '07|assente|false|false|no'],
-  'admin: righe grezze stato/pasto dei bambini attivi con presenza o pasto (B4 e B5 esclusi)');
+  array['03|assente|false|false|si', '06|malattia|false|false|si'],
+  'admin: solo i bambini incoerenti B3 e B6 (coerenti B1, B2, B7 esclusi; B5 inattivo escluso)');
 select is(pg_temp.esito_as('a0000000-0000-0000-0000-000000000001',
     'select public.pasti_si_oggi_asilo(null)'), '22004',
   'admin: data nulla rifiutata');
@@ -407,15 +406,22 @@ select is(pg_temp.senza_as('a0000000-0000-0000-0000-000000000002', public.oggi_r
 select is(pg_temp.nome_b4_as('a0000000-0000-0000-0000-000000000002', public.oggi_roma()),
   'PgtapQuattro Fittizio', 'maestra: nome e cognome del bambino di una sezione non sua');
 select is(pg_temp.incoerenti_as('a0000000-0000-0000-0000-000000000002', public.oggi_roma()),
-  array['01|presente|true|false|si', '02|presente|false|false|si', '03|assente|false|false|si',
-        '06|malattia|false|false|si', '07|assente|false|false|no'],
-  'maestra: righe grezze dell''intero asilo, anche di sezioni non sue');
+  array['03|assente|false|false|si', '06|malattia|false|false|si'],
+  'maestra: solo gli incoerenti dell''intero asilo, anche di sezioni non sue');
 select is(pg_temp.senza_as('a0000000-0000-0000-0000-000000000001', public.oggi_roma()), array['04'],
   'admin: senza presenza di oggi = solo B4');
 select is(pg_temp.incoerenti_as('a0000000-0000-0000-0000-000000000001', public.oggi_roma()),
-  array['01|presente|true|false|si', '02|presente|false|false|si', '03|assente|false|false|si',
-        '06|malattia|false|false|si', '07|assente|false|false|no'],
-  'admin: righe grezze di oggi');
+  array['03|assente|false|false|si', '06|malattia|false|false|si'],
+  'admin: solo gli incoerenti di oggi');
+
+-- La maestra non riceve lo stato di presenza di bambini coerenti di altre
+-- sezioni (B2 presente, B7 assente con pasto no): solo gli incoerenti.
+select ok(
+  not ('02|presente|false|false|si' = any(pg_temp.incoerenti_as('a0000000-0000-0000-0000-000000000002', public.oggi_roma()))),
+  'maestra: bambini_incoerenti_asilo non restituisce B2 (coerente, altra sezione)');
+select ok(
+  not ('07|assente|false|false|no' = any(pg_temp.incoerenti_as('a0000000-0000-0000-0000-000000000002', public.oggi_roma()))),
+  'maestra: bambini_incoerenti_asilo non restituisce B7 (assente ma coerente)');
 
 -- ---------------------------------------------------------------------
 -- Respinti: errore 42501, mai un insieme vuoto

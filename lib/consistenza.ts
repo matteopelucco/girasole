@@ -52,9 +52,10 @@ export function bambiniConIncoerenze(
 }
 
 // Riga grezza restituita dalla RPC `bambini_incoerenti_asilo` (migration
-// 0056): un bambino attivo con l'eventuale presenza e l'eventuale pasto
-// della data, con i campi null se la riga corrispondente non esiste.
-// La RPC non applica nessuna regola: la logica resta qui.
+// 0056): un bambino attivo GIÀ incoerente (il filtro SQL replica i casi di
+// inconsistenzeGiorno, vedi la migration), con presenza e pasto della data
+// (null se la riga corrispondente non esiste). I messaggi si compongono
+// qui.
 export type RigaIncoerenzaDb = {
   id: string;
   nome: string;

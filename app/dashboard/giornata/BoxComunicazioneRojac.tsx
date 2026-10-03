@@ -8,7 +8,9 @@ import {
   bambiniSenzaPresenzaOggiTuttoAsilo,
   bambiniConIncoerenzeOggiTuttoAsilo,
   TELEFONO_ROJAC,
+  type BambinoSenzaPresenza,
 } from '@/lib/pastiRojac';
+import type { BambinoConIncoerenze } from '@/lib/consistenza';
 import { comunicaPastiRojac } from '../pasti/actions';
 
 export type ComunicazioneGiorno = {
@@ -97,11 +99,28 @@ export async function BoxComunicazioneRojac({
   } else if (!puoScrivereData(ruolo, data)) {
     return null;
   } else {
-    const [bambiniSenzaPresenza, bambiniIncoerenti] = await Promise.all([
-      bambiniSenzaPresenzaOggiTuttoAsilo(supabase, data),
-      bambiniConIncoerenzeOggiTuttoAsilo(supabase, data),
-    ]);
-    if (bambiniSenzaPresenza.length > 0 || bambiniIncoerenti.length > 0) {
+    // Le RPC rifiutano chi non ha il permesso (o una data non consentita,
+    // es. orologi app/database sfasati a cavallo della mezzanotte): senza i
+    // controlli non si offre il pulsante, invece di mandare in errore
+    // l'intera pagina. Nessun permesso allargato.
+    let controlli: [BambinoSenzaPresenza[], BambinoConIncoerenze[]] | null = null;
+    try {
+      controlli = await Promise.all([
+        bambiniSenzaPresenzaOggiTuttoAsilo(supabase, data),
+        bambiniConIncoerenzeOggiTuttoAsilo(supabase, data),
+      ]);
+    } catch (errore) {
+      console.error('BoxComunicazioneRojac: controlli di comunicazione non disponibili', errore);
+    }
+    const [bambiniSenzaPresenza, bambiniIncoerenti] = controlli ?? [[], []];
+    if (!controlli) {
+      contenuto = (
+        <p className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
+          Al momento non è possibile verificare le presenze e i pasti per la comunicazione a Rojac. Ricarica la
+          pagina.
+        </p>
+      );
+    } else if (bambiniSenzaPresenza.length > 0 || bambiniIncoerenti.length > 0) {
       contenuto = (
         <div className="space-y-3">
           {bambiniSenzaPresenza.length > 0 && (

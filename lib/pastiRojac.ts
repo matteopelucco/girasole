@@ -44,8 +44,8 @@ export async function bambiniSenzaPresenzaOggiTuttoAsilo(
 // Bambini attivi, in TUTTO l'asilo, con dati incoerenti per la data
 // (specs/16, specs/06): in pratica un pasto "sì" su un bambino assente o
 // malato, cioè pasti segnati > bambini presenti. La comunicazione a
-// Rojac è bloccata finché ne esiste uno. La RPC restituisce solo le righe
-// grezze; la regola è in lib/consistenza.ts:bambiniConIncoerenzeDaRighe
+// Rojac è bloccata finché ne esiste uno. La RPC restituisce solo le righe dei
+// bambini incoerenti; i messaggi sono composti da lib/consistenza.ts:bambiniConIncoerenzeDaRighe
 // (pura, con unit test).
 export async function bambiniConIncoerenzeOggiTuttoAsilo(
   supabase: SupabaseClient,
