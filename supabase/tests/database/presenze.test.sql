@@ -344,12 +344,12 @@ select is(
 select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000005',
     $q$insert into public.presenze (bambino_id, data, stato)
-       values ('c0000000-0000-0000-0000-000000000001', '2030-03-13', 'presente')$q$),
+       values ('c0000000-0000-0000-0000-000000000001', public.oggi_roma(), 'presente')$q$),
   '42501', 'genitore: non può inserire presenze, neanche del proprio figlio');
 select is(
   pg_temp.write_as(null,
     $q$insert into public.presenze (bambino_id, data, stato)
-       values ('c0000000-0000-0000-0000-000000000001', '2030-03-13', 'presente')$q$),
+       values ('c0000000-0000-0000-0000-000000000001', public.oggi_roma(), 'presente')$q$),
   '42501', 'anonimo: non può inserire presenze');
 
 select is(
