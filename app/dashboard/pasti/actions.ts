@@ -11,6 +11,7 @@ import {
   bambiniConIncoerenzeOggiTuttoAsilo,
 } from '@/lib/pastiRojac';
 import { inviaEmail } from '@/lib/email';
+import { escapeHtml } from '@/lib/htmlEscape';
 import { formattaDataItaliana } from '@/lib/date';
 import type { EsitoAzione } from '@/components/FormConEsito';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -129,7 +130,7 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     await inviaEmail({
       a: 'info@asilosartorio.it',
       oggetto: `Pasti comunicati a Rojac — ${formattaDataItaliana(data)}`,
-      html: `<p>${comunicatoDaNome} ha comunicato a Rojac <strong>${numeroPasti}</strong> pasti per il ${formattaDataItaliana(data)}.</p>`,
+      html: `<p>${escapeHtml(comunicatoDaNome)} ha comunicato a Rojac <strong>${numeroPasti}</strong> pasti per il ${formattaDataItaliana(data)}.</p>`,
     });
   } catch (erroreEmail) {
     console.error('comunicaPastiRojac: invio email di notifica fallito', erroreEmail);
