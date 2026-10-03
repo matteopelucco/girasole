@@ -35,6 +35,15 @@ lo richiede.
 - Trunk-based, commit atomici, **in inglese**, formato Conventional Commits
   (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`; `!` per
   i breaking change). Dettagli in `docs/sviluppo-dettagli.md`.
+- **Issue**: titolo `<tipo>(<ambito>): <descrizione breve in italiano>`,
+  ambito opzionale, stessi tipi dei commit, minuscolo, niente maiuscole
+  tipo `Bug:`/`IMPROVEMENT:`/`Sicurezza:`, niente codici tipo `A32 ·`. Una
+  label `type:*` per tipo: `feat`→`type:feature`, `fix`→`type:bug`,
+  `chore`/`docs`/`test`/`ci`/`refactor`/`perf`/`build`→`type:chore`; un tema di
+  sicurezza ha in più `type:security` (titolo `fix(security): …`). `area:*`,
+  `tier:*`, `status:*` le assegna il triage, non chi apre. Aprire dai
+  template in `.github/ISSUE_TEMPLATE/` (anche con `gh issue create`: stesso
+  prefisso, stessa label). Il prefisso del titolo e la label devono coincidere.
 - Backlog e storia sono issue e PR; `docs/tasks-archivio.md` è solo
   storico, da leggere se serve.
 - Requisiti: `specs/`, numerati per scenario. Aggiornare `00 - overview.md`

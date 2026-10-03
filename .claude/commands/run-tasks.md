@@ -54,11 +54,18 @@ differenza reale; tieni come stima il **massimo** osservato (la granularità è
 
 Dì in una riga il budget letto e l'`n_effettivo` scelto.
 
-## Fase 2 — Selezione dei task (ordine = ranking della board)
+## Fase 2 — Selezione dei task (priorità = posizione in board, bug in vantaggio)
+La board è ordinata a mano da Matteo: **più in alto = più importante**. È il
+criterio di priorità quasi esclusivo. Non sostituirlo con tuoi giudizi di
+comodo (issue "più piccola", tier più economico, numero di issue più basso,
+area che conosci meglio): nel dubbio vince la posizione.
+
 1. Leggi la board (Project 2 dell'utente):
    `gh project item-list 2 --owner matteopelucco --limit 200 --format json`
-   L'ordine dell'array è il ranking della board: **rispettalo**, non
-   riordinare per numero di issue o per tier.
+   L'ordine dell'array è il ranking della board. Nell'array sono mescolati
+   Status diversi (`Todo`, `Done`, `Need Info`): filtra prima (punto 2),
+   **poi** numera, così le posizioni 1, 2, 3… sono quelle dei soli candidati,
+   nell'ordine originale.
 2. Tieni solo gli elementi `Issue` aperti con Status **`Todo`**. Scarta:
    - Status `In Progress`, `Need Info`, `Done`;
    - label `status:needs-info`, `status:blocked`, `status:in-progress`,
@@ -66,10 +73,26 @@ Dì in una riga il budget letto e l'`n_effettivo` scelto.
    - issue che hanno già una PR aperta collegata;
    - issue con "Dipende da #X / Axx" non ancora chiuse;
    - elementi di tipo `PullRequest` (es. bump di Dependabot): non sono task.
-3. Prendi i primi in ordine finché ne hai `n_effettivo`. Per le issue senza
-   `status:ready` (`status:triage` o nessuna label di stato) lancia prima
-   l'agente **triage**; se l'esito è `status:needs-info` salta la issue.
-4. Con `--dry-run`: stampa tabella (n°, titolo, classificazione prevista) e fermati.
+3. **Priorità dei bug nel loro intorno.** Un bug è un'issue con label
+   `type:bug` (o `bug`), oppure con titolo che inizia per `fix:` / `fix(`
+   (convenzione dei titoli in `CLAUDE.md`; le issue storiche `Bug: …` hanno
+   comunque `type:bug`). Un bug può scavalcare i non-bug **vicini**, non l'intera lista:
+   - posizione effettiva del bug = `posizione − 5` (l'intorno è di 5 posti);
+     per i non-bug la posizione effettiva è quella reale;
+   - riordina per posizione effettiva crescente; a parità vince il bug; tra
+     elementi dello stesso tipo resta l'ordine di board (ordinamento stabile);
+   - quindi un bug in posizione 4 passa davanti a tutto, un bug in posizione 9
+     passa davanti ai non-bug in posizione 5-8 ma non a quelli in 1-4, un bug
+     in posizione 30 non scavalca nulla di quello che sta in alto;
+   - tra due bug conta la posizione di board (il più in alto prima).
+4. Prendi i primi della lista così ordinata finché ne hai `n_effettivo`. Per le
+   issue senza `status:ready` (`status:triage` o nessuna label di stato) lancia
+   prima l'agente **triage**; se l'esito è `status:needs-info` salta la issue
+   e passa alla successiva **nella stessa lista ordinata**.
+5. Con `--dry-run`: stampa tabella (posizione di board, posizione effettiva,
+   n° issue, titolo, "bug" sì/no, classificazione prevista) e fermati. Il
+   report finale (Fase 4) riporta nella riga di ogni task la posizione di board
+   e, se un bug ha scavalcato altri, quali.
 
 ## Fase 3 — Ciclo per ogni task (strettamente sequenziale)
 
@@ -202,7 +225,8 @@ il contesto della sessione. Fermati e riporta se:
 - ci sono ≥ 3 PR `human-in-the-loop` in attesa.
 
 ## Fase 4 — Report finale e avviso
-Tabella breve, una riga per task: n° issue · classificazione · esito
+Tabella breve, una riga per task: n° issue · posizione in board (con nota
+`bug: ha scavalcato #X, #Y` se è successo) · classificazione · esito
 (`mergiata` / `PR aperta: serve te` / `needs-info` / `fallita` / `saltata`)
 · link PR. Subito sotto la tabella, **un paragrafo descrittivo** (in prosa,
 non un elenco, 4-8 righe) di cosa è stato fatto nel ciclo: che cosa è

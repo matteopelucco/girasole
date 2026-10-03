@@ -19,7 +19,13 @@ deve costare poco: niente esplorazione inutile, output breve.
 1. **Riformula** il problema in 1-2 frasi, senza inventare dettagli.
 2. **Tracciabilità**: se la issue mappa su un requisito esistente, cita
    l'ID (es. FR-07). Se introduce un requisito nuovo, dillo esplicitamente.
-3. **Label** (usa `gh issue edit` / `gh label`):
+3. **Titolo e label** (usa `gh issue edit` / `gh label`):
+   - **Titolo**: deve seguire `<tipo>(<ambito>): <descrizione>` (vedi sezione
+     "Issue" di `CLAUDE.md`). Se non lo segue (`Bug:`, `IMPROVEMENT:`,
+     `Sicurezza:`, codici `Axx ·`, ecc.) riscrivilo con
+     `gh issue edit <n> --title "..."` senza cambiare il senso, e dillo nel
+     commento. Prefisso e label `type:` devono coincidere; se divergono, vince
+     il contenuto della issue e allinei l'altro.
    - `type:` uno tra bug / feature / chore / security
    - `area:` una tra rls-auth / db / ui / api (quella prevalente)
    - `tier:` il modello che dovrà lavorarla:
