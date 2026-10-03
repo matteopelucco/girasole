@@ -33,6 +33,7 @@ export function ConfermaAzione({
   messaggioConferma,
   etichettaConferma = 'Sì',
   tono = 'distruttivo',
+  titoloPopupErrore,
 }: {
   azione: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   campiNascosti: Record<string, string>;
@@ -40,6 +41,9 @@ export function ConfermaAzione({
   messaggioConferma: ReactNode;
   etichettaConferma?: string;
   tono?: keyof typeof PALETTE;
+  // Se indicato, un'azione fallita apre un popup bloccante con questo
+  // titolo (vedi FormConEsito) invece del solo banner discreto.
+  titoloPopupErrore?: string;
 }) {
   const [confermaRichiesta, setConfermaRichiesta] = useState(false);
   const palette = PALETTE[tono];
@@ -55,7 +59,7 @@ export function ConfermaAzione({
   return (
     <div className={`flex flex-wrap items-center gap-2 rounded-lg border p-3 ${palette.box}`}>
       <span className={`text-sm ${palette.testo}`}>{messaggioConferma}</span>
-      <FormConEsito action={azione}>
+      <FormConEsito action={azione} titoloPopupErrore={titoloPopupErrore}>
         {Object.entries(campiNascosti).map(([nome, valore]) => (
           <input key={nome} type="hidden" name={nome} value={valore} />
         ))}

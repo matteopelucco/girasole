@@ -69,6 +69,14 @@ bianca o un errore non gestito
   su `useFormState`): si applica a ogni form con un'unica azione
   (creazione/modifica/eliminazione di sezioni, anni scolastici, bambini,
   utenti, assegnazioni, avvisi).
+- Per le azioni dove un errore ignorato ha conseguenze (oggi: salvataggio
+  e conferma della settimana di ore di lavoro, specs/18, issue #189) il
+  messaggio inline non basta: `FormConEsito` può aprire in più un popup
+  bloccante (`components/DialogErrore.tsx`, `<dialog>` nativo con
+  `showModal()`, ruolo `alertdialog`) con un titolo che dice che l'azione
+  NON è andata a buon fine e, se l'azione lo fornisce (`elenco` in
+  `EsitoAzione`), l'elenco di tutte le incongruenze. Si chiude con il
+  pulsante o con Esc; il banner inline resta come ripiego senza JS.
 - Per i pochi punti dove un form ha più azioni diverse su pulsanti
   diversi (i pulsanti presente/assente/malattia e sì/no in dashboard,
   che condividono lo stesso form) l'errore viene sollevato

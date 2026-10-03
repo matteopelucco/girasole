@@ -256,6 +256,27 @@ export function validaGiornoOreLavoro(input: InputGiornoOreLavoro): EsitoValidaz
   };
 }
 
+export type EsitoValidazioneSettimana =
+  | { ok: true; giorni: GiornoOreLavoroValidato[] }
+  | { ok: false; errori: string[] };
+
+// Valida TUTTI i giorni di un salvataggio e ne raccoglie gli errori, uno
+// per giorno non valido, nell'ordine dei giorni (specs/18, popup "Settimana
+// non salvata": l'utente vede in una volta sola tutte le incongruenze da
+// sanare, non una alla volta). Le regole sono quelle, invariate, di
+// validaGiornoOreLavoro; cambia solo che non ci si ferma al primo errore.
+// Funzione pura, nessun I/O.
+export function validaSettimanaOreLavoro(giorni: InputGiornoOreLavoro[]): EsitoValidazioneSettimana {
+  const validati: GiornoOreLavoroValidato[] = [];
+  const errori: string[] = [];
+  for (const input of giorni) {
+    const esito = validaGiornoOreLavoro(input);
+    if (esito.ok) validati.push(esito.giorno);
+    else errori.push(esito.errore);
+  }
+  return errori.length ? { ok: false, errori } : { ok: true, giorni: validati };
+}
+
 // true se `valore` è un multiplo di un quarto d'ora (0.25), anche
 // negativo o zero (specs/18). Le moltiplicazioni per 4 di multipli di
 // 0.25 sono esatte in virgola mobile, quindi il confronto è sicuro.

@@ -228,6 +228,21 @@ export function alertApp(page: Page) {
   return page.locator('[role="alert"]:not(#__next-route-announcer__)');
 }
 
+// Popup bloccante d'errore (components/DialogErrore.tsx, specs/05 e 18):
+// <dialog> modale con ruolo alertdialog, il cui nome accessibile è il titolo
+// (es. "Settimana non salvata"). Mentre è aperto il resto della pagina è
+// inerte: i test devono chiuderlo ("Chiudi e correggi" o Esc) prima di
+// interagire di nuovo con il form.
+export function popupErrore(page: Page, titolo: string): Locator {
+  return page.getByRole('alertdialog', { name: titolo });
+}
+
+// Chiude il popup con il pulsante e verifica che sparisca.
+export async function chiudiPopupErrore(popup: Locator): Promise<void> {
+  await popup.getByRole('button', { name: 'Chiudi e correggi' }).click();
+  await expect(popup).toBeHidden();
+}
+
 // Click su un bottone che invia una Server Action, attendendo che la
 // risposta sia arrivata per intero (non solo le intestazioni). Il campo
 // di un form mostra già il valore digitato prima del salvataggio: senza

@@ -20,7 +20,17 @@
 // test.skip) solo se qualcuno l'ha già confermata manualmente questa
 // settimana.
 import { test, expect, type Page } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione, dataOggiRoma, dataFraGiorni } from './helpers';
+import {
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+  alertApp,
+  clickEAttendiAzione,
+  dataOggiRoma,
+  dataFraGiorni,
+  popupErrore,
+  chiudiPopupErrore,
+} from './helpers';
 
 // Ore ordinarie mostrate (testo, non un campo: specs/18) del giorno
 // `indice` della settimana (0 = lunedì ... 5 = sabato).
@@ -203,7 +213,43 @@ test.describe('18 — Report ore di lavoro', () => {
         // (scenario "una differenza diversa da zero richiede un motivo").
         await page.getByLabel('Differenza ore Lunedì').fill('2');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(alertApp(page)).toContainText('motivo');
+        await expect(popupErrore(page, 'Settimana non salvata')).toContainText('motivo');
+        await chiudiPopupErrore(popupErrore(page, 'Settimana non salvata'));
+
+        // Scenari "un errore di validazione al salvataggio apre un popup
+        // bloccante con l'elenco delle incongruenze" e "il popup di errore
+        // si chiude con il pulsante o con Esc e riporta al form": due
+        // giorni incompleti (lunedì senza motivo, martedì malattia senza
+        // codice) => UNA finestra con titolo, avviso che nulla è stato
+        // salvato e DUE voci; il form resta compilato.
+        await page.getByLabel('Stato Martedì').selectOption('malattia');
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        const popup = popupErrore(page, 'Settimana non salvata');
+        await expect(popup).toBeVisible();
+        await expect(popup).toContainText('nessuna modifica');
+        const voci = popup.getByRole('listitem');
+        await expect(voci).toHaveCount(2);
+        await expect(voci.nth(0)).toContainText('motivo');
+        await expect(voci.nth(1)).toContainText('codice malattia');
+        expect((await popup.getByRole('button', { name: 'Chiudi e correggi' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        await nessunaViolazioneA11yGrave(page);
+        // Bloccante: un tocco fuori dalla finestra non la chiude...
+        await page.mouse.click(2, 2);
+        await expect(popup).toBeVisible();
+        // ...Esc sì, e il focus torna al pulsante di salvataggio.
+        await page.keyboard.press('Escape');
+        await expect(popup).toBeHidden();
+        await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeFocused();
+        // I dati compilati non sono andati persi.
+        await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('2');
+        await expect(page.getByLabel('Stato Martedì')).toHaveValue('malattia');
+        // Riaprire il popup è solo questione di salvare di nuovo (stesso
+        // elenco), e si chiude anche con il pulsante.
+        await page.getByRole('button', { name: 'Salva modifiche' }).click();
+        await expect(popup).toBeVisible();
+        await expect(voci).toHaveCount(2);
+        await chiudiPopupErrore(popup);
+        await page.getByLabel('Stato Martedì').selectOption('lavorativo');
 
         // Scenario "le ore ammettono solo multipli di un quarto d'ora e
         // il totale non è mai negativo": validazione lato server.
@@ -211,10 +257,12 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Differenza ore Lunedì').fill('0.2');
         await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(alertApp(page)).toContainText("quarto d'ora");
+        await expect(popupErrore(page, 'Settimana non salvata')).toContainText("quarto d'ora");
+        await chiudiPopupErrore(popupErrore(page, 'Settimana non salvata'));
         await page.getByLabel('Differenza ore Lunedì').fill('-8');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(alertApp(page)).toContainText('negativo');
+        await expect(popupErrore(page, 'Settimana non salvata')).toContainText('negativo');
+        await chiudiPopupErrore(popupErrore(page, 'Settimana non salvata'));
 
         // Scenario "i dati storici non a quarti d'ora sono mostrati
         // arrotondati e non vengono modificati finché non si salva": non
@@ -230,6 +278,8 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Motivo Lunedì').fill('Uscita anticipata E2E');
         await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
         await expect(alertApp(page)).toHaveCount(0);
+        // Scenario "se il salvataggio va a buon fine non compare alcun popup".
+        await expect(page.getByRole('alertdialog')).toHaveCount(0);
         await page.waitForTimeout(1000);
         await page.reload();
         await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('-0.5');
@@ -249,6 +299,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByLabel('Motivo Lunedì').fill('Riunione E2E');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
         await expect(alertApp(page)).toHaveCount(0);
+        await expect(page.getByRole('alertdialog')).toHaveCount(0);
         await expect(page.getByText('Differenza ore:', { exact: false })).toContainText('+2h', {
           timeout: 20_000,
         });
@@ -256,7 +307,8 @@ test.describe('18 — Report ore di lavoro', () => {
         // Malattia senza codice: rifiutata.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(alertApp(page)).toContainText('codice malattia');
+        await expect(popupErrore(page, 'Settimana non salvata')).toContainText('codice malattia');
+        await chiudiPopupErrore(popupErrore(page, 'Settimana non salvata'));
 
         // Con il codice: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Martedì').selectOption('malattia');
@@ -269,7 +321,8 @@ test.describe('18 — Report ore di lavoro', () => {
         // Assenza senza nota: rifiutata.
         await page.getByLabel('Stato Mercoledì').selectOption('assenza');
         await page.getByRole('button', { name: 'Salva modifiche' }).click();
-        await expect(alertApp(page)).toContainText('nota giustificativa');
+        await expect(popupErrore(page, 'Settimana non salvata')).toContainText('nota giustificativa');
+        await chiudiPopupErrore(popupErrore(page, 'Settimana non salvata'));
 
         // Con la nota: accettata, e resta salvata dopo un ricaricamento.
         await page.getByLabel('Stato Mercoledì').selectOption('assenza');
@@ -792,6 +845,82 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
         await contestoMaestra.close();
       } finally {
+        await page.goto('/admin/maestre');
+        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
+        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
+        await page.waitForTimeout(1000);
+      }
+    });
+
+    // Scenario "una conferma settimana che fallisce apre un popup bloccante"
+    // (issue #189). Usa una settimana lontana (11 settimane fa, diversa da
+    // quella del test di riapertura, per non contendersi lo stesso stato) e
+    // la lascia non confermata. La maestra apre la pagina quando la settimana
+    // è ancora da confermare; poi l'admin la conferma; la conferma della
+    // maestra, ormai superata, fallisce con "già confermata".
+    test('una conferma settimana che fallisce apre il popup bloccante "Settimana non confermata"', async ({
+      page,
+      browser,
+      baseURL,
+    }) => {
+      const undiciSettimaneFa = new Date(`${dataFraGiorni(-77)}T12:00:00Z`);
+      undiciSettimaneFa.setUTCDate(undiciSettimaneFa.getUTCDate() - ((undiciSettimaneFa.getUTCDay() + 6) % 7));
+      const lunedi = undiciSettimaneFa.toISOString().slice(0, 10);
+
+      await page.goto('/admin/maestre');
+      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
+      await rigaAbilita.getByLabel('Ore di lavoro').check();
+      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
+
+      let urlAdmin = '';
+      try {
+        await page.goto('/admin/ore-lavoro');
+        await page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! }).getByRole('link').click();
+        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+        const utenteId = new URL(page.url()).searchParams.get('utente')!;
+        urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
+
+        // Parto da una settimana non confermata (la riapro se serve).
+        await page.goto(urlAdmin);
+        if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) > 0) {
+          await page.getByRole('button', { name: 'Riapri settimana' }).click();
+          await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, riapri' }));
+        }
+        await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible({ timeout: 20_000 });
+
+        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra'), baseURL });
+        const paginaMaestra = await contestoMaestra.newPage();
+        await paginaMaestra.goto(`/dashboard/ore-lavoro?settimana=${lunedi}`);
+        await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
+
+        // L'admin conferma per conto della maestra.
+        await page.getByRole('button', { name: 'Conferma settimana' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì', exact: true }));
+        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
+
+        // La pagina della maestra è rimasta indietro: la sua conferma fallisce.
+        await paginaMaestra.getByRole('button', { name: 'Conferma settimana' }).click();
+        await clickEAttendiAzione(paginaMaestra, paginaMaestra.getByRole('button', { name: 'Sì', exact: true }));
+        const popup = popupErrore(paginaMaestra, 'Settimana non confermata');
+        await expect(popup).toBeVisible();
+        await expect(popup).toContainText('già confermata');
+        await nessunaViolazioneA11yGrave(paginaMaestra);
+
+        // Si chiude con Esc e la pagina torna utilizzabile.
+        await paginaMaestra.keyboard.press('Escape');
+        await expect(popup).toBeHidden();
+        await expect(paginaMaestra.getByRole('button', { name: 'Annulla' })).toBeVisible();
+        await contestoMaestra.close();
+      } finally {
+        // Ripristino: settimana riaperta, maestra di nuovo non abilitata.
+        if (urlAdmin) {
+          await page.goto(urlAdmin);
+          if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) > 0) {
+            await page.getByRole('button', { name: 'Riapri settimana' }).click();
+            await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, riapri' }));
+          }
+        }
         await page.goto('/admin/maestre');
         const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
         await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
