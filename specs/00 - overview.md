@@ -77,7 +77,9 @@ della maestra, `5x` amministrazione.
 - [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md) — il
   personale abilitato registra ore ordinarie/straordinarie o
   malattia/assenza per la settimana corrente, e la conferma; navigazione
-  libera tra le settimane passate (frecce e selettore di data)
+  libera tra le settimane passate (frecce e selettore di data); un
+  salvataggio o una conferma che falliscono aprono un popup bloccante con
+  l'elenco delle incongruenze
 - [19 - monte-ore.md](19%20-%20monte-ore.md) — contatore di ore per
   persona, gestito completamente a mano dall'admin (movimenti inseriti,
   modificati, eliminati), con segno unico: + ore a credito (già erogate in

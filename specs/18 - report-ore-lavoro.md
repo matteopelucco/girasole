@@ -81,7 +81,8 @@ E l'intestazione della card (giorno e selettore di stato) e le viste
 ## Scenario: una differenza diversa da zero richiede un motivo
 Quando per un giorno inserisco una differenza ore diversa da 0 (in più o
 in meno) senza indicarne il motivo, e premo "Salva modifiche"
-Allora vedo un messaggio d'errore che richiede il motivo
+Allora vedo il popup di errore (vedi "un errore di validazione al
+salvataggio apre un popup bloccante") che richiede il motivo
 E nessuna modifica di quel salvataggio viene registrata
 E con differenza 0 il campo "Motivo" non è mostrato e non è richiesto
 
@@ -89,8 +90,8 @@ E con differenza 0 il campo "Motivo" non è mostrato e non è richiesto
 Quando inserisco una differenza che non è multiplo di 0,25 (es. 0,2) o
 che porterebbe il totale sotto zero (differenza inferiore a −ore
 ordinarie), e premo "Salva modifiche"
-Allora vedo un messaggio d'errore in italiano semplice che spiega il
-problema, e nessuna modifica di quel salvataggio viene registrata
+Allora vedo il popup di errore con un messaggio in italiano semplice che
+spiega il problema, e nessuna modifica di quel salvataggio viene registrata
 E differenze come 1, 2,5, −0,5, −1,25 sono accettate
 E la stessa regola è applicata dal server, non solo dal campo
 
@@ -173,7 +174,7 @@ senza ore ordinarie né straordinarie
 ## Scenario: la malattia richiede il codice
 Quando per un giorno scelgo lo stato "Malattia" senza indicare il
 codice, e premo "Salva modifiche"
-Allora vedo un messaggio d'errore che richiede il codice malattia
+Allora vedo il popup di errore che richiede il codice malattia
 E nessuna modifica di quel salvataggio viene registrata
 
 ## Scenario: segnare un giorno di assenza
@@ -185,8 +186,54 @@ senza ore ordinarie né straordinarie
 ## Scenario: l'assenza richiede una nota giustificativa
 Quando per un giorno scelgo lo stato "Assenza" senza indicare una nota,
 e premo "Salva modifiche"
-Allora vedo un messaggio d'errore che richiede la nota
+Allora vedo il popup di errore che richiede la nota
 E nessuna modifica di quel salvataggio viene registrata
+
+## Scenario: un errore di validazione al salvataggio apre un popup bloccante con l'elenco delle incongruenze
+Dato che la settimana non è confermata
+E ho lasciato due o più giorni con dati incompleti (per esempio una
+differenza ore senza motivo il lunedì e la malattia senza codice il martedì)
+Quando premo "Salva modifiche"
+Allora si apre un popup bloccante (finestra modale: il resto della pagina
+non è utilizzabile finché è aperto) con il titolo "Settimana non salvata"
+e un testo che dice chiaramente che nessuna modifica è stata registrata
+E il popup elenca **tutte** le incongruenze da sanare, una per riga e una
+per giorno (non solo la prima): ogni voce dice quale giorno e che cosa
+manca o non è valido
+E i dati già compilati nel form restano tali, e nulla viene salvato
+(nemmeno i giorni validi)
+E la validazione resta quella del server di sempre: cambia solo come
+l'esito è mostrato
+
+## Scenario: il popup di errore si chiude con il pulsante o con Esc e riporta al form
+Dato che è aperto il popup "Settimana non salvata"
+Quando premo il pulsante "Chiudi e correggi" (bersaglio di almeno 44px, già
+selezionato all'apertura così Invio lo chiude), oppure premo Esc
+Allora il popup si chiude e posso correggere i campi nel form senza aver
+perso nulla; il focus torna al pulsante da cui era partito il salvataggio
+E il popup non si chiude toccando fuori dalla finestra
+E riaprirlo è solo questione di salvare di nuovo: se l'errore c'è ancora,
+il popup ricompare, anche con lo stesso identico elenco
+E il popup è accessibile: ruolo "alertdialog", titolo e descrizione
+collegati, focus mantenuto dentro la finestra finché è aperta
+
+## Scenario: se il salvataggio va a buon fine non compare alcun popup
+Dato che tutti i giorni sono validi
+Quando premo "Salva modifiche"
+Allora non compare alcun popup né messaggio d'errore: l'effetto visibile
+resta quello di sempre ("Ultimo salvataggio: ...")
+
+## Scenario: una conferma settimana che fallisce apre un popup bloccante
+Dato che premo "Conferma settimana" e confermo con "Sì"
+Quando la conferma non va a buon fine (per esempio la settimana risulta
+già confermata, perché nel frattempo è stata confermata da un'altra
+pagina o da un admin, oppure un errore del server)
+Allora si apre lo stesso popup bloccante, con il titolo "Settimana non
+confermata", il motivo del fallimento e, quando c'è, il dettaglio
+tecnico, e il pulsante "Chiudi e correggi" (o Esc) per tornare alla pagina
+E la settimana non risulta confermata da questa azione
+E il popup si chiude e si riapre con gli stessi criteri dello scenario
+precedente
 
 ## Scenario: confermare la settimana
 Quando, dopo aver verificato le ore, premo "Conferma settimana" e
@@ -554,7 +601,16 @@ principio "parametro non valido ⇒ valore di default" già in uso per
   sua volta abilitato.
 - Nessuna scrittura silenziosa: un salvataggio che fallisce la
   validazione (motivo/quarti d'ora/codice/nota) non salva nessuno dei giorni
-  di quel submit, nemmeno quelli validi — il personale corregge il
+  di quel submit, nemmeno quelli validi, e lo segnala con un popup
+  bloccante che elenca tutte le incongruenze (issue #189): un errore
+  mostrato solo come banner sotto il pulsante passava inosservato e si
+  credeva la settimana salvata. Lo stesso popup (titolo "Settimana non
+  confermata") segnala una conferma fallita. Il banner inline sotto il
+  form resta come ripiego senza JavaScript. La conferma NON rilegge i
+  valori digitati nel form: completa solo i giorni non ancora salvati con
+  i valori precaricati, quindi non produce errori di validazione per
+  campi incompleti (vedi "confermare la settimana"), ma solo errori di
+  stato o del server — il personale corregge il
   giorno segnalato e reinvia (stesso pattern "errore ⇒ dati preservati"
   di specs/05 - feedback.md, i campi già compilati restano tali).
 - Navigazione: un parametro in query string (`?settimana=`, un lunedì)
