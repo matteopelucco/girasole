@@ -62,16 +62,18 @@ export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: 
 // maestra, in qualunque classe (non per l'admin — vedi il trigger
 // pasti_blocca_se_comunicato in
 // supabase/migrations/0020_pasti_comunicati_globale.sql, che è la
-// difesa reale). Usa la service_role key per il conteggio e
-// l'inserimento: una sessione maestra vede via RLS solo le proprie
-// sezioni, ma il totale da comunicare è sull'intero asilo — l'app
-// stessa (assicuraAccessoPasti + il controllo data sotto) resta il
-// gate di autorizzazione, dato che qui by-passiamo la RLS di proposito.
+// difesa reale). Conteggio e controlli di blocco sono RPC con la sessione
+// dell'utente (migration 0056: una sessione maestra vede via RLS solo le
+// proprie sezioni, ma il totale da comunicare è sull'intero asilo; il
+// ruolo è verificato dentro la funzione). Solo l'INSERT in
+// pasti_comunicati usa ancora la service_role key (sotto-issue #212 di
+// #38); l'app stessa (assicuraAccessoPasti + il controllo data sotto)
+// resta il gate di autorizzazione per quell'insert.
 // Segue la firma di useFormState (FormConEsito/ConfermaAzione), a
 // differenza di segnaPasto sopra che non ha bisogno del
 // feedback avviato/riuscito/fallita di specs/05.
 export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { profilo, user } = await requireProfilo();
+  const { supabase, profilo, user } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
 
   const data = formData.get('data') as string;
@@ -81,7 +83,7 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     return { ok: false, messaggio: 'Le maestre possono comunicare solo i pasti della giornata odierna.' };
   }
 
-  const numeroSenzaPresenza = (await bambiniSenzaPresenzaOggiTuttoAsilo(data)).length;
+  const numeroSenzaPresenza = (await bambiniSenzaPresenzaOggiTuttoAsilo(supabase, data)).length;
   if (numeroSenzaPresenza > 0) {
     return {
       ok: false,
@@ -93,7 +95,7 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
   // in questo caso, ma potrebbe essere stata aperta prima della modifica
   // che ha creato l'incoerenza — il controllo è ripetuto qui, prima di
   // registrare la comunicazione (che è irreversibile).
-  const incoerenti = await bambiniConIncoerenzeOggiTuttoAsilo(data);
+  const incoerenti = await bambiniConIncoerenzeOggiTuttoAsilo(supabase, data);
   if (incoerenti.length > 0) {
     const elenco = incoerenti.map((b) => `${b.nome} ${b.cognome}`).join(', ');
     return {
@@ -102,7 +104,7 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     };
   }
 
-  const numeroPasti = await contaPastiSiOggiTuttoAsilo(data);
+  const numeroPasti = await contaPastiSiOggiTuttoAsilo(supabase, data);
   const comunicatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
 
   const admin = createAdminClient();
