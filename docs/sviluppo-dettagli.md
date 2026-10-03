@@ -33,6 +33,22 @@ Contesto operativo per Claude Code su questo progetto.
   Matteo, con `supabase db push --project-ref <ref-produzione>` esplicito
   sul singolo comando dopo il merge — mai un link permanente verso il ref
   di produzione, mai un'automazione CI/agente verso la produzione.
+- **Intestazione delle nuove migration** (issue #204): ogni nuova migration
+  apre con questo commento standard, senza istruzioni di applicazione
+  diverse:
+
+  ```sql
+  -- Girasole — <titolo> (specs/NN). Applicazione: in test con
+  -- `supabase db push --project-ref <ref-test>`; in produzione solo Matteo,
+  -- a mano, con `--project-ref` esplicito (mai SQL Editor, mai automazioni).
+  -- Non incollare questo file nel SQL Editor.
+  ```
+
+  **Non copiare l'intestazione dell'ultima migration**: molte migration già
+  applicate riportano ancora la vecchia frase "Incolla questo file nel SQL
+  Editor (test e produzione)", superata e in contrasto con questa regola e
+  con l'[ADR 0005](adr/0005-niente-automazioni-verso-la-produzione.md). Le
+  migration già applicate non si riscrivono.
 - Le policy RLS sono la difesa primaria dei dati, non un dettaglio: ogni nuova
   query deve rispettare i confini di ruolo (admin / maestra / genitore)
   descritti in `specs/`. Se una feature richiede una nuova policy, scrivila
