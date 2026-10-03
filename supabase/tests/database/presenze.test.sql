@@ -4,7 +4,7 @@
 --
 -- Policy sotto test (stato REALE dopo le migration, non quello di 0001):
 --   presenze_select        (0016) admin; maestra/assistente della sezione del
---                                 bambino; genitore del bambino
+--                                 bambino; genitore del bambino (ramo inattivo, vedi "DISCREPANZA")
 --   presenze_insert_staff  (0016) admin su ogni data; maestra/assistente della
 --                                 sezione SOLO con data = oggi_roma()
 --   presenze_update_staff  (0016) idem (nessuna WITH CHECK esplicita: vale la
@@ -101,7 +101,7 @@ begin
 end;
 $$;
 
-select plan(42);
+select plan(43);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -295,14 +295,31 @@ select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000004'),
   array['e0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000005']::uuid[],
   'maestra S2: legge solo le presenze della propria sezione, non quelle di S1');
+-- DISCREPANZA SPEC <-> DB (da decidere): specs/03 dice "lettura, solo il
+-- proprio figlio" per il genitore, e presenze_select (0016) ha il ramo
+-- `exists (select 1 from bambini_genitori bg where bg.genitore_id =
+-- auth.uid() ...)`. Ma `bambini_genitori` ha la RLS attiva (0001) e NESSUNA
+-- policy (verificato qui sotto su pg_policies): per authenticated la
+-- subquery non restituisce righe (e lo stesso vale per `bambini_select_genitore`
+-- su `bambini`), quindi il ramo genitore non scatta mai e OGGI il genitore
+-- legge ZERO presenze. Il portale genitori è fuori scope UI, quindi nessun
+-- effetto visibile; ma se un giorno servisse, la policy va corretta (non qui).
+-- Il test fissa il comportamento REALE; se si aggiunge una policy a
+-- bambini_genitori, l'asserzione strutturale sotto fallisce e questi due
+-- casi vanno riscritti (atteso: le righe del solo figlio).
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and tablename = 'bambini_genitori'),
+  0,
+  'bambini_genitori: RLS attiva e nessuna policy (causa per cui il ramo genitore di presenze_select non scatta)');
 select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000005'),
-  array['e0000000-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000004']::uuid[],
-  'genitore G1: legge solo le presenze del proprio figlio (B1), non quelle di altri bambini');
+  '{}'::uuid[],
+  'genitore G1: OGGI legge zero presenze, anche del proprio figlio B1 (differisce da specs/03; vedi nota sopra)');
 select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000006'),
-  array['e0000000-0000-0000-0000-000000000003', 'e0000000-0000-0000-0000-000000000005']::uuid[],
-  'genitore G2: legge solo le presenze del proprio figlio (B3)');
+  '{}'::uuid[],
+  'genitore G2: OGGI legge zero presenze, anche del proprio figlio B3 (differisce da specs/03; vedi nota sopra)');
 select is(pg_temp.ids_as(null), '{}'::uuid[], 'anonimo: non legge nessuna presenza');
 
 -- ---------------------------------------------------------------------
@@ -399,7 +416,7 @@ select is(
 select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000005',
     $q$update public.presenze set note = 'manomesso' where id = 'e0000000-0000-0000-0000-000000000004'$q$),
-  '0', 'genitore: vede la presenza del figlio ma non può modificarla (0 righe)');
+  '0', 'genitore: non modifica (0 righe) la presenza del proprio figlio');
 -- Anonimo: 0 righe se authenticated/anon hanno il GRANT (la RLS nega), 42501
 -- se il GRANT mancasse: entrambi significano "nessuna scrittura possibile".
 select ok(

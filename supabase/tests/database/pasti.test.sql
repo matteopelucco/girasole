@@ -4,7 +4,7 @@
 --
 -- Policy sotto test (stato REALE dopo le migration):
 --   pasti_select        (0001) admin; MAESTRA della sezione del bambino;
---                              genitore del bambino. L'assistente NON è
+--                              genitore del bambino (ramo inattivo, vedi "DISCREPANZA"). L'assistente NON è
 --                              nell'elenco: non legge nessun pasto (specs/14)
 --   pasti_insert_staff  (0016) admin su ogni data; maestra (NON assistente)
 --                              della sezione SOLO con data = oggi_roma()
@@ -105,7 +105,7 @@ begin
 end;
 $$;
 
-select plan(42);
+select plan(43);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -303,14 +303,31 @@ select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000004'),
   array['f0000000-0000-0000-0000-000000000003', 'f0000000-0000-0000-0000-000000000005']::uuid[],
   'maestra S2: legge solo i pasti della propria sezione, non quelli di S1');
+-- DISCREPANZA SPEC <-> DB (da decidere): specs/03 dice "lettura, solo il
+-- proprio figlio" per il genitore, e pasti_select (0001) ha il ramo
+-- `exists (select 1 from bambini_genitori bg where bg.genitore_id =
+-- auth.uid() ...)`. Ma `bambini_genitori` ha la RLS attiva (0001) e NESSUNA
+-- policy (verificato qui sotto su pg_policies): per authenticated la
+-- subquery non restituisce righe (e lo stesso vale per `bambini_select_genitore`
+-- su `bambini`), quindi il ramo genitore non scatta mai e OGGI il genitore
+-- legge ZERO pasti. Il portale genitori è fuori scope UI, quindi nessun
+-- effetto visibile; ma se un giorno servisse, la policy va corretta (non qui).
+-- Il test fissa il comportamento REALE; se si aggiunge una policy a
+-- bambini_genitori, l'asserzione strutturale sotto fallisce e questi due
+-- casi vanno riscritti (atteso: le righe del solo figlio).
+select is(
+  (select count(*)::int from pg_policies
+    where schemaname = 'public' and tablename = 'bambini_genitori'),
+  0,
+  'bambini_genitori: RLS attiva e nessuna policy (causa per cui il ramo genitore di pasti_select non scatta)');
 select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000005'),
-  array['f0000000-0000-0000-0000-000000000001', 'f0000000-0000-0000-0000-000000000004']::uuid[],
-  'genitore G1: legge solo i pasti del proprio figlio (B1), non quelli di altri bambini');
+  '{}'::uuid[],
+  'genitore G1: OGGI legge zero pasti, anche del proprio figlio B1 (differisce da specs/03; vedi nota sopra)');
 select is(
   pg_temp.ids_as('a0000000-0000-0000-0000-000000000006'),
-  array['f0000000-0000-0000-0000-000000000003', 'f0000000-0000-0000-0000-000000000005']::uuid[],
-  'genitore G2: legge solo i pasti del proprio figlio (B3)');
+  '{}'::uuid[],
+  'genitore G2: OGGI legge zero pasti, anche del proprio figlio B3 (differisce da specs/03; vedi nota sopra)');
 select is(pg_temp.ids_as(null), '{}'::uuid[], 'anonimo: non legge nessun pasto');
 
 -- ---------------------------------------------------------------------
@@ -407,7 +424,7 @@ select is(
 select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000005',
     $q$update public.pasti set note = 'manomesso' where id = 'f0000000-0000-0000-0000-000000000004'$q$),
-  '0', 'genitore: vede il pasto del figlio ma non può modificarlo (0 righe)');
+  '0', 'genitore: non modifica (0 righe) il pasto del proprio figlio');
 -- Anonimo: 0 righe se anon ha il GRANT (la RLS nega), 42501 se il GRANT
 -- mancasse: entrambi significano "nessuna scrittura possibile".
 select ok(
