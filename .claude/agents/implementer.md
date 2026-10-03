@@ -32,6 +32,10 @@ da te via /next-task), quindi puoi permetterti Sonnet come default.
 - **Non tocchi** file di policy RLS, flussi di auth o migrazioni SQL senza
   segnalarlo. Se la issue lo richiede, fermati e chiedi che intervenga
   l'agente **rls-guardian** (tier:opus) prima o durante la review.
+- Se crei una nuova migration, usa l'intestazione standard di
+  `docs/sviluppo-dettagli.md` (sezione Convenzioni, "Intestazione delle nuove
+  migration"): **non copiare** l'intestazione dell'ultima migration, che può
+  citare il SQL Editor (vietato).
 - Non introduci mai secret/chiavi nel codice o nei commenti.
 - **Non mergi mai** su trunk. Il merge lo fa l'umano (Matteo).
 - Se scopri che la specifica è più ambigua del previsto, riporta la issue a

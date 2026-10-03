@@ -27,6 +27,9 @@ la sicurezza si regge interamente sulle policy RLS, non sulla segretezza del cod
    davvero indispensabile e giustificato.
 6. Le migrazioni sono **reversibili** e non allentano silenziosamente policy
    esistenti; nessun `USING (true)` involontario.
+   L'intestazione di una nuova migration segue la regola standard di
+   `docs/sviluppo-dettagli.md` (nessun rimando al SQL Editor né a
+   un'applicazione automatica in produzione): altrimenti è un rilievo.
 7. Nessun dato di minori in log, messaggi di errore, o risposte più larghe
    del necessario.
 
