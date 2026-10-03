@@ -4,11 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { PERCORSO_GIORNATA } from '@/lib/giornata';
 import { requireProfilo, assicuraScrivibile, assicuraAccessoPasti, puoScrivereData } from '@/lib/auth';
 import { assicuraGiornoApribile } from '@/lib/calendarioScolastico';
-import { createAdminClient } from '@/lib/supabase/admin';
 import {
-  contaPastiSiOggiTuttoAsilo,
   bambiniSenzaPresenzaOggiTuttoAsilo,
   bambiniConIncoerenzeOggiTuttoAsilo,
+  comunicaPastiRojacDb,
 } from '@/lib/pastiRojac';
 import { inviaEmail } from '@/lib/email';
 import { formattaDataItaliana } from '@/lib/date';
@@ -62,18 +61,19 @@ export async function segnaPasto(bambinoId: string, mangiato: StatoPasto, data: 
 // maestra, in qualunque classe (non per l'admin — vedi il trigger
 // pasti_blocca_se_comunicato in
 // supabase/migrations/0020_pasti_comunicati_globale.sql, che è la
-// difesa reale). Conteggio e controlli di blocco sono RPC con la sessione
-// dell'utente (migration 0056: una sessione maestra vede via RLS solo le
-// proprie sezioni, ma il totale da comunicare è sull'intero asilo; il
-// ruolo è verificato dentro la funzione). Solo l'INSERT in
-// pasti_comunicati usa ancora la service_role key (sotto-issue #212 di
-// #38); l'app stessa (assicuraAccessoPasti + il controllo data sotto)
-// resta il gate di autorizzazione per quell'insert.
+// difesa reale). Controlli di blocco e registrazione sono RPC con la
+// sessione dell'utente, senza service_role key (migrations 0056 e 0057:
+// una sessione maestra vede via RLS solo le proprie sezioni, ma il
+// totale da comunicare è sull'intero asilo; ruolo, totale e nome sono
+// verificati/calcolati dentro la funzione, e l'INSERT diretto in
+// pasti_comunicati non è più concesso ad authenticated). I controlli
+// qui sotto servono solo a dare messaggi chiari prima dell'RPC, che li
+// ripete come difesa reale.
 // Segue la firma di useFormState (FormConEsito/ConfermaAzione), a
 // differenza di segnaPasto sopra che non ha bisogno del
 // feedback avviato/riuscito/fallita di specs/05.
 export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase, profilo, user } = await requireProfilo();
+  const { supabase, profilo } = await requireProfilo();
   assicuraAccessoPasti(profilo?.ruolo);
 
   const data = formData.get('data') as string;
@@ -104,22 +104,16 @@ export async function comunicaPastiRojac(_stato: EsitoAzione, formData: FormData
     };
   }
 
-  const numeroPasti = await contaPastiSiOggiTuttoAsilo(supabase, data);
-  const comunicatoDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';
-
-  const admin = createAdminClient();
-  const { error } = await admin.from('pasti_comunicati').insert({
-    data,
-    numero_pasti: numeroPasti,
-    comunicato_da: user.id,
-    comunicato_da_nome: comunicatoDaNome,
-  });
-  if (error) {
-    if (error.code === '23505') {
+  // Totale e nome di chi comunica li decide il database (RPC
+  // comunica_pasti_rojac, migration 0057): non vengono passati dall'app.
+  const { esito, errore } = await comunicaPastiRojacDb(supabase, data);
+  if (!esito) {
+    if (errore?.code === '23505') {
       return { ok: false, messaggio: 'I pasti di oggi sono già stati comunicati a Rojac.' };
     }
-    return { ok: false, messaggio: 'Impossibile comunicare i pasti a Rojac.', dettaglio: error.message };
+    return { ok: false, messaggio: 'Impossibile comunicare i pasti a Rojac.', dettaglio: errore?.message };
   }
+  const { numero: numeroPasti, nome: comunicatoDaNome } = esito;
 
   // Best-effort (specs/16, "l'email di notifica è un effetto
   // collaterale"): un problema del servizio email non deve invalidare

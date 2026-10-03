@@ -41,6 +41,26 @@ export async function bambiniSenzaPresenzaOggiTuttoAsilo(
   return (bambini as BambinoSenzaPresenza[] | null) ?? [];
 }
 
+export type EsitoComunicazioneRojac = { numero: number; nome: string };
+
+// Registra la comunicazione dei pasti a Rojac (specs/16) via RPC
+// `comunica_pasti_rojac` (migration 0057, sessione dell'utente): la
+// funzione verifica il ruolo, applica i blocchi (presenze mancanti, dati
+// incoerenti, già comunicato) e decide da sé totale e nome di chi
+// comunica, in una sola transazione. Non lancia: restituisce l'errore
+// così l'azione può mappare il codice (es. 23505 = già comunicato) in un
+// messaggio per l'utente.
+export async function comunicaPastiRojacDb(
+  supabase: SupabaseClient,
+  data: string
+): Promise<{ esito: EsitoComunicazioneRojac | null; errore: { code?: string; message: string } | null }> {
+  const { data: righe, error } = await supabase.rpc('comunica_pasti_rojac', { p_data: data });
+  if (error) return { esito: null, errore: { code: error.code, message: error.message } };
+  const riga = (righe as { numero_comunicato: number; comunicato_nome: string }[] | null)?.[0];
+  if (!riga) return { esito: null, errore: { message: 'risposta vuota da comunica_pasti_rojac' } };
+  return { esito: { numero: riga.numero_comunicato, nome: riga.comunicato_nome }, errore: null };
+}
+
 // Bambini attivi, in TUTTO l'asilo, con dati incoerenti per la data
 // (specs/16, specs/06): in pratica un pasto "sì" su un bambino assente o
 // malato, cioè pasti segnati > bambini presenti. La comunicazione a
