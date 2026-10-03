@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, destinatarioNotifiche, type AllegatoEmail } from '@/lib/email';
@@ -108,8 +109,8 @@ async function allegatoGiornaliero(data: string, generatoIl: Date): Promise<Alle
 // "PDF mensile delle ore del personale in allegato"; specs/19 -
 // monte-ore.md): allegato insieme al report mensile di presenze/pasti,
 // stessa idempotenza (nessun tracciamento separato — vedi Regole).
-function allegatoOreLavoroMensile(mese: string, generatoIl: Date): Promise<AllegatoEmail> {
-  return pdfOreLavoroMensile(mese, generatoIl);
+function allegatoOreLavoroMensile(supabase: SupabaseClient, mese: string, generatoIl: Date): Promise<AllegatoEmail> {
+  return pdfOreLavoroMensile(supabase, mese, generatoIl);
 }
 
 // Vercel Cron chiama questa route una volta al giorno poco dopo la
@@ -198,7 +199,7 @@ export async function GET(request: Request) {
         tipo: 'mensile',
         genera: async () => [
           await allegatoPeriodico('mensile', inizio, dataReport, 'Report mensile', formattaMeseItaliano(mese), generatoIl),
-          await allegatoOreLavoroMensile(mese, generatoIl),
+          await allegatoOreLavoroMensile(supabase, mese, generatoIl),
         ],
       });
     }
@@ -211,7 +212,7 @@ export async function GET(request: Request) {
     // quando quel corpo viene davvero (ri)generato, stessa condizione
     // della tabella di presenze/pasti sopra.
     const htmlGiornaliero = daPreparare.some((d) => d.tipo === 'giornaliero')
-      ? (await generaTabellaGiornalieraHtml(dataReport)) + (await generaRiepilogoOreLavoroSettimanaHtml(dataReport))
+      ? (await generaTabellaGiornalieraHtml(dataReport)) + (await generaRiepilogoOreLavoroSettimanaHtml(supabase, dataReport))
       : `<p>In allegato: ${daPreparare.map((d) => d.tipo).join(', ')}.</p>`;
 
     await inviaEmail({

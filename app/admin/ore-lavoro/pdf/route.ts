@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 import { oggi } from '@/lib/date';
 import { meseOreLavoroRichiesto } from '@/lib/oreLavoroMese';
 import { pdfOreLavoroMensile, pdfOreLavoroMensileDipendente } from '@/lib/reportOreLavoro';
@@ -26,10 +27,16 @@ export async function GET(request: Request) {
   const utente = parametri.get('utente');
   if (utente !== null && !UUID.test(utente)) return nonTrovato();
 
+  // Client con la sessione dell'admin (non la service_role): la RLS
+  // (`*_select_own_or_admin`, ecc.) gli consente già di leggere i dati di
+  // tutto il personale, e resta la difesa anche se il controllo sopra
+  // venisse meno (issue #213, sotto-issue di #38).
+  const supabase = createClient();
+
   try {
     const pdf = utente
-      ? await pdfOreLavoroMensileDipendente(mese, new Date(), utente)
-      : await pdfOreLavoroMensile(mese, new Date());
+      ? await pdfOreLavoroMensileDipendente(supabase, mese, new Date(), utente)
+      : await pdfOreLavoroMensile(supabase, mese, new Date());
     if (!pdf) return nonTrovato();
     return new NextResponse(pdf.content as unknown as BodyInit, {
       headers: {

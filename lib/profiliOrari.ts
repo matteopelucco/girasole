@@ -79,7 +79,9 @@ export type ProfiloOrarioConNome = ProfiloOrario & { nome: string };
 // "il profilo orario di riferimento" va identificato per nome, non solo
 // per ore) — funzione distinta perché il resto dell'app non ha mai
 // bisogno del nome, solo delle ore per il precaricamento (specs/18).
-// grant-check: service_role
+// Il client è del chiamante: la sessione dell'admin (download PDF) o la
+// service_role (cron), quindi nessuna annotazione `grant-check` — il
+// parametro generico richiede il GRANT per entrambi i ruoli.
 export async function recuperaProfiloOrarioConNome(
   supabase: SupabaseClient,
   profiloOrarioId: string | null | undefined
