@@ -49,3 +49,11 @@ più la service_role: sono tre funzioni Postgres `security definer` (migration
 ruolo dentro la funzione. Restano con la service_role la gestione utenti
 (Admin API di Auth), i cron e, fino alla sotto-issue #212, l'INSERT in
 `pasti_comunicati`.
+
+## Aggiornamento (issue #213, sotto-issue di #38)
+Il download del PDF mensile delle ore di lavoro (`/admin/ore-lavoro/pdf`) non usa
+più la service_role: `lib/reportOreLavoro.ts` riceve il client dal chiamante.
+La route admin passa il client della sessione dell'admin (dopo `requireAdmin()`),
+le cui policy `*_select_own_or_admin` leggono già i dati di tutto il personale
+(verificato da `supabase/tests/database/ore_lavoro_report_admin.test.sql`); il
+cron `report-presenze` continua a passare la service_role.
