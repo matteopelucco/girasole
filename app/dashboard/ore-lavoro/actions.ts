@@ -5,7 +5,7 @@ import { requireStaff, requireAdmin, assicuraAccessoOreLavoro } from '@/lib/auth
 import { oggi, giorniSettimana } from '@/lib/date';
 import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import {
-  validaGiornoOreLavoro,
+  validaSettimanaOreLavoro,
   oreOrdinariePreviste,
   statoPredefinitoGiornoOreLavoro,
   isStatoNeutroOreLavoro,
@@ -105,9 +105,11 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
   const giorni = giorniSettimana(settimanaInizio);
   const profiloOrario = await profiloOrarioDelBersaglio(supabase, user.id, profilo?.profilo_orario_id, utenteId);
 
-  const daScrivere = [];
-  for (const data of giorni) {
-    const esito = validaGiornoOreLavoro({
+  // Valida TUTTI i giorni e raccoglie ogni errore (non solo il primo): il
+  // popup "Settimana non salvata" li elenca insieme (specs/18). Le regole
+  // sono quelle di sempre (validaGiornoOreLavoro).
+  const validazione = validaSettimanaOreLavoro(
+    giorni.map((data) => ({
       data,
       stato: (formData.get(`stato_${data}`) as string) || 'lavorativo',
       orePreviste: oreOrdinariePreviste(profiloOrario, data),
@@ -117,12 +119,17 @@ export async function salvaSettimanaOreLavoro(_stato: EsitoAzione, formData: For
       motivo: (formData.get(`motivo_${data}`) as string) || '',
       codiceMalattia: (formData.get(`codice_malattia_${data}`) as string) || '',
       notaAssenza: (formData.get(`nota_assenza_${data}`) as string) || '',
-    });
-    if (!esito.ok) {
-      return { ok: false, messaggio: esito.errore };
-    }
-    daScrivere.push(esito.giorno);
+    }))
+  );
+  if (!validazione.ok) {
+    return {
+      ok: false,
+      messaggio:
+        'La settimana non è stata salvata: nessuna modifica è stata registrata. Correggi le incongruenze elencate e salva di nuovo.',
+      elenco: validazione.errori,
+    };
   }
+  const daScrivere = validazione.giorni;
 
   if (!daScrivere.length) {
     return { ok: true };

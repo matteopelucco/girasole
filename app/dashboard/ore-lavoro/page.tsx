@@ -353,7 +353,7 @@ export default async function OreLavoroPage({
             ))}
           </div>
         ) : (
-          <FormConEsito action={salvaSettimanaOreLavoro} className="space-y-2">
+          <FormConEsito action={salvaSettimanaOreLavoro} className="space-y-2" titoloPopupErrore="Settimana non salvata">
             <input type="hidden" name="settimana_inizio" value={lunedi} />
             <input type="hidden" name="utente_id" value={utenteTarget.id} />
             {righe.map((r) => (
@@ -432,6 +432,7 @@ export default async function OreLavoroPage({
                 : 'Confermi le ore di questa settimana? Da questo momento non potrai più modificarle autonomamente.'
             }
             tono="neutro"
+            titoloPopupErrore="Settimana non confermata"
           />
         )}
       </main>
