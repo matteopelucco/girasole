@@ -27,6 +27,38 @@ test.describe('57 — Reset giornata', () => {
     test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
   });
 
+  // I tre test seguenti non dipendono dal calendario né scrivono dati:
+  // controllano solo menu e pagina intermedia (nessun reset eseguito).
+  test('"Impostazioni avanzate" è l\'ultima voce del menu e "Reset giornata" non è di primo livello', async ({
+    page,
+  }) => {
+    await page.goto('/admin');
+    const voci = page.getByRole('navigation').getByRole('link');
+    await expect(voci.last()).toHaveText(/Impostazioni avanzate/);
+    await expect(voci.last()).toHaveAttribute('href', '/admin/impostazioni-avanzate');
+    await expect(page.getByRole('navigation').getByRole('link', { name: 'Reset giornata' })).toHaveCount(0);
+  });
+
+  test('la pagina Impostazioni avanzate elenca "Reset giornata" e porta alla pagina di reset', async ({
+    page,
+  }) => {
+    await page.goto('/admin/impostazioni-avanzate');
+    await expect(page.getByRole('heading', { name: 'Impostazioni avanzate' })).toBeVisible();
+    await nessunaViolazioneA11yGrave(page);
+
+    const azione = page.getByRole('link', { name: /Reset giornata/ });
+    await expect(azione).toBeVisible();
+    await expect(azione).toContainText('presenze e i pasti');
+    const riquadro = await azione.boundingBox();
+    expect(riquadro?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await azione.click();
+    await page.waitForURL('/admin/reset-giornata');
+    await expect(page.getByRole('heading', { name: 'Reset presenze e pasti di una giornata' })).toBeVisible();
+    // Sulla pagina dell'azione la voce di menu "Impostazioni avanzate" resta evidenziata.
+    await expect(page.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveAttribute('aria-current', 'page');
+  });
+
   test('pagina raggiungibile con selettore data + accessibilità', async ({ page }) => {
     await page.goto('/admin/reset-giornata');
     await expect(page.getByRole('heading', { name: 'Reset presenze e pasti di una giornata' })).toBeVisible();
@@ -85,8 +117,16 @@ test.describe('57 — Reset giornata', () => {
 
       const context = await browser.newContext({ storageState: stato });
       const page = await context.newPage();
-      await page.goto('/admin/reset-giornata');
-      await page.waitForURL('/dashboard', { timeout: 20_000 });
+      // La voce non compare nel menu di chi non è admin...
+      await page.goto('/dashboard');
+      await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
+
+      // ...e le pagine admin respingono alla dashboard.
+      for (const url of ['/admin/impostazioni-avanzate', '/admin/reset-giornata']) {
+        await page.goto(url);
+        await page.waitForURL('/dashboard', { timeout: 20_000 });
+      }
       await context.close();
     }
   });

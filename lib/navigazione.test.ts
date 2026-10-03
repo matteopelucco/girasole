@@ -19,8 +19,17 @@ describe('vociMenu', () => {
       '/admin/profili-orari',
       '/admin/ore-lavoro',
       '/admin/rette',
-      '/admin/reset-giornata',
+      '/admin/impostazioni-avanzate',
     ]);
+  });
+
+  it('mette "Impostazioni avanzate" per ultima, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
+    const voci = vociMenu('admin');
+    expect(voci[voci.length - 1].etichetta).toBe('Impostazioni avanzate');
+    expect(voci.some((v) => v.href === '/admin/reset-giornata')).toBe(false);
+    for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
+      expect(vociMenu(ruolo).some((v) => v.href === '/admin/impostazioni-avanzate')).toBe(false);
+    }
   });
 });
 
@@ -41,6 +50,13 @@ describe('vociMenuConStato', () => {
     for (const pathname of ['/admin', '/admin/bambini/123']) {
       const attive = vociMenuConStato('admin', pathname).filter((v) => v.attivo);
       expect(attive.map((v) => v.href)).toEqual(['/admin']);
+    }
+  });
+
+  it('evidenzia "Impostazioni avanzate" anche sulle pagine delle sue azioni', () => {
+    for (const pathname of ['/admin/impostazioni-avanzate', '/admin/reset-giornata']) {
+      const attive = vociMenuConStato('admin', pathname).filter((v) => v.attivo);
+      expect(attive.map((v) => v.href)).toEqual(['/admin/impostazioni-avanzate']);
     }
   });
 
