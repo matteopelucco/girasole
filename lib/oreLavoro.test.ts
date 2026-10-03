@@ -19,6 +19,7 @@ import {
   totaliSettimanaOreLavoro,
   utenteBersaglioOreLavoro,
   validaGiornoOreLavoro,
+  validaSettimanaOreLavoro,
   type InputGiornoOreLavoro,
 } from './oreLavoro';
 import type { GiornoChiusura } from './calendarioScolastico';
@@ -306,6 +307,49 @@ describe('validaGiornoOreLavoro', () => {
     const esito = validaGiornoOreLavoro(inputBase({ stato: 'boh' }));
     expect(esito.ok).toBe(true);
     if (esito.ok) expect(esito.giorno.stato).toBe('lavorativo');
+  });
+});
+
+describe('validaSettimanaOreLavoro', () => {
+  it('tutti i giorni validi: restituisce i giorni validati nello stesso ordine', () => {
+    const esito = validaSettimanaOreLavoro([
+      inputBase({ data: '2026-08-31' }),
+      inputBase({ data: '2026-09-01', differenzaOre: 1, motivo: 'Riunione' }),
+    ]);
+    expect(esito.ok).toBe(true);
+    if (esito.ok) {
+      expect(esito.giorni.map((g) => g.data)).toEqual(['2026-08-31', '2026-09-01']);
+      expect(esito.giorni[1].oreStraordinarie).toBe(1);
+    }
+  });
+
+  it('raccoglie un errore per ogni giorno non valido, non solo il primo, in ordine', () => {
+    const esito = validaSettimanaOreLavoro([
+      inputBase({ data: '2026-08-31', differenzaOre: 2, motivo: '' }),
+      inputBase({ data: '2026-09-01' }),
+      inputBase({ data: '2026-09-02', stato: 'malattia', codiceMalattia: '  ' }),
+      inputBase({ data: '2026-09-03', stato: 'assenza', notaAssenza: '' }),
+    ]);
+    expect(esito.ok).toBe(false);
+    if (!esito.ok) {
+      expect(esito.errori).toHaveLength(3);
+      expect(esito.errori[0]).toContain('motivo');
+      expect(esito.errori[1]).toContain('codice malattia');
+      expect(esito.errori[2]).toContain('nota giustificativa');
+    }
+  });
+
+  it('gli errori sono gli stessi messaggi di validaGiornoOreLavoro', () => {
+    const input = inputBase({ differenzaOre: 0.2 });
+    const singolo = validaGiornoOreLavoro(input);
+    const settimana = validaSettimanaOreLavoro([input]);
+    expect(singolo.ok).toBe(false);
+    expect(settimana.ok).toBe(false);
+    if (!singolo.ok && !settimana.ok) expect(settimana.errori).toEqual([singolo.errore]);
+  });
+
+  it('nessun giorno: valida e vuota', () => {
+    expect(validaSettimanaOreLavoro([])).toEqual({ ok: true, giorni: [] });
   });
 });
 
