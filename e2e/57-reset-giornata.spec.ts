@@ -48,7 +48,7 @@ test.describe('57 — Reset giornata', () => {
 
     const azione = page.getByRole('link', { name: /Reset giornata/ });
     await expect(azione).toBeVisible();
-    await expect(azione).toContainText('presenze e pasti');
+    await expect(azione).toContainText('presenze e i pasti');
     const riquadro = await azione.boundingBox();
     expect(riquadro?.height ?? 0).toBeGreaterThanOrEqual(44);
 
