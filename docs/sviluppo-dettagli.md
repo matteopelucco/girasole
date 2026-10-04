@@ -413,6 +413,15 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   - privilegi TRUNCATE, REFERENCES e TRIGGER esclusi;
   - gira solo sul DB di test resettato: non vede la produzione (es.
     modifiche fatte dal pannello).
+- **Service-role-check (issue #214, ADR-0002)**: `npm run check:service-role`
+  (`scripts/service-role-check.mts`, logica pura in `lib/serviceRoleCheck.ts`)
+  fallisce, con file e riga, se `createAdminClient`, l'import di
+  `lib/supabase/admin` o `SUPABASE_SERVICE_ROLE_KEY` compaiono fuori da
+  `FILE_AMMESSI` (factory, cron e librerie del cron, gestione utenti, script,
+  e2e, test). È concatenato a `npm run lint` (quindi nel passo 2 dello
+  `statico`, in `npm run analyze` e, come passo a sé, nel pre-push): nessun
+  DB, rete o secret. Per ammettere un'eccezione: nuova voce in `FILE_AMMESSI`
+  con motivazione + aggiornamento di ADR-0002, con review umana.
 - **Coda del DB di test (issue #105, ADR-0008)**: `ci.yml` ha tre job,
   `statico` (passi 0-5) → `e2e` (passi 6-8) → `verifica`. Solo `e2e`
   usa il DB, e sta in un gruppo di concorrenza globale
