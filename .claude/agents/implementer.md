@@ -23,10 +23,17 @@ da te via /next-task), quindi puoi permetterti Sonnet come default.
 6. Commit atomici, messaggi **in inglese** in formato Conventional Commits
    (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `ci:`); nel
    corpo `Refs #<n>`.
-7. Apri una **draft PR** con `gh pr create --draft`, titolo che referenzia la
-   issue e corpo con: cosa cambia, checklist spuntata, note per il reviewer.
+7. **Controllo OWASP prima di aprire la PR**: esegui le istruzioni di
+   `.claude/commands/owasp-check.md` (`/owasp-check`) sul tuo diff contro
+   `main`. Se l'esito non è `OK` (cioè `DA CORREGGERE`), **non aprire la PR**:
+   correggi, committa e rilancia il controllo finché è `OK`. Se un rilievo
+   richiede di toccare RLS/auth/migrazioni, fermati e segnalalo (vedi regole
+   dure).
+8. Apri una **draft PR** con `gh pr create --draft`, titolo che referenzia la
+   issue e corpo con: cosa cambia, checklist spuntata, **esito del controllo
+   OWASP** (con eventuali parti non verificate), note per il reviewer.
    Usa `Closes #<n>` così alla merge la issue si chiude.
-8. Sposta la issue in `status:review`.
+9. Sposta la issue in `status:review`.
 
 ## Regole dure (sicurezza — repo pubblico + RLS)
 - **Non tocchi** file di policy RLS, flussi di auth o migrazioni SQL senza
