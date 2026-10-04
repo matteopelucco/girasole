@@ -46,6 +46,17 @@ della RLS.
 Il conteggio e i controlli dei pasti per Rojac (`lib/pastiRojac.ts`) non usano
 più la service_role: sono tre funzioni Postgres `security definer` (migration
 0056) richiamate via RPC con la sessione dell'utente, con il controllo del
-ruolo dentro la funzione. Restano con la service_role la gestione utenti
-(Admin API di Auth), i cron e, fino alla sotto-issue #212, l'INSERT in
-`pasti_comunicati`.
+ruolo dentro la funzione.
+
+## Aggiornamento (issue #212, sotto-issue di #38)
+Nemmeno la registrazione della comunicazione (INSERT in `pasti_comunicati`) usa
+più la service_role: è la funzione `comunica_pasti_rojac(data)` (migration
+0057, `security definer`, ruolo admin/maestra verificato dentro, maestra solo
+su oggi). Si è scartato l'INSERT col client dell'utente: il trigger 0033 non è
+`security definer` e con la RLS di una maestra non vedrebbe i bambini delle
+altre sezioni, e la policy 0020 non vincola `numero_pasti`/`comunicato_da`/
+`comunicato_da_nome` (log contabile falsificabile). La migration revoca anche
+l'INSERT diretto ad `authenticated`. Restano con la service_role la gestione
+utenti (Admin API di Auth) e i cron (con le loro librerie); il GRANT INSERT a
+service_role di 0021 è ora inutilizzato e va rimosso con una migration
+successiva, dopo il deploy.
