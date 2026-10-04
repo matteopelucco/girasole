@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { logout } from '@/app/actions';
-import { vociMenuConStato } from '@/lib/navigazione';
+import { eGruppoConStato, vociMenuConStato, type VoceMenuConStato } from '@/lib/navigazione';
 
 function Logo() {
   return (
@@ -18,25 +18,51 @@ function Logo() {
   );
 }
 
+function VoceLink({
+  voce,
+  figlia,
+  onNavigazione,
+}: {
+  voce: VoceMenuConStato;
+  figlia?: boolean;
+  onNavigazione?: () => void;
+}) {
+  return (
+    <Link
+      href={voce.href}
+      onClick={onNavigazione}
+      aria-current={voce.attivo ? 'page' : undefined}
+      className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors ${
+        figlia ? 'pl-9 pr-3' : 'px-3'
+      } ${
+        voce.attivo ? 'bg-emerald-50 text-emerald-800' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
+      }`}
+    >
+      <span aria-hidden>{voce.icona}</span>
+      {voce.etichetta}
+    </Link>
+  );
+}
+
 function ElencoVoci({ ruolo, pathname, onNavigazione }: { ruolo: string | null; pathname: string; onNavigazione?: () => void }) {
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
-      {vociMenuConStato(ruolo, pathname).map((voce) => (
-        <Link
-          key={voce.href}
-          href={voce.href}
-          onClick={onNavigazione}
-          aria-current={voce.attivo ? 'page' : undefined}
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            voce.attivo
-              ? 'bg-emerald-50 text-emerald-800'
-              : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-          }`}
-        >
-          <span aria-hidden>{voce.icona}</span>
-          {voce.etichetta}
-        </Link>
-      ))}
+      {vociMenuConStato(ruolo, pathname).map((elemento) =>
+        eGruppoConStato(elemento) ? (
+          // Gruppo (specs/60): intestazione senza pagina, con le voci figlie rientrate sotto.
+          <div key={elemento.etichetta} role="group" aria-label={elemento.etichetta} className="flex flex-col gap-1">
+            <span className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-stone-500">
+              <span aria-hidden>{elemento.icona}</span>
+              {elemento.etichetta}
+            </span>
+            {elemento.figli.map((figlio) => (
+              <VoceLink key={figlio.href} voce={figlio} figlia onNavigazione={onNavigazione} />
+            ))}
+          </div>
+        ) : (
+          <VoceLink key={elemento.href} voce={elemento} onNavigazione={onNavigazione} />
+        )
+      )}
     </nav>
   );
 }
