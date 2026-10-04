@@ -1,0 +1,23 @@
+-- Girasole — revoca INSERT su pasti_comunicati a service_role (specs/16).
+-- Applicazione: in test con `supabase db push --project-ref <ref-test>`; in
+-- produzione solo Matteo, a mano, con `--project-ref` esplicito (mai SQL
+-- Editor, mai automazioni). Non incollare questo file nel SQL Editor.
+--
+-- Perché (issue #217, follow-up di #212): il GRANT INSERT a service_role
+-- (0021) serviva al vecchio codice, che registrava la comunicazione a Rojac
+-- con la service_role key. Dalla 0057 la registrazione passa solo dalla RPC
+-- comunica_pasti_rojac, `security definer`: gira con i privilegi del
+-- proprietario della funzione, non dipende dal privilegio di service_role.
+-- Nessun codice applicativo, cron, script o fixture e2e inserisce più in
+-- pasti_comunicati con service_role (verificato con grep, vedi PR): il
+-- privilegio è inutilizzato e si toglie, così il log contabile non è
+-- falsificabile nemmeno con la service_role key.
+--
+-- SELECT a service_role resta (0020): lo leggono i cron (allarmi, report
+-- presenze). Il revoke è idempotente: rieseguirlo non ha effetto se il
+-- privilegio è già assente.
+--
+-- Ordine di applicazione: nessun vincolo rispetto al deploy del codice (nessun
+-- codice dipende dal privilegio), purché la 0057 sia già applicata.
+
+revoke insert on public.pasti_comunicati from service_role;
