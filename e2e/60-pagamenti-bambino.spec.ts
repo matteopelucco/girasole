@@ -83,7 +83,7 @@ test.describe('60 — Pagamenti bambino', () => {
       const menu = page.getByRole('navigation');
 
       // "Pagamenti" è solo l'intestazione del gruppo, non un link.
-      const gruppo = menu.getByText('Pagamenti', { exact: true });
+      const gruppo = menu.getByRole('group', { name: 'Pagamenti', exact: true });
       await expect(gruppo).toBeVisible();
       await expect(menu.getByRole('link', { name: 'Pagamenti', exact: true })).toHaveCount(0);
 
@@ -96,7 +96,8 @@ test.describe('60 — Pagamenti bambino', () => {
 
       // Ordine verticale: gruppo, Rette, Pagamenti bambino, poi il resto.
       const y = async (l: typeof rette) => (await l.boundingBox())!.y;
-      const x = async (l: typeof rette) => (await l.boundingBox())!.x;
+      // L'indentazione è il padding interno del link: si misura l'icona al suo interno.
+      const x = async (l: typeof rette) => (await l.locator('span').first().boundingBox())!.x;
       expect(await y(gruppo)).toBeLessThan(await y(rette));
       expect(await y(rette)).toBeLessThan(await y(pagamentiBambino));
       expect(await y(pagamentiBambino)).toBeLessThan(await y(avanzate));
@@ -132,7 +133,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await page.getByRole('button', { name: 'Mostra' }).click();
       await page.waitForURL(new RegExp(`bambino=${bambino.id}`));
 
-      await expect(page.getByText(bambino.nomeCompleto).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2 })).toBeVisible();
       // L'anno scolastico di riferimento (quello del mese corrente): "AAAA/AAAA+1".
       const anno = page.getByText(/Anno scolastico \d{4}\/\d{4}/);
       await expect(anno).toBeVisible();
@@ -169,7 +170,8 @@ test.describe('60 — Pagamenti bambino', () => {
       await page.goto(urlBambino(bambino));
       const riga = page.getByRole('row', { name: /settembre 2020/ });
       for (const voce of ['250,00 €', '2,00 €', '66,00 €', '-11,00 €', '30,00 €', '20,00 €', '15,00 €', '-5,00 €']) {
-        await expect(riga.getByRole('cell', { name: voce, exact: true })).toBeVisible();
+        // Il nome della cella può includere la nota sotto l'importo: conta l'inizio.
+        await expect(riga.getByRole('cell', { name: new RegExp(`^${voce}`) })).toBeVisible();
       }
       await expect(riga.getByText('Gita di prova')).toBeVisible();
       await expect(riga.getByText('Rimborso di prova')).toBeVisible();
@@ -250,12 +252,12 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(page.getByRole('link', { name: 'Anno scolastico successivo' })).toHaveCount(0);
 
       await page.getByRole('link', { name: 'Anno scolastico precedente' }).click();
-      await expect(page.getByText(`Anno scolastico ${annoInizio - 1}/${annoInizio}`)).toBeVisible();
+      await expect(page.getByText(`Anno scolastico ${annoInizio - 1}/${annoInizio}`, { exact: true })).toBeVisible();
       await expect(page.getByRole('rowheader').first()).toHaveText(`settembre ${annoInizio - 1}`);
-      await expect(page.getByText(bambino.nomeCompleto).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2 })).toBeVisible();
 
       await page.getByRole('link', { name: 'Anno scolastico successivo' }).click();
-      await expect(page.getByText(`Anno scolastico ${annoInizio}/${annoInizio + 1}`)).toBeVisible();
+      await expect(page.getByText(`Anno scolastico ${annoInizio}/${annoInizio + 1}`, { exact: true })).toBeVisible();
       await expect(page.getByRole('link', { name: 'Anno scolastico successivo' })).toHaveCount(0);
     });
 
@@ -287,7 +289,7 @@ test.describe('60 — Pagamenti bambino', () => {
       // La voce non compare nel menu di chi non è admin...
       await page.goto('/dashboard');
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-      await expect(page.getByText('Pagamenti', { exact: true })).toHaveCount(0);
+      await expect(page.getByRole('group', { name: 'Pagamenti' })).toHaveCount(0);
       await expect(page.getByRole('link', { name: 'Pagamenti bambino' })).toHaveCount(0);
 
       // ...e la pagina respinge alla dashboard.
