@@ -19,7 +19,7 @@ ogni comunicazione già inviata è invece descritta in
 
 ## Scenario: vedere la tabella di revisione della comunicazione del mese corrente
 Dato che sono autenticato come admin
-Quando apro "Rette" dal menu
+Quando apro "Rette" dal menu (gruppo "Pagamenti", specs/60)
 Allora vedo il nome del mese corrente in intestazione, e una riga per
 ciascun bambino attivo con: nome e cognome (con l'email a cui verrà
 inviata la comunicazione subito sotto, tra parentesi), retta mensile,

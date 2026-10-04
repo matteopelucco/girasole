@@ -60,7 +60,7 @@ export type RiepilogoRetta = {
 // Il `+ 0` finale normalizza un eventuale -0 (es. 0 giorni di assenza
 // per un conguaglio pasti) a 0: stesso valore numerico, ma -0 !== 0 per
 // Object.is/toEqual e comparirebbe come "-0,00" se mai renderizzato.
-function arrotonda(valore: number): number {
+export function arrotonda(valore: number): number {
   return Math.round(valore * 100) / 100 + 0;
 }
 

@@ -121,6 +121,10 @@ della maestra, `5x` amministrazione.
   marcare il bonifico di una comunicazione come corretto o con importo
   diverso; un importo diverso genera un credito/debito sulla retta di
   un mese scelto
+- [60 - pagamenti-bambino.md](60%20-%20pagamenti-bambino.md) — voce di menu
+  "Pagamenti bambino" (gruppo "Pagamenti", insieme a "Rette"): vista admin di
+  sola lettura, per bambino, dei mesi dell'anno scolastico (settembre-giugno)
+  con l'importo richiesto con la mail delle rette scomposto nelle sue voci
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
