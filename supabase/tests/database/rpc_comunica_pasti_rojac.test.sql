@@ -22,7 +22,10 @@
 --     stessa data -> 23505;
 --   * INSERT diretto in pasti_comunicati non più possibile per authenticated e
 --     anon (privilegio revocato in 0057) né per service_role (revocato in 0058,
---     issue #217); service_role mantiene SELECT (lo leggono i cron).
+--     issue #217); service_role mantiene SELECT (lo leggono i cron);
+--   * UPDATE, DELETE e TRUNCATE su pasti_comunicati revocati a service_role,
+--     anon e authenticated (0058): il log contabile non si riscrive né si
+--     cancella dalle API.
 --
 -- Fixture (stesse righe su più date; il DB di test può contenere altri dati
 -- "di oggi" e altri bambini attivi, quindi per oggi si ripulisce la giornata
@@ -80,7 +83,7 @@ begin
 end;
 $$;
 
-select plan(26);
+select plan(35);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -263,7 +266,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- Proprietà di sicurezza (10 asserzioni)
+-- Proprietà di sicurezza (19 asserzioni)
 -- ---------------------------------------------------------------------
 select ok(
   (select p.prosecdef from pg_proc p where p.oid = 'public.comunica_pasti_rojac(date)'::regprocedure),
@@ -298,6 +301,33 @@ select ok(
 select ok(
   has_table_privilege('service_role', 'public.pasti_comunicati', 'select'),
   'pasti_comunicati: service_role mantiene SELECT (i cron leggono il log)');
+select ok(
+  not has_table_privilege('service_role', 'public.pasti_comunicati', 'update'),
+  'pasti_comunicati: service_role non ha UPDATE (0058)');
+select ok(
+  not has_table_privilege('service_role', 'public.pasti_comunicati', 'delete'),
+  'pasti_comunicati: service_role non ha DELETE (0058)');
+select ok(
+  not has_table_privilege('service_role', 'public.pasti_comunicati', 'truncate'),
+  'pasti_comunicati: service_role non ha TRUNCATE (0058)');
+select ok(
+  not has_table_privilege('anon', 'public.pasti_comunicati', 'update'),
+  'pasti_comunicati: anon non ha UPDATE (0058)');
+select ok(
+  not has_table_privilege('anon', 'public.pasti_comunicati', 'delete'),
+  'pasti_comunicati: anon non ha DELETE (0058)');
+select ok(
+  not has_table_privilege('anon', 'public.pasti_comunicati', 'truncate'),
+  'pasti_comunicati: anon non ha TRUNCATE (0058)');
+select ok(
+  not has_table_privilege('authenticated', 'public.pasti_comunicati', 'update'),
+  'pasti_comunicati: authenticated non ha UPDATE (0058)');
+select ok(
+  not has_table_privilege('authenticated', 'public.pasti_comunicati', 'delete'),
+  'pasti_comunicati: authenticated non ha DELETE (0058)');
+select ok(
+  not has_table_privilege('authenticated', 'public.pasti_comunicati', 'truncate'),
+  'pasti_comunicati: authenticated non ha TRUNCATE (0058)');
 
 -- ---------------------------------------------------------------------
 -- Respinti: errore, nessuna riga di log
