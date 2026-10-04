@@ -190,7 +190,9 @@ Allora non vedo il riepilogo del personale
   sull'intero asilo (non una email per sezione o per maestra), calcolato
   lato server con la service_role key (`lib/supabase/admin.ts`), stesso
   motivo già documentato per il report notturno (specs/52) — il job non
-  ha una sessione utente da cui ereditare la RLS. Soglia oraria 10:00
+  ha una sessione utente da cui ereditare la RLS (uno dei pochi usi
+  ammessi della service_role, con il resto dei cron e la gestione utenti:
+  `npm run check:service-role`, ADR-0002). Soglia oraria 10:00
   (Europe/Rome), stessa soglia del banner personale.
 - Idempotenza delle email tracciata in un'unica tabella
   `allarmi_inviati` (`tipo`, `chiave`, `inviato_at`): `chiave` è la data

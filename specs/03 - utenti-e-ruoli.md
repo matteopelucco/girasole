@@ -219,7 +219,11 @@ Allora vengo reindirizzato alla dashboard
   service_role key di Supabase (`lib/supabase/admin.ts`), mai esposta al
   browser — vedi `supabase/migrations/0005_utenti_gestiti_da_app.sql` per
   lo schema e `CLAUDE.md` per le regole di sicurezza sulla service_role
-  key.
+  key. La gestione utenti è l'unico flusso avviato da un utente che usa la
+  service_role (Admin API di Auth: non esiste come RPC); ogni altro uso è
+  vietato dalla CI (`npm run check:service-role`, ADR-0002), quindi il
+  criterio "nessuna service_role nelle server action di un utente" ha come
+  sola eccezione la gestione utenti (`auth.admin.*`).
 - Il form di creazione utente segue lo stesso pattern "errore ⇒ dati
   preservati" di tutte le altre form di creazione (specs/05 -
   feedback.md): un errore di validazione non svuota il form. La

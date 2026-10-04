@@ -68,3 +68,31 @@ La route admin passa il client della sessione dell'admin (dopo `requireAdmin()`)
 le cui policy di lettura per l'admin (`*_select_own_or_admin`, `giorni_chiusura_select_staff`, `profili_orari_admin_all`) leggono già i dati di tutto il personale
 (verificato da `supabase/tests/database/ore_lavoro_report_admin.test.sql`); il
 cron `report-presenze` continua a passare la service_role.
+
+## Aggiornamento (issue #214, sotto-issue di #38): la regola e come ammettere un'eccezione
+Chiusi #211-#213, `createAdminClient` resta solo dove la service_role è
+inevitabile, ed è ora **imposto dalla CI**:
+- `lib/supabase/admin.ts` (la factory);
+- i cron `app/api/cron/**` e le librerie usate solo da loro
+  (`lib/reportPresenze.ts`): non c'è una sessione utente da cui ereditare i
+  permessi;
+- la gestione utenti `app/admin/maestre/actions.ts` (Admin API di Supabase
+  Auth: `createUser`/`updateUserById`/`deleteUser`, non esistono come RPC);
+- `scripts/` ed `e2e/` (CI e manutenzione, fuori dal bundle dell'app) e i file
+  `*.test.ts`/`*.spec.ts`;
+- `lib/grantCheck.ts`, che nomina la factory solo dentro letterali regex per
+  l'analisi statica.
+
+Il criterio "`createAdminClient` assente da ogni server action avviata da un
+utente" (specs/03, specs/07) va quindi letto con **un'eccezione**: la gestione
+utenti (`auth.admin.*`).
+
+`npm run check:service-role` (`scripts/service-role-check.mts`, logica pura in
+`lib/serviceRoleCheck.ts`, agganciato a `npm run lint` e all'hook pre-push) fa
+fallire la CI se `createAdminClient`, l'import di `lib/supabase/admin` o la
+variabile `SUPABASE_SERVICE_ROLE_KEY` compaiono in qualunque altro file,
+indicando file e riga. **Per ammettere un'eccezione**: aggiungere il file a
+`FILE_AMMESSI` in `lib/serviceRoleCheck.ts` con la motivazione e aggiornare
+questa ADR nella stessa PR; la modifica richiede review umana (e rls-guardian).
+La strada preferita resta una RPC `security definer` chiamata con la sessione
+dell'utente.
