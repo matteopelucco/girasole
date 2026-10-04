@@ -57,9 +57,14 @@ su oggi). Si è scartato l'INSERT col client dell'utente: il trigger 0033 non è
 altre sezioni, e la policy 0020 non vincola `numero_pasti`/`comunicato_da`/
 `comunicato_da_nome` (log contabile falsificabile). La migration revoca anche
 l'INSERT diretto ad `authenticated`. Restano con la service_role la gestione
-utenti (Admin API di Auth) e i cron (con le loro librerie); il GRANT INSERT a
-service_role di 0021 è ora inutilizzato e va rimosso con una migration
-successiva, dopo il deploy.
+utenti (Admin API di Auth) e i cron (con le loro librerie). Il GRANT INSERT a
+service_role di 0021 è stato rimosso con la migration 0058 (issue #217): nessun
+codice lo usava più e la RPC `security definer` non dipende da quel privilegio.
+La 0058 revoca anche UPDATE, DELETE e TRUNCATE a service_role, anon e
+authenticated (residui dei default privileges di Supabase, inutilizzati; la
+service_role ignora la RLS e avrebbe potuto riscrivere il log contabile via
+REST). Restano SELECT a service_role (cron) e ad authenticated, e tutti i
+privilegi al proprietario `postgres`.
 
 ## Aggiornamento (issue #213, sotto-issue di #38)
 Il download del PDF mensile delle ore di lavoro (`/admin/ore-lavoro/pdf`) non usa
