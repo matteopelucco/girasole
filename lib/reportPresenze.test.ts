@@ -86,4 +86,35 @@ describe('formattaTabellaReportHtml', () => {
     const html = formattaTabellaReportHtml('Presenze del 24 agosto 2026', sezioni);
     expect(html).not.toContain('⚠️');
   });
+
+  it('rende come testo nome, cognome, sezione e titolo con markup, & e virgolette', () => {
+    const sezioni: SezioneConRighe[] = [
+      {
+        nome: '<script>alert("s")</script> & Co',
+        righe: [riga({ nome: '<img src=x onerror=alert(1)>', cognome: 'Rossi & "Figli"' })],
+      },
+    ];
+    const html = formattaTabellaReportHtml('<script>t</script> & "titolo"', sezioni);
+
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<img');
+    expect(html).toContain('<h1>&lt;script&gt;t&lt;/script&gt; &amp; &quot;titolo&quot;</h1>');
+    expect(html).toContain('<h2>&lt;script&gt;alert(&quot;s&quot;)&lt;/script&gt; &amp; Co</h2>');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt; Rossi &amp; &quot;Figli&quot;');
+  });
+
+  it("un apostrofo (D'Angelo) è escapato come &#39;, che l'HTML mostra come apostrofo", () => {
+    const sezioni: SezioneConRighe[] = [{ nome: "Sant'Anna", righe: [riga({ cognome: "D'Angelo" })] }];
+    const html = formattaTabellaReportHtml('Presenze', sezioni);
+    expect(html).toContain('Anna D&#39;Angelo');
+    expect(html).toContain('<h2>Sant&#39;Anna</h2>');
+  });
+
+  it("le inconsistenze con virgolette non rompono l'attributo title", () => {
+    const sezioni: SezioneConRighe[] = [
+      { nome: 'Girasoli', righe: [riga({ inconsistenze: ['Pasto segnato "sì" ma il bambino risulta assente.'] })] },
+    ];
+    const html = formattaTabellaReportHtml('Presenze', sezioni);
+    expect(html).toContain('title="Pasto segnato &quot;sì&quot; ma il bambino risulta assente."');
+  });
 });

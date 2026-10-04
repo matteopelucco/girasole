@@ -6,6 +6,7 @@ import {
   allarmeAsiloAttivo,
   allarmePersonalePresenzePastiAttivo,
   descrizioneStatoOperativo,
+  htmlAllarmeSettimanaOreNonConfermata,
   type StatoOperativoGiorno,
   type StatoPersonaleGiorno,
 } from './allarmi';
@@ -197,5 +198,30 @@ describe('allarmePersonalePresenzePastiAttivo', () => {
     expect(allarmePersonalePresenzePastiAttivo(DIECI_INVERNO, true, statoPersonale({ pastiNonConfermati: true }))).toBe(
       true
     );
+  });
+});
+
+describe('htmlAllarmeSettimanaOreNonConfermata', () => {
+  const utente = { utenteId: 'u1', nome: 'Anna', cognome: 'Bianchi', email: 'anna@example.com' };
+
+  it('per un utente normale compone il paragrafo con nome, email e intervallo', () => {
+    expect(htmlAllarmeSettimanaOreNonConfermata(utente, '1-7 settembre 2026')).toBe(
+      '<p>Anna Bianchi (anna@example.com) non ha ancora confermato le ore della settimana 1-7 settembre 2026.</p>'
+    );
+  });
+
+  it('rende come testo nome, cognome ed email con markup, & e virgolette', () => {
+    const html = htmlAllarmeSettimanaOreNonConfermata(
+      { utenteId: 'u2', nome: '<script>alert(1)</script>', cognome: 'Rossi & "Figli"', email: 'a"b@x.it<b>' },
+      '1-7 settembre 2026'
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('<b>');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; Rossi &amp; &quot;Figli&quot;');
+    expect(html).toContain('(a&quot;b@x.it&lt;b&gt;)');
+  });
+
+  it("un apostrofo (D'Angelo) è escapato come &#39;, che l'HTML mostra come apostrofo", () => {
+    expect(htmlAllarmeSettimanaOreNonConfermata({ ...utente, cognome: "D'Angelo" }, 'x')).toContain('Anna D&#39;Angelo');
   });
 });

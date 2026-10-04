@@ -6,6 +6,7 @@ import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { righeMeseOreLavoro, settimaneDelMese } from '@/lib/oreLavoroMese';
 import { personaPdfOreLavoro, nomeFilePdfOreLavoroPersona } from '@/lib/pdfOreLavoroDati';
 import { recuperaProfiloOrarioConNome } from '@/lib/profiliOrari';
+import { escapeHtml } from '@/lib/htmlEscape';
 import { righeOSollevaErrore, STILE_TABELLA, STILE_CELLA, STILE_CELLA_NUMERO } from '@/lib/reportPresenze';
 import {
   generaPdfOreLavoroMensile,
@@ -41,6 +42,47 @@ async function personaleAbilitatoOreLavoro(
   return righeOSollevaErrore(await query, 'lettura personale abilitato al report ore');
 }
 
+export type RigaRiepilogoOreLavoro = {
+  nome: string;
+  cognome: string;
+  ordinarie: number;
+  straordinarie: number;
+  totale: number;
+  // Saldo di monte ore già formattato (saldoMonteOreBreve).
+  saldo: string;
+};
+
+// Parte pura (nessun I/O) del riepilogo ore per l'email: nome, cognome e
+// titolo sono testo libero, quindi escapati (issue #220).
+export function formattaRiepilogoOreLavoroHtml(titolo: string, righe: RigaRiepilogoOreLavoro[]): string {
+  const titoloHtml = escapeHtml(titolo);
+  if (!righe.length) {
+    return `<h2>${titoloHtml}</h2><p>Nessun membro del personale è abilitato al report ore.</p>`;
+  }
+
+  const righeHtml = righe
+    .map(
+      (r) =>
+        `<tr><td style="${STILE_CELLA}">${escapeHtml(r.nome)} ${escapeHtml(r.cognome)}</td>` +
+        `<td style="${STILE_CELLA_NUMERO}">${r.ordinarie}</td>` +
+        `<td style="${STILE_CELLA_NUMERO}">${r.straordinarie}</td>` +
+        `<td style="${STILE_CELLA_NUMERO}">${r.totale}</td>` +
+        `<td style="${STILE_CELLA_NUMERO}">${r.saldo}</td></tr>`
+    )
+    .join('');
+
+  return (
+    `<h2>${titoloHtml}</h2>` +
+    `<table style="${STILE_TABELLA}"><thead><tr>` +
+    `<th style="${STILE_CELLA}">Nome</th>` +
+    `<th style="${STILE_CELLA_NUMERO}">Ore ordinarie</th>` +
+    `<th style="${STILE_CELLA_NUMERO}">Ore straordinarie</th>` +
+    `<th style="${STILE_CELLA_NUMERO}">Totale</th>` +
+    `<th style="${STILE_CELLA_NUMERO}">Monte ore</th>` +
+    `</tr></thead><tbody>${righeHtml}</tbody></table>`
+  );
+}
+
 // Corpo HTML del riepilogo ore della settimana corrente per il report
 // notturno (specs/52, scenario "riepilogo delle ore di lavoro del
 // personale nel corpo dell'email"): una riga per persona abilitata, con
@@ -56,9 +98,7 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(
   const lunedi = lunediSettimana(finoAData);
   const titolo = `Ore di lavoro — settimana ${formattaIntervalloItaliano(lunedi, finoAData)}`;
 
-  if (!personale.length) {
-    return `<h2>${titolo}</h2><p>Nessun membro del personale è abilitato al report ore.</p>`;
-  }
+  if (!personale.length) return formattaRiepilogoOreLavoroHtml(titolo, []);
 
   const idPersonale = personale.map((p) => p.id);
   const [rGiorni, rMovimenti] = await Promise.all([
@@ -74,34 +114,23 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(
   const movimenti = righeOSollevaErrore(rMovimenti, 'lettura movimenti monte ore');
   const saldi = saldiPerUtente(movimenti);
 
-  const righe = personale
-    .map((persona) => {
-      const totali = totaliSettimanaOreLavoro(
-        giorni
-          .filter((g) => g.utente_id === persona.id)
-          .map((g) => ({ oreOrdinarie: g.ore_ordinarie, oreStraordinarie: g.ore_straordinarie }))
-      );
-      const saldo = saldi.get(persona.id) ?? 0;
-      return (
-        `<tr><td style="${STILE_CELLA}">${persona.nome} ${persona.cognome}</td>` +
-        `<td style="${STILE_CELLA_NUMERO}">${totali.ordinarie}</td>` +
-        `<td style="${STILE_CELLA_NUMERO}">${totali.straordinarie}</td>` +
-        `<td style="${STILE_CELLA_NUMERO}">${totali.totale}</td>` +
-        `<td style="${STILE_CELLA_NUMERO}">${saldoMonteOreBreve(saldo)}</td></tr>`
-      );
-    })
-    .join('');
+  const righe = personale.map((persona) => {
+    const totali = totaliSettimanaOreLavoro(
+      giorni
+        .filter((g) => g.utente_id === persona.id)
+        .map((g) => ({ oreOrdinarie: g.ore_ordinarie, oreStraordinarie: g.ore_straordinarie }))
+    );
+    return {
+      nome: persona.nome,
+      cognome: persona.cognome,
+      ordinarie: totali.ordinarie,
+      straordinarie: totali.straordinarie,
+      totale: totali.totale,
+      saldo: saldoMonteOreBreve(saldi.get(persona.id) ?? 0),
+    };
+  });
 
-  return (
-    `<h2>${titolo}</h2>` +
-    `<table style="${STILE_TABELLA}"><thead><tr>` +
-    `<th style="${STILE_CELLA}">Nome</th>` +
-    `<th style="${STILE_CELLA_NUMERO}">Ore ordinarie</th>` +
-    `<th style="${STILE_CELLA_NUMERO}">Ore straordinarie</th>` +
-    `<th style="${STILE_CELLA_NUMERO}">Totale</th>` +
-    `<th style="${STILE_CELLA_NUMERO}">Monte ore</th>` +
-    `</tr></thead><tbody>${righe}</tbody></table>`
-  );
+  return formattaRiepilogoOreLavoroHtml(titolo, righe);
 }
 
 // PDF mensile delle ore di lavoro, completo di nome file (specs/52,

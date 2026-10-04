@@ -9,6 +9,7 @@ import {
   allarmeAsiloAttivo,
   calcolaStatoOperativoGiorno,
   descrizioneStatoOperativo,
+  htmlAllarmeSettimanaOreNonConfermata,
   settimanaDiRiferimentoOre,
   utentiConSettimanaNonConfermata,
 } from '@/lib/allarmi';
@@ -85,7 +86,7 @@ export async function GET(request: Request) {
     await inviaEmail({
       a: destinatarioNotifiche(),
       oggetto: `Allarme: settimana ore non confermata — ${utente.nome} ${utente.cognome}`,
-      html: `<p>${utente.nome} ${utente.cognome} (${utente.email}) non ha ancora confermato le ore della settimana ${formattaIntervalloItaliano(settimanaInizio, settimanaFine)}.</p>`,
+      html: htmlAllarmeSettimanaOreNonConfermata(utente, formattaIntervalloItaliano(settimanaInizio, settimanaFine)),
     });
     await supabase.from('allarmi_inviati').insert({ tipo: 'settimana_ore_non_confermata', chiave });
     risultati.settimanaOre.push(utente.email);
