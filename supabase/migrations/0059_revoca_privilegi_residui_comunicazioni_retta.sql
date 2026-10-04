@@ -20,14 +20,19 @@
 --
 -- Cosa si revoca:
 --   * ad anon: tutti i privilegi (select, insert, update, delete, truncate,
---     references, trigger);
+--     references, trigger e, da PostgreSQL 17, maintain);
 --   * a service_role: insert, update, delete, truncate;
 --   * ad authenticated: solo truncate.
 -- Cosa resta:
 --   * ad authenticated: select, insert, update, delete (le policy admin-only
 --     li richiedono: senza il GRANT di tabella l'admin avrebbe "permission
 --     denied", vedi 0046), più references e trigger (non usati, non toccati);
---   * a service_role: select, references, trigger (non usati, non toccati);
+--   * a service_role: select, references, trigger non sono toccati (nessun
+--     codice li usa). Dipendono dai default privileges dell'ambiente: nel DB
+--     di test service_role non ha nemmeno SELECT su questa tabella, mentre in
+--     altri ambienti (produzione) i default privileges potrebbero concedere
+--     ALL. La revoca di insert/update/delete/truncate è quindi una difesa in
+--     profondità idempotente: un no-op dove il privilegio non c'è;
 --   * al proprietario `postgres` non si toglie nulla.
 --
 -- Le revoche sono idempotenti: rieseguirle non ha effetto se i privilegi sono

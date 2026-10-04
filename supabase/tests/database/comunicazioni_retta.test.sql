@@ -89,7 +89,7 @@ begin
 end;
 $$;
 
-select plan(48);
+select plan(47);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -263,7 +263,10 @@ select is(
 -- avere privilegi: il log contabile si protegge anche togliendo i GRANT
 -- inutilizzati. authenticated tiene select/insert/update/delete (le policy
 -- admin-only li richiedono, senza il GRANT l'admin avrebbe "permission
--- denied"), ma non truncate.
+-- denied"), ma non truncate. Di service_role si asserisce solo l'assenza
+-- dei privilegi di scrittura: SELECT dipende dai default privileges
+-- dell'ambiente e il codice non lo usa, quindi non si asserisce né l'uno né
+-- l'altro.
 select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'SELECT'),
   'anon: nessun SELECT sul log');
 select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'INSERT'),
@@ -293,8 +296,6 @@ select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'DE
 select ok(not has_table_privilege('authenticated', 'public.comunicazioni_retta', 'TRUNCATE'),
   'authenticated: nessun TRUNCATE (la RLS non lo filtra)');
 
-select ok(has_table_privilege('service_role', 'public.comunicazioni_retta', 'SELECT'),
-  'service_role: mantiene SELECT (non usato dal codice, non toccato)');
 select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'INSERT'),
   'service_role: nessun INSERT sul log (ignorerebbe la RLS)');
 select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'UPDATE'),
