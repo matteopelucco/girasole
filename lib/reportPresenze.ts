@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { formattaDataItaliana } from '@/lib/date';
+import { escapeHtml } from '@/lib/htmlEscape';
 import { aggregaConteggiPresenzePasti, type RigaReportBambino } from '@/lib/report';
 import type { ComunicazionePasto } from '@/lib/comunicazionePasti';
 
@@ -33,9 +34,9 @@ export const STILE_CELLA_NUMERO = 'border:1px solid #ccc;padding:4px 8px;text-al
 // (specs/06 - controllo-consistenza.md).
 function rigaHtml(r: RigaReportBambino): string {
   const avviso = r.inconsistenze.length
-    ? ` <span title="${r.inconsistenze.join(' ')}">⚠️ Inconsistenza</span>`
+    ? ` <span title="${escapeHtml(r.inconsistenze.join(' '))}">⚠️ Inconsistenza</span>`
     : '';
-  return `<tr><td style="${STILE_CELLA}">${r.nome} ${r.cognome}${avviso}</td><td style="${STILE_CELLA_NUMERO}">${r.presenze}</td><td style="${STILE_CELLA_NUMERO}">${r.preAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.postAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.pasti}</td></tr>`;
+  return `<tr><td style="${STILE_CELLA}">${escapeHtml(r.nome)} ${escapeHtml(r.cognome)}${avviso}</td><td style="${STILE_CELLA_NUMERO}">${r.presenze}</td><td style="${STILE_CELLA_NUMERO}">${r.preAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.postAsilo}</td><td style="${STILE_CELLA_NUMERO}">${r.pasti}</td></tr>`;
 }
 
 // Corpo HTML del report notturno (specs/52 - report-email-automatico.md):
@@ -57,11 +58,11 @@ export function formattaTabellaReportHtml(titolo: string, sezioni: SezioneConRig
           `<th style="${STILE_CELLA_NUMERO}">Pasti</th>` +
           `</tr></thead><tbody>${sezione.righe.map(rigaHtml).join('')}</tbody></table>`
         : '<p>Nessun bambino in questa classe.</p>';
-      return `<h2>${sezione.nome}</h2>${corpo}`;
+      return `<h2>${escapeHtml(sezione.nome)}</h2>${corpo}`;
     })
     .join('');
 
-  return `<h1>${titolo}</h1>${sezioniHtml || '<p>Nessuna classe attiva.</p>'}`;
+  return `<h1>${escapeHtml(titolo)}</h1>${sezioniHtml || '<p>Nessuna classe attiva.</p>'}`;
 }
 
 // Corpo HTML del report notturno per un solo giorno — usata come corpo

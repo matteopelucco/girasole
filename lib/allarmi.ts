@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SezioneAttiva } from './sezioni';
 import { settimanaCorrente, settimanaPrecedente } from './date';
+import { escapeHtml } from './htmlEscape';
 
 // Soglia oraria (fuso Europe/Rome) dell'allarme "presenze/pasti non
 // completati" (specs/07 - allarmi.md): condivisa dal banner personale in
@@ -206,6 +207,13 @@ export async function settimanaConfermata(
 }
 
 export type UtenteSettimanaNonConfermata = { utenteId: string; nome: string; cognome: string; email: string };
+
+// Corpo HTML dell'allarme "settimana ore non confermata" (specs/07), puro
+// (nessun I/O). Nome, cognome ed email sono dati liberi dell'utente:
+// vanno escapati (issue #220) per non essere interpretati come markup.
+export function htmlAllarmeSettimanaOreNonConfermata(utente: UtenteSettimanaNonConfermata, intervallo: string): string {
+  return `<p>${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)} (${escapeHtml(utente.email)}) non ha ancora confermato le ore della settimana ${intervallo}.</p>`;
+}
 
 // Tutti gli utenti abilitati al report ore la cui settimana
 // `settimanaInizio` non risulta confermata (fa I/O) — usata dal cron
