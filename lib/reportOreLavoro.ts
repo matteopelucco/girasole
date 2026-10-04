@@ -1,4 +1,4 @@
-import { createAdminClient } from '@/lib/supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { lunediSettimana, formattaIntervalloItaliano, primoGiornoMese, ultimoGiornoMese, formattaMeseItaliano, oggi } from '@/lib/date';
 import { totaliSettimanaOreLavoro } from '@/lib/oreLavoro';
 import { saldiPerUtente, saldoMonteOreBreve } from '@/lib/monteOre';
@@ -16,16 +16,20 @@ import {
 // Aggregazione delle ore di lavoro del personale per il report notturno
 // (specs/52 - report-email-automatico.md, specs/19 - monte-ore.md): il
 // riepilogo settimanale nel corpo dell'email e il PDF mensile allegato.
-// Usa la service_role key (bypassa la RLS), come lib/reportPresenze.ts:
-// il cron non ha una sessione utente e deve vedere tutto il personale
-// abilitato, non solo il proprio.
+// Il client Supabase arriva dal chiamante (issue #213, sotto-issue di #38):
+// il cron notturno passa quello con la service_role key (nessuna sessione
+// utente, deve vedere tutto il personale abilitato, come
+// lib/reportPresenze.ts); la route di download dell'admin passa quello
+// della sessione dell'admin, per cui la RLS (`*_select_own_or_admin`)
+// consente già la lettura di tutto il personale. Qui dentro non si crea
+// mai un client: la RLS resta la difesa quando il chiamante è un utente.
 
 type PersonaAbilitata = { id: string; nome: string; cognome: string; profilo_orario_id: string | null };
 
 // `utenteId` (opzionale) restringe a una sola persona: è il PDF del singolo
 // dipendente, che resta vuoto se quella persona non è abilitata.
 async function personaleAbilitatoOreLavoro(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: SupabaseClient,
   utenteId?: string
 ): Promise<PersonaAbilitata[]> {
   let query = supabase
@@ -43,8 +47,10 @@ async function personaleAbilitatoOreLavoro(
 // le ore registrate dal lunedì fino a `finoAData` incluso ("a
 // tutt'oggi", stesso principio del settimanale/mensile di presenze) e
 // il saldo di monte ore attuale.
-export async function generaRiepilogoOreLavoroSettimanaHtml(finoAData: string): Promise<string> {
-  const supabase = createAdminClient();
+export async function generaRiepilogoOreLavoroSettimanaHtml(
+  supabase: SupabaseClient,
+  finoAData: string
+): Promise<string> {
   const personale = await personaleAbilitatoOreLavoro(supabase);
 
   const lunedi = lunediSettimana(finoAData);
@@ -100,18 +106,22 @@ export async function generaRiepilogoOreLavoroSettimanaHtml(finoAData: string): 
 
 // PDF mensile delle ore di lavoro, completo di nome file (specs/52,
 // specs/18): l'unica fonte sia per l'allegato del cron notturno sia per i
-// download dell'admin. `mese` nel formato 'AAAA-MM'. Usa la service_role
-// key: chi chiama deve aver già verificato il ruolo (il cron con il suo
-// secret, le route di download con requireAdmin).
+// download dell'admin. `mese` nel formato 'AAAA-MM'. Il client è del
+// chiamante: il cron passa la service_role (dopo aver verificato il suo
+// secret), la route di download la sessione dell'admin (dopo requireAdmin).
 type PdfOreLavoro = { filename: string; content: Uint8Array };
 
 // Tutto il personale abilitato: allegato del cron e download da
 // `/admin/ore-lavoro/pdf`.
-export async function pdfOreLavoroMensile(mese: string, generatoIl: Date): Promise<PdfOreLavoro> {
-  const personale = await personaleAbilitatoOreLavoro(createAdminClient());
+export async function pdfOreLavoroMensile(
+  supabase: SupabaseClient,
+  mese: string,
+  generatoIl: Date
+): Promise<PdfOreLavoro> {
+  const personale = await personaleAbilitatoOreLavoro(supabase);
   return {
     filename: nomeFilePdfOreLavoroMensile(mese),
-    content: await pdfDelPersonale(mese, generatoIl, personale),
+    content: await pdfDelPersonale(supabase, mese, generatoIl, personale),
   };
 }
 
@@ -119,20 +129,26 @@ export async function pdfOreLavoroMensile(mese: string, generatoIl: Date): Promi
 // stesso codice e stesso layout del PDF del personale. null se la persona
 // non esiste o non è abilitata al report ore.
 export async function pdfOreLavoroMensileDipendente(
+  supabase: SupabaseClient,
   mese: string,
   generatoIl: Date,
   utenteId: string
 ): Promise<PdfOreLavoro | null> {
-  const [persona] = await personaleAbilitatoOreLavoro(createAdminClient(), utenteId);
+  const [persona] = await personaleAbilitatoOreLavoro(supabase, utenteId);
   if (!persona) return null;
   return {
     filename: nomeFilePdfOreLavoroPersona(mese, persona.cognome, persona.nome),
-    content: await pdfDelPersonale(mese, generatoIl, [persona]),
+    content: await pdfDelPersonale(supabase, mese, generatoIl, [persona]),
   };
 }
 
-async function pdfDelPersonale(mese: string, generatoIl: Date, personale: PersonaAbilitata[]): Promise<Uint8Array> {
-  const persone = await personePdfOreLavoroMensile(mese, personale);
+async function pdfDelPersonale(
+  supabase: SupabaseClient,
+  mese: string,
+  generatoIl: Date,
+  personale: PersonaAbilitata[]
+): Promise<Uint8Array> {
+  const persone = await personePdfOreLavoroMensile(supabase, mese, personale);
   return generaPdfOreLavoroMensile(formattaMeseItaliano(mese), persone, generatoIl);
 }
 
@@ -141,9 +157,12 @@ async function pdfDelPersonale(mese: string, generatoIl: Date, personale: Person
 // gli stessi dati della vista mensile admin (lib/oreLavoroMese.ts), tutti i
 // giorni del mese e lo stato di conferma di ogni settimana. `mese` nel
 // formato 'YYYY-MM' (lib/date.ts).
-async function personePdfOreLavoroMensile(mese: string, personale: PersonaAbilitata[]): Promise<PersonaPdfOreLavoro[]> {
+async function personePdfOreLavoroMensile(
+  supabase: SupabaseClient,
+  mese: string,
+  personale: PersonaAbilitata[]
+): Promise<PersonaPdfOreLavoro[]> {
   if (!personale.length) return [];
-  const supabase = createAdminClient();
 
   const inizioMese = primoGiornoMese(mese);
   const fineMese = ultimoGiornoMese(mese);
