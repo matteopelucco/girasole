@@ -16,6 +16,9 @@ npx tsc --noEmit
 echo "── Lint (ESLint) ─────────────────────────────────"
 npx next lint
 
+echo "── Service-role-check (createAdminClient) ────────"
+npm run --silent check:service-role
+
 echo "── Unit test (Vitest) ────────────────────────────"
 npx vitest run
 
