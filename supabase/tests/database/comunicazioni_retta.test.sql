@@ -2,7 +2,7 @@
 -- (issue #182, sotto-issue "c" di #29; specs/56 - comunicazione-retta-mensile.md,
 -- specs/59 - verifica-bonifico-retta.md, specs/03 - utenti-e-ruoli.md).
 --
--- Comportamento fissato (migration 0036, 0038, 0046): la tabella è "solo
+-- Comportamento fissato (migration 0036, 0038, 0046; privilegi 0059): la tabella è "solo
 -- admin" su tutte e quattro le operazioni.
 --   SELECT  0036  comunicazioni_retta_admin_select
 --   INSERT  0036  comunicazioni_retta_admin_insert
@@ -89,7 +89,7 @@ begin
 end;
 $$;
 
-select plan(30);
+select plan(47);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -255,6 +255,55 @@ select is(
   4,
   'comunicazioni_retta: esattamente le 4 policy admin, nessun''altra'
 );
+
+-- ---------------------------------------------------------------------
+-- Privilegi di tabella (migration 0059, issue #226)
+-- ---------------------------------------------------------------------
+-- La RLS filtra le righe, ma service_role la ignora e anon non ha motivo di
+-- avere privilegi: il log contabile si protegge anche togliendo i GRANT
+-- inutilizzati. authenticated tiene select/insert/update/delete (le policy
+-- admin-only li richiedono, senza il GRANT l'admin avrebbe "permission
+-- denied"), ma non truncate. Di service_role si asserisce solo l'assenza
+-- dei privilegi di scrittura: SELECT dipende dai default privileges
+-- dell'ambiente e il codice non lo usa, quindi non si asserisce né l'uno né
+-- l'altro.
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'SELECT'),
+  'anon: nessun SELECT sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'INSERT'),
+  'anon: nessun INSERT sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'UPDATE'),
+  'anon: nessun UPDATE sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'DELETE'),
+  'anon: nessun DELETE sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'TRUNCATE'),
+  'anon: nessun TRUNCATE sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'REFERENCES'),
+  'anon: nessun REFERENCES sul log');
+select ok(not has_table_privilege('anon', 'public.comunicazioni_retta', 'TRIGGER'),
+  'anon: nessun TRIGGER sul log');
+select ok(
+  not has_any_column_privilege('anon', 'public.comunicazioni_retta', 'SELECT,INSERT,UPDATE,REFERENCES'),
+  'anon: nessun privilegio nemmeno a livello di colonna');
+
+select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'SELECT'),
+  'authenticated: ha SELECT (richiesto dalla policy admin_select)');
+select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'INSERT'),
+  'authenticated: ha INSERT (richiesto dalla policy admin_insert)');
+select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'UPDATE'),
+  'authenticated: ha UPDATE (richiesto dalla policy admin_update, 0046)');
+select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'DELETE'),
+  'authenticated: ha DELETE (richiesto dalla policy admin_delete, 0038)');
+select ok(not has_table_privilege('authenticated', 'public.comunicazioni_retta', 'TRUNCATE'),
+  'authenticated: nessun TRUNCATE (la RLS non lo filtra)');
+
+select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'INSERT'),
+  'service_role: nessun INSERT sul log (ignorerebbe la RLS)');
+select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'UPDATE'),
+  'service_role: nessun UPDATE sul log (ignorerebbe la RLS)');
+select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'DELETE'),
+  'service_role: nessun DELETE sul log (ignorerebbe la RLS)');
+select ok(not has_table_privilege('service_role', 'public.comunicazioni_retta', 'TRUNCATE'),
+  'service_role: nessun TRUNCATE sul log');
 
 -- ---------------------------------------------------------------------
 -- SELECT: solo l'admin legge
