@@ -236,6 +236,14 @@ finché non risulta tutto verde.
   calcolato dal server deve usare `clickEAttendiAzione`
   (`e2e/helpers.ts`); i valori calcolati dal server si leggono con
   `expect.poll` per attendere il calcolo asincrono.
+- **Dati propri per test (issue #228, #172)**: un test che scrive su un
+  bambino non usa quelli del seed ma la fixture `bambino` di
+  `e2e/fixture-bambino.ts` (`test.extend`): crea un bambino con nome unico
+  `E2eFx...` nella sezione fixture e lo elimina a fine test, anche se
+  fallisce. Usa la chiave anon con il login dell'admin di test (RLS
+  applicata), mai la service_role. Per un gruppo di test in sequenza con
+  stato condiviso (06) si usano `creaBambinoFixture`/`eliminaBambinoFixture`
+  in `beforeAll`/`afterAll`. Documentazione completa in testa al file.
 
 ### Unit (Vitest) — solo logica pura
 - **Criterio di ammissione, rigido**: un unit test in `lib/xxx.test.ts`

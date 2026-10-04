@@ -2,6 +2,12 @@
 //
 // ATTENZIONE: questi test scrivono davvero in presenze/pasti sul
 // progetto Supabase di test — vedi la nota in 13-segna-presenza.spec.ts.
+//
+// Dati propri (issue #228): i test lavorano su un bambino creato apposta
+// in `beforeAll` (e2e/fixture-bambino.ts) ed eliminato in `afterAll`, che
+// gira anche se un test fallisce. Non si usa la fixture per-test `bambino`
+// perché qui lo stato passa da un test al successivo.
+//
 // I test sono in sequenza (mode: 'serial'): segnano deliberatamente
 // prima il pasto "sì" e solo dopo correggono la presenza in "assente"
 // sullo stesso bambino/giorno — lo stesso ordine di eventi reale che il
@@ -9,29 +15,30 @@
 // comunque"). Da issue #186, se a segnare "assente" è la maestra l'app
 // avvisa e azzera il pasto (specs/13): l'incoerenza resta raggiungibile
 // da chi non vede i pasti, cioè l'assistente, che qui fa da "secondo
-// attore" in un contesto di browser a parte. L'ultimo test ripristina il
-// bambino a "presente", perché un'incoerenza lasciata nel DB di test
-// bloccherebbe la comunicazione a Rojac (specs/16) per gli altri test.
-import { test, expect } from '@playwright/test';
+// attore" in un contesto di browser a parte. L'ultimo test riporta il
+// bambino a "presente" e verifica che il warning sparisca.
+import {
+  test,
+  expect,
+  cardBambino,
+  creaBambinoFixture,
+  eliminaBambinoFixture,
+  type BambinoFixture,
+} from './fixture-bambino';
 import {
   apriGiornata,
-  cardBambini,
   clickEAttendiAzione,
   colonnaPasto,
   colonnaPresenza,
   dataOggiRoma,
   hasCredenziali,
-  nomeBambinoCard,
   nessunaViolazioneA11yGrave,
-  primaCardConPulsante,
   segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
 
 // Stessa formattazione di lib/date.ts:formattaDataItaliana, per
-// individuare nel drill-down mensile la riga del giorno odierno senza
-// dipendere dall'ordine/quantità di righe accumulate da run precedenti
-// della suite (che non ripulisce i dati creati).
+// individuare nel drill-down mensile la riga del giorno odierno.
 function dataOggiFormattata(): string {
   const [anno, mese, giorno] = dataOggiRoma().split('-').map(Number);
   return new Intl.DateTimeFormat('it-IT', {
@@ -44,30 +51,44 @@ function dataOggiFormattata(): string {
 
 // Schermata unica "Presenze e pasti" (specs/10): presenza e pasto dello
 // stesso bambino sono nella stessa card, colonne "Presenza" e "Pasto".
-let nomeBambino: string | undefined;
+let bambino: BambinoFixture | undefined;
+// Vero dopo che il primo test ha preparato la base coerente (presente con
+// pasto "sì"): i test successivi si saltano se non è stato possibile.
+let baseCoerentePronta = false;
 
 test.describe('06 — Controllo di consistenza dei dati', () => {
   test.describe('come maestra, sulla data odierna', () => {
     test.describe.configure({ mode: 'serial' });
     test.use({ storageState: statoAutenticazione('maestra') });
 
-    test.beforeEach(async () => {
+    test.beforeAll(async ({ adminDb }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      test.skip(adminDb === null, 'richiede E2E_ADMIN_EMAIL/PASSWORD (fixture bambino)');
+      bambino = await creaBambinoFixture(adminDb!);
+      baseCoerentePronta = false;
+    });
+
+    test.afterAll(async ({ adminDb }) => {
+      if (bambino && adminDb) await eliminaBambinoFixture(adminDb, bambino.id);
+      bambino = undefined;
     });
 
     test('nessun warning su un bambino con pasto "sì" coerente', async ({ page }) => {
       await apriGiornata(page, dataOggiRoma());
 
-      const primaCard = primaCardConPulsante(page, 'Pasto', 'Sì');
-      test.skip((await primaCard.count()) === 0, 'nessun bambino selezionabile per il pasto');
-
-      nomeBambino = (await nomeBambinoCard(primaCard).textContent())?.trim();
+      const card = cardBambino(page, bambino!);
+      await expect(card).toBeVisible();
+      test.skip(
+        (await colonnaPasto(card).getByRole('button', { name: 'Sì', exact: true }).count()) === 0,
+        'nessun pulsante Sì/No disponibile (es. pasti già comunicati, giorno di chiusura)'
+      );
 
       // Base coerente: presente con pasto "sì".
-      await clickEAttendiAzione(page, colonnaPresenza(primaCard).getByRole('button', { name: 'Presente' }));
-      await clickEAttendiAzione(page, colonnaPasto(primaCard).getByRole('button', { name: 'Sì' }));
-      await expect(colonnaPasto(primaCard).getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-      await expect(primaCard.getByText('Inconsistenza')).toHaveCount(0);
+      await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
+      await clickEAttendiAzione(page, colonnaPasto(card).getByRole('button', { name: 'Sì' }));
+      await expect(colonnaPasto(card).getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
+      await expect(card.getByText('Inconsistenza')).toHaveCount(0);
+      baseCoerentePronta = true;
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -76,15 +97,15 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       page,
       browser,
     }) => {
-      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!baseCoerentePronta, 'test precedente saltato (base coerente non preparata)');
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
 
       const contestoAssistente = await browser.newContext({ storageState: statoAutenticazione('assistente') });
       try {
         const paginaAssistente = await contestoAssistente.newPage();
         await apriGiornata(paginaAssistente, dataOggiRoma());
-        const cardAssistente = cardBambini(paginaAssistente).filter({ hasText: nomeBambino! }).first();
-        test.skip((await cardAssistente.count()) === 0, "bambino non visibile all'assistente");
+        const cardAssistente = cardBambino(paginaAssistente, bambino!);
+        await expect(cardAssistente).toBeVisible();
         const presenzaAssistente = colonnaPresenza(cardAssistente);
         test.skip(
           await presenzaAssistente.getByRole('button', { name: 'Assente' }).isDisabled(),
@@ -99,28 +120,28 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       // Una sola card per bambino (specs/10): il warning è nella sua
       // intestazione, e la colonna Pasto mostra l'etichetta "Assente".
       await apriGiornata(page, dataOggiRoma());
-      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
+      const card = cardBambino(page, bambino!);
       await expect(card.getByText('Inconsistenza')).toBeVisible();
       await expect(colonnaPasto(card).getByText('🚫 Assente')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
 
     test('il warning compare nel report a schermo (giornaliero)', async ({ page }) => {
-      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!baseCoerentePronta, 'test precedente saltato (base coerente non preparata)');
 
       await page.goto(`/dashboard/report?tipo=giornaliero&periodo=${dataOggiRoma()}`);
-      const riga = page.locator('tr', { hasText: nomeBambino! }).first();
-      test.skip((await riga.count()) === 0, 'bambino non visibile nel report per questo account');
+      const riga = page.locator('tr', { hasText: bambino!.cognome }).first();
+      await expect(riga).toBeVisible();
 
       await expect(riga.getByText('Inconsistenza')).toBeVisible();
     });
 
     test('il warning compare nel drill-down del giorno specifico (report mensile)', async ({ page }) => {
-      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!baseCoerentePronta, 'test precedente saltato (base coerente non preparata)');
 
       await page.goto('/dashboard/report?tipo=mensile');
-      const link = page.locator('a', { hasText: nomeBambino! }).first();
-      test.skip((await link.count()) === 0, 'bambino non visibile nel report per questo account');
+      const link = page.locator('a', { hasText: bambino!.cognome }).first();
+      await expect(link).toBeVisible();
 
       await link.click();
       await page.waitForURL(/\/dashboard\/report\/bambino\/.+/);
@@ -133,13 +154,13 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    // Ripristino: l'incoerenza lasciata nel DB di test bloccherebbe la
-    // comunicazione a Rojac (specs/16) per i test successivi.
+    // Ripristino: il bambino torna presente e il warning sparisce (il
+    // bambino viene comunque eliminato in afterAll).
     test('ripristino: il bambino torna presente e il warning sparisce', async ({ page }) => {
-      test.skip(!nomeBambino, 'test precedente saltato (nessun bambino disponibile)');
+      test.skip(!baseCoerentePronta, 'test precedente saltato (base coerente non preparata)');
 
       await apriGiornata(page, dataOggiRoma());
-      const card = cardBambini(page).filter({ hasText: nomeBambino! }).first();
+      const card = cardBambino(page, bambino!);
       await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
       await expect(card.getByText('Inconsistenza')).toHaveCount(0);
     });
