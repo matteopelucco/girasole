@@ -501,6 +501,18 @@ Comando di Claude Code (`.claude/commands/task-review.md`), accanto a
   (`status:review` resta scelta umana); il report si posta come commento solo
   su richiesta esplicita (`--body-file`). Senza PR aperta si ferma.
 
+## Controllo OWASP prima della PR: `/owasp-check` (issue #102)
+Comando di Claude Code (`.claude/commands/owasp-check.md`), in sola lettura.
+- **Fa**: analizza solo il diff della branch contro `main` sulle categorie
+  OWASP Top 10 pertinenti a una web app con database (accessi/RLS,
+  iniezione/XSS, autenticazione, secret e `service_role`, configurazione ed
+  errori, dipendenze con `npm audit` se toccate, logging) e chiude con
+  `Esito OWASP: OK` oppure `DA CORREGGERE` con elenco `file:riga`.
+- **Flusso**: l'`implementer` lo esegue prima di aprire la PR e, se l'esito non
+  è `OK`, continua a lavorare e lo rilancia; l'esito va nel corpo della PR.
+  `rls-guardian` lo usa come checklist nella review di sicurezza. Non gira in
+  CI (sarebbe troppo tardi) e non sostituisce `rls-guardian` né i test pgTAP.
+
 ## Token e cache delle esecuzioni Claude in CI (issue #119)
 - Ogni job `triage`/`review` di `claude-board.yml` scrive nel **job
   summary** (pagina del run su GitHub Actions, sezione "Summary") una
