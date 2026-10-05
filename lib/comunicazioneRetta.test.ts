@@ -63,7 +63,8 @@ describe('calcolaRiepilogoRetta', () => {
     prezzoMensile: 250,
     prezzoBuonoPasto: 5,
     giorniAperturaMeseCorrente: 20,
-    giorniAssenzaMesePrecedente: 0,
+    pastiPotenzialiMesePrecedente: 0,
+    pastiEffettiviMesePrecedente: 0,
     marcaDaBollo: 0,
     preAsiloRichiesto: false,
     prezzoPreAsilo: 0,
@@ -94,10 +95,43 @@ describe('calcolaRiepilogoRetta', () => {
     expect(riepilogo.totale).toBe(352);
   });
 
-  it('il conguaglio pasti è negativo, proporzionale ai giorni di assenza', () => {
-    const riepilogo = calcolaRiepilogoRetta({ ...base, giorniAssenzaMesePrecedente: 4 });
-    expect(riepilogo.conguaglioPasti).toBe(-20);
-    expect(riepilogo.totale).toBe(330);
+  it('il conguaglio pasti è negativo: (pasti potenziali − effettivi) × prezzo del buono pasto', () => {
+    const riepilogo = calcolaRiepilogoRetta({
+      ...base,
+      pastiPotenzialiMesePrecedente: 18,
+      pastiEffettiviMesePrecedente: 11,
+    });
+    expect(riepilogo.conguaglioPasti).toBe(-35);
+    expect(riepilogo.totale).toBe(315);
+  });
+
+  it('il conguaglio pasti è zero se i pasti effettivi uguagliano i potenziali', () => {
+    const riepilogo = calcolaRiepilogoRetta({
+      ...base,
+      pastiPotenzialiMesePrecedente: 18,
+      pastiEffettiviMesePrecedente: 18,
+    });
+    expect(riepilogo.conguaglioPasti).toBe(0);
+    expect(riepilogo.totale).toBe(350);
+  });
+
+  it('senza nessun pasto effettivo il conguaglio rimborsa tutti i pasti potenziali', () => {
+    const riepilogo = calcolaRiepilogoRetta({
+      ...base,
+      pastiPotenzialiMesePrecedente: 18,
+      pastiEffettiviMesePrecedente: 0,
+    });
+    expect(riepilogo.conguaglioPasti).toBe(-90);
+  });
+
+  it('il conguaglio pasti non diventa mai un addebito se gli effettivi superano i potenziali', () => {
+    const riepilogo = calcolaRiepilogoRetta({
+      ...base,
+      pastiPotenzialiMesePrecedente: 18,
+      pastiEffettiviMesePrecedente: 19,
+    });
+    expect(riepilogo.conguaglioPasti).toBe(0);
+    expect(riepilogo.totale).toBe(350);
   });
 
   it('pre-asilo e post-asilo richiesti aggiungono il loro prezzo pieno', () => {
@@ -142,7 +176,8 @@ describe('calcolaRiepilogoRetta', () => {
       prezzoMensile: 0,
       prezzoBuonoPasto: 5,
       giorniAperturaMeseCorrente: 0,
-      giorniAssenzaMesePrecedente: 10,
+      pastiPotenzialiMesePrecedente: 10,
+      pastiEffettiviMesePrecedente: 0,
       marcaDaBollo: 0,
       preAsiloRichiesto: false,
       prezzoPreAsilo: 0,

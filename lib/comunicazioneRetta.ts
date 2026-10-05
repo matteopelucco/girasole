@@ -32,7 +32,11 @@ export type ParametriRiepilogoRetta = {
   prezzoMensile: number;
   prezzoBuonoPasto: number;
   giorniAperturaMeseCorrente: number;
-  giorniAssenzaMesePrecedente: number;
+  // Pasti potenziali (giorni di apertura, pagati in anticipo) ed
+  // effettivi (pasti segnati "sì") del mese precedente: la loro
+  // differenza è il conguaglio pasti.
+  pastiPotenzialiMesePrecedente: number;
+  pastiEffettiviMesePrecedente: number;
   marcaDaBollo: number;
   preAsiloRichiesto: boolean;
   prezzoPreAsilo: number;
@@ -57,8 +61,8 @@ export type RiepilogoRetta = {
   totale: number;
 };
 
-// Il `+ 0` finale normalizza un eventuale -0 (es. 0 giorni di assenza
-// per un conguaglio pasti) a 0: stesso valore numerico, ma -0 !== 0 per
+// Il `+ 0` finale normalizza un eventuale -0 (es. 0 pasti non
+// consumati per un conguaglio pasti) a 0: stesso valore numerico, ma -0 !== 0 per
 // Object.is/toEqual e comparirebbe come "-0,00" se mai renderizzato.
 export function arrotonda(valore: number): number {
   return Math.round(valore * 100) / 100 + 0;
@@ -66,14 +70,15 @@ export function arrotonda(valore: number): number {
 
 // Il riepilogo economico di un bambino per la comunicazione del mese
 // corrente (specs/56): costo pasti proiettato sui giorni di apertura
-// (il mese non è ancora trascorso), conguaglio pasti negativo sui
-// giorni di assenza/malattia del mese precedente (già trascorso, dati
-// reali), pre-asilo/post-asilo al prezzo pieno solo se richiesti,
+// (il mese non è ancora trascorso), conguaglio pasti negativo pari ai
+// pasti potenziali meno gli effettivi del mese precedente (già
+// trascorso, dati reali; mai un addebito: al minimo zero), pre-asilo/post-asilo al prezzo pieno solo se richiesti,
 // credito/debito "da conteggiare" questo mese (specs/58). Funzione
 // pura, nessun I/O.
 export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): RiepilogoRetta {
   const costoPasti = arrotonda(parametri.giorniAperturaMeseCorrente * parametri.prezzoBuonoPasto);
-  const conguaglioPasti = arrotonda(-parametri.giorniAssenzaMesePrecedente * parametri.prezzoBuonoPasto);
+  const pastiNonConsumati = Math.max(0, parametri.pastiPotenzialiMesePrecedente - parametri.pastiEffettiviMesePrecedente);
+  const conguaglioPasti = arrotonda(-pastiNonConsumati * parametri.prezzoBuonoPasto);
   const costoPreAsilo = parametri.preAsiloRichiesto ? parametri.prezzoPreAsilo : 0;
   const costoPostAsilo = parametri.postAsiloRichiesto ? parametri.prezzoPostAsilo : 0;
   const creditoDebito = arrotonda(parametri.creditoDebito);
