@@ -19,8 +19,9 @@ Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel (free tier).
 - Schema: file numerati in `supabase/migrations/`, mai dashboard.
   Applicazione: in locale `supabase db push --project-ref <ref-test>`, in
   test il reset di CI, in **produzione solo Matteo, a mano**, con
-  `--project-ref` esplicito. Mai link permanenti né automazioni verso la
-  produzione.
+  `--project-ref` esplicito, subito dopo il merge di una PR con migration
+  (prima `--dry-run`, mai dal SQL Editor: vedi `docs/sviluppo-dettagli.md`).
+  Mai link permanenti né automazioni verso la produzione.
 - RLS: difesa primaria; ogni query rispetta i confini di ruolo (admin /
   maestra / genitore) di `specs/`. Policy nuova → migration insieme alla
   tabella.

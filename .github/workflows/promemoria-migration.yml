@@ -1,0 +1,62 @@
+name: Promemoria migration
+
+# Issue #237 — una PR che aggiunge o cambia migration in supabase/migrations/
+# riceve un commento che ricorda a chi la mergia il passo manuale in
+# produzione (docs/sviluppo-dettagli.md, "Migration in produzione dopo il
+# merge"). Il merge su main fa il deploy da solo; le migration in produzione
+# le applica solo Matteo, a mano (ADR 0005): il commento colma la finestra
+# tra le due cose.
+#
+# È SOLO un avviso: nessun secret, nessun accesso al DB (né di test né di
+# produzione), nessun checkout del codice della PR. L'unico permesso è
+# `pull-requests: write`, per scrivere il commento. Non fa parte del gate
+# `CI / verifica` e non lo può far fallire. Sulle PR da fork il token è in
+# sola lettura: il job viene saltato (le PR esterne si revisionano
+# comunque a mano prima del merge, CLAUDE.md).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: ['supabase/migrations/**']
+
+permissions: {}
+
+jobs:
+  promemoria:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Commento di promemoria (una sola volta per PR)
+        run: |
+          # Il marcatore evita di duplicare il commento a ogni push e di
+          # toccare commenti di altri (es. la review automatica).
+          trovato=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- promemoria-migration -->")) | .id')
+          if [ -n "$trovato" ]; then
+            echo "Promemoria già presente, nulla da fare."
+            exit 0
+          fi
+          cat > corpo.md <<'MD'
+          <!-- promemoria-migration -->
+          ### ⚠️ Questa PR contiene migration (`supabase/migrations/`)
+
+          Il merge su `main` fa il deploy su Vercel **da solo**, ma le migration in produzione **non si applicano da sole** (ADR 0005). Finché non le applichi, il codice nuovo può chiamare funzioni o colonne che in produzione non esistono.
+
+          **Subito dopo il merge, Matteo, a mano**, con `--project-ref` esplicito:
+
+          1. `supabase db push --project-ref <ref-produzione> --dry-run` — deve elencare solo le migration di questa PR
+          2. `supabase db push --project-ref <ref-produzione>`
+          3. `supabase migration list --project-ref <ref-produzione>` — Local e Remote devono coincidere
+
+          Mai dal SQL Editor: lo storico delle migration non si aggiorna e `db push`/`--dry-run` non servono più a scoprire cosa manca. Dettagli: `docs/sviluppo-dettagli.md`, «Migration in produzione dopo il merge».
+
+          _Messaggio automatico: non ha accesso a nessun database e non applica nulla._
+          MD
+          gh pr comment "$PR" --body-file corpo.md
