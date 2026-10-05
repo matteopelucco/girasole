@@ -61,7 +61,10 @@ comodo (issue "più piccola", tier più economico, numero di issue più basso,
 area che conosci meglio): nel dubbio vince la posizione.
 
 1. Leggi la board (Project 2 dell'utente):
-   `gh project item-list 2 --owner matteopelucco --limit 200 --format json`
+   `gh project item-list 2 --owner matteopelucco --limit 1000 --format json`
+   (il limite deve restare sopra il numero di item della board, che cresce:
+   con un limite troppo basso le issue `Todo` in fondo non si vedono mai;
+   controlla che `totalCount` sia uguale a `items.length`, altrimenti alza il limite).
    L'ordine dell'array è il ranking della board. Nell'array sono mescolati
    Status diversi (`Todo`, `Done`, `Need Info`): filtra prima (punto 2),
    **poi** numera, così le posizioni 1, 2, 3… sono quelle dei soli candidati,
