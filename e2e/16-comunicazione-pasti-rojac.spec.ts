@@ -24,7 +24,21 @@
 // la comunicazione (issue #100): si verificano solo se oggi i pasti sono
 // già stati comunicati, altrimenti si saltano. Il box di comunicazione
 // sta in cima alla schermata unica "Presenze e pasti" (specs/10).
-import { test, expect, type Locator, type Page } from '@playwright/test';
+//
+// Dati propri (issue #229): i due test che costruiscono da sé lo stato
+// (bloccato per presenza mancante; pasto "sì" su un bambino assente) usano
+// un bambino creato apposta (fixture `bambino`, e2e/fixture-bambino.ts) ed
+// eliminato a fine test. Gli altri, che verificano il box di conferma o lo
+// stato "già comunicato", leggono lo stato GLOBALE della giornata (tutti i
+// bambini dell'asilo: la comunicazione è una sola, irreversibile, e qui non
+// la si fa mai): non possono avere dati propri e per questo il file resta nel
+// progetto 'chromium-stato-condiviso' (playwright.config.ts). In
+// particolare "Conferma pasti" compare solo se TUTTI i bambini hanno la
+// presenza segnata: non quello dei test che girano in parallelo con un
+// proprio bambino fixture, quindi il test del riquadro di conferma si salta
+// se in quel momento il pulsante non c'è.
+import type { Locator, Page } from '@playwright/test';
+import { test, expect, cardBambino, cardConPulsante } from './fixture-bambino';
 import {
   apriGiornata,
   cardBambini,
@@ -34,8 +48,6 @@ import {
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
-  nomeBambinoCard,
-  primaCardConPulsante,
   segnaAssenteOMalattia,
   statoAutenticazione,
   sezioneNota,
@@ -71,11 +83,16 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
 
     test('se manca la presenza di qualche bambino, il pulsante "Conferma pasti" non compare e viene mostrato un messaggio con l\'elenco dei bambini, con scorciatoie alle loro card', async ({
       page,
+      bambino,
     }) => {
+      // Il bambino fixture è appena creato e senza presenza: oggi è lui a
+      // far scattare il blocco. Si riapre la pagina perché lo mostri.
+      await apriGiornata(page, dataOggiRoma());
+      await expect(cardBambino(page, bambino)).toBeVisible();
       const messaggioBloccato = page.getByText('Non puoi ancora comunicare i pasti', { exact: false });
       test.skip(
         (await messaggioBloccato.count()) === 0,
-        'tutte le presenze di oggi sono già segnate (o i pasti sono già stati comunicati): nessun blocco da verificare'
+        'i pasti di oggi sono già stati comunicati: nessun blocco da verificare'
       );
 
       await expect(messaggioBloccato).toBeVisible();
@@ -92,12 +109,15 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       // Niente più "Vai alle presenze" (la schermata è la stessa): i nomi
       // dei bambini con la card in questa pagina sono ancore alla card.
       await expect(page.getByRole('link', { name: 'Vai alle presenze' })).toHaveCount(0);
-      const ancora = page.getByRole('list', { name: 'Bambini senza presenza' }).getByRole('link').first();
-      if ((await ancora.count()) > 0) {
-        const href = (await ancora.getAttribute('href')) ?? '';
-        expect(href).toMatch(/^#bambino-/);
-        await expect(page.locator(`li${href}`)).toHaveCount(1);
-      }
+      // Il bambino fixture (senza presenza) è nell'elenco, con l'ancora
+      // alla sua card.
+      const ancora = page
+        .getByRole('list', { name: 'Bambini senza presenza' })
+        .getByRole('link', { name: bambino.nomeCompleto });
+      await expect(ancora).toHaveCount(1);
+      const href = (await ancora.getAttribute('href')) ?? '';
+      expect(href).toBe(`#bambino-${bambino.id}`);
+      await expect(page.locator(`li${href}`)).toHaveCount(1);
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -105,15 +125,23 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
     // Issue #186: pasto "sì" su un bambino assente (pasti > presenti). Da
     // maestra non si crea più (l'app avvisa e azzera il pasto, specs/13):
     // lo crea l'assistente, che non vede i pasti, in un contesto di
-    // browser a parte. Il test ripristina il bambino a "presente".
+    // browser a parte. Il test riporta il bambino a "presente" per verificare
+    // che l'incoerenza sparisca (il bambino fixture è poi eliminato).
     test('se un bambino ha il pasto "sì" ma è assente, "Conferma pasti" non compare e il messaggio elenca il bambino con il motivo', async ({
       page,
       browser,
+      bambino,
     }) => {
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
-      const card = primaCardConPulsante(page, 'Pasto', 'Sì');
-      test.skip((await card.count()) === 0, 'nessun bambino con Sì/No disponibili (es. pasti già comunicati)');
-      const nome = (await nomeBambinoCard(card).textContent())?.trim();
+      await apriGiornata(page, dataOggiRoma());
+      const card = await cardConPulsante(
+        page,
+        bambino,
+        'Pasto',
+        'Sì',
+        'nessun pulsante Sì/No disponibile (es. pasti già comunicati)'
+      );
+      const nome = bambino.nomeCompleto;
       const presenza = colonnaPresenza(card);
 
       await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
@@ -124,25 +152,24 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       try {
         const paginaAssistente = await contestoAssistente.newPage();
         await apriGiornata(paginaAssistente, dataOggiRoma());
-        const cardAssistente = cardBambini(paginaAssistente).filter({ hasText: nome! }).first();
-        test.skip((await cardAssistente.count()) === 0, "bambino non visibile all'assistente");
+        const cardAssistente = cardBambino(paginaAssistente, bambino);
+        await expect(cardAssistente).toBeVisible();
         await segnaAssenteOMalattia(paginaAssistente, colonnaPresenza(cardAssistente), 'Assente');
 
         await apriGiornata(page, dataOggiRoma());
         await expect(page.getByText(/bambin\w+ ha(nno)? dati incoerenti/)).toBeVisible();
         const elenco = page.getByRole('list', { name: 'Bambini con dati incoerenti' });
-        const voce = elenco.getByRole('listitem').filter({ hasText: nome! });
+        const voce = elenco.getByRole('listitem').filter({ hasText: nome });
         await expect(voce).toContainText('Pasto segnato "sì" ma il bambino risulta assente.');
         // La card è in questa pagina: il nome è un link alla sua card.
-        await expect(voce.getByRole('link', { name: nome! })).toBeVisible();
+        await expect(voce.getByRole('link', { name: nome })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Conferma pasti' })).toHaveCount(0);
         await nessunaViolazioneA11yGrave(page);
       } finally {
         await contestoAssistente.close();
         // Ripristino: Presente è sempre consentito (anche se il test è fallito a metà).
         await apriGiornata(page, dataOggiRoma());
-        const cardMaestra = cardBambini(page).filter({ hasText: nome! }).first();
-        await clickEAttendiAzione(page, colonnaPresenza(cardMaestra).getByRole('button', { name: 'Presente' }));
+        await clickEAttendiAzione(page, colonnaPresenza(cardBambino(page, bambino)).getByRole('button', { name: 'Presente' }));
       }
 
       await expect(page.getByRole('list', { name: 'Bambini con dati incoerenti' })).toHaveCount(0);

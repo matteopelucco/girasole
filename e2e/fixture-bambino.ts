@@ -80,7 +80,17 @@ function cognomeUnico(): string {
   return `E2eFx${Date.now().toString(36)}${casuale}`;
 }
 
-export async function creaBambinoFixture(db: SupabaseClient): Promise<BambinoFixture> {
+// Opzioni per i test che hanno bisogno di un bambino particolare (es. il
+// sesso per l'avatar, le allergie): di default femmina, senza allergie.
+export type OpzioniBambinoFixture = {
+  sesso?: 'M' | 'F' | null;
+  noteAllergie?: string;
+};
+
+export async function creaBambinoFixture(
+  db: SupabaseClient,
+  opzioni: OpzioniBambinoFixture = {}
+): Promise<BambinoFixture> {
   const nome = 'Fixture';
   const cognome = cognomeUnico();
   const { data, error } = await db
@@ -90,7 +100,8 @@ export async function creaBambinoFixture(db: SupabaseClient): Promise<BambinoFix
       cognome,
       sezione_id: SEZIONE_FIXTURE_ID,
       data_nascita: '2020-01-01',
-      sesso: 'F',
+      sesso: opzioni.sesso === undefined ? 'F' : opzioni.sesso,
+      note_allergie: opzioni.noteAllergie ?? null,
     })
     .select('id')
     .single();
@@ -116,6 +127,27 @@ export async function eliminaBambinoFixture(db: SupabaseClient, id: string): Pro
 // di un filtro sul testo.
 export function cardBambino(page: Page, bambino: BambinoFixture): Locator {
   return page.locator(`li#bambino-${bambino.id}`);
+}
+
+// Card del bambino fixture, ma salta il test se nella sua colonna `colonna`
+// ("Presenza" o "Pasto") non c'è il pulsante `pulsante`: giorno di chiusura
+// (specs/53, la card c'è ma senza pulsanti) o pasti già comunicati a Rojac
+// (niente Sì/No). Prima di cercare i pulsanti aspetta la card, così un
+// bambino che non compare fa fallire il test invece di saltarlo.
+export async function cardConPulsante(
+  page: Page,
+  bambino: BambinoFixture,
+  colonna: 'Presenza' | 'Pasto',
+  pulsante: string,
+  motivoSkip: string
+): Promise<Locator> {
+  const card = cardBambino(page, bambino);
+  await expect(card).toBeVisible();
+  const pulsanti = card
+    .getByRole('group', { name: colonna, exact: true })
+    .getByRole('button', { name: pulsante, exact: true });
+  base.skip((await pulsanti.count()) === 0, motivoSkip);
+  return card;
 }
 
 export const test = base.extend<{ bambino: BambinoFixture }, { adminDb: SupabaseClient | null }>({
