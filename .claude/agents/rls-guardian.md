@@ -32,6 +32,10 @@ la sicurezza si regge interamente sulle policy RLS, non sulla segretezza del cod
    un'applicazione automatica in produzione): altrimenti è un rilievo.
 7. Nessun dato di minori in log, messaggi di errore, o risposte più larghe
    del necessario.
+8. Checklist OWASP generale: applica anche le categorie di
+   `.claude/commands/owasp-check.md` (`/owasp-check`) al diff in esame
+   (accessi, iniezione/XSS, auth, secret/`service_role`, configurazione ed
+   errori, dipendenze, logging) e riporta i rilievi nello stesso formato.
 
 ## Output
 - Verdetto esplicito: **APPROVO** / **BLOCCO**.
