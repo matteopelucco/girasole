@@ -142,7 +142,9 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
     }) => {
       await page.goto('/admin/rojac/template');
       await expect(page.getByRole('heading', { name: 'Modello email Rojac' })).toBeVisible();
-      await expect(page.getByText('{{pasti_insegnanti}}')).toBeVisible();
+      // Il segnaposto compare anche dentro la textarea del corpo: si guarda
+      // solo l'elenco dei segnaposto disponibili (il paragrafo mono).
+      await expect(page.locator('p.font-mono', { hasText: '{{pasti_insegnanti}}' })).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
 
       const oggettoOriginale = await page.getByLabel('Oggetto').inputValue();
