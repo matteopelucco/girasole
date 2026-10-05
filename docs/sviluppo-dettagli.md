@@ -75,6 +75,49 @@ Contesto operativo per Claude Code su questo progetto.
   scenario corrispondente in `specs/` (aggiornando l'indice in
   `00 - overview.md`), non un documento monolitico.
 
+### Migration in produzione dopo il merge (issue #237)
+- **Perché serve un passo esplicito**: il merge su `main` fa il deploy di
+  Vercel da solo, ma le migration in produzione le applica Matteo a mano
+  (ADR 0005). Tra le due cose c'è una finestra in cui il codice chiama
+  funzioni o colonne che nel DB di produzione ancora non esistono. Il
+  5 ottobre 2026 mancava la `0056` (RPC dei pasti Rojac) e la
+  comunicazione dei pasti non funzionava: l'unico segnale era un
+  `console.error` nei log di Vercel e, a schermo, «Ricarica la pagina».
+- **Promemoria automatico**: sulle PR che toccano `supabase/migrations/**`
+  il workflow `.github/workflows/promemoria-migration.yml` pubblica (una
+  sola volta per PR) un commento con questi passi. Non ha secret, non si collega a
+  nessun database, non applica nulla: è solo un avviso.
+- **Procedura (solo Matteo, subito dopo il merge)**, sempre con
+  `--project-ref <ref-produzione>` esplicito:
+  1. `supabase db push --project-ref <ref-produzione> --dry-run`: elenca
+     cosa verrebbe applicato, senza modificare nulla. Deve elencare
+     **solo** le migration della PR appena mergiata.
+  2. `supabase db push --project-ref <ref-produzione>`: le applica, in
+     ordine di versione, e le registra nello storico.
+  3. `supabase migration list --project-ref <ref-produzione>`: Local e
+     Remote devono coincidere. Poi un dry-run finale deve rispondere
+     «Remote database is up to date».
+  4. Se la PR cambia anche il codice che usa la migration, provare la
+     schermata coinvolta in produzione.
+- **Mai dal SQL Editor**: `db push` confronta i file in
+  `supabase/migrations/` con la tabella `supabase_migrations.schema_migrations`
+  del DB, non con lo schema reale. Una migration incollata nel SQL Editor
+  esiste nel DB ma non nello storico: il `db push` successivo la considera
+  ancora da applicare (e la riesegue), e `migration list` e `--dry-run`
+  non servono più a scoprire cosa manca. Il 5 ottobre 2026 in produzione lo
+  storico era vuoto (tutte le `0001`–`0059` applicate a mano), quindi il
+  dry-run elencava tutte e 59.
+- **Se qualcuno ha già applicato a mano** (storico fuori allineamento):
+  prima verificare che lo schema contenga davvero quelle migration, poi
+  `supabase migration repair --status applied <versione> --project-ref
+  <ref-produzione>` (più versioni nello stesso comando). Il comando scrive
+  solo nella tabella dello storico, non esegue le migration; si fida di chi
+  lo lancia, quindi non va usato per «far sparire» una migration mancante.
+  Chiudere con `migration list` e un dry-run pulito.
+- **Una migration già applicata non si modifica**: per cambiare qualcosa si
+  scrive un file nuovo. Un file si può correggere solo se non è stato
+  ancora applicato in nessun ambiente.
+
 ### Rilasci e tag (issue #32)
 - **Cosa succede da solo**: a ogni merge su `main` che cambia `version` in
   `package.json` (cioè ogni PR, vedi bump di versione in CLAUDE.md), il
