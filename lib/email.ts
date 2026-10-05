@@ -17,6 +17,13 @@ export function destinatarioNotifiche(): string {
   return process.env.REPORT_EMAIL_DESTINATARIO || DESTINATARIO_NOTIFICHE_DEFAULT;
 }
 
+// Indirizzo di Rojac (la mensa esterna) per la mail mensile dei pasti
+// (specs/61): per ora solo da variabile d'ambiente, mai da interfaccia.
+// null se non configurato: chi chiama deve avvisare invece di inviare.
+export function destinatarioRojac(): string | null {
+  return process.env.ROJAC_EMAIL_DESTINATARIO?.trim() || null;
+}
+
 export async function inviaEmail({
   a,
   cc,

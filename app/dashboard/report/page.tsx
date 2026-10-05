@@ -5,6 +5,9 @@ import { requireStaff } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
 import { rigaComunicazione, totalePasti, type ComunicazionePasto } from '@/lib/comunicazionePasti';
+import { meseDaData, oggi } from '@/lib/date';
+import { meseInviabileRojac } from '@/lib/emailRojac';
+import { BoxEmailRojac } from './BoxEmailRojac';
 
 export const dynamic = 'force-dynamic';
 
@@ -201,6 +204,10 @@ export default async function ReportPage({
             </ul>
             <p className="mt-2 text-sm font-semibold text-amber-900">Totale del periodo: {totaleComunicazioni} pasti</p>
           </div>
+        )}
+
+        {ruolo === 'admin' && tipo === 'mensile' && meseInviabileRojac(periodoAttuale, meseDaData(oggi())) && (
+          <BoxEmailRojac supabase={supabase} mese={periodoAttuale} />
         )}
       </main>
     </NavHeader>
