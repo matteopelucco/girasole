@@ -12,6 +12,7 @@ const MODELLO_DI_RIPIEGO = { oggetto: 'Pasti {{mese}}', corpo: 'Pasti {{mese}}: 
 // sessione dell'utente (RLS): pensato per l'admin. Nessuna logica di
 // calcolo qui (è in lib/emailRojac.ts, pura e testata): solo letture,
 // quindi coperto da e2e. Condiviso da pagina Report e azione di invio.
+// grant-check: authenticated
 export async function caricaDatiEmailRojac(
   supabase: SupabaseClient,
   mese: string
