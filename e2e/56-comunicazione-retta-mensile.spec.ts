@@ -192,11 +192,13 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveCount(0);
   });
 
-  test('un bambino senza presenze registrate il mese precedente ha conguaglio pasti zero', async ({ page }) => {
-    // Il calcolo completo (conguaglio negativo proporzionale ai giorni
-    // di assenza) è coperto da unit test puri in
-    // lib/comunicazioneRetta.test.ts — qui verifichiamo solo che un
-    // bambino nuovo, senza presenze pregresse, non generi un conguaglio.
+  test('il conguaglio pasti è la differenza tra pasti potenziali ed effettivi del mese precedente', async ({ page }) => {
+    // Il calcolo completo (potenziali − effettivi, zero se uguali, mai
+    // un addebito) è coperto da unit test puri in
+    // lib/comunicazioneRetta.test.ts — qui verifichiamo solo il
+    // collegamento con i dati: un bambino nuovo, senza nessun pasto "Sì"
+    // il mese precedente, ha come conguaglio l'intero importo dei pasti
+    // potenziali indicati nell'intestazione.
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-${Date.now()}@example.com`,
       prezzoMensile: '200',
@@ -204,8 +206,14 @@ test.describe('56 — Comunicazione retta mensile', () => {
     });
 
     await page.goto('/admin/rette');
+    const testoIntestazione = await page.getByText(/Pasti potenziali del mese precedente \(giorni di apertura\): \d+/).textContent();
+    const pastiPotenziali = Number(testoIntestazione?.match(/apertura\): (\d+)/)?.[1]);
+    expect(pastiPotenziali).toBeGreaterThan(0);
+
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveValue('0');
+    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveValue(
+      String(-pastiPotenziali * 5)
+    );
   });
 
   test("l'email a cui verrà inviata la comunicazione compare sotto il nome del bambino", async ({ page }) => {

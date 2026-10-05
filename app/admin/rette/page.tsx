@@ -262,20 +262,34 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
       .order('cognome');
     const bambinoIds = (bambini ?? []).map((b) => b.id);
 
-    const [{ data: costi }, { data: presenzeAssenza }, { data: comunicazioni }, { data: creditiDebiti }, { data: template }, chiusure] =
+    // Pasti effettivi del mese precedente (specs/56, conguaglio pasti):
+    // le righe `pasti` con mangiato = 'si'. Lette a pagine perché il tetto
+    // di righe per richiesta di PostgREST (1000) troncherebbe in silenzio
+    // un mese con tanti bambini e darebbe un conguaglio sbagliato.
+    async function pastiEffettiviMese() {
+      const righe: { bambino_id: string }[] = [];
+      for (let da = 0; ; da += 1000) {
+        const { data } = await supabase
+          .from('pasti')
+          .select('bambino_id')
+          .in('bambino_id', bambinoIds)
+          .gte('data', primoGiornoMese(mesePrecedenteValore))
+          .lte('data', ultimoGiornoMese(mesePrecedenteValore))
+          .eq('mangiato', 'si')
+          .order('id')
+          .range(da, da + 999);
+        righe.push(...(data ?? []));
+        if ((data?.length ?? 0) < 1000) break;
+      }
+      return { data: righe };
+    }
+
+    const [{ data: costi }, { data: pastiEffettivi }, { data: comunicazioni }, { data: creditiDebiti }, { data: template }, chiusure] =
       await Promise.all([
         bambinoIds.length
           ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
-        bambinoIds.length
-          ? supabase
-              .from('presenze')
-              .select('bambino_id')
-              .in('bambino_id', bambinoIds)
-              .gte('data', primoGiornoMese(mesePrecedenteValore))
-              .lte('data', ultimoGiornoMese(mesePrecedenteValore))
-              .in('stato', ['assente', 'malattia'])
-          : Promise.resolve({ data: [] }),
+        bambinoIds.length ? pastiEffettiviMese() : Promise.resolve({ data: [] }),
         bambinoIds.length
           ? supabase.from('comunicazioni_retta').select('*').eq('mese', meseVisualizzato).in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
@@ -302,14 +316,18 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
     const creditoDebitoPerBambino = new Map(
       (creditiDebiti ?? []).map((c) => [c.bambino_id, { importo: Number(c.importo), nota: c.nota }])
     );
-    const assenzePerBambino = new Map<string, number>();
-    for (const riga of presenzeAssenza ?? []) {
-      assenzePerBambino.set(riga.bambino_id, (assenzePerBambino.get(riga.bambino_id) ?? 0) + 1);
+    // Pasti potenziali: giorni di servizio pasto del mese precedente,
+    // pagati in anticipo (stesso calendario per tutti i bambini).
+    const pastiPotenziali = giorniAperturaMese(mesePrecedenteValore, chiusure);
+    const pastiEffettiviPerBambino = new Map<string, number>();
+    for (const riga of pastiEffettivi ?? []) {
+      pastiEffettiviPerBambino.set(riga.bambino_id, (pastiEffettiviPerBambino.get(riga.bambino_id) ?? 0) + 1);
     }
 
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
-        Giorni di apertura stimati questo mese: {giorniApertura}. Conguaglio pasti, pre-asilo, post-asilo, costi
+        Giorni di apertura stimati questo mese: {giorniApertura}. Pasti potenziali del mese precedente (giorni di
+        apertura): {pastiPotenziali}. Conguaglio pasti, pre-asilo, post-asilo, costi
         extra e relative note sono modificabili per una correzione ad-hoc (retta, marca da bollo, costo pasti e
         credito/debito no — questi ultimi due si cambiano dalla scheda del bambino); il totale mostrato per i
         bambini da comunicare resta la stima calcolata al caricamento della pagina, non si aggiorna mentre
@@ -358,7 +376,8 @@ export default async function RettePage({ searchParams }: { searchParams: { mese
         prezzoMensile: Number(costiBambino.prezzo_mensile),
         prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
         giorniAperturaMeseCorrente: giorniApertura,
-        giorniAssenzaMesePrecedente: assenzePerBambino.get(bambino.id) ?? 0,
+        pastiPotenzialiMesePrecedente: pastiPotenziali,
+        pastiEffettiviMesePrecedente: pastiEffettiviPerBambino.get(bambino.id) ?? 0,
         marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
         preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
         prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),

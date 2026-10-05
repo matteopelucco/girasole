@@ -84,14 +84,25 @@ Allora l'importo mostrato è (giorni di apertura del mese corrente) ×
 (prezzo del suo buono pasto) — una stima, dato che il mese corrente non
 è ancora trascorso, di sola lettura come retta e marca da bollo
 
-## Scenario: il conguaglio pasti riflette le assenze del mese precedente
-Dato che nel mese precedente il bambino risulta assente o malato in
-alcuni giorni (presenze già registrate e concluse)
+## Scenario: il conguaglio pasti è la differenza tra pasti potenziali ed effettivi del mese precedente
+Dato che i genitori hanno pagato in anticipo, per il mese precedente,
+un pasto per ogni giorno di apertura (i "pasti potenziali": giorni in
+cui c'è il servizio pasto Rojac, cioè weekend e giorni di chiusura
+registrati esclusi) — e che nello stesso mese il bambino ha effettivamente
+mangiato in alcuni giorni (i "pasti effettivi": pasti segnati "Sì",
+specs/14)
 Quando guardo la colonna "Conguaglio pasti mese precedente" di quel
 bambino
-Allora l'importo mostrato è negativo, pari a (giorni di assenza/
-malattia del mese precedente) × (prezzo del suo buono pasto) — un
-rimborso per i pasti stimati ma non consumati
+Allora l'importo mostrato è negativo, pari a
+−((pasti potenziali) − (pasti effettivi)) × (prezzo del suo buono pasto)
+— un rimborso per i pasti pagati e non consumati, qualunque ne sia il
+motivo (assenza, malattia, o presente senza pranzo)
+E se i pasti effettivi uguagliano i potenziali il conguaglio è zero
+E se un bambino non ha nessun pasto "Sì" nel mese precedente il
+conguaglio è l'intero importo pagato in anticipo per quel mese
+E i giorni di apertura del mese precedente (= i pasti potenziali) sono
+indicati nell'intestazione della pagina, accanto a quelli del mese
+corrente
 
 ## Scenario: inserire un costo extra del mese e vederlo nel totale
 Quando scrivo un importo nel campo "Costi extra" di un bambino (ed
@@ -237,7 +248,13 @@ Allora vengo reindirizzato alla dashboard
   registrato (`lib/comunicazioneRetta.ts`, `giorniAperturaMese` — stessa
   regola di `lib/calendarioScolastico.ts`, `isGiornoChiuso`): un unico
   numero, uguale per tutti i bambini (l'asilo ha lo stesso calendario di
-  apertura per tutti).
+  apertura per tutti). Con la stessa funzione sono calcolati i pasti
+  potenziali del mese precedente (conguaglio pasti).
+- I pasti effettivi del mese precedente sono le righe di `pasti` del
+  bambino in quel mese con `mangiato = 'si'`; la presenza (assente/
+  malato/presente) non entra nel calcolo. Il conguaglio non è mai un
+  addebito: se i pasti effettivi superassero i potenziali (es. un pasto
+  segnato in un giorno non considerato di apertura) vale zero.
 - Pre-asilo e post-asilo contano il loro prezzo pieno se richiesti
   (specs/55), 0 se non richiesti: non dipendono dai giorni di apertura
   né dalle presenze effettive.
