@@ -1,9 +1,5 @@
-import Link from 'next/link';
-import { NavHeader } from '@/components/NavHeader';
-import { FormConEsito } from '@/components/FormConEsito';
-import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { PaginaModelloEmail } from '@/components/PaginaModelloEmail';
 import { requireAdmin } from '@/lib/auth';
-import { formattaDataOraItaliana } from '@/lib/date';
 import { aggiornaTemplateEmailRetta } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -35,56 +31,16 @@ export default async function TemplateEmailRettaPage() {
     .maybeSingle();
 
   return (
-    <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
-      <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-        <Link href="/admin/rette" className="text-sm text-stone-600 hover:text-stone-900">
-          ← Torna a Rette
-        </Link>
-
-        <div>
-          <h1 className="text-lg font-medium">Modello email retta</h1>
-          <p className="mt-1 text-sm text-stone-600">
-            Placeholder disponibili (sostituiti con i dati del bambino e del mese al momento dell&apos;invio,
-            importi già formattati in euro):
-          </p>
-          <p className="mt-1 font-mono text-xs text-stone-600">{PLACEHOLDER_DISPONIBILI.join('  ')}</p>
-        </div>
-
-        <FormConEsito
-          action={aggiornaTemplateEmailRetta}
-          className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
-        >
-          <label className="block text-xs text-stone-600">
-            Oggetto
-            <input
-              name="oggetto"
-              required
-              defaultValue={template?.oggetto ?? ''}
-              aria-label="Oggetto"
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
-            />
-          </label>
-          <label className="block text-xs text-stone-600">
-            Corpo
-            <textarea
-              name="corpo"
-              required
-              rows={14}
-              defaultValue={template?.corpo ?? ''}
-              aria-label="Corpo"
-              className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
-            />
-          </label>
-          <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
-            Salva modello
-          </PulsanteInvio>
-          {template?.updated_at && (
-            <p className="text-xs text-stone-500">
-              Ultimo salvataggio: {formattaDataOraItaliana(template.updated_at).replace('_', ' alle ')}
-            </p>
-          )}
-        </FormConEsito>
-      </main>
-    </NavHeader>
+    <PaginaModelloEmail
+      nome={profilo?.nome || user.email || ''}
+      ruolo={profilo?.ruolo ?? null}
+      hrefIndietro="/admin/rette"
+      etichettaIndietro="Torna a Rette"
+      titolo="Modello email retta"
+      descrizione="Placeholder disponibili (sostituiti con i dati del bambino e del mese al momento dell'invio, importi già formattati in euro):"
+      placeholder={PLACEHOLDER_DISPONIBILI}
+      action={aggiornaTemplateEmailRetta}
+      modello={template}
+    />
   );
 }
