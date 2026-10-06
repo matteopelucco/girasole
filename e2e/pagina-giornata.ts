@@ -74,7 +74,8 @@ export function nomeBambinoCard(card: Locator): Locator {
   return card.getByRole('heading', { level: 3 });
 }
 
-// Warning di incoerenza (presente/assente vs pasto, specs/06) nella card.
+// Warning di incoerenza (presente/assente vs pasto, specs/06) nella card o
+// nella riga del report (stessa etichetta).
 export function warningInconsistenza(contenitore: Page | Locator): Locator {
   return contenitore.getByText('Inconsistenza');
 }
@@ -119,12 +120,20 @@ export function bottonePasto(card: Locator, risposta: RispostaPasto): Locator {
 
 // Etichette al posto di Sì/No nella sezione "Pasto" per un bambino assente o
 // malato (specs/10).
-export function etichettaPastoAssente(card: Locator): Locator {
-  return colonnaPasto(card).getByText('🚫 Assente');
+export function etichettaPastoAssente(contenitore: Page | Locator): Locator {
+  return colonnaPasto(contenitore).getByText('🚫 Assente');
 }
 
-export function etichettaPastoMalattia(card: Locator): Locator {
-  return colonnaPasto(card).getByText('🤒 Malattia');
+export function etichettaPastoMalattia(contenitore: Page | Locator): Locator {
+  return colonnaPasto(contenitore).getByText('🤒 Malattia');
+}
+
+// Pulsante "Sì" evidenziato (pasto segnato "sì") nella sezione Pasto: per
+// chi può ancora modificarlo (admin) non è un'etichetta in sola lettura ma
+// il pulsante con la classe di stato attivo (stesso colore di
+// CLASSE_ATTIVO.pastoSi, qui in forma di selettore CSS).
+export function bottonePastoSiSelezionato(contenitore: Page | Locator): Locator {
+  return colonnaPasto(contenitore).locator('button.bg-emerald-700');
 }
 
 // Avviso "Conferma azzeramento" che Assente/Malattia mostrano se c'è un pasto
@@ -138,24 +147,13 @@ export function avvisoConfermaAzzeramento(card: Locator): Locator {
 // Da chiamare dentro un test.
 export async function saltaSeStatoBloccato(
   card: Locator,
-  stato: 'Assente' | 'Malattia'
+  stato: 'Assente' | 'Malattia',
+  conseguenza?: string
 ): Promise<void> {
   test.skip(
     await bottonePresenza(card, stato).isDisabled(),
-    `${stato} bloccat${stato === 'Assente' ? 'o' : 'a'} (pasto già comunicato a Rojac)`
+    `${stato} bloccat${stato === 'Assente' ? 'o' : 'a'} (pasto già comunicato a Rojac)${conseguenza ? `: ${conseguenza}` : ''}`
   );
-}
-
-// Card del primo bambino la cui colonna indicata contiene il pulsante
-// `nomePulsante` (es. la prima card con "Sì" ancora disponibile).
-export function primaCardConPulsante(page: Page, colonna: Colonna, nomePulsante: string): Locator {
-  return cardBambini(page)
-    .filter({
-      has: page
-        .getByRole('group', { name: colonna, exact: true })
-        .getByRole('button', { name: nomePulsante, exact: true }),
-    })
-    .first();
 }
 
 // Card del bambino fixture, ma salta il test se nella sua colonna `colonna`
@@ -194,8 +192,15 @@ export function titoloGiornata(page: Page): Locator {
 }
 
 // Card/link "Presenze e pasti" nella dashboard (specs/12).
-export function linkGiornata(page: Page): Locator {
+export function linkApriGiornata(page: Page): Locator {
   return page.getByRole('link', { name: NOME_PAGINA_GIORNATA });
+}
+
+// I vecchi link separati "Presenze" e "Pasti" della dashboard (specs/12), ora
+// unificati in "Presenze e pasti": per verificare che non ci siano più. Nome
+// esatto, altrimenti "Presenze" combacerebbe anche con "Presenze e pasti".
+export function linkSeparato(page: Page, nome: 'Presenze' | 'Pasti'): Locator {
+  return page.getByRole('link', { name: nome, exact: true });
 }
 
 // Intestazione di un gruppo di bambini ("Sezione ...").

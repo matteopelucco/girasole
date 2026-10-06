@@ -32,11 +32,17 @@ import {
   statoAutenticazione,
 } from './helpers';
 import {
+  CLASSE_ATTIVO,
   apriGiornata,
+  bottonePasto,
+  bottonePresenza,
   cardBambino,
-  colonnaPasto,
+  cardConPulsante,
   colonnaPresenza,
+  etichettaPastoAssente,
+  saltaSeStatoBloccato,
   segnaAssenteOMalattia,
+  warningInconsistenza,
 } from './pagina-giornata';
 
 // Stessa formattazione di lib/date.ts:formattaDataItaliana, per
@@ -78,18 +84,13 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
     test('nessun warning su un bambino con pasto "sì" coerente', async ({ page }) => {
       await apriGiornata(page, dataOggiRoma());
 
-      const card = cardBambino(page, bambino!);
-      await expect(card).toBeVisible();
-      test.skip(
-        (await colonnaPasto(card).getByRole('button', { name: 'Sì', exact: true }).count()) === 0,
-        'nessun pulsante Sì/No disponibile (es. pasti già comunicati, giorno di chiusura)'
-      );
+      const card = await cardConPulsante(page, bambino!, 'Pasto', 'Sì');
 
       // Base coerente: presente con pasto "sì".
-      await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
-      await clickEAttendiAzione(page, colonnaPasto(card).getByRole('button', { name: 'Sì' }));
-      await expect(colonnaPasto(card).getByRole('button', { name: 'Sì' })).toHaveClass(/bg-emerald-700/);
-      await expect(card.getByText('Inconsistenza')).toHaveCount(0);
+      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await clickEAttendiAzione(page, bottonePasto(card, 'Sì'));
+      await expect(bottonePasto(card, 'Sì')).toHaveClass(CLASSE_ATTIVO.pastoSi);
+      await expect(warningInconsistenza(card)).toHaveCount(0);
       baseCoerentePronta = true;
 
       await nessunaViolazioneA11yGrave(page);
@@ -108,13 +109,9 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
         await apriGiornata(paginaAssistente, dataOggiRoma());
         const cardAssistente = cardBambino(paginaAssistente, bambino!);
         await expect(cardAssistente).toBeVisible();
-        const presenzaAssistente = colonnaPresenza(cardAssistente);
-        test.skip(
-          await presenzaAssistente.getByRole('button', { name: 'Assente' }).isDisabled(),
-          'Assente bloccato (pasto già comunicato a Rojac): incoerenza non più raggiungibile'
-        );
-        await segnaAssenteOMalattia(paginaAssistente, presenzaAssistente, 'Assente');
-        await expect(presenzaAssistente.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+        await saltaSeStatoBloccato(cardAssistente, 'Assente', 'incoerenza non più raggiungibile');
+        await segnaAssenteOMalattia(paginaAssistente, colonnaPresenza(cardAssistente), 'Assente');
+        await expect(bottonePresenza(cardAssistente, 'Assente')).toHaveClass(CLASSE_ATTIVO.assente);
       } finally {
         await contestoAssistente.close();
       }
@@ -123,8 +120,8 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       // intestazione, e la colonna Pasto mostra l'etichetta "Assente".
       await apriGiornata(page, dataOggiRoma());
       const card = cardBambino(page, bambino!);
-      await expect(card.getByText('Inconsistenza')).toBeVisible();
-      await expect(colonnaPasto(card).getByText('🚫 Assente')).toBeVisible();
+      await expect(warningInconsistenza(card)).toBeVisible();
+      await expect(etichettaPastoAssente(card)).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
 
@@ -135,7 +132,7 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       const riga = page.locator('tr', { hasText: bambino!.cognome }).first();
       await expect(riga).toBeVisible();
 
-      await expect(riga.getByText('Inconsistenza')).toBeVisible();
+      await expect(warningInconsistenza(riga)).toBeVisible();
     });
 
     test('il warning compare nel drill-down del giorno specifico (report mensile)', async ({ page }) => {
@@ -151,7 +148,7 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       const rigaOggi = page.locator('tr', { hasText: dataOggiFormattata() });
       await expect(rigaOggi.getByText('Assente')).toBeVisible();
       await expect(rigaOggi.getByText('Sì')).toBeVisible();
-      await expect(rigaOggi.getByText('Inconsistenza')).toBeVisible();
+      await expect(warningInconsistenza(rigaOggi)).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -163,8 +160,8 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
 
       await apriGiornata(page, dataOggiRoma());
       const card = cardBambino(page, bambino!);
-      await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
-      await expect(card.getByText('Inconsistenza')).toHaveCount(0);
+      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await expect(warningInconsistenza(card)).toHaveCount(0);
     });
   });
 });

@@ -1,7 +1,7 @@
 // Requisito: specs/01 - ux.md
 import { test, expect, type Page } from '@playwright/test';
 import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
-import { colonnaPasto } from './pagina-giornata';
+import { colonnaPasto, linkApriGiornata } from './pagina-giornata';
 
 const MOBILE = { width: 375, height: 812 }; // priorità dichiarata nel requisito
 
@@ -36,7 +36,7 @@ test.describe('01 — UX/UI', () => {
       // Niente selettore di data in dashboard (specs/12): "Presenze e
       // pasti" è raggiungibile con un solo tap sulla sua scheda.
       await expect(page.getByLabel('Data')).toHaveCount(0);
-      await expect(page.getByRole('link', { name: 'Presenze e pasti' })).toBeVisible();
+      await expect(linkApriGiornata(page)).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -99,7 +99,7 @@ test.describe('01 — UX/UI', () => {
       const barra = page.getByRole('status', { name: 'Caricamento in corso' });
       await expect(barra).toHaveCount(0);
 
-      const linkGiornata = page.getByRole('link', { name: 'Presenze e pasti' });
+      const linkGiornata = linkApriGiornata(page);
       test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
 
       // Il click prima dell'idratazione sarebbe una navigazione nativa a

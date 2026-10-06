@@ -1,9 +1,16 @@
 // Requisito: specs/12 - dashboard-maestre.md
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
-import { cardBambini } from './pagina-giornata';
-
-const NOME_CARD = 'Presenze e pasti';
+import {
+  cardBambini,
+  conteggioRiepilogo,
+  linkApriGiornata,
+  linkSeparato,
+  riepilogoGiornaliero,
+  titoloComunicazioneRojac,
+  titoloGiornata,
+  titoloSezione,
+} from './pagina-giornata';
 
 test.describe('12 — Dashboard maestra/admin', () => {
   test.describe('come maestra', () => {
@@ -17,15 +24,15 @@ test.describe('12 — Dashboard maestra/admin', () => {
       await page.goto('/dashboard');
       await expect(page.getByLabel('Data')).toHaveCount(0);
 
-      const linkGiornata = page.getByRole('link', { name: NOME_CARD });
+      const linkGiornata = linkApriGiornata(page);
       // Una maestra di test senza sezioni assegnate non vede la card:
       // in quel caso questo scenario non si applica (coperto a parte).
       test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
 
       await expect(linkGiornata).toBeVisible();
       await expect(linkGiornata).toContainText('📋');
-      await expect(page.getByRole('link', { name: 'Presenze', exact: true })).toHaveCount(0);
-      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
+      await expect(linkSeparato(page, 'Presenze')).toHaveCount(0);
+      await expect(linkSeparato(page, 'Pasti')).toHaveCount(0);
       await expect(page.getByRole('link', { name: 'Report' })).toContainText('📊');
 
       await nessunaViolazioneA11yGrave(page);
@@ -35,16 +42,16 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      const linkGiornata = page.getByRole('link', { name: NOME_CARD });
+      const linkGiornata = linkApriGiornata(page);
       test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
       await linkGiornata.click();
       await page.waitForURL(/\/dashboard\/giornata\?/);
-      await expect(page.getByRole('heading', { name: NOME_CARD, exact: true })).toBeVisible();
+      await expect(titoloGiornata(page)).toBeVisible();
 
       // Niente elenco di classi da selezionare: i bambini (se ce ne sono)
       // sono già nella stessa pagina, raggruppati per sezione.
       if ((await cardBambini(page).count()) > 0) {
-        await expect(page.getByRole('heading', { name: /^Sezione / }).first()).toBeVisible();
+        await expect(titoloSezione(page).first()).toBeVisible();
       }
 
       await nessunaViolazioneA11yGrave(page);
@@ -56,14 +63,13 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
 
       await page.goto('/dashboard/giornata');
-      const titolo = page.getByRole('heading', { name: 'Riepilogo giornaliero', exact: true });
-      test.skip((await titolo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
+      const riepilogo = riepilogoGiornaliero(page);
+      test.skip((await riepilogo.count()) === 0, 'nessun bambino in nessuna classe di questo account');
 
-      const riepilogo = page.locator('div', { has: titolo }).last();
-      await expect(riepilogo.getByText(/^Presenti: \d+\/\d+$/)).toBeVisible();
-      await expect(riepilogo.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
-      await expect(riepilogo.getByText(/^Post-asilo: \d+$/)).toBeVisible();
-      await expect(riepilogo.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+      await expect(conteggioRiepilogo(riepilogo, 'Presenti')).toBeVisible();
+      await expect(conteggioRiepilogo(riepilogo, 'Pre-asilo')).toBeVisible();
+      await expect(conteggioRiepilogo(riepilogo, 'Post-asilo')).toBeVisible();
+      await expect(conteggioRiepilogo(riepilogo, 'Pasti')).toBeVisible();
 
       // Compare prima dell'elenco bambini raggruppato, non dopo (specs/12).
       const primaCard = cardBambini(page).first();
@@ -82,18 +88,18 @@ test.describe('12 — Dashboard maestra/admin', () => {
       test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
 
       await page.goto('/dashboard');
-      const linkGiornata = page.getByRole('link', { name: NOME_CARD });
+      const linkGiornata = linkApriGiornata(page);
       test.skip((await linkGiornata.count()) === 0, 'nessuna sezione assegnata a questo account');
 
       await expect(linkGiornata).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Pasti', exact: true })).toHaveCount(0);
+      await expect(linkSeparato(page, 'Pasti')).toHaveCount(0);
       await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
 
       await linkGiornata.click();
       await page.waitForURL(/\/dashboard\/giornata\?/);
-      await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toHaveCount(0);
-      await expect(page.getByRole('heading', { name: 'Comunicazione pasti a Rojac' })).toHaveCount(0);
+      await expect(conteggioRiepilogo(page, 'Pasti')).toHaveCount(0);
+      await expect(titoloComunicazioneRojac(page)).toHaveCount(0);
     });
   });
 
@@ -112,7 +118,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
     await page.waitForURL('/dashboard', { timeout: 20_000 });
 
     await expect(page.getByText('Non hai ancora nessuna sezione assegnata')).toBeVisible();
-    await expect(page.getByRole('link', { name: NOME_CARD })).toHaveCount(0);
+    await expect(linkApriGiornata(page)).toHaveCount(0);
   });
 
   test.describe('come admin', () => {
@@ -129,7 +135,7 @@ test.describe('12 — Dashboard maestra/admin', () => {
       // Le pagine di amministrazione restano raggiungibili dal menu laterale.
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' }).first()).toBeVisible();
       await expect(page.getByRole('link', { name: 'Utenti' }).first()).toBeVisible();
-      await expect(page.getByRole('link', { name: NOME_CARD })).toBeVisible();
+      await expect(linkApriGiornata(page)).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
