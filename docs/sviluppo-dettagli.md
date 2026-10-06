@@ -287,6 +287,18 @@ finché non risulta tutto verde.
   applicata), mai la service_role. Per un gruppo di test in sequenza con
   stato condiviso (06) si usano `creaBambinoFixture`/`eliminaBambinoFixture`
   in `beforeAll`/`afterAll`. Documentazione completa in testa al file.
+- **Utente di staff proprio (issue #230, #172)**: un test che accende un
+  flag di un account (es. "Ore di lavoro", profilo orario) non usa gli
+  account condivisi (admin, maestra) ma la fixture `e2e/fixture-utente.ts`:
+  `creaUtente({ ruolo, abilitato })` crea dalla schermata /admin/maestre un
+  utente con email unica `e2e-fx-...@example.com`, `apriComeUtente(utente)`
+  ne apre la sessione in un contesto a parte, e a fine test (anche se
+  fallisce) l'utente viene eliminato con tutti i suoi dati (ore, monte ore).
+  Nessuna service_role negli e2e. Così gli account condivisi restano sempre
+  "senza abilitazione" e i test che lo verificano sono deterministici. Del
+  progetto `chromium-stato-condiviso` (un solo worker) restano 06, 13 e 16
+  (presenze e pasti di oggi; 16 legge lo stato globale della giornata e non
+  può avere dati propri).
 - **Helper per pagina (issue #249, #173)**: i selettori della schermata
   "Presenze e pasti" stanno in `e2e/pagina-giornata.ts` (card, pulsanti di
   presenza e pasto, nota, riepilogo, banner Rojac, classi di stato); i
