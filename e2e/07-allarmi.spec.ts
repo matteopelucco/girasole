@@ -8,12 +8,15 @@
 // la condizione, il test si salta da solo con `test.skip` invece di
 // fallire o di dare un falso positivo — coerente con la suite esistente.
 //
-// Il test dell'allarme "settimana ore non confermata" modifica
-// temporaneamente l'account admin di test (abilitazione al report ore)
-// e lo ripristina in `finally` — stesso pattern di
-// 17-ore-di-lavoro.spec.ts e 18-report-ore-lavoro.spec.ts.
-import { test, expect } from '@playwright/test';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
+// I test dell'allarme "settimana ore non confermata" lavorano su un utente
+// di staff creato apposta, abilitato alle ore di lavoro ed eliminato a fine
+// test (e2e/fixture-utente.ts, issue #177 e #230): un utente nuovo non ha mai
+// confermato nessuna settimana, quindi il banner c'è sempre, senza dipendere
+// da cosa è stato confermato sull'account condiviso né da altri test che lo
+// abilitano o disabilitano in parallelo. L'account admin condiviso non viene
+// più toccato e "senza abilitazione..." lo usa così com'è.
+import { test, expect } from './fixture-utente';
+import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 function oraRomaAdesso(): number {
   return Number(
@@ -142,92 +145,59 @@ test.describe('07 — Allarmi', () => {
         await expect(page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false })).toHaveCount(0);
       });
 
-      test('abilitata senza aver mai confermato la settimana di riferimento, il banner compare; scompare disabilitando', async ({
-        page,
+      // Utente di staff nuovo, abilitato alle ore: non ha mai confermato
+      // una settimana, quindi il banner c'è sempre. Il caso "non abilitato"
+      // è quello del test precedente (admin condiviso, mai abilitato).
+      test('abilitata senza aver mai confermato la settimana di riferimento, il banner compare con il link alla settimana', async ({
+        creaUtente,
+        apriComeUtente,
       }) => {
-        await page.goto('/admin/maestre');
-        const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await riga.getByLabel('Ore di lavoro').check();
-        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
+        const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+        const page = await apriComeUtente(utente);
 
-        try {
-          await page.goto('/dashboard');
-          const banner = page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false });
-          const presente = (await banner.count()) > 0;
-          test.skip(
-            !presente,
-            'la settimana di riferimento risulta già confermata per questo account (es. verificata manualmente in passato) — nessuna funzione per "sconfermarla" in questa fase'
-          );
-
-          await expect(banner).toBeVisible();
-          // Il banner porta direttamente alla settimana da confermare
-          // (specs/07, specs/18 — navigazione tra settimane).
-          await expect(page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' })).toHaveAttribute(
-            'href',
-            /\/dashboard\/ore-lavoro\?settimana=\d{4}-\d{2}-\d{2}/
-          );
-          await nessunaViolazioneA11yGrave(page);
-        } finally {
-          await page.goto('/admin/maestre');
-          const rigaRipristina = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-          await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-          await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-          await page.waitForTimeout(1000);
-        }
+        await page.goto('/dashboard');
+        await expect(page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false })).toBeVisible();
+        // Il banner porta direttamente alla settimana da confermare
+        // (specs/07, specs/18 — navigazione tra settimane).
+        await expect(page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' })).toHaveAttribute(
+          'href',
+          /\/dashboard\/ore-lavoro\?settimana=\d{4}-\d{2}-\d{2}/
+        );
+        await nessunaViolazioneA11yGrave(page);
       });
 
       test('dal venerdì alle 18:00 la settimana di riferimento è quella corrente, non la precedente', async ({
-        page,
+        creaUtente,
+        apriComeUtente,
       }) => {
         test.skip(!oggiDopoSogliaVenerdiSera(), 'verificabile solo da venerdì 18:00 in poi (fuso Europe/Rome)');
 
-        await page.goto('/admin/maestre');
-        const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await riga.getByLabel('Ore di lavoro').check();
-        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
+        const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+        const page = await apriComeUtente(utente);
 
-        try {
-          await page.goto('/dashboard');
-          const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
-          const presente = (await link.count()) > 0;
-          test.skip(!presente, 'la settimana corrente risulta già confermata per questo account');
-
-          const href = await link.getAttribute('href');
-          const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
-          expect(settimana).toBe(lunediSettimanaRoma());
-        } finally {
-          await page.goto('/admin/maestre');
-          const rigaRipristina = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-          await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-          await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-          await page.waitForTimeout(1000);
-        }
+        await page.goto('/dashboard');
+        const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
+        await expect(link).toBeVisible();
+        const href = await link.getAttribute('href');
+        const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
+        expect(settimana).toBe(lunediSettimanaRoma());
       });
 
-      test('prima di venerdì 18:00 la settimana di riferimento è quella precedente', async ({ page }) => {
+      test('prima di venerdì 18:00 la settimana di riferimento è quella precedente', async ({
+        creaUtente,
+        apriComeUtente,
+      }) => {
         test.skip(oggiDopoSogliaVenerdiSera(), 'verificabile solo da lunedì a venerdì prima delle 18:00 (fuso Europe/Rome)');
 
-        await page.goto('/admin/maestre');
-        const riga = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await riga.getByLabel('Ore di lavoro').check();
-        await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
+        const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+        const page = await apriComeUtente(utente);
 
-        try {
-          await page.goto('/dashboard');
-          const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
-          const presente = (await link.count()) > 0;
-          test.skip(!presente, 'la settimana precedente risulta già confermata per questo account');
-
-          const href = await link.getAttribute('href');
-          const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
-          expect(settimana).toBe(lunediSettimanaPrecedenteRoma());
-        } finally {
-          await page.goto('/admin/maestre');
-          const rigaRipristina = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-          await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-          await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-          await page.waitForTimeout(1000);
-        }
+        await page.goto('/dashboard');
+        const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
+        await expect(link).toBeVisible();
+        const href = await link.getAttribute('href');
+        const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
+        expect(settimana).toBe(lunediSettimanaPrecedenteRoma());
       });
     });
   });
