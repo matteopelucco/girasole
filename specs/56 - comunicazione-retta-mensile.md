@@ -218,6 +218,18 @@ E il template è solo testo (non HTML): per andare a capo basta un a capo
 nel testo, che la mail rende come tale
 E l'oggetto resta testo semplice, senza alcuna trasformazione HTML
 
+## Scenario: una risposta dei genitori arriva all'asilo, non al mittente tecnico
+Dato che una comunicazione di retta viene inviata (massiva o singola)
+Quando il genitore, o l'asilo, risponde alla mail
+Allora la risposta ("Rispondi") va all'indirizzo dell'asilo
+(`destinatarioNotifiche()`, `Reply-To`) e non all'indirizzo mittente
+tecnico (`RESEND_MITTENTE`, es. `girasole@asilosartorio.it`, che non è
+una casella letta da nessuno)
+E i genitori restano in A (TO) e l'asilo in CC, invariati
+E il `Reply-To` vale solo per le comunicazioni ai genitori: le mail
+interne (report notturno specs/52, allarmi specs/07, notifiche
+all'asilo) non lo impostano
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)
@@ -371,7 +383,12 @@ Allora vengo reindirizzato alla dashboard
   d'ambiente `REPORT_EMAIL_DESTINATARIO`), così l'asilo ha sempre una
   copia di ogni comunicazione inviata ai genitori. La CC non è
   visibile né configurabile dall'admin in pagina: è un comportamento
-  fisso, non un'ulteriore voce del template.
+  fisso, non un'ulteriore voce del template. Lo stesso indirizzo è
+  impostato come `Reply-To` (campo `reply_to` dell'API Resend, costruito
+  da `lib/email.ts:costruisciPayloadEmail`): senza, ogni risposta
+  tornerebbe al mittente tecnico e un "Rispondi a tutti" dell'asilo
+  metterebbe il mittente tra i destinatari insieme ai genitori
+  (issue #245).
 - L'invio scrive un log in `comunicazioni_retta` (un solo record per
   bambino e mese, `supabase/migrations/0036_comunicazione_retta.sql`,
   stesso pattern di `pasti_comunicati` per la comunicazione pasti a
