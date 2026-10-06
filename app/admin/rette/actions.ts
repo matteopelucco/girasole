@@ -7,6 +7,7 @@ import {
   calcolaDifferenzaBonifico,
   formattaImporto,
   giorniAperturaMese,
+  corpoEmailHtmlRetta,
   sostituisciPlaceholder,
   type RiepilogoRetta,
 } from '@/lib/comunicazioneRetta';
@@ -165,7 +166,8 @@ async function inviaEPersistiComunicazione(
 ): Promise<boolean> {
   const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra, notaCreditoDebito);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
-  const corpoHtml = sostituisciPlaceholder(template?.corpo ?? '', valoriPlaceholder).replace(/\n/g, '<br>');
+  // Corpo: testo escapato (specs/56); oggetto: testo semplice, non HTML.
+  const corpoHtml = corpoEmailHtmlRetta(template?.corpo ?? '', valoriPlaceholder);
 
   try {
     // specs/55, "più indirizzi email di promemoria, separati da ;": un
