@@ -172,7 +172,15 @@ async function inviaEPersistiComunicazione(
   try {
     // specs/55, "più indirizzi email di promemoria, separati da ;": un
     // solo invio, con tutti gli indirizzi come destinatari.
-    await inviaEmail({ a: emailsDaCampo(email), cc: destinatarioNotifiche(), oggetto, html: corpoHtml });
+    // Reply-To all'asilo: le risposte dei genitori non tornano al mittente
+    // tecnico (specs/56, issue #245).
+    await inviaEmail({
+      a: emailsDaCampo(email),
+      cc: destinatarioNotifiche(),
+      rispondiA: destinatarioNotifiche(),
+      oggetto,
+      html: corpoHtml,
+    });
   } catch (errore) {
     return false;
   }
