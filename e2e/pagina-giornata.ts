@@ -109,9 +109,12 @@ export function bottonePresenza(card: Locator, stato: StatoPresenza): Locator {
   return colonnaPresenza(card).getByRole('button', { name: stato, exact: true });
 }
 
-// Pulsante Sì/No della sezione "Pasto" della card.
+// Pulsante Sì/No della sezione "Pasto" della card. "No" è cercato per nome
+// esatto perché altrimenti combacerebbe con altre etichette che lo contengono
+// (es. "Non ancora segnato"); "Sì" no, come nei test originali (così le
+// asserzioni di assenza, con count 0, restano il più severe possibile).
 export function bottonePasto(card: Locator, risposta: RispostaPasto): Locator {
-  return colonnaPasto(card).getByRole('button', { name: risposta, exact: true });
+  return colonnaPasto(card).getByRole('button', { name: risposta, exact: risposta === 'No' });
 }
 
 // Etichette al posto di Sì/No nella sezione "Pasto" per un bambino assente o
