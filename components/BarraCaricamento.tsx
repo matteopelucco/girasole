@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { eStessaPagina } from '@/lib/navigazione';
 
 // Barra di caricamento in cima alla pagina, riscontro visivo immediato
 // durante la navigazione tra pagine (specs/01 - ux.md): un'app a Server
@@ -17,7 +18,7 @@ export function BarraCaricamento() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [inCorso, setInCorso] = useState(false);
-  const percorsoAttuale = useRef(`${pathname}?${searchParams.toString()}`);
+  const percorsoAttuale = useRef({ pathname, query: searchParams.toString() });
 
   useEffect(() => {
     // In fase di cattura: il <Link> di Next.js chiama preventDefault() nel
@@ -44,7 +45,18 @@ export function BarraCaricamento() {
         return;
       }
       if (destinazione.origin !== window.location.origin) return;
-      if (`${destinazione.pathname}${destinazione.search}` === percorsoAttuale.current) return;
+      // Stessa pagina: nessuna navigazione, quindi nessun cambio di
+      // pathname/query che spenga la barra (issue #241).
+      if (
+        eStessaPagina(
+          destinazione.pathname,
+          destinazione.search,
+          percorsoAttuale.current.pathname,
+          percorsoAttuale.current.query
+        )
+      ) {
+        return;
+      }
 
       setInCorso(true);
     }
@@ -62,7 +74,7 @@ export function BarraCaricamento() {
   }, []);
 
   useEffect(() => {
-    percorsoAttuale.current = `${pathname}?${searchParams.toString()}`;
+    percorsoAttuale.current = { pathname, query: searchParams.toString() };
     setInCorso(false);
   }, [pathname, searchParams]);
 

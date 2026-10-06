@@ -66,7 +66,25 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
   return voci;
 }
 
-export type VoceMenuConStato = VoceMenu & { attivo: boolean };
+// Vero se la destinazione di un link coincide con la pagina corrente
+// (stesso percorso e stessa query): in quel caso non c'è navigazione e la
+// barra di caricamento non deve partire (issue #241). La query si accetta
+// con o senza "?" iniziale (`URL.search` lo include, `searchParams.toString()`
+// no), così "/dashboard" e "/dashboard?" risultano uguali.
+export function eStessaPagina(
+  pathnameDestinazione: string,
+  queryDestinazione: string,
+  pathnameCorrente: string,
+  queryCorrente: string
+): boolean {
+  const senzaPunto = (q: string) => (q.startsWith('?') ? q.slice(1) : q);
+  return (
+    pathnameDestinazione === pathnameCorrente &&
+    senzaPunto(queryDestinazione) === senzaPunto(queryCorrente)
+  );
+}
+
+export type VoceMenuConStato =VoceMenu & { attivo: boolean };
 export type GruppoMenuConStato = Omit<GruppoMenu, 'figli'> & { figli: VoceMenuConStato[] };
 export type ElementoMenuConStato = VoceMenuConStato | GruppoMenuConStato;
 
