@@ -11,7 +11,7 @@
 // run parallelo poteva essere il bambino di un altro test, eliminato a metà.
 import { test, expect } from './fixture-bambino';
 import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
-import { apriGiornata, bottonePasto, bottonePresenza, cardConPulsante } from './pagina-giornata';
+import { apriGiornata, bottonePasto, bottonePresenza, cardConPulsante, segnaStato } from './pagina-giornata';
 
 const DATA_TEST = '2019-05-15';
 
@@ -78,10 +78,10 @@ test.describe('57 — Reset giornata', () => {
     const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente');
     // Attendo la risposta della Server Action: con un'attesa fissa il goto
     // successivo poteva interrompere il salvataggio (issue #70).
-    await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+    await segnaStato(page, bottonePresenza(card, 'Presente'));
 
     // Registro anche un pasto, stessa data e stesso bambino.
-    await clickEAttendiAzione(page, bottonePasto(card, 'Sì'));
+    await segnaStato(page, bottonePasto(card, 'Sì'));
 
     await page.goto(`/admin/reset-giornata?data=${DATA_TEST}`);
     await expect(page.getByText(/^[1-9]\d* presenze$/)).toBeVisible();

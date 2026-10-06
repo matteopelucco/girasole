@@ -12,7 +12,6 @@
 // nella schermata unica "Presenze e pasti" (specs/10).
 import { test, expect, creaBambinoFixture, eliminaBambinoFixture } from './fixture-bambino';
 import {
-  clickEAttendiAzione,
   dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
@@ -34,6 +33,7 @@ import {
   etichettaPastoMalattia,
   saltaSeStatoBloccato,
   segnaAssenteOMalattia,
+  segnaStato,
   titoloGiornata,
   titoloSezione,
 } from './pagina-giornata';
@@ -87,7 +87,7 @@ test.describe('14 — Segna pasto', () => {
       const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
 
       const bottoneSi = bottonePasto(card, 'Sì');
-      await clickEAttendiAzione(page, bottoneSi);
+      await segnaStato(page, bottoneSi);
       await expect(bottoneSi).toHaveClass(CLASSE_ATTIVO.pastoSi);
     });
 
@@ -95,7 +95,7 @@ test.describe('14 — Segna pasto', () => {
       const card = await cardConPulsante(page, bambino, 'Pasto', 'No');
 
       const bottoneNo = bottonePasto(card, 'No');
-      await clickEAttendiAzione(page, bottoneNo);
+      await segnaStato(page, bottoneNo);
       await expect(bottoneNo).toHaveClass(CLASSE_ATTIVO.pastoNo);
       // Stesso bug del pulsante "Assente" (vedi 13-segna-presenza.spec.ts):
       // verifico il colore reale, non solo il nome della classe.
@@ -110,7 +110,7 @@ test.describe('14 — Segna pasto', () => {
 
       const bottoneSi = bottonePasto(card, 'Sì');
       await expect(bottoneSi).toBeEnabled();
-      await clickEAttendiAzione(page, bottoneSi);
+      await segnaStato(page, bottoneSi);
       await expect(bottoneSi).toHaveClass(CLASSE_ATTIVO.pastoSi);
     });
 

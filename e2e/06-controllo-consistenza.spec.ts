@@ -25,7 +25,6 @@ import {
   type BambinoFixture,
 } from './fixture-bambino';
 import {
-  clickEAttendiAzione,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -42,6 +41,7 @@ import {
   etichettaPastoAssente,
   saltaSeStatoBloccato,
   segnaAssenteOMalattia,
+  segnaStato,
   warningInconsistenza,
 } from './pagina-giornata';
 
@@ -87,8 +87,8 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
       const card = await cardConPulsante(page, bambino!, 'Pasto', 'Sì');
 
       // Base coerente: presente con pasto "sì".
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePasto(card, 'Sì'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePasto(card, 'Sì'));
       await expect(bottonePasto(card, 'Sì')).toHaveClass(CLASSE_ATTIVO.pastoSi);
       await expect(warningInconsistenza(card)).toHaveCount(0);
       baseCoerentePronta = true;
@@ -160,7 +160,7 @@ test.describe('06 — Controllo di consistenza dei dati', () => {
 
       await apriGiornata(page, dataOggiRoma());
       const card = cardBambino(page, bambino!);
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(warningInconsistenza(card)).toHaveCount(0);
     });
   });

@@ -39,6 +39,7 @@ import {
   etichettaPastoAssente,
   saltaSeStatoBloccato,
   segnaAssenteOMalattia,
+  segnaStato,
   titoloSezione,
   warningInconsistenza,
 } from './pagina-giornata';
@@ -66,7 +67,7 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente');
 
       const bottonePresente = bottonePresenza(card, 'Presente');
-      await clickEAttendiAzione(page, bottonePresente);
+      await segnaStato(page, bottonePresente);
 
       await expect(bottonePresente).toHaveClass(CLASSE_ATTIVO.presente);
     });
@@ -100,7 +101,7 @@ test.describe('13 — Segna presenza', () => {
       // Serve uno stato già segnato: "Salva nota" richiede un record di
       // presenza esistente. Aspetto la fine di ciascun salvataggio: il
       // reload annullerebbe il salvataggio della nota (issue #70).
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePresenza(card, 'Presente')).toHaveClass(CLASSE_ATTIVO.presente);
 
       await campoNota(card).fill('entra alle 9:03');
@@ -119,7 +120,7 @@ test.describe('13 — Segna presenza', () => {
       const presenza = colonnaPresenza(card);
       await saltaSeStatoBloccato(card, 'Malattia');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePresenza(card, 'Presente')).toHaveClass(CLASSE_ATTIVO.presente);
 
       // Ricarico e correggo in malattia: se l'upsert funziona resta un
@@ -146,8 +147,8 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
       await saltaSeStatoBloccato(card, 'Assente');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
       await expect(bottonePresenza(card, 'Pre-asilo')).toHaveClass(CLASSE_ATTIVO.preAsilo);
 
       await bottonePresenza(card, 'Assente').click();
@@ -170,8 +171,8 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
       await saltaSeStatoBloccato(card, 'Assente');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePasto(card, 'Sì'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePasto(card, 'Sì'));
       await expect(bottonePasto(card, 'Sì')).toHaveClass(CLASSE_ATTIVO.pastoSi);
 
       await bottonePresenza(card, 'Assente').click();
@@ -190,7 +191,7 @@ test.describe('13 — Segna presenza', () => {
       await expect(campoNota(card)).toHaveValue('influenza');
 
       // Tornato presente, il pasto è "no" (azzerato), non più "sì".
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePasto(card, 'No')).toHaveClass(CLASSE_ATTIVO.pastoNo);
       await expect(bottonePasto(card, 'Sì')).not.toHaveClass(CLASSE_ATTIVO.pastoSi);
     });
@@ -199,13 +200,13 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Pasto', 'No');
       await saltaSeStatoBloccato(card, 'Malattia');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePasto(card, 'No'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePasto(card, 'No'));
       await expect(bottonePasto(card, 'No')).toHaveClass(CLASSE_ATTIVO.pastoNo);
 
       const bottoneMalattia = bottonePresenza(card, 'Malattia');
       await expect(bottoneMalattia).not.toHaveAttribute('aria-expanded');
-      await clickEAttendiAzione(page, bottoneMalattia);
+      await segnaStato(page, bottoneMalattia);
       await expect(bottoneMalattia).toHaveClass(CLASSE_ATTIVO.malattia);
       await expect(avvisoConfermaAzzeramento(card)).toHaveCount(0);
     });
@@ -230,9 +231,9 @@ test.describe('13 — Segna presenza', () => {
 
       // Base nota: "Presente" azzera pre/post-asilo, così il click sotto
       // attiva (e non disattiva) il toggle.
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       const bottonePreAsilo = bottonePresenza(card, 'Pre-asilo');
-      await clickEAttendiAzione(page, bottonePreAsilo);
+      await segnaStato(page, bottonePreAsilo);
 
       await expect(bottonePreAsilo).toHaveClass(CLASSE_ATTIVO.preAsilo);
       await expect(bottonePresenza(card, 'Presente')).toHaveClass(CLASSE_ATTIVO.presente);
@@ -243,12 +244,12 @@ test.describe('13 — Segna presenza', () => {
 
       // Riparte da una base nota (nessun pre/post-asilo attivo): un
       // secondo click su un toggle già attivo lo disattiverebbe.
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePresenza(card, 'Presente')).toHaveClass(CLASSE_ATTIVO.presente);
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
       const bottonePostAsilo = bottonePresenza(card, 'Post-asilo');
-      await clickEAttendiAzione(page, bottonePostAsilo);
+      await segnaStato(page, bottonePostAsilo);
 
       await expect(bottonePresenza(card, 'Pre-asilo')).toHaveClass(CLASSE_ATTIVO.preAsilo);
       await expect(bottonePostAsilo).toHaveClass(CLASSE_ATTIVO.postAsilo);
@@ -257,9 +258,9 @@ test.describe('13 — Segna presenza', () => {
     test('ripremere pre-asilo lo disattiva, restando presente', async ({ page, bambino }) => {
       const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       const bottonePreAsilo = bottonePresenza(card, 'Pre-asilo');
-      await clickEAttendiAzione(page, bottonePreAsilo);
+      await segnaStato(page, bottonePreAsilo);
       await expect(bottonePreAsilo).toHaveClass(CLASSE_ATTIVO.preAsilo);
 
       await clickEAttendiAzione(page, bottonePreAsilo);
@@ -272,8 +273,8 @@ test.describe('13 — Segna presenza', () => {
       const presenza = colonnaPresenza(card);
       await saltaSeStatoBloccato(card, 'Assente');
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
       await expect(bottonePresenza(card, 'Pre-asilo')).toHaveClass(CLASSE_ATTIVO.preAsilo);
 
       // Con pre-asilo attivo, Assente chiede prima conferma (specs/13,
@@ -287,7 +288,7 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
 
       // Base nota: presente, senza pre-asilo né post-asilo.
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePresenza(card, 'Presente')).toHaveClass(CLASSE_ATTIVO.presente);
       await page.reload();
 
@@ -355,7 +356,7 @@ test.describe('13 — Segna presenza', () => {
       const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente');
 
       const bottonePresente = bottonePresenza(card, 'Presente');
-      await clickEAttendiAzione(page, bottonePresente);
+      await segnaStato(page, bottonePresente);
 
       await expect(bottonePresente).toHaveClass(CLASSE_ATTIVO.presente);
     });
@@ -372,7 +373,7 @@ test.describe('13 — Segna presenza', () => {
 
       await expect(avvisoSolaLettura(page)).toHaveCount(0);
       const bottonePresente = bottonePresenza(card, 'Presente');
-      await clickEAttendiAzione(page, bottonePresente);
+      await segnaStato(page, bottonePresente);
       await expect(bottonePresente).toHaveClass(CLASSE_ATTIVO.presente);
     });
   });

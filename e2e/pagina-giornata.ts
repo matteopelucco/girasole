@@ -273,13 +273,29 @@ export function bottoneConfermaPasti(page: Page): Locator {
 
 // --- Azioni -----------------------------------------------------------------
 
+// Clicca un pulsante di stato (Presente, Pre-asilo, Sì, ...) per impostarlo e
+// attende che la schermata lo mostri selezionato (`aria-pressed`). Non basta
+// la risposta della Server Action (clickEAttendiAzione): il pulsante
+// successivo porta con sé, legata alla Server Action, la riga di presenza che
+// la pagina aveva al momento del render, e l'app la confronta con il database
+// (controllo di concorrenza ottimistica, lib/presenza.ts); un click subito
+// dopo la risposta, prima che la pagina si sia aggiornata, la trova superata e
+// viene rifiutato ("I dati di questo bambino sono cambiati"). Da usare per i
+// passaggi di preparazione (non per spegnere un toggle già acceso, né per i
+// click che devono essere rifiutati).
+export async function segnaStato(page: Page, bottone: Locator): Promise<void> {
+  await clickEAttendiAzione(page, bottone);
+  await expect(bottone).toHaveAttribute('aria-pressed', 'true');
+}
+
 // Segna Assente o Malattia nella sezione "Presenza" `presenza` di una card
 // (specs/13). Se il bambino ha un pasto "sì" o un pre/post-asilo già
 // segnati, il pulsante non salva subito ma apre l'avviso di conferma
 // (`aria-expanded` presente, issue #186): in quel caso conferma con
 // "Conferma e azzera". Gli altri test condividono lo stesso stato dei
 // bambini, quindi non sanno a priori se serva la conferma. Attende la
-// risposta della Server Action, come clickEAttendiAzione.
+// risposta della Server Action e che lo stato risulti selezionato, come
+// segnaStato.
 export async function segnaAssenteOMalattia(
   page: Page,
   presenza: Locator,
@@ -287,9 +303,10 @@ export async function segnaAssenteOMalattia(
 ): Promise<void> {
   const bottone = presenza.getByRole('button', { name: stato });
   if ((await bottone.getAttribute('aria-expanded')) === null) {
-    await clickEAttendiAzione(page, bottone);
+    await segnaStato(page, bottone);
     return;
   }
   await bottone.click();
   await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Conferma e azzera' }));
+  await expect(bottone).toHaveAttribute('aria-pressed', 'true');
 }

@@ -42,6 +42,7 @@ import {
   riepilogoGiornaliero,
   saltaSeStatoBloccato,
   segnaAssenteOMalattia,
+  segnaStato,
   sezioneNota,
   titoloComunicazioneRojac,
   titoloGiornata,
@@ -324,7 +325,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       expect(new URL(page.url()).pathname).toBe('/dashboard/giornata');
 
       // Ripristino: il bambino torna presente, con Sì/No di nuovo disponibili.
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
       await expect(bottonePasto(card, 'Sì')).toBeVisible();
     });
 

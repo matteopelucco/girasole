@@ -40,7 +40,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixture-bambino';
 import {
-  clickEAttendiAzione,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -63,6 +62,7 @@ import {
   etichettaPastoAssente,
   etichettaPastoMalattia,
   segnaAssenteOMalattia,
+  segnaStato,
 } from './pagina-giornata';
 
 const SPIEGAZIONE_BLOCCO = 'Pasto già comunicato a Rojac';
@@ -149,8 +149,8 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
       const nome = bambino.nomeCompleto;
 
-      await clickEAttendiAzione(page, bottonePresenza(card, 'Presente'));
-      await clickEAttendiAzione(page, bottonePasto(card, 'Sì'));
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await segnaStato(page, bottonePasto(card, 'Sì'));
       await expect(bottonePasto(card, 'Sì')).toHaveClass(CLASSE_ATTIVO.pastoSi);
 
       const contestoAssistente = await browser.newContext({ storageState: statoAutenticazione('assistente') });
@@ -174,7 +174,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
         await contestoAssistente.close();
         // Ripristino: Presente è sempre consentito (anche se il test è fallito a metà).
         await apriGiornata(page, dataOggiRoma());
-        await clickEAttendiAzione(page, bottonePresenza(cardBambino(page, bambino), 'Presente'));
+        await segnaStato(page, bottonePresenza(cardBambino(page, bambino), 'Presente'));
       }
 
       await expect(page.getByRole('list', { name: 'Bambini con dati incoerenti' })).toHaveCount(0);
