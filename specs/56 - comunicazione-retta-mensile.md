@@ -207,6 +207,17 @@ contenuto del form resta lo stesso testo appena scritto, quindi senza
 questa data non ci sarebbe alcun modo di accorgersi che il salvataggio
 è davvero avvenuto
 
+## Scenario: il markup nel template o nei dati è mostrato come testo nella mail
+Dato che il template della mail o un valore di un segnaposto (es. il
+nome del bambino, la nota dei costi extra) contiene caratteri speciali
+HTML, come `<b>`, `<script>`, `&` o virgolette
+Quando apro l'anteprima o invio la comunicazione
+Allora il testo compare in anteprima e nella mail esattamente come
+scritto, come testo semplice: nessun markup viene interpretato
+E il template è solo testo (non HTML): per andare a capo basta un a capo
+nel testo, che la mail rende come tale
+E l'oggetto resta testo semplice, senza alcuna trasformazione HTML
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)

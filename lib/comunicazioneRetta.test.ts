@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calcolaDifferenzaBonifico,
   calcolaRiepilogoRetta,
+  corpoEmailHtmlRetta,
   formattaImporto,
   giorniAperturaMese,
   meseRettaRichiesto,
@@ -252,5 +253,51 @@ describe('formattaImporto', () => {
 
   it('arrotonda a due decimali', () => {
     expect(formattaImporto(15.999)).toBe('16,00');
+  });
+});
+
+describe('corpoEmailHtmlRetta', () => {
+  it('un template e valori normali restano invariati', () => {
+    expect(corpoEmailHtmlRetta('Ciao {{nome}}, totale {{totale}} euro.', { nome: 'Maria', totale: '212,00' })).toBe(
+      'Ciao Maria, totale 212,00 euro.'
+    );
+  });
+
+  it('gli a capo diventano <br>', () => {
+    expect(corpoEmailHtmlRetta('Riga 1\nRiga 2\n\nRiga 4', {})).toBe('Riga 1<br>Riga 2<br><br>Riga 4');
+  });
+
+  it('un nome con <script> viene escapato e non interpretato', () => {
+    expect(corpoEmailHtmlRetta('Ciao {{nome}}', { nome: '<script>alert(1)</script>' })).toBe(
+      'Ciao &lt;script&gt;alert(1)&lt;/script&gt;'
+    );
+  });
+
+  it('escapa & virgolette doppie e apici nei valori', () => {
+    expect(corpoEmailHtmlRetta('{{nome}}', { nome: `Rossi & "Figli" d'Oro` })).toBe(
+      'Rossi &amp; &quot;Figli&quot; d&#39;Oro'
+    );
+  });
+
+  it('escapa anche il markup scritto nel template (il template è solo testo)', () => {
+    expect(corpoEmailHtmlRetta('<b>Ciao</b> <a href="http://x">link</a> {{nome}}', { nome: 'Maria' })).toBe(
+      '&lt;b&gt;Ciao&lt;/b&gt; &lt;a href=&quot;http://x&quot;&gt;link&lt;/a&gt; Maria'
+    );
+  });
+
+  it("gli a capo nei valori diventano <br> dopo l'escaping, senza lasciare markup", () => {
+    expect(corpoEmailHtmlRetta('Nota: {{nota}}', { nota: 'a\n<i>b</i>' })).toBe('Nota: a<br>&lt;i&gt;b&lt;/i&gt;');
+  });
+
+  it("un segnaposto mancante resta com'è, senza errori", () => {
+    expect(corpoEmailHtmlRetta('Ciao {{sconosciuto}}', { nome: 'Maria' })).toBe('Ciao {{sconosciuto}}');
+  });
+
+  it('un valore già con entità viene escapato una sola volta (nessuna doppia sostituzione dei segnaposto)', () => {
+    expect(corpoEmailHtmlRetta('{{nome}}', { nome: '&lt;' })).toBe('&amp;lt;');
+  });
+
+  it('un template vuoto dà un corpo vuoto', () => {
+    expect(corpoEmailHtmlRetta('', { nome: 'Maria' })).toBe('');
   });
 });

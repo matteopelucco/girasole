@@ -1,5 +1,6 @@
 import { giorniInRange, primoGiornoMese, ultimoGiornoMese } from './date';
 import { isGiornoChiuso, type GiornoChiusura } from './calendarioScolastico';
+import { escapeHtml } from './htmlEscape';
 
 // Mese da mostrare/rivedere in "Rette" (specs/56, scenario "navigare a
 // un mese passato per rivedere le comunicazioni inviate"): quello
@@ -123,6 +124,19 @@ export function sostituisciPlaceholder(testo: string, valori: Record<string, str
   return testo.replace(/\{\{(\w+)\}\}/g, (corrispondenza, chiave: string) =>
     Object.prototype.hasOwnProperty.call(valori, chiave) ? valori[chiave] : corrispondenza
   );
+}
+
+// Corpo HTML della mail (specs/56, "il markup nel template o nei dati è
+// mostrato come testo"): il template è solo testo, non HTML. Sostituisce i
+// segnaposto, escapa l'INTERO risultato (template e valori, es. il nome di
+// un bambino: dati non fidati) una sola volta e solo dopo trasforma gli a
+// capo in <br>, così gli unici tag nel corpo sono quelli aggiunti qui.
+// Escapare dopo la sostituzione equivale a escapare template e valori
+// separatamente: i segnaposto `{{chiave}}` non contengono caratteri
+// speciali HTML. L'oggetto della mail NON passa di qui: è testo semplice
+// (campo `subject` di Resend), non HTML. Funzione pura, nessun I/O.
+export function corpoEmailHtmlRetta(template: string, valori: Record<string, string>): string {
+  return escapeHtml(sostituisciPlaceholder(template, valori)).replace(/\n/g, '<br>');
 }
 
 // Formattazione euro condivisa tra la tabella di revisione (UI) e i
