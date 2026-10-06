@@ -25,32 +25,28 @@ Argomenti: `$ARGUMENTS`
    accumulare lavoro che nessuno ha ancora guardato).
 
 ## Fase 1 — Budget: quanti task posso permettermi?
-Usa `mcp__ccd_session_mgmt__get_usage` (caricalo con ToolSearch se differito).
-Restituisce le finestre del piano (5 ore, settimanale) con `percentUsed`, più
-`extraUsage` e la finestra di contesto di questa sessione.
+Usa `mcp__ccd_session_mgmt__get_usage` (caricalo con ToolSearch se differito):
+restituisce `percentUsed` per le finestre del piano, `extraUsage` e il contesto
+della sessione.
 
-**Soglie di sicurezza** (non si sfondano mai, nemmeno se `n` è più alto):
-| Finestra | Tetto di utilizzo |
+| Finestra | Tetto (mai da sfondare, nemmeno con `n` più alto) |
 |---|---|
 | 5 ore | 80 % |
 | Settimanale (tutti i modelli) | 85 % |
-| Extra usage / mensile | non si entra mai in extra usage; se è abilitato e `percentUsed` ≥ 80 %, fermati |
-| Contesto di questa sessione | 60 % (`context.percentUsed`) |
+| Extra usage / mensile | mai entrarci; se abilitato e `percentUsed` ≥ 80 %, fermati |
+| Contesto di questa sessione (`context.percentUsed`) | 60 % |
 
-**Costo per task**: all'inizio stima prudente 10 punti % sulla finestra 5 ore e
-3 punti % su quella settimanale. Dopo ogni task rileggi l'usage e misura la
-differenza reale; tieni come stima il **massimo** osservato (la granularità è
-1 %, e altre sessioni dell'utente possono consumare in parallelo).
-
-**Calcolo di `n`**:
-- `n_budget = min( floor((80 − usato_5h) / costo_5h), floor((85 − usato_sett) / costo_sett) )`
-- `n` passato → `n_effettivo = min(n, n_budget)`; `n` assente → `n_effettivo = min(n_budget, 5)`
-  (5 è il tetto automatico, alzabile solo passando `n` esplicito).
+- **Costo per task**: stima iniziale prudente 10 punti % (5 ore) e 3 punti %
+  (settimanale). Dopo ogni task rileggi l'usage e tieni come stima la
+  differenza **massima** osservata (granularità 1 %, altre sessioni consumano
+  in parallelo).
+- **Formula**: `n_budget = min( floor((80 − usato_5h) / costo_5h), floor((85 − usato_sett) / costo_sett) )`;
+  `n` passato → `n_effettivo = min(n, n_budget)`; `n` assente →
+  `n_effettivo = min(n_budget, 5)` (5 alzabile solo con `n` esplicito).
 - Prima di **ogni** task ricalcola con la stima aggiornata: se il prossimo non
   ci sta, fermati e riporta quando si resetta la finestra (`resetsAt`).
-- Se `get_usage` non è disponibile (non sei nell'app desktop) o risponde
-  `unavailable`: usa `n` se c'è, altrimenti `n = 2`, e dì chiaramente che
-  non hai potuto controllare il budget.
+- `get_usage` non disponibile o `unavailable`: usa `n` se c'è, altrimenti
+  `n = 2`, e dì che non hai potuto controllare il budget.
 
 Dì in una riga il budget letto e l'`n_effettivo` scelto.
 
@@ -60,22 +56,25 @@ criterio di priorità quasi esclusivo. Non sostituirlo con tuoi giudizi di
 comodo (issue "più piccola", tier più economico, numero di issue più basso,
 area che conosci meglio): nel dubbio vince la posizione.
 
-1. Leggi la board (Project 2 dell'utente):
-   `gh project item-list 2 --owner matteopelucco --limit 1000 --format json`
-   (il limite deve restare sopra il numero di item della board, che cresce:
-   con un limite troppo basso le issue `Todo` in fondo non si vedono mai;
-   controlla che `totalCount` sia uguale a `items.length`, altrimenti alza il limite).
-   L'ordine dell'array è il ranking della board. Nell'array sono mescolati
-   Status diversi (`Todo`, `Done`, `Need Info`): filtra prima (punto 2),
-   **poi** numera, così le posizioni 1, 2, 3… sono quelle dei soli candidati,
-   nell'ordine originale.
-2. Tieni solo gli elementi `Issue` aperti con Status **`Todo`**. Scarta:
-   - Status `In Progress`, `Need Info`, `Done`;
+1. Leggi la board (Project 2 dell'utente) **già filtrata**, senza scaricare
+   l'output grezzo:
+   ```
+   gh project item-list 2 --owner matteopelucco --limit 500 --format json --jq '{complete:(.totalCount==(.items|length)), todo:[.items|to_entries[]|select(.value.status=="Todo" and .value.content.type=="Issue")|{pos:.key, n:.value.content.number, t:.value.title, l:.value.labels}]}'
+   ```
+   - L'ordine dell'array della board è il ranking: `pos` (da 0) è l'indice nella
+     board **prima** del filtro e serve per il report; `todo` resta nell'ordine
+     originale, quindi la posizione dei candidati (1, 2, 3…) è quella nella
+     lista `todo`.
+   - `complete` deve essere `true` (`totalCount` == `items.length`); se è
+     `false` la board supera il limite: alzalo (deve restare sopra il numero
+     di item, altrimenti le issue `Todo` in fondo non si vedono mai).
+2. Il filtro tiene già solo le `Issue` con Status **`Todo`** (restano fuori
+   `In Progress`, `Need Info`, `Done` e i `PullRequest`, es. i bump di
+   Dependabot). Dei candidati scarta ancora:
    - label `status:needs-info`, `status:blocked`, `status:in-progress`,
      `status:review` (stanno aspettando qualcuno);
    - issue che hanno già una PR aperta collegata;
-   - issue con "Dipende da #X / Axx" non ancora chiuse;
-   - elementi di tipo `PullRequest` (es. bump di Dependabot): non sono task.
+   - issue con "Dipende da #X / Axx" non ancora chiuse.
 3. **Priorità dei bug nel loro intorno.** Un bug è un'issue con label
    `type:bug` (o `bug`), oppure con titolo che inizia per `fix:` / `fix(`
    (convenzione dei titoli in `CLAUDE.md`; le issue storiche `Bug: …` hanno
@@ -258,5 +257,6 @@ con il riepilogo; altrimenti basta il report.
 - Mai toccare la produzione: nessun `supabase db push`/`link` verso produzione,
   nessun secret nel codice o nei commenti (repo pubblico).
 - Mai dati reali di bambini o genitori, nemmeno nelle fixture.
-- Non leggere `docs/tasks-archivio.md` né `docs/programma-attivita.md` se il task non lo richiede.
+- `docs/tasks-archivio.md` e `docs/programma-attivita.md` non si leggono: sono
+  bloccati da `permissions.deny` in `.claude/settings.json`.
 - In caso di dubbio su cosa è sicuro: scegli `human-in-the-loop` e dillo.

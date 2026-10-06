@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(docs/tasks-archivio.md)",
+      "Read(docs/programma-attivita.md)"
+    ]
+  }
+}
