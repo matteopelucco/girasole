@@ -10,10 +10,10 @@ import { loadEnvConfig } from '@next/env';
 // interrogando. Vedi CLAUDE.md, sezione "Test end-to-end (Playwright)".
 loadEnvConfig(process.cwd());
 
-// File e2e che modificano flag degli account di test condivisi (vedi il
+// File e2e di presenze e pasti di oggi che girano in un solo worker (vedi il
 // progetto 'chromium-stato-condiviso' sotto).
 const FILE_STATO_CONDIVISO =
-  /(06-controllo-consistenza|13-segna-presenza|16-comunicazione-pasti-rojac|17-ore-di-lavoro|18-report-ore-lavoro|19-monte-ore|53-calendario-scolastico)\.spec\.ts/;
+  /(06-controllo-consistenza|13-segna-presenza|16-comunicazione-pasti-rojac)\.spec\.ts/;
 
 export default defineConfig({
   testDir: './e2e',
@@ -68,17 +68,20 @@ export default defineConfig({
       testIgnore: FILE_STATO_CONDIVISO,
     },
     {
-      // 17/18/19 abilitano e disabilitano "Ore di lavoro" sugli stessi
-      // account condivisi (admin, maestra): in parallelo tra loro un test
-      // abilita mentre un altro verifica che l'account NON sia abilitato
-      // (issue #70). 53 crea ed elimina giorni di chiusura, che valgono
-      // per tutto l'asilo. 06/13/16 segnano o leggono presenze e pasti di
-      // oggi: 06 e 13 usano già un bambino proprio (e2e/fixture-bambino.ts)
-      // ma restano qui finché non si verifica che la suite regga senza (issue
-      // #230); 16 legge lo stato globale della giornata (la comunicazione dei
-      // pasti a Rojac è una per tutto l'asilo) e non può avere dati propri.
-      // 10 e 14 usano solo bambini propri (#229) e girano nel progetto
-      // 'chromium'. Un solo worker per questi file, in sequenza.
+      // Restano solo i file di presenze e pasti di oggi. 16 legge lo stato
+      // globale della giornata (la comunicazione dei pasti a Rojac è una per
+      // tutto l'asilo, irreversibile) e non può avere dati propri: i suoi
+      // test che dipendono da "tutti i bambini hanno la presenza" si saltano
+      // se in quel momento un altro test ha un bambino fixture senza
+      // presenza. 06 e 13 usano già un bambino proprio
+      // (e2e/fixture-bambino.ts, #228) ma restano qui, in sequenza con 16,
+      // per non moltiplicare quei salti: si possono togliere quando la CI
+      // mostra che la suite regge (seguito di #230). Tutti gli altri file
+      // lavorano su dati propri e girano nel progetto 'chromium': 10 e 14 su
+      // un bambino proprio (#229), 17, 18, 19 su un utente di staff proprio
+      // al posto dei flag degli account condivisi (e2e/fixture-utente.ts,
+      // #230), 53 su giorni di chiusura lontani nel futuro con note uniche.
+      // Un solo worker, in sequenza.
       name: 'chromium-stato-condiviso',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
