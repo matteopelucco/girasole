@@ -5,7 +5,6 @@
 // nota in 13-segna-presenza.spec.ts.
 import { test, expect, type Page } from '@playwright/test';
 import {
-  cardBambini,
   dataOggiRoma,
   formCreaBambino,
   hasCredenziali,
@@ -14,6 +13,7 @@ import {
   statoAutenticazione,
   clickEAttendiAzione,
 } from './helpers';
+import { cardBambini } from './pagina-giornata';
 
 function gruppoClassiAssegnate(page: Page) {
   return page.locator('#classi-e-bambini-assegnati');

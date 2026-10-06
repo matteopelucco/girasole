@@ -11,28 +11,43 @@ import type { Locator, Page } from '@playwright/test';
 import {
   test,
   expect,
-  cardBambino,
-  cardConPulsante,
   creaBambinoFixture,
   eliminaBambinoFixture,
   type BambinoFixture,
 } from './fixture-bambino';
 import {
-  apriGiornata,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataIeriRoma,
   dataOggiRoma,
-  giornoDiChiusura,
   hasCredenziali,
-  intestazioneCard,
   nessunaViolazioneA11yGrave,
-  nomeBambinoCard,
-  segnaAssenteOMalattia,
-  sezioneNota,
   statoAutenticazione,
 } from './helpers';
+import {
+  type StatoPresenza,
+  apriGiornata,
+  bottonePasto,
+  bottonePresenza,
+  bottoneSalvaNota,
+  campoNota,
+  cardBambino,
+  cardConPulsante,
+  colonnaPasto,
+  colonnaPresenza,
+  conteggioRiepilogo,
+  etichettaPastoAssente,
+  giornoDiChiusura,
+  intestazioneCard,
+  nomeBambinoCard,
+  riepilogoGiornaliero,
+  saltaSeStatoBloccato,
+  segnaAssenteOMalattia,
+  segnaStato,
+  sezioneNota,
+  titoloComunicazioneRojac,
+  titoloGiornata,
+  titoloSezione,
+} from './pagina-giornata';
 
 // Verifica che la pagina non scorra in orizzontale. Se scorre, il
 // messaggio dell'asserzione elenca gli elementi che sporgono oltre il
@@ -138,32 +153,23 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       bambino,
     }) => {
       await apriGiornata(page, dataOggiRoma());
-      await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
+      await expect(titoloGiornata(page)).toBeVisible();
 
-      const card = await cardConPulsante(
-        page,
-        bambino,
-        'Pasto',
-        'Sì',
-        'nessun pulsante Sì/No disponibile (es. pasti già comunicati)'
-      );
+      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
 
       // Il nome è il titolo della card, dentro l'intestazione.
       await expect(intestazioneCard(card).getByRole('heading', { level: 3 })).not.toBeEmpty();
-      const presenza = colonnaPresenza(card);
-      for (const nome of ['Presente', 'Assente', 'Malattia', 'Pre-asilo', 'Post-asilo']) {
-        await expect(presenza.getByRole('button', { name: nome, exact: true })).toBeVisible();
+      for (const nome of ['Presente', 'Assente', 'Malattia', 'Pre-asilo', 'Post-asilo'] as const) {
+        await expect(bottonePresenza(card, nome)).toBeVisible();
       }
 
-      const pasto = colonnaPasto(card);
-      for (const nome of ['Sì', 'No']) {
-        await expect(pasto.getByRole('button', { name: nome, exact: true })).toBeVisible();
+      for (const nome of ['Sì', 'No'] as const) {
+        await expect(bottonePasto(card, nome)).toBeVisible();
       }
       // Una sola nota per card (issue #109), nella sezione "Nota" in
       // fondo (issue #110).
-      const nota = sezioneNota(card);
-      await expect(nota.getByLabel('Nota (opzionale)')).toBeVisible();
-      await expect(nota.getByRole('button', { name: 'Salva nota', exact: true })).toBeVisible();
+      await expect(campoNota(card)).toBeVisible();
+      await expect(bottoneSalvaNota(card)).toBeVisible();
       await expect(card.getByLabel('Nota (opzionale)')).toHaveCount(1);
 
       // Anche da computer (viewport di default, 1280px): una colonna.
@@ -174,17 +180,10 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
 
     test('i pulsanti della sezione Presenza hanno un ordine fisso', async ({ page, bambino }) => {
       await apriGiornata(page, dataOggiRoma());
-      const card = await cardConPulsante(
-        page,
-        bambino,
-        'Presenza',
-        'Pre-asilo',
-        'nessun pulsante di presenza modificabile (giorno di chiusura)'
-      );
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
 
       const presenza = colonnaPresenza(card);
-      const box = async (nome: string) =>
-        riquadro(presenza.getByRole('button', { name: nome, exact: true }));
+      const box = async (nome: StatoPresenza) => riquadro(bottonePresenza(card, nome));
       const [presente, assente, malattia, pre, post] = [
         await box('Presente'),
         await box('Assente'),
@@ -213,15 +212,13 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await apriGiornata(page, dataOggiRoma());
       await expect(cardBambino(page, bambino)).toBeVisible();
 
-      // Il div più interno che contiene il titolo è la card stessa.
-      const titoloRiepilogo = page.getByRole('heading', { name: 'Riepilogo giornaliero', exact: true });
-      const cardRiepilogo = page.locator('div', { has: titoloRiepilogo }).last();
-      const titoloRojac = page.getByRole('heading', { name: 'Comunicazione pasti a Rojac', exact: true });
+      const cardRiepilogo = riepilogoGiornaliero(page);
+      const titoloRojac = titoloComunicazioneRojac(page);
       await expect(titoloRojac).toHaveCount(1);
-      await expect(cardRiepilogo.getByRole('heading', { name: 'Comunicazione pasti a Rojac', exact: true })).toBeVisible();
+      await expect(titoloComunicazioneRojac(cardRiepilogo)).toBeVisible();
 
       // Sotto gli specchietti del riepilogo, non sopra.
-      const yPasti = (await riquadro(cardRiepilogo.getByText(/^Pasti: \d+\/\d+$/))).y;
+      const yPasti = (await riquadro(conteggioRiepilogo(cardRiepilogo, 'Pasti'))).y;
       expect((await riquadro(titoloRojac)).y).toBeGreaterThan(yPasti);
 
       await nessunaViolazioneA11yGrave(page);
@@ -231,9 +228,9 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await apriGiornata(page, dataOggiRoma());
       await expect(cardBambino(page, bambino)).toBeVisible();
 
-      const titoloSezione = page.getByRole('heading', { name: /^Sezione / }).first();
-      await expect(titoloSezione).toBeVisible();
-      const intestazione = titoloSezione.locator('..');
+      const titolo = titoloSezione(page).first();
+      await expect(titolo).toBeVisible();
+      const intestazione = titolo.locator('..');
 
       // Niente bordo, ombra né sfondo da card.
       const stile = await intestazione.evaluate((el) => {
@@ -243,10 +240,10 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       expect(stile).toEqual({ bordo: '0px', ombra: 'none', sfondo: 'rgba(0, 0, 0, 0)' });
 
       // Riassunto testuale sotto il titolo.
-      await expect(intestazione.getByText(/^Presenti: \d+\/\d+$/)).toBeVisible();
-      await expect(intestazione.getByText(/^Pre-asilo: \d+$/)).toBeVisible();
-      await expect(intestazione.getByText(/^Post-asilo: \d+$/)).toBeVisible();
-      await expect(intestazione.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+      await expect(conteggioRiepilogo(intestazione, 'Presenti')).toBeVisible();
+      await expect(conteggioRiepilogo(intestazione, 'Pre-asilo')).toBeVisible();
+      await expect(conteggioRiepilogo(intestazione, 'Post-asilo')).toBeVisible();
+      await expect(conteggioRiepilogo(intestazione, 'Pasti')).toBeVisible();
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -264,7 +261,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
         const [bambinaF, bambinoM, bambinoSenzaSesso] = creati;
 
         await apriGiornata(page, dataOggiRoma());
-        const avatar = (card: Locator, nome: string) => card.locator('header').getByRole('img', { name: nome, exact: true });
+        const avatar = (card: Locator, nome: string) => intestazioneCard(card).getByRole('img', { name: nome, exact: true });
         const femmina = cardBambino(page, bambinaF);
         const maschio = cardBambino(page, bambinoM);
         const senzaSesso = cardBambino(page, bambinoSenzaSesso);
@@ -297,17 +294,16 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
 
     test('lo stato selezionato è evidenziato con un segno di spunta', async ({ page, bambino }) => {
       await apriGiornata(page, dataOggiRoma());
-      const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente', 'nessun bambino segnabile oggi');
-      const presenza = colonnaPresenza(card);
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente');
 
-      const presente = presenza.getByRole('button', { name: 'Presente', exact: true });
+      const presente = bottonePresenza(card, 'Presente');
       if ((await presente.getAttribute('aria-pressed')) !== 'true') {
         await clickEAttendiAzione(page, presente);
       }
       await expect(presente).toHaveAttribute('aria-pressed', 'true');
       await expect(presente).toContainText('✓');
-      for (const nome of ['Assente', 'Malattia']) {
-        const altro = presenza.getByRole('button', { name: nome, exact: true });
+      for (const nome of ['Assente', 'Malattia'] as const) {
+        const altro = bottonePresenza(card, nome);
         if (await altro.isEnabled()) await expect(altro).toHaveAttribute('aria-pressed', 'false');
         await expect(altro).not.toContainText('✓');
       }
@@ -318,36 +314,26 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       bambino,
     }) => {
       await apriGiornata(page, dataOggiRoma());
-      const stessaCard = await cardConPulsante(
-        page,
-        bambino,
-        'Pasto',
-        'Sì',
-        'nessun pulsante Sì/No disponibile (es. pasti già comunicati)'
-      );
-      const presenza = colonnaPresenza(stessaCard);
-      test.skip(
-        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
-        'Assente bloccato (pasto già comunicato a Rojac)'
-      );
+      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
+      const presenza = colonnaPresenza(card);
+      await saltaSeStatoBloccato(card, 'Assente');
 
       await segnaAssenteOMalattia(page, presenza, 'Assente');
 
-      const pasto = colonnaPasto(stessaCard);
-      await expect(pasto.getByText('🚫 Assente')).toBeVisible();
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
+      await expect(etichettaPastoAssente(card)).toBeVisible();
+      await expect(bottonePasto(card, 'Sì')).toHaveCount(0);
       expect(new URL(page.url()).pathname).toBe('/dashboard/giornata');
 
       // Ripristino: il bambino torna presente, con Sì/No di nuovo disponibili.
-      await clickEAttendiAzione(page, presenza.getByRole('button', { name: 'Presente' }));
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toBeVisible();
+      await segnaStato(page, bottonePresenza(card, 'Presente'));
+      await expect(bottonePasto(card, 'Sì')).toBeVisible();
     });
 
     test('le vecchie pagine Presenze e Pasti portano alla schermata unica, per la stessa data', async ({ page }) => {
       const ieri = dataIeriRoma();
       await page.goto(`/dashboard/presenze?data=${ieri}`);
       await page.waitForURL(`/dashboard/giornata?data=${ieri}`);
-      await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
+      await expect(titoloGiornata(page)).toBeVisible();
 
       await page.goto(`/dashboard/pasti?data=${ieri}`);
       await page.waitForURL(`/dashboard/giornata?data=${ieri}`);
@@ -355,7 +341,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       // Senza data: la schermata unica, alla data odierna.
       await page.goto('/dashboard/presenze');
       await page.waitForURL(/\/dashboard\/giornata$/);
-      await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
+      await expect(titoloGiornata(page)).toBeVisible();
     });
   });
 
@@ -372,7 +358,7 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       const card = cardBambino(page, bambino);
       await sezioniUnaSottoLAltra(card);
 
-      const bottonePresente = colonnaPresenza(card).getByRole('button', { name: 'Presente' });
+      const bottonePresente = bottonePresenza(card, 'Presente');
       if ((await bottonePresente.count()) > 0) {
         expect((await riquadro(bottonePresente)).height).toBeGreaterThanOrEqual(44);
       }
@@ -426,8 +412,8 @@ test.describe('10 — Presenze e pasti (schermata unica)', () => {
       await expect(sezioneNota(card)).toBeVisible();
       await expect(colonnaPasto(page)).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Sì', exact: true })).toHaveCount(0);
-      await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toHaveCount(0);
-      await expect(page.getByRole('heading', { name: 'Comunicazione pasti a Rojac' })).toHaveCount(0);
+      await expect(conteggioRiepilogo(page, 'Pasti')).toHaveCount(0);
+      await expect(titoloComunicazioneRojac(page)).toHaveCount(0);
       // Nemmeno nel payload della pagina (HTML + dati RSC incorporati).
       const html = await page.content();
       expect(html).not.toContain('nota_pasto');

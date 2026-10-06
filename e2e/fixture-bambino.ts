@@ -8,7 +8,8 @@
 // con un nome unico, nella sezione fixture, e lo elimina alla fine.
 //
 // COME SI USA.
-//   import { test, expect, cardBambino } from './fixture-bambino';
+//   import { test, expect } from './fixture-bambino';
+//   import { apriGiornata, cardBambino } from './pagina-giornata';
 //
 //   test('...', async ({ page, bambino }) => {
 //     await apriGiornata(page, dataOggiRoma());
@@ -43,7 +44,7 @@
 // scritture passano dalla RLS esattamente come quelle dell'app (policy
 // `bambini_admin_write`). NON si usa mai la service_role key negli e2e.
 // Mai dati reali di bambini, nemmeno qui.
-import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { credenziali } from './helpers';
 
@@ -120,34 +121,6 @@ export async function eliminaBambinoFixture(db: SupabaseClient, id: string): Pro
     await new Promise((r) => setTimeout(r, 500 * tentativo));
   }
   throw new Error(`Pulizia del bambino fixture ${id} non riuscita: ${ultimoErrore}`);
-}
-
-// La card del bambino fixture nella schermata "Presenze e pasti": il suo id
-// (`bambino-<id>`, components della pagina giornata) è univoco, a differenza
-// di un filtro sul testo.
-export function cardBambino(page: Page, bambino: BambinoFixture): Locator {
-  return page.locator(`li#bambino-${bambino.id}`);
-}
-
-// Card del bambino fixture, ma salta il test se nella sua colonna `colonna`
-// ("Presenza" o "Pasto") non c'è il pulsante `pulsante`: giorno di chiusura
-// (specs/53, la card c'è ma senza pulsanti) o pasti già comunicati a Rojac
-// (niente Sì/No). Prima di cercare i pulsanti aspetta la card, così un
-// bambino che non compare fa fallire il test invece di saltarlo.
-export async function cardConPulsante(
-  page: Page,
-  bambino: BambinoFixture,
-  colonna: 'Presenza' | 'Pasto',
-  pulsante: string,
-  motivoSkip: string
-): Promise<Locator> {
-  const card = cardBambino(page, bambino);
-  await expect(card).toBeVisible();
-  const pulsanti = card
-    .getByRole('group', { name: colonna, exact: true })
-    .getByRole('button', { name: pulsante, exact: true });
-  base.skip((await pulsanti.count()) === 0, motivoSkip);
-  return card;
 }
 
 export const test = base.extend<{ bambino: BambinoFixture }, { adminDb: SupabaseClient | null }>({

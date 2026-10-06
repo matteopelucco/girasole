@@ -10,28 +10,33 @@
 //
 // Il pasto si segna dalla sezione "Pasto" della card di ogni bambino
 // nella schermata unica "Presenze e pasti" (specs/10).
+import { test, expect, creaBambinoFixture, eliminaBambinoFixture } from './fixture-bambino';
 import {
-  test,
-  expect,
-  cardBambino,
-  cardConPulsante,
-  creaBambinoFixture,
-  eliminaBambinoFixture,
-} from './fixture-bambino';
-import {
-  apriGiornata,
-  clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
-  segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
-
-const MOTIVO_NIENTE_SI_NO = 'nessun pulsante Sì/No disponibile (es. pasti già comunicati, giorno di chiusura)';
+import {
+  CLASSE_ATTIVO,
+  apriGiornata,
+  avvisoSolaLettura,
+  bottonePasto,
+  bottonePresenza,
+  cardBambino,
+  cardConPulsante,
+  colonnaPasto,
+  colonnaPresenza,
+  conteggioRiepilogo,
+  etichettaPastoAssente,
+  etichettaPastoMalattia,
+  saltaSeStatoBloccato,
+  segnaAssenteOMalattia,
+  segnaStato,
+  titoloGiornata,
+  titoloSezione,
+} from './pagina-giornata';
 
 test.describe('14 — Segna pasto', () => {
   test.describe('come maestra, sulla data odierna', () => {
@@ -46,7 +51,7 @@ test.describe('14 — Segna pasto', () => {
     });
 
     test('la sezione Pasto mostra lo stato pasto di ogni bambino', async ({ page, bambino }) => {
-      await expect(page.getByRole('heading', { name: 'Presenze e pasti', exact: true })).toBeVisible();
+      await expect(titoloGiornata(page)).toBeVisible();
       await expect(colonnaPasto(cardBambino(page, bambino))).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
@@ -54,9 +59,9 @@ test.describe('14 — Segna pasto', () => {
     test('riepilogo pasti della classe', async ({ page }) => {
       // Il riepilogo aggregato (in cima) e quello per sezione condividono
       // lo stesso formato: .first() basta a verificare che compaia.
-      await expect(page.getByText(/^Pasti: \d+\/\d+$/).first()).toBeVisible();
-      const intestazioneSezione = page.getByRole('heading', { name: /^Sezione / }).last().locator('..');
-      await expect(intestazioneSezione.getByText(/^Pasti: \d+\/\d+$/)).toBeVisible();
+      await expect(conteggioRiepilogo(page, 'Pasti').first()).toBeVisible();
+      const intestazioneSezione = titoloSezione(page).last().locator('..');
+      await expect(conteggioRiepilogo(intestazioneSezione, 'Pasti')).toBeVisible();
     });
 
     test("le allergie sono visibili nell'intestazione della card, indipendentemente dallo stato pasto", async ({
@@ -79,19 +84,19 @@ test.describe('14 — Segna pasto', () => {
     });
 
     test('segnare che un bambino ha mangiato', async ({ page, bambino }) => {
-      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì', MOTIVO_NIENTE_SI_NO);
+      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
 
-      const bottoneSi = colonnaPasto(card).getByRole('button', { name: 'Sì' });
-      await clickEAttendiAzione(page, bottoneSi);
-      await expect(bottoneSi).toHaveClass(/bg-emerald-700/);
+      const bottoneSi = bottonePasto(card, 'Sì');
+      await segnaStato(page, bottoneSi);
+      await expect(bottoneSi).toHaveClass(CLASSE_ATTIVO.pastoSi);
     });
 
     test('segnare che un bambino non ha mangiato', async ({ page, bambino }) => {
-      const card = await cardConPulsante(page, bambino, 'Pasto', 'No', MOTIVO_NIENTE_SI_NO);
+      const card = await cardConPulsante(page, bambino, 'Pasto', 'No');
 
-      const bottoneNo = colonnaPasto(card).getByRole('button', { name: 'No', exact: true });
-      await clickEAttendiAzione(page, bottoneNo);
-      await expect(bottoneNo).toHaveClass(/bg-rose-600/);
+      const bottoneNo = bottonePasto(card, 'No');
+      await segnaStato(page, bottoneNo);
+      await expect(bottoneNo).toHaveClass(CLASSE_ATTIVO.pastoNo);
       // Stesso bug del pulsante "Assente" (vedi 13-segna-presenza.spec.ts):
       // verifico il colore reale, non solo il nome della classe.
       await expect(bottoneNo).toHaveCSS('background-color', 'rgb(225, 29, 72)');
@@ -101,67 +106,47 @@ test.describe('14 — Segna pasto', () => {
       page,
       bambino,
     }) => {
-      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì', MOTIVO_NIENTE_SI_NO);
+      const card = await cardConPulsante(page, bambino, 'Pasto', 'Sì');
 
-      const bottoneSi = colonnaPasto(card).getByRole('button', { name: 'Sì' });
+      const bottoneSi = bottonePasto(card, 'Sì');
       await expect(bottoneSi).toBeEnabled();
-      await clickEAttendiAzione(page, bottoneSi);
-      await expect(bottoneSi).toHaveClass(/bg-emerald-700/);
+      await segnaStato(page, bottoneSi);
+      await expect(bottoneSi).toHaveClass(CLASSE_ATTIVO.pastoSi);
     });
 
     test('non posso modificare il pasto di una data diversa da oggi: sola lettura', async ({ page, bambino }) => {
       await apriGiornata(page, dataUltimoGiornoApertoPrimaDiOggi());
       await expect(cardBambino(page, bambino)).toBeVisible();
 
-      await expect(page.getByText('Sola lettura: puoi modificare solo la data di oggi.')).toBeVisible();
+      await expect(avvisoSolaLettura(page)).toBeVisible();
       await expect(page.getByRole('button', { name: 'Sì' })).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
     });
 
     test('un bambino assente non è selezionabile per il pasto', async ({ page, bambino }) => {
-      const card = await cardConPulsante(
-        page,
-        bambino,
-        'Presenza',
-        'Assente',
-        'nessun pulsante di presenza (giorno di chiusura)'
-      );
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Assente');
       const presenza = colonnaPresenza(card);
-      test.skip(
-        await presenza.getByRole('button', { name: 'Assente' }).isDisabled(),
-        'Assente bloccato (pasto già comunicato a Rojac)'
-      );
+      await saltaSeStatoBloccato(card, 'Assente');
 
       await segnaAssenteOMalattia(page, presenza, 'Assente');
-      await expect(presenza.getByRole('button', { name: 'Assente' })).toHaveClass(/bg-stone-600/);
+      await expect(bottonePresenza(card, 'Assente')).toHaveClass(CLASSE_ATTIVO.assente);
 
-      const pasto = colonnaPasto(card);
-      await expect(pasto.getByText('🚫 Assente')).toBeVisible();
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
-      await expect(pasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
+      await expect(etichettaPastoAssente(card)).toBeVisible();
+      await expect(bottonePasto(card, 'Sì')).toHaveCount(0);
+      await expect(bottonePasto(card, 'No')).toHaveCount(0);
     });
 
     test('un bambino malato non è selezionabile per il pasto', async ({ page, bambino }) => {
-      const card = await cardConPulsante(
-        page,
-        bambino,
-        'Presenza',
-        'Malattia',
-        'nessun pulsante di presenza (giorno di chiusura)'
-      );
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Malattia');
       const presenza = colonnaPresenza(card);
-      test.skip(
-        await presenza.getByRole('button', { name: 'Malattia' }).isDisabled(),
-        'Malattia bloccata (pasto già comunicato a Rojac)'
-      );
+      await saltaSeStatoBloccato(card, 'Malattia');
 
       await segnaAssenteOMalattia(page, presenza, 'Malattia');
-      await expect(presenza.getByRole('button', { name: 'Malattia' })).toHaveClass(/bg-rose-600/);
+      await expect(bottonePresenza(card, 'Malattia')).toHaveClass(CLASSE_ATTIVO.malattia);
 
-      const pasto = colonnaPasto(card);
-      await expect(pasto.getByText('🤒 Malattia')).toBeVisible();
-      await expect(pasto.getByRole('button', { name: 'Sì' })).toHaveCount(0);
-      await expect(pasto.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
+      await expect(etichettaPastoMalattia(card)).toBeVisible();
+      await expect(bottonePasto(card, 'Sì')).toHaveCount(0);
+      await expect(bottonePasto(card, 'No')).toHaveCount(0);
     });
   });
 
@@ -177,7 +162,7 @@ test.describe('14 — Segna pasto', () => {
       await expect(cardBambino(page, bambino)).toBeVisible();
       await expect(colonnaPasto(page)).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Sì' })).toHaveCount(0);
-      await expect(page.getByText(/^Pasti: \d+\/\d+$/)).toHaveCount(0);
+      await expect(conteggioRiepilogo(page, 'Pasti')).toHaveCount(0);
 
       await page.goto(`/dashboard/pasti?data=${dataOggiRoma()}`);
       await page.waitForURL(`/dashboard/giornata?data=${dataOggiRoma()}`);

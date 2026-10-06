@@ -15,11 +15,11 @@ import {
   statoAutenticazione,
   alertApp,
   clickEAttendiAzione,
-  apriGiornata,
 } from './helpers';
+import { apriGiornata } from './pagina-giornata';
 
 // "Presenze e pasti" (specs/10) mostra presenza e pasto di tutti i
-// bambini visibili nella stessa pagina: apriGiornata (e2e/helpers.ts)
+// bambini visibili nella stessa pagina: apriGiornata (e2e/pagina-giornata.ts)
 // ritorna se l'account vede almeno un bambino.
 test.describe('53 — Calendario scolastico', () => {
   test.describe('come admin', () => {
@@ -76,7 +76,7 @@ test.describe('53 — Calendario scolastico', () => {
       await riga.click();
       await page.waitForURL(/\/admin\/calendario\/.+/);
       await page.getByRole('button', { name: 'Elimina giorno di chiusura' }).click();
-      await page.getByRole('button', { name: 'Sì' }).click();
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì' }));
     });
 
     test('la data di fine non può precedere quella di inizio', async ({ page }) => {
@@ -133,7 +133,7 @@ test.describe('53 — Calendario scolastico', () => {
 
       // Pulizia.
       await page.getByRole('button', { name: 'Elimina giorno di chiusura' }).click();
-      await page.getByRole('button', { name: 'Sì' }).click();
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì' }));
     });
 
     test('eliminare un giorno di chiusura lo rimuove dall\'elenco', async ({ page }) => {
@@ -191,7 +191,7 @@ test.describe('53 — Calendario scolastico', () => {
         await page.getByText(nota, { exact: false }).click();
         await page.waitForURL(/\/admin\/calendario\/.+/);
         await page.getByRole('button', { name: 'Elimina giorno di chiusura' }).click();
-        await page.getByRole('button', { name: 'Sì' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì' }));
       }
     });
 

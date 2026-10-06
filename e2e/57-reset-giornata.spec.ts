@@ -5,17 +5,13 @@
 // fissa (2019-05-15, mai una data reale usata dall'asilo), e li elimina
 // da solo alla fine — stesso genere di pulizia automatica delle altre
 // suite che scrivono dati veri.
-import { test, expect } from '@playwright/test';
-import {
-  apriGiornata,
-  clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
-  hasCredenziali,
-  nessunaViolazioneA11yGrave,
-  primaCardConPulsante,
-  statoAutenticazione,
-} from './helpers';
+//
+// Il bambino su cui scrive è proprio del test (fixture `bambino`,
+// e2e/fixture-bambino.ts, issue #249): non "il primo della lista", che in un
+// run parallelo poteva essere il bambino di un altro test, eliminato a metà.
+import { test, expect } from './fixture-bambino';
+import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { apriGiornata, bottonePasto, bottonePresenza, cardConPulsante, segnaStato } from './pagina-giornata';
 
 const DATA_TEST = '2019-05-15';
 
@@ -73,21 +69,19 @@ test.describe('57 — Reset giornata', () => {
     await expect(page.getByRole('button', { name: 'Resetta giornata' })).toBeDisabled();
   });
 
-  test('registrare presenza e pasto, poi resettarli con doppia conferma', async ({ page }) => {
-    // Registro una presenza per la prima classe/bambino disponibile,
-    // sulla data di test (l'admin può scrivere su qualunque data,
-    // specs/13).
+  test('registrare presenza e pasto, poi resettarli con doppia conferma', async ({ page, bambino }) => {
+    // Registro una presenza per il bambino fixture, sulla data di test
+    // (l'admin può scrivere su qualunque data, specs/13).
     // Schermata unica "Presenze e pasti" (specs/10): presenza e pasto
     // dello stesso bambino sono nella stessa card.
     await apriGiornata(page, DATA_TEST);
-    const card = primaCardConPulsante(page, 'Presenza', 'Presente');
-    test.skip((await card.count()) === 0, 'nessun bambino visibile per questo account');
+    const card = await cardConPulsante(page, bambino, 'Presenza', 'Presente');
     // Attendo la risposta della Server Action: con un'attesa fissa il goto
     // successivo poteva interrompere il salvataggio (issue #70).
-    await clickEAttendiAzione(page, colonnaPresenza(card).getByRole('button', { name: 'Presente' }));
+    await segnaStato(page, bottonePresenza(card, 'Presente'));
 
     // Registro anche un pasto, stessa data e stesso bambino.
-    await clickEAttendiAzione(page, colonnaPasto(card).getByRole('button', { name: 'Sì' }));
+    await segnaStato(page, bottonePasto(card, 'Sì'));
 
     await page.goto(`/admin/reset-giornata?data=${DATA_TEST}`);
     await expect(page.getByText(/^[1-9]\d* presenze$/)).toBeVisible();
@@ -102,8 +96,7 @@ test.describe('57 — Reset giornata', () => {
 
     // Il secondo click di conferma elimina davvero.
     await page.getByRole('button', { name: 'Resetta giornata' }).click();
-    await page.getByRole('button', { name: 'Sì, elimina tutto' }).click();
-    await page.waitForTimeout(1000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, elimina tutto' }));
     await page.reload();
     await expect(page.getByText('0 presenze')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText('0 pasti')).toBeVisible();
