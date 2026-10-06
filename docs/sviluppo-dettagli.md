@@ -287,6 +287,12 @@ finché non risulta tutto verde.
   applicata), mai la service_role. Per un gruppo di test in sequenza con
   stato condiviso (06) si usano `creaBambinoFixture`/`eliminaBambinoFixture`
   in `beforeAll`/`afterAll`. Documentazione completa in testa al file.
+- **Helper per pagina (issue #249, #173)**: i selettori della schermata
+  "Presenze e pasti" stanno in `e2e/pagina-giornata.ts` (card, pulsanti di
+  presenza e pasto, nota, riepilogo, banner Rojac, classi di stato); i
+  test non ripetono `getByRole('group', { name: 'Presenza' })` e simili:
+  se un'etichetta cambia, si corregge lì. `e2e/helpers.ts` tiene solo
+  quanto è generico (login, a11y, date, `clickEAttendiAzione`).
 
 ### Unit (Vitest) — solo logica pura
 - **Criterio di ammissione, rigido**: un unit test in `lib/xxx.test.ts`
