@@ -122,6 +122,27 @@ test.describe('01 — UX/UI', () => {
       await page.waitForURL(/\/dashboard\/giornata\?/);
       await expect(barra).toHaveCount(0);
     });
+
+    // Issue #241: un link alla pagina in cui ci si trova già non produce
+    // navigazione, quindi la barra non deve partire (resterebbe all'infinito).
+    test('non parte cliccando "Dashboard" o il logo mentre si è già in /dashboard', async ({
+      page,
+    }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      await expect(page.locator('body')).toHaveAttribute('data-barra-caricamento-pronta', 'true');
+      const barra = page.getByRole('status', { name: 'Caricamento in corso' });
+
+      for (const nome of ['Dashboard', 'Girasole']) {
+        await page.getByRole('link', { name: nome, exact: true }).first().click();
+        // Il click si registra subito: lascio un attimo al render per un
+        // eventuale (errato) setInCorso, poi la barra deve essere assente.
+        await page.waitForTimeout(300);
+        await expect(barra).toHaveCount(0);
+        await expect(page).toHaveURL(/\/dashboard$/);
+      }
+    });
   });
 
   test.describe('sidebar di navigazione (mobile: drawer)', () => {

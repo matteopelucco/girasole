@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { eGruppo, eGruppoConStato, vociLink, vociMenu, vociMenuConStato } from './navigazione';
+import { eGruppo, eGruppoConStato, eStessaPagina, vociLink, vociMenu, vociMenuConStato } from './navigazione';
+
+describe('eStessaPagina', () => {
+  it('è vera per lo stesso percorso senza query (caso "Dashboard"/logo su /dashboard)', () => {
+    expect(eStessaPagina('/dashboard', '', '/dashboard', '')).toBe(true);
+  });
+
+  it('accetta la query con o senza "?" iniziale', () => {
+    expect(eStessaPagina('/dashboard/giornata', '?data=2026-10-06', '/dashboard/giornata', 'data=2026-10-06')).toBe(true);
+    expect(eStessaPagina('/dashboard/giornata', 'data=2026-10-06', '/dashboard/giornata', '?data=2026-10-06')).toBe(true);
+  });
+
+  it('è falsa se cambia il percorso (navigazione reale, es. da /presenze a /dashboard)', () => {
+    expect(eStessaPagina('/dashboard', '', '/presenze', '')).toBe(false);
+  });
+
+  it('è falsa se cambia la query', () => {
+    expect(eStessaPagina('/dashboard/giornata', '?data=2026-10-07', '/dashboard/giornata', 'data=2026-10-06')).toBe(false);
+    expect(eStessaPagina('/dashboard', '?x=1', '/dashboard', '')).toBe(false);
+  });
+});
 
 describe('vociMenu', () => {
   it('include solo "Dashboard" per maestra, assistente, genitore e ruolo assente', () => {
