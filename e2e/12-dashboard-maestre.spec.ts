@@ -1,6 +1,7 @@
 // Requisito: specs/12 - dashboard-maestre.md
 import { test, expect } from '@playwright/test';
-import { cardBambini, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { cardBambini } from './pagina-giornata';
 
 const NOME_CARD = 'Presenze e pasti';
 

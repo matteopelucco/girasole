@@ -38,20 +38,24 @@
 // proprio bambino fixture, quindi il test del riquadro di conferma si salta
 // se in quel momento il pulsante non c'è.
 import type { Locator, Page } from '@playwright/test';
-import { test, expect, cardBambino, cardConPulsante } from './fixture-bambino';
+import { test, expect } from './fixture-bambino';
 import {
-  apriGiornata,
-  cardBambini,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
-  segnaAssenteOMalattia,
   statoAutenticazione,
-  sezioneNota,
 } from './helpers';
+import {
+  apriGiornata,
+  cardBambini,
+  cardBambino,
+  cardConPulsante,
+  colonnaPasto,
+  colonnaPresenza,
+  segnaAssenteOMalattia,
+  sezioneNota,
+} from './pagina-giornata';
 
 const SPIEGAZIONE_BLOCCO = 'Pasto già comunicato a Rojac';
 

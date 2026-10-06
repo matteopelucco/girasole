@@ -6,16 +6,8 @@
 // da solo alla fine — stesso genere di pulizia automatica delle altre
 // suite che scrivono dati veri.
 import { test, expect } from '@playwright/test';
-import {
-  apriGiornata,
-  clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
-  hasCredenziali,
-  nessunaViolazioneA11yGrave,
-  primaCardConPulsante,
-  statoAutenticazione,
-} from './helpers';
+import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { apriGiornata, colonnaPasto, colonnaPresenza, primaCardConPulsante } from './pagina-giornata';
 
 const DATA_TEST = '2019-05-15';
 

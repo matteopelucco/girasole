@@ -15,19 +15,22 @@
 // fondo alla card, issue #110), per non confondersi con i pulsanti della
 // sezione "Pasto".
 import type { Page } from '@playwright/test';
-import { test, expect, cardBambino, type BambinoFixture } from './fixture-bambino';
+import { test, expect, type BambinoFixture } from './fixture-bambino';
 import {
-  apriGiornata,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
-  segnaAssenteOMalattia,
-  sezioneNota,
   statoAutenticazione,
 } from './helpers';
+import {
+  apriGiornata,
+  cardBambino,
+  colonnaPasto,
+  colonnaPresenza,
+  segnaAssenteOMalattia,
+  sezioneNota,
+} from './pagina-giornata';
 
 // Card del bambino fixture, saltando il test se in questo giorno la
 // colonna "Presenza" non ha il pulsante richiesto (giorno di chiusura:

@@ -10,26 +10,23 @@
 //
 // Il pasto si segna dalla sezione "Pasto" della card di ogni bambino
 // nella schermata unica "Presenze e pasti" (specs/10).
+import { test, expect, creaBambinoFixture, eliminaBambinoFixture } from './fixture-bambino';
 import {
-  test,
-  expect,
-  cardBambino,
-  cardConPulsante,
-  creaBambinoFixture,
-  eliminaBambinoFixture,
-} from './fixture-bambino';
-import {
-  apriGiornata,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
-  segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
+import {
+  apriGiornata,
+  cardBambino,
+  cardConPulsante,
+  colonnaPasto,
+  colonnaPresenza,
+  segnaAssenteOMalattia,
+} from './pagina-giornata';
 
 const MOTIVO_NIENTE_SI_NO = 'nessun pulsante Sì/No disponibile (es. pasti già comunicati, giorno di chiusura)';
 

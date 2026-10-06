@@ -11,28 +11,30 @@ import type { Locator, Page } from '@playwright/test';
 import {
   test,
   expect,
-  cardBambino,
-  cardConPulsante,
   creaBambinoFixture,
   eliminaBambinoFixture,
   type BambinoFixture,
 } from './fixture-bambino';
 import {
-  apriGiornata,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataIeriRoma,
   dataOggiRoma,
-  giornoDiChiusura,
   hasCredenziali,
-  intestazioneCard,
   nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+} from './helpers';
+import {
+  apriGiornata,
+  cardBambino,
+  cardConPulsante,
+  colonnaPasto,
+  colonnaPresenza,
+  giornoDiChiusura,
+  intestazioneCard,
   nomeBambinoCard,
   segnaAssenteOMalattia,
   sezioneNota,
-  statoAutenticazione,
-} from './helpers';
+} from './pagina-giornata';
 
 // Verifica che la pagina non scorra in orizzontale. Se scorre, il
 // messaggio dell'asserzione elenca gli elementi che sporgono oltre il

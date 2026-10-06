@@ -1,6 +1,7 @@
 // Requisito: specs/01 - ux.md
 import { test, expect, type Page } from '@playwright/test';
-import { colonnaPasto, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { colonnaPasto } from './pagina-giornata';
 
 const MOBILE = { width: 375, height: 812 }; // priorità dichiarata nel requisito
 

@@ -20,22 +20,24 @@
 import {
   test,
   expect,
-  cardBambino,
   creaBambinoFixture,
   eliminaBambinoFixture,
   type BambinoFixture,
 } from './fixture-bambino';
 import {
-  apriGiornata,
   clickEAttendiAzione,
-  colonnaPasto,
-  colonnaPresenza,
   dataOggiRoma,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
-  segnaAssenteOMalattia,
   statoAutenticazione,
 } from './helpers';
+import {
+  apriGiornata,
+  cardBambino,
+  colonnaPasto,
+  colonnaPresenza,
+  segnaAssenteOMalattia,
+} from './pagina-giornata';
 
 // Stessa formattazione di lib/date.ts:formattaDataItaliana, per
 // individuare nel drill-down mensile la riga del giorno odierno.
