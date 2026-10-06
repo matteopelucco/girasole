@@ -1,12 +1,11 @@
 // Requisito: specs/17 - ore-di-lavoro.md
 //
-// ATTENZIONE: il test di abilitazione modifica davvero il flag
-// abilitato_ore_lavoro sul profilo admin di test e lo ripristina a fine
-// test (try/finally, stesso pattern di 53-calendario-scolastico.spec.ts)
-// — un solo test lo fa, per evitare che due esecuzioni parallele
-// sull'unico account admin si contendano lo stesso flag (fullyParallel:
-// true, stessa cautela già presa in 16-comunicazione-pasti-rojac.spec.ts).
-import { test, expect } from '@playwright/test';
+// Dati propri (issue #230): il test di abilitazione non tocca il flag
+// abilitato_ore_lavoro degli account condivisi (admin, maestra) ma quello di
+// un utente creato apposta ed eliminato a fine test (e2e/fixture-utente.ts):
+// per questo i test che verificano "senza abilitazione" sugli account
+// condivisi non possono più essere disturbati da un altro test in parallelo.
+import { test, expect } from './fixture-utente';
 import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
 
 test.describe('17 — Ore di lavoro', () => {
@@ -27,59 +26,53 @@ test.describe('17 — Ore di lavoro', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
+    // Dati propri (issue #230): l'abilitazione si prova su un utente admin
+    // creato apposta (e2e/fixture-utente.ts), non sull'account admin condiviso,
+    // così nessun altro test vede mai il flag acceso.
     test('abilitare/disabilitare un utente esistente mostra/nasconde la card e la sezione, che non ha alcuna form', async ({
-      page,
+      creaUtente,
+      apriComeUtente,
     }) => {
+      const utente = await creaUtente({ ruolo: 'admin' });
+      const page = await apriComeUtente(utente);
+
       await page.goto('/admin/maestre');
-      const rigaPropria = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
+      const rigaPropria = page.locator('li', { hasText: utente.email });
       const checkbox = rigaPropria.getByLabel('Ore di lavoro');
 
-      try {
-        // Abilitazione: la spunta resta visibile riaprendo la pagina, la
-        // card compare in dashboard e apre la sezione dedicata (il
-        // contenuto vero e proprio — tabella settimanale, conferma,
-        // malattia/assenza — è testato in dettaglio in
-        // 18-report-ore-lavoro.spec.ts, non qui).
-        await checkbox.check();
-        await clickEAttendiAzione(page, rigaPropria.getByRole('button', { name: 'Aggiorna' }));
-        await page.reload();
-        await expect(page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Ore di lavoro')).toBeChecked();
+      // Abilitazione: la spunta resta visibile riaprendo la pagina, la
+      // card compare in dashboard e apre la sezione dedicata (il
+      // contenuto vero e proprio — tabella settimanale, conferma,
+      // malattia/assenza — è testato in dettaglio in
+      // 18-report-ore-lavoro.spec.ts, non qui).
+      await checkbox.check();
+      await clickEAttendiAzione(page, rigaPropria.getByRole('button', { name: 'Aggiorna' }));
+      await page.reload();
+      await expect(page.locator('li', { hasText: utente.email }).getByLabel('Ore di lavoro')).toBeChecked();
 
-        await page.goto('/dashboard');
-        const link = page.getByRole('link', { name: 'Ore di lavoro', exact: true });
-        await expect(link).toBeVisible();
-        await expect(link).toContainText('🕒');
+      await page.goto('/dashboard');
+      const link = page.getByRole('link', { name: 'Ore di lavoro', exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toContainText('🕒');
 
-        await link.click();
-        await page.waitForURL('/dashboard/ore-lavoro');
-        await expect(page.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
+      await link.click();
+      await page.waitForURL('/dashboard/ore-lavoro');
+      await expect(page.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
 
-        await nessunaViolazioneA11yGrave(page);
+      await nessunaViolazioneA11yGrave(page);
 
-        // Disabilitazione: la card sparisce e l'accesso diretto reindirizza.
-        await page.goto('/admin/maestre');
-        const rigaDaDisabilitare = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await rigaDaDisabilitare.getByLabel('Ore di lavoro').uncheck();
-        await clickEAttendiAzione(page, rigaDaDisabilitare.getByRole('button', { name: 'Aggiorna' }));
-        await page.reload();
-        await expect(
-          page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Ore di lavoro')
-        ).not.toBeChecked();
+      // Disabilitazione: la card sparisce e l'accesso diretto reindirizza.
+      await page.goto('/admin/maestre');
+      const rigaDaDisabilitare = page.locator('li', { hasText: utente.email });
+      await rigaDaDisabilitare.getByLabel('Ore di lavoro').uncheck();
+      await clickEAttendiAzione(page, rigaDaDisabilitare.getByRole('button', { name: 'Aggiorna' }));
+      await page.reload();
+      await expect(page.locator('li', { hasText: utente.email }).getByLabel('Ore di lavoro')).not.toBeChecked();
 
-        await page.goto('/dashboard');
-        await expect(page.getByRole('link', { name: 'Ore di lavoro', exact: true })).toHaveCount(0);
-        await page.goto('/dashboard/ore-lavoro');
-        await page.waitForURL('/dashboard', { timeout: 20_000 });
-      } finally {
-        await page.goto('/admin/maestre');
-        const rigaDaRipristinare = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        const checkboxDaRipristinare = rigaDaRipristinare.getByLabel('Ore di lavoro');
-        if (await checkboxDaRipristinare.isChecked()) {
-          await checkboxDaRipristinare.uncheck();
-          await rigaDaRipristinare.getByRole('button', { name: 'Aggiorna' }).click();
-          await page.waitForTimeout(1000);
-        }
-      }
+      await page.goto('/dashboard');
+      await expect(page.getByRole('link', { name: 'Ore di lavoro', exact: true })).toHaveCount(0);
+      await page.goto('/dashboard/ore-lavoro');
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
     test('creazione di un utente con abilitazione al report ore già attiva', async ({ page }) => {

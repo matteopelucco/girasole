@@ -5,6 +5,11 @@
 // I test che creano un giorno di chiusura usano una data lontana nel
 // futuro (dataFraGiorni con un n grande) per non collidere con "oggi"/
 // "ieri", usate da altri test, e lo eliminano a fine test.
+//
+// Girano in parallelo con il resto della suite (issue #230): ogni test usa
+// date proprie, lontane da quelle degli altri test e senza sovrapposizioni
+// tra loro, e individua le proprie righe da una nota unica, mai contando
+// quelle dell'elenco (che altri test in parallelo creano ed eliminano).
 import { test, expect } from '@playwright/test';
 import {
   dataFraGiorni,
@@ -82,19 +87,20 @@ test.describe('53 — Calendario scolastico', () => {
     test('la data di fine non può precedere quella di inizio', async ({ page }) => {
       const inizio = dataFraGiorni(320);
       const fine = dataFraGiorni(315);
+      const nota = `Fine prima E2E ${Date.now()}`;
 
       await page.goto('/admin/calendario');
-      // L'elenco può già contenere chiusure di altri test sul DB di test
-      // condiviso: verifico che non ne sia stata aggiunta nessuna, non che
-      // sia vuoto.
-      const righe = page.locator('a[href^="/admin/calendario/"]');
-      const righePrima = await righe.count();
+      // L'elenco contiene le chiusure di altri test in parallelo, che si
+      // creano e si eliminano mentre questo gira: non se ne conta il numero,
+      // si verifica che la chiusura rifiutata (con una nota unica) non
+      // compaia.
       await page.getByLabel('Data di inizio').fill(inizio);
       await page.getByLabel('Data di fine').fill(fine);
+      await page.getByPlaceholder('Nota (opzionale, es. Vacanze di Natale)').fill(nota);
       await page.getByRole('button', { name: 'Aggiungi giorno di chiusura' }).click();
 
       await expect(alertApp(page)).toContainText('non può precedere');
-      await expect(righe).toHaveCount(righePrima);
+      await expect(page.getByText(nota, { exact: false })).toHaveCount(0);
     });
 
     test('modificare un giorno di chiusura', async ({ page }) => {

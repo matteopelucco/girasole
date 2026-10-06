@@ -1,25 +1,20 @@
 // Requisito: specs/18 - report-ore-lavoro.md
 //
-// ATTENZIONE: il test principale abilita temporaneamente l'account admin
-// di test al report ore e gli assegna/rimuove un profilo orario di test
-// per poter verificare il contenuto reale della sezione, poi ripristina
-// tutto in `finally` — stesso pattern di 17-ore-di-lavoro.spec.ts e
-// 54-profili-orari.spec.ts. Un solo test esegue l'intero percorso in
-// sequenza (non test separati) per evitare che esecuzioni parallele
-// sullo stesso account condiviso si contendano lo stesso stato
-// (fullyParallel: true, stessa cautela di
-// 16-comunicazione-pasti-rojac.spec.ts).
+// Dati propri (issue #230): i test che hanno bisogno di un'abilitazione alle
+// ore di lavoro (e di un profilo orario) lavorano su un utente di staff creato
+// apposta ed eliminato a fine test (e2e/fixture-utente.ts), insieme a ore
+// settimanali, conferme e movimenti. Nessun flag degli account condivisi
+// (admin, maestra) viene toccato: i test "senza abilitazione" li usano così
+// come sono e non possono essere disturbati da altri test in parallelo. Il
+// test principale esegue l'intero percorso in sequenza su un solo utente
+// (non test separati) perché le sue fasi dipendono dallo stato lasciato dalle
+// precedenti.
 //
-// La suite NON preme "Sì" su "Conferma settimana" per la settimana
-// corrente: confermare bloccherebbe la scrittura sull'account di test
-// condiviso per il resto della settimana (solo lo scenario di riapertura,
-// issue #90, conferma e poi riapre una settimana lontana nel passato) — stessa
-// cautela già presa per "Pasti comunicati a Rojac" in
-// 16-comunicazione-pasti-rojac.spec.ts. Lo scenario "settimana
-// confermata non è più modificabile" si attiva da solo (altrimenti
-// test.skip) solo se qualcuno l'ha già confermata manualmente questa
-// settimana.
-import { test, expect, type Page } from '@playwright/test';
+// La suite NON preme "Sì" su "Conferma settimana" per la settimana corrente:
+// i test di conferma/riapertura (issue #90, #189) usano settimane lontane nel
+// passato di un utente proprio.
+import type { Page } from '@playwright/test';
+import { test, expect } from './fixture-utente';
 import {
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -37,17 +32,6 @@ import {
 const oreOrdinarieGiorno = (page: Page, indice: number) => page.locator('[data-ore-ordinarie]').nth(indice);
 const totaleErogato = (page: Page, giorno: string) => page.getByRole('status', { name: `Totale ore erogate ${giorno}` });
 
-// Scenario "una settimana confermata non è più modificabile dal
-// personale": in sola lettura ogni giorno lavorativo mostra il totale
-// erogato con il testo di stato (non più "Ordinarie / Straordinarie").
-async function verificaCardSolaLettura(page: Page) {
-  const totali = page.getByRole('status', { name: /^Totale ore erogate/ });
-  expect(await totali.count()).toBeGreaterThan(0);
-  await expect(totali.first()).toContainText(/✓ Ore come previsto|⚠ .*(in più|in meno) del previsto/);
-  await expect(page.getByText('Straordinarie:', { exact: false })).toHaveCount(0);
-  await expect(page.locator('input[name^="differenza_ore"]')).toHaveCount(0);
-}
-
 // Il campo "Differenza ore" ha step 0.25: il browser bloccherebbe da sé
 // l'invio di valori non validi. Per verificare la validazione LATO
 // SERVER (fonte di verità, specs/18) disattivo quella nativa.
@@ -61,7 +45,7 @@ test.describe('18 — Report ore di lavoro', () => {
   test.describe('come admin', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
@@ -71,31 +55,29 @@ test.describe('18 — Report ore di lavoro', () => {
     });
 
     test('form settimanale: precaricamento dal profilo orario, validazioni, giorni chiusi lavorabili, conferma (senza premere Sì)', async ({
-      page,
+      creaUtente,
+      apriComeUtente,
     }) => {
+      // Percorso lungo (creazione e login dell'utente, molti salvataggi con
+      // ricarica): supera i 60s di default senza essere bloccato su nessun
+      // passo (issue #70).
+      test.slow();
       const nomeProfilo = `E2E ore lavoro ${Date.now()}`;
+      // Utente admin proprio (non l'admin condiviso): si abilita da solo e si
+      // assegna un profilo orario, come faceva l'admin condiviso.
+      const utente = await creaUtente({ ruolo: 'admin' });
+      const page = await apriComeUtente(utente);
 
       // Setup: abilito l'account SENZA profilo orario, per lo scenario
       // "senza profilo orario assegnato le ore ordinarie partono da zero".
       await page.goto('/admin/maestre');
-      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
+      const rigaAbilita = page.locator('li', { hasText: utente.email });
       await rigaAbilita.getByLabel('Ore di lavoro').check();
       await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
 
       try {
         await page.goto('/dashboard/ore-lavoro');
         await expect(page.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
-
-        const giaConfermata = await page.getByText('Settimana confermata il', { exact: false }).count();
-        if (giaConfermata > 0) {
-          // Vedi nota in testa al file: verifico solo la sola lettura,
-          // il resto del test presuppone di poter ancora modificare.
-          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
-          await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
-          await verificaCardSolaLettura(page);
-          await nessunaViolazioneA11yGrave(page);
-          return;
-        }
 
         // Tutti i 7 giorni sono mostrati ed editabili, sabato/domenica
         // inclusi: il personale può lavorare anche nei giorni in cui
@@ -139,7 +121,7 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByText(nomeProfilo, { exact: false })).toBeVisible({ timeout: 20_000 });
 
         await page.goto('/admin/maestre');
-        const rigaAssegna = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
+        const rigaAssegna = page.locator('li', { hasText: utente.email });
         await rigaAssegna.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
         await clickEAttendiAzione(page, rigaAssegna.getByRole('button', { name: 'Aggiorna' }));
 
@@ -409,39 +391,21 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(page.getByRole('link', { name: 'Settimana successiva' })).toBeVisible();
         await nessunaViolazioneA11yGrave(page);
 
-        const settimanaPassataConfermata = await page.getByText('Settimana confermata il', { exact: false }).count();
-        if (settimanaPassataConfermata > 0) {
-          // Scenario "una settimana passata già confermata resta di
-          // sola lettura": si attiva da solo se una settimana
-          // precedente risulta già confermata.
-          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
-          await expect(page.getByRole('button', { name: 'Conferma settimana' })).toHaveCount(0);
-          await verificaCardSolaLettura(page);
-        } else {
-          // Scenario "modificare o confermare una settimana passata non
-          // ancora confermata": stesso comportamento della settimana
-          // corrente. Ripristino lo stesso valore trovato, per non
-          // lasciare lo stato diverso da come l'ho trovato.
-          await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
-          const valorePrecedente = await page.getByLabel('Differenza ore Lunedì').inputValue();
-          const motivoPrecedente = await page.getByLabel('Motivo Lunedì').count() ? await page.getByLabel('Motivo Lunedì').inputValue() : '';
-          await page.getByLabel('Differenza ore Lunedì').fill('1');
-          await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
-          await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
-          await page.reload();
-          await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('1');
+        // Scenario "modificare o confermare una settimana passata non
+        // ancora confermata": stesso comportamento della settimana
+        // corrente (l'utente è nuovo: nessuna settimana è già confermata).
+        await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
+        await page.getByLabel('Differenza ore Lunedì').fill('1');
+        await page.getByLabel('Motivo Lunedì').fill('Prova E2E');
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
+        await page.reload();
+        await expect(page.getByLabel('Differenza ore Lunedì')).toHaveValue('1');
 
-          await page.getByRole('button', { name: 'Conferma settimana' }).click();
-          await expect(
-            page.getByText('Da questo momento non potrai più modificarle', { exact: false })
-          ).toBeVisible();
-          await page.getByRole('button', { name: 'Annulla' }).click();
-
-          await page.getByLabel('Differenza ore Lunedì').fill(valorePrecedente);
-          if (Number(valorePrecedente) !== 0) await page.getByLabel('Motivo Lunedì').fill(motivoPrecedente || 'Ripristino E2E');
-          await page.getByRole('button', { name: 'Salva modifiche' }).click();
-          await page.waitForTimeout(1000);
-        }
+        await page.getByRole('button', { name: 'Conferma settimana' }).click();
+        await expect(
+          page.getByText('Da questo momento non potrai più modificarle', { exact: false })
+        ).toBeVisible();
+        await page.getByRole('button', { name: 'Annulla' }).click();
 
         // "→" torna verso la settimana corrente (scenario "tornare
         // verso la settimana corrente"): il pulsante "→" scompare di
@@ -459,50 +423,15 @@ test.describe('18 — Report ore di lavoro', () => {
         await page.getByRole('button', { name: 'Annulla' }).click();
         await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
       } finally {
-        // Ripristino: martedì/mercoledì/giovedì tornano lavorativo, sabato
-        // torna Chiusura, l'account torna disabilitato e senza profilo, il
-        // profilo di test viene eliminato (svuota anche l'eventuale
-        // assegnazione, specs/54).
-        const confermata = await page.getByText('Settimana confermata il', { exact: false }).count();
-        if (!confermata) {
-          await page.goto('/dashboard/ore-lavoro');
-          if ((await page.getByLabel('Stato Martedì').count()) > 0) {
-            await page.getByLabel('Stato Martedì').selectOption('lavorativo');
-          }
-          if ((await page.getByLabel('Stato Mercoledì').count()) > 0) {
-            await page.getByLabel('Stato Mercoledì').selectOption('lavorativo');
-          }
-          if ((await page.getByLabel('Stato Giovedì').count()) > 0) {
-            await page.getByLabel('Stato Giovedì').selectOption('lavorativo');
-          }
-          if ((await page.getByLabel('Stato Sabato').count()) > 0) {
-            await page.getByLabel('Stato Sabato').selectOption('chiusura');
-          }
-          if ((await page.getByLabel('Differenza ore Lunedì').count()) > 0) {
-            await page.getByLabel('Differenza ore Lunedì').fill('0');
-          }
-          const salva = page.getByRole('button', { name: 'Salva modifiche' });
-          if ((await salva.count()) > 0) {
-            await salva.click();
-            await page.waitForTimeout(1000);
-          }
-        }
-
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        if ((await rigaRipristina.getByLabel('Profilo orario').count()) > 0) {
-          await rigaRipristina.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
-        }
-        await clickEAttendiAzione(page, rigaRipristina.getByRole('button', { name: 'Aggiorna' }));
-
+        // Pulizia: elimino il profilo di test. L'utente e le sue ore settimanali
+        // vengono eliminati dalla fixture (e2e/fixture-utente.ts).
         await page.goto('/admin/profili-orari');
         const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
         if ((await rigaProfilo.count()) > 0) {
           await rigaProfilo.click();
           await page.waitForURL(/\/admin\/profili-orari\/.+/);
           await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-          await page.getByRole('button', { name: 'Sì' }).click();
+          await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì' }));
         }
       }
     });
@@ -540,21 +469,16 @@ test.describe('18 — Report ore di lavoro', () => {
 
   // Amministrazione (specs/18, sezione "Amministrazione"): l'admin può
   // rivedere/correggere le ore di chiunque sia abilitato, anche una
-  // settimana già confermata. Usa l'account maestra come "dipendente"
-  // di prova, abilitandolo temporaneamente e ripristinandolo in
-  // `finally` — stesso pattern del blocco "come admin" sopra. Non
-  // preme mai "Sì" su "Conferma settimana" (stessa cautela di sopra:
-  // irreversibile sull'account condiviso) né "Salva modifiche" su dati
-  // reali del dipendente — verifica solo che i controlli siano
-  // presenti/editabili, non li usa per davvero.
+  // settimana già confermata. Ogni test crea un "dipendente" di prova
+  // (maestra già abilitata, e2e/fixture-utente.ts) che la fixture elimina
+  // a fine test. Sulla settimana corrente non preme mai "Sì" su "Conferma
+  // settimana" né "Salva modifiche" sui dati del dipendente — verifica solo
+  // che i controlli siano presenti/editabili.
   test.describe('amministrazione: rivedere/correggere le ore di un dipendente', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test.beforeEach(async ({ page }) => {
-      test.skip(
-        !hasCredenziali('admin') || !hasCredenziali('maestra'),
-        'richiede E2E_ADMIN_EMAIL/PASSWORD e E2E_MAESTRA_EMAIL/PASSWORD'
-      );
+    test.beforeEach(async () => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
     // Scenario "l'admin genera e scarica il PDF mensile del personale":
@@ -578,145 +502,137 @@ test.describe('18 — Report ore di lavoro', () => {
       expect(contenuto.length).toBeGreaterThan(500);
     });
 
-    test('elenco, apertura, navigazione e correzione delle ore di un dipendente abilitato', async ({ page }) => {
-      await page.goto('/admin/maestre');
-      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-      await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
+    test('elenco, apertura, navigazione e correzione delle ore di un dipendente abilitato', async ({
+      page,
+      creaUtente,
+    }) => {
+      const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
 
-      try {
-        // Scenario: l'admin apre l'elenco del personale abilitato.
-        await page.goto('/admin/ore-lavoro');
-        const rigaDipendente = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await expect(rigaDipendente).toBeVisible();
-        await expect(rigaDipendente).toContainText(/Settimana corrente (non )?confermata/);
-        await nessunaViolazioneA11yGrave(page);
+      // Scenario: l'admin apre l'elenco del personale abilitato.
+      await page.goto('/admin/ore-lavoro');
+      const rigaDipendente = page.locator('li', { hasText: dipendente.email });
+      await expect(rigaDipendente).toBeVisible();
+      await expect(rigaDipendente).toContainText(/Settimana corrente (non )?confermata/);
+      await nessunaViolazioneA11yGrave(page);
 
-        // Scenario: l'admin apre un dipendente e vede per prima la vista
-        // mensile — vale anche se il profilo admin non è personalmente
-        // abilitato (nessun redirect alla dashboard).
-        await rigaDipendente.getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
-        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
-        await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
-        const selettore = page.getByRole('navigation', { name: 'Vista ore di lavoro' });
-        await expect(selettore.getByRole('link', { name: 'Mese' })).toHaveAttribute('aria-current', 'page');
+      // Scenario: l'admin apre un dipendente e vede per prima la vista
+      // mensile — vale anche se il profilo admin non è personalmente
+      // abilitato (nessun redirect alla dashboard).
+      await rigaDipendente.getByRole('link').click();
+      await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+      await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+      await expect(page.getByRole('link', { name: /Torna all.elenco del personale/ })).toBeVisible();
+      const selettore = page.getByRole('navigation', { name: 'Vista ore di lavoro' });
+      await expect(selettore.getByRole('link', { name: 'Mese' })).toHaveAttribute('aria-current', 'page');
 
-        // Scenario: la vista mensile mostra i giorni del mese e i totali.
-        const giorniMese = page.getByRole('list', { name: 'Giorni del mese' }).getByRole('listitem');
-        expect(await giorniMese.count()).toBeGreaterThanOrEqual(28);
-        await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/[0-9]+([.][0-9]+)?h/);
-        await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?[0-9]+([.][0-9]+)?h/);
-        await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
-        await expect(page.getByText('Settimane del mese')).toBeVisible();
-        await nessunaViolazioneA11yGrave(page);
+      // Scenario: la vista mensile mostra i giorni del mese e i totali.
+      const giorniMese = page.getByRole('list', { name: 'Giorni del mese' }).getByRole('listitem');
+      expect(await giorniMese.count()).toBeGreaterThanOrEqual(28);
+      await expect(page.getByText('Ore previste:', { exact: false })).toContainText(/[0-9]+([.][0-9]+)?h/);
+      await expect(page.getByText('Differenza ore:', { exact: false })).toContainText(/[+-]?[0-9]+([.][0-9]+)?h/);
+      await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
+      await expect(page.getByText('Settimane del mese')).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
 
-        // Scenario: l'admin scarica il PDF del mese di un singolo dipendente
-        // (pulsante "Scarica PDF" nella barra del mese, bersaglio >= 44px).
-        const utenteInUrl = new URL(page.url()).searchParams.get('utente')!;
-        const scarica = page.getByRole('link', { name: 'Scarica PDF' });
-        await expect(scarica).toBeVisible();
-        expect((await scarica.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-        const [downloadSingolo] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), scarica.click()]);
-        expect(downloadSingolo.suggestedFilename()).toMatch(/^ore-lavoro-[0-9]{4}-[0-9]{2}-[a-z0-9-]+[.]pdf$/);
-        const pezziSingolo: Buffer[] = [];
-        for await (const pezzo of await downloadSingolo.createReadStream()) pezziSingolo.push(pezzo as Buffer);
-        const pdfSingolo = Buffer.concat(pezziSingolo);
-        expect(pdfSingolo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
-        expect(pdfSingolo.length).toBeGreaterThan(500);
+      // Scenario: l'admin scarica il PDF del mese di un singolo dipendente
+      // (pulsante "Scarica PDF" nella barra del mese, bersaglio >= 44px).
+      const utenteInUrl = new URL(page.url()).searchParams.get('utente')!;
+      const scarica = page.getByRole('link', { name: 'Scarica PDF' });
+      await expect(scarica).toBeVisible();
+      expect((await scarica.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      const [downloadSingolo] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), scarica.click()]);
+      expect(downloadSingolo.suggestedFilename()).toMatch(/^ore-lavoro-[0-9]{4}-[0-9]{2}-[a-z0-9-]+[.]pdf$/);
+      const pezziSingolo: Buffer[] = [];
+      for await (const pezzo of await downloadSingolo.createReadStream()) pezziSingolo.push(pezzo as Buffer);
+      const pdfSingolo = Buffer.concat(pezziSingolo);
+      expect(pdfSingolo.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      expect(pdfSingolo.length).toBeGreaterThan(500);
 
-        // Un 'utente' non valido, o non abilitato, non produce alcun PDF.
-        const nonValido = await page.request.get('/admin/ore-lavoro/pdf?utente=non-un-uuid');
-        expect(nonValido.status()).toBe(404);
-        const inesistente = await page.request.get('/admin/ore-lavoro/pdf?utente=00000000-0000-0000-0000-000000000000');
-        expect(inesistente.status()).toBe(404);
+      // Un 'utente' non valido, o non abilitato, non produce alcun PDF.
+      const nonValido = await page.request.get('/admin/ore-lavoro/pdf?utente=non-un-uuid');
+      expect(nonValido.status()).toBe(404);
+      const inesistente = await page.request.get('/admin/ore-lavoro/pdf?utente=00000000-0000-0000-0000-000000000000');
+      expect(inesistente.status()).toBe(404);
 
-        // Scenario: navigare tra i mesi — l'utente resta nell'URL e sul
-        // mese corrente non c'è "Mese successivo".
-        await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
-        await page.getByRole('link', { name: 'Mese precedente' }).click();
-        await page.waitForURL(/mese=[0-9]{4}-[0-9]{2}&utente=.+/);
-        await expect(page.getByRole('link', { name: 'Mese successivo' })).toBeVisible();
-        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+      // Scenario: navigare tra i mesi — l'utente resta nell'URL e sul
+      // mese corrente non c'è "Mese successivo".
+      await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
+      await page.getByRole('link', { name: 'Mese precedente' }).click();
+      await page.waitForURL(/mese=[0-9]{4}-[0-9]{2}&utente=.+/);
+      await expect(page.getByRole('link', { name: 'Mese successivo' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
 
-        // Un mese futuro in query string mostra il mese corrente.
-        await page.goto(`/dashboard/ore-lavoro/mese?mese=2099-01&utente=${utenteInUrl}`);
-        await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
+      // Un mese futuro in query string mostra il mese corrente.
+      await page.goto(`/dashboard/ore-lavoro/mese?mese=2099-01&utente=${utenteInUrl}`);
+      await expect(page.getByRole('link', { name: 'Mese successivo' })).toHaveCount(0);
 
-        // Scenario: passare tra vista mensile e settimanale, e ritorno.
-        await page.getByRole('navigation', { name: 'Vista ore di lavoro' }).getByRole('link', { name: 'Settimana' }).click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\?settimana=[0-9]{4}-[0-9]{2}-[0-9]{2}&utente=.+/);
-        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
-        await nessunaViolazioneA11yGrave(page);
+      // Scenario: passare tra vista mensile e settimanale, e ritorno.
+      await page.getByRole('navigation', { name: 'Vista ore di lavoro' }).getByRole('link', { name: 'Settimana' }).click();
+      await page.waitForURL(/\/dashboard\/ore-lavoro\?settimana=[0-9]{4}-[0-9]{2}-[0-9]{2}&utente=.+/);
+      await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+      await nessunaViolazioneA11yGrave(page);
 
-        // Il riquadro ore previste/differenza è visibile anche da qui
-        // (specs/18: "per ogni vista"), non solo dalla vista personale.
-        await expect(page.getByText('Ore previste:', { exact: false })).toBeVisible();
+      // Il riquadro ore previste/differenza è visibile anche da qui
+      // (specs/18: "per ogni vista"), non solo dalla vista personale.
+      await expect(page.getByText('Ore previste:', { exact: false })).toBeVisible();
 
-        const url = new URL(page.url());
-        const utenteId = url.searchParams.get('utente')!;
+      const url = new URL(page.url());
+      const utenteId = url.searchParams.get('utente')!;
 
-        const giaConfermata = (await page.getByText('Settimana confermata il', { exact: false }).count()) > 0;
-        if (giaConfermata) {
-          // Scenario: l'admin modifica le ore di un dipendente, anche
-          // se la settimana è già confermata — a differenza della
-          // vista del diretto interessato (sola lettura), l'admin vede
-          // comunque i campi modificabili.
-          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
-          await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
-          await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveCount(0);
-          await expect(page.getByText('Puoi comunque correggerla qui sotto', { exact: false })).toBeVisible();
-        } else {
-          // Scenario: l'admin conferma per conto di un dipendente una
-          // settimana non ancora confermata — verifico solo che il
-          // dialogo compaia con il testo corretto, senza confermare
-          // per davvero.
-          await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
-          await page.getByRole('button', { name: 'Conferma settimana' }).click();
-          await expect(page.getByText('Confermi le ore di questa settimana per', { exact: false })).toBeVisible();
-          await page.getByRole('button', { name: 'Annulla' }).click();
-        }
-
-        // Scenario "il riepilogo si aggiorna con quanto digitato" (anche
-        // per una settimana confermata e corretta dall'admin, #151):
-        // "Differenza ore" del riquadro è la somma delle differenze dei
-        // giorni mostrati nelle card, mai un valore congelato alla
-        // conferma.
-        const campiDifferenza = page.getByLabel(/^Differenza ore (Lunedì|Martedì|Mercoledì|Giovedì|Venerdì|Sabato|Domenica)$/);
-        const valoriDifferenza = await campiDifferenza.evaluateAll((els) => els.map((el) => Number((el as HTMLInputElement).value)));
-        const sommaDifferenze = Math.round(valoriDifferenza.reduce((t, v) => t + v, 0) * 100) / 100;
-        const testoDifferenza = (await page.getByText('Differenza ore:', { exact: false }).textContent()) ?? '';
-        const differenzaRiquadro = Number(testoDifferenza.match(/Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/)![1]);
-        expect(differenzaRiquadro).toBe(sommaDifferenze);
-
-        // Scenario: l'admin naviga tra le settimane di un dipendente —
-        // resta sulle ore della stessa persona (il parametro `utente`
-        // resta nell'URL).
-        await page.getByRole('link', { name: 'Settimana precedente' }).click();
-        await page.waitForURL(new RegExp(`settimana=\\d{4}-\\d{2}-\\d{2}&utente=${utenteId}`));
-        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
-
-        // Scenario: l'admin naviga con il selettore di data — `utente`
-        // resta nell'indirizzo, stessa persona.
-        await page.getByLabel('Vai alla settimana del').fill('2024-03-13');
-        await page.getByRole('button', { name: 'Vai', exact: true }).click();
-        await page.waitForURL(new RegExp(`settimana=2024-03-11&utente=${utenteId}`));
-        await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
-        await expect(page.getByLabel('Vai alla settimana del')).toHaveValue('2024-03-11');
-
-        // Scenario: un parametro `utente` non valido viene ignorato —
-        // torno a vedere le mie proprie ore (che, essendo io admin non
-        // abilitato personalmente in questo test, mi reindirizzano alla
-        // dashboard esattamente come senza alcun parametro).
-        await page.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
-        await page.waitForURL('/dashboard', { timeout: 20_000 });
-      } finally {
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+      const giaConfermata = (await page.getByText('Settimana confermata il', { exact: false }).count()) > 0;
+      if (giaConfermata) {
+        // Scenario: l'admin modifica le ore di un dipendente, anche
+        // se la settimana è già confermata — a differenza della
+        // vista del diretto interessato (sola lettura), l'admin vede
+        // comunque i campi modificabili.
+        await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+        await expect(page.getByLabel('Differenza ore Lunedì')).toBeEditable();
+        await expect(page.getByLabel('Ore ordinarie Lunedì')).toHaveCount(0);
+        await expect(page.getByText('Puoi comunque correggerla qui sotto', { exact: false })).toBeVisible();
+      } else {
+        // Scenario: l'admin conferma per conto di un dipendente una
+        // settimana non ancora confermata — verifico solo che il
+        // dialogo compaia con il testo corretto, senza confermare
+        // per davvero.
+        await expect(page.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+        await page.getByRole('button', { name: 'Conferma settimana' }).click();
+        await expect(page.getByText('Confermi le ore di questa settimana per', { exact: false })).toBeVisible();
+        await page.getByRole('button', { name: 'Annulla' }).click();
       }
+
+      // Scenario "il riepilogo si aggiorna con quanto digitato" (anche
+      // per una settimana confermata e corretta dall'admin, #151):
+      // "Differenza ore" del riquadro è la somma delle differenze dei
+      // giorni mostrati nelle card, mai un valore congelato alla
+      // conferma.
+      const campiDifferenza = page.getByLabel(/^Differenza ore (Lunedì|Martedì|Mercoledì|Giovedì|Venerdì|Sabato|Domenica)$/);
+      const valoriDifferenza = await campiDifferenza.evaluateAll((els) => els.map((el) => Number((el as HTMLInputElement).value)));
+      const sommaDifferenze = Math.round(valoriDifferenza.reduce((t, v) => t + v, 0) * 100) / 100;
+      const testoDifferenza = (await page.getByText('Differenza ore:', { exact: false }).textContent()) ?? '';
+      const differenzaRiquadro = Number(testoDifferenza.match(/Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/)![1]);
+      expect(differenzaRiquadro).toBe(sommaDifferenze);
+
+      // Scenario: l'admin naviga tra le settimane di un dipendente —
+      // resta sulle ore della stessa persona (il parametro `utente`
+      // resta nell'URL).
+      await page.getByRole('link', { name: 'Settimana precedente' }).click();
+      await page.waitForURL(new RegExp(`settimana=\\d{4}-\\d{2}-\\d{2}&utente=${utenteId}`));
+      await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+
+      // Scenario: l'admin naviga con il selettore di data — `utente`
+      // resta nell'indirizzo, stessa persona.
+      await page.getByLabel('Vai alla settimana del').fill('2024-03-13');
+      await page.getByRole('button', { name: 'Vai', exact: true }).click();
+      await page.waitForURL(new RegExp(`settimana=2024-03-11&utente=${utenteId}`));
+      await expect(page.getByRole('heading', { name: /Ore di lavoro/ })).toContainText('—');
+      await expect(page.getByLabel('Vai alla settimana del')).toHaveValue('2024-03-11');
+
+      // Scenario: un parametro `utente` non valido viene ignorato —
+      // torno a vedere le mie proprie ore (che, essendo io admin non
+      // abilitato personalmente in questo test, mi reindirizzano alla
+      // dashboard esattamente come senza alcun parametro).
+      await page.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
     });
 
     // Regressione (0030_profili_orari_self_select.sql): la policy RLS
@@ -732,7 +648,8 @@ test.describe('18 — Report ore di lavoro', () => {
     // intercettava.
     test('un profilo orario assegnato dall\'admin precarica le ore ordinarie anche per chi non è admin', async ({
       page,
-      browser,
+      creaUtente,
+      apriComeUtente,
     }) => {
       const nomeProfilo = `E2E ore lavoro maestra ${Date.now()}`;
 
@@ -746,32 +663,21 @@ test.describe('18 — Report ore di lavoro', () => {
       await page.getByRole('button', { name: 'Crea profilo orario' }).click();
       await expect(page.getByText(nomeProfilo, { exact: false })).toBeVisible({ timeout: 20_000 });
 
+      const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
       await page.goto('/admin/maestre');
-      const rigaAssegna = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-      await rigaAssegna.getByLabel('Ore di lavoro').check();
+      const rigaAssegna = page.locator('li', { hasText: dipendente.email });
       await rigaAssegna.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
       await clickEAttendiAzione(page, rigaAssegna.getByRole('button', { name: 'Aggiorna' }));
 
       try {
-        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
-        const paginaMaestra = await contestoMaestra.newPage();
+        const paginaMaestra = await apriComeUtente(dipendente);
         await paginaMaestra.goto('/dashboard/ore-lavoro');
-        const giaConfermata =
-          (await paginaMaestra.getByText('Settimana confermata il', { exact: false }).count()) > 0;
-        if (!giaConfermata) {
-          await expect(oreOrdinarieGiorno(paginaMaestra, 0)).toHaveText('6h');
-          await expect(oreOrdinarieGiorno(paginaMaestra, 4)).toHaveText('3h');
-          // Sabato (chiusura implicita) parte in Chiusura, senza ore previste da mostrare.
-          await expect(paginaMaestra.getByLabel('Stato Sabato')).toHaveValue('chiusura');
-        }
-        await contestoMaestra.close();
+        await expect(oreOrdinarieGiorno(paginaMaestra, 0)).toHaveText('6h');
+        await expect(oreOrdinarieGiorno(paginaMaestra, 4)).toHaveText('3h');
+        // Sabato (chiusura implicita) parte in Chiusura, senza ore previste da mostrare.
+        await expect(paginaMaestra.getByLabel('Stato Sabato')).toHaveValue('chiusura');
       } finally {
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        await rigaRipristina.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
-        await clickEAttendiAzione(page, rigaRipristina.getByRole('button', { name: 'Aggiorna' }));
-
+        // L'utente è eliminato dalla fixture; qui resta solo il profilo di test.
         await page.goto('/admin/profili-orari');
         const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
         if ((await rigaProfilo.count()) > 0) {
@@ -789,68 +695,55 @@ test.describe('18 — Report ore di lavoro', () => {
     // lavorano gli altri test, e la lascia riaperta (non confermata).
     test("l'admin riapre una settimana confermata; la maestra non può e torna a poterla modificare", async ({
       page,
-      browser,
-      baseURL,
+      creaUtente,
+      apriComeUtente,
     }) => {
       // "Oggi" nel fuso Europe/Rome, non UTC (#163).
       const dieciSettimaneFa = new Date(`${dataFraGiorni(-70)}T12:00:00Z`);
       dieciSettimaneFa.setUTCDate(dieciSettimaneFa.getUTCDate() - ((dieciSettimaneFa.getUTCDay() + 6) % 7));
       const lunedi = dieciSettimaneFa.toISOString().slice(0, 10);
 
-      await page.goto('/admin/maestre');
-      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-      await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
+      const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
 
-      try {
-        await page.goto('/admin/ore-lavoro');
-        await page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! }).getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
-        const utenteId = new URL(page.url()).searchParams.get('utente')!;
-        const urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
-        const urlMaestra = `/dashboard/ore-lavoro?settimana=${lunedi}`;
+      await page.goto('/admin/ore-lavoro');
+      await page.locator('li', { hasText: dipendente.email }).getByRole('link').click();
+      await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+      const utenteId = new URL(page.url()).searchParams.get('utente')!;
+      const urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
+      const urlMaestra = `/dashboard/ore-lavoro?settimana=${lunedi}`;
 
-        // Parto da una settimana confermata (la confermo se serve).
-        await page.goto(urlAdmin);
-        if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) === 0) {
-          await page.getByRole('button', { name: 'Conferma settimana' }).click();
-          await page.getByRole('button', { name: 'Sì', exact: true }).click();
-        }
-        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
-        await nessunaViolazioneA11yGrave(page);
-
-        // La maestra la vede di sola lettura, senza alcun "Riapri settimana".
-        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra'), baseURL });
-        const paginaMaestra = await contestoMaestra.newPage();
-        await paginaMaestra.goto(urlMaestra);
-        await expect(paginaMaestra.getByText('Settimana confermata il', { exact: false })).toBeVisible();
-        await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
-        await expect(paginaMaestra.getByRole('button', { name: 'Riapri settimana' })).toHaveCount(0);
-
-        // L'admin riapre: prima chiede conferma (Annulla non cambia nulla)...
-        await page.getByRole('button', { name: 'Riapri settimana' }).click();
-        await expect(page.getByText('Riaprire la settimana', { exact: false })).toBeVisible();
-        await page.getByRole('button', { name: 'Annulla' }).click();
-        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible();
-
-        // ...poi riapre davvero.
-        await page.getByRole('button', { name: 'Riapri settimana' }).click();
-        await page.getByRole('button', { name: 'Sì, riapri' }).click();
-        await expect(page.getByText('Settimana confermata il', { exact: false })).toHaveCount(0, { timeout: 20_000 });
-        await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
-
-        // La maestra può di nuovo modificarla (e deve riconfermarla).
-        await paginaMaestra.goto(urlMaestra);
-        await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
-        await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
-        await contestoMaestra.close();
-      } finally {
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+      // Parto da una settimana confermata (la confermo se serve).
+      await page.goto(urlAdmin);
+      if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) === 0) {
+        await page.getByRole('button', { name: 'Conferma settimana' }).click();
+        await page.getByRole('button', { name: 'Sì', exact: true }).click();
       }
+      await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
+      await nessunaViolazioneA11yGrave(page);
+
+      // La maestra la vede di sola lettura, senza alcun "Riapri settimana".
+      const paginaMaestra = await apriComeUtente(dipendente);
+      await paginaMaestra.goto(urlMaestra);
+      await expect(paginaMaestra.getByText('Settimana confermata il', { exact: false })).toBeVisible();
+      await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toHaveCount(0);
+      await expect(paginaMaestra.getByRole('button', { name: 'Riapri settimana' })).toHaveCount(0);
+
+      // L'admin riapre: prima chiede conferma (Annulla non cambia nulla)...
+      await page.getByRole('button', { name: 'Riapri settimana' }).click();
+      await expect(page.getByText('Riaprire la settimana', { exact: false })).toBeVisible();
+      await page.getByRole('button', { name: 'Annulla' }).click();
+      await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible();
+
+      // ...poi riapre davvero.
+      await page.getByRole('button', { name: 'Riapri settimana' }).click();
+      await page.getByRole('button', { name: 'Sì, riapri' }).click();
+      await expect(page.getByText('Settimana confermata il', { exact: false })).toHaveCount(0, { timeout: 20_000 });
+      await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
+
+      // La maestra può di nuovo modificarla (e deve riconfermarla).
+      await paginaMaestra.goto(urlMaestra);
+      await expect(paginaMaestra.getByRole('button', { name: 'Salva modifiche' })).toBeVisible();
+      await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
     });
 
     // Scenario "una conferma settimana che fallisce apre un popup bloccante"
@@ -861,97 +754,62 @@ test.describe('18 — Report ore di lavoro', () => {
     // maestra, ormai superata, fallisce con "già confermata".
     test('una conferma settimana che fallisce apre il popup bloccante "Settimana non confermata"', async ({
       page,
-      browser,
-      baseURL,
+      creaUtente,
+      apriComeUtente,
     }) => {
       const undiciSettimaneFa = new Date(`${dataFraGiorni(-77)}T12:00:00Z`);
       undiciSettimaneFa.setUTCDate(undiciSettimaneFa.getUTCDate() - ((undiciSettimaneFa.getUTCDay() + 6) % 7));
       const lunedi = undiciSettimaneFa.toISOString().slice(0, 10);
 
-      await page.goto('/admin/maestre');
-      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-      await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
+      const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
 
-      let urlAdmin = '';
-      try {
-        await page.goto('/admin/ore-lavoro');
-        await page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! }).getByRole('link').click();
-        await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
-        const utenteId = new URL(page.url()).searchParams.get('utente')!;
-        urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
+      await page.goto('/admin/ore-lavoro');
+      await page.locator('li', { hasText: dipendente.email }).getByRole('link').click();
+      await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+      const utenteId = new URL(page.url()).searchParams.get('utente')!;
+      const urlAdmin = `/dashboard/ore-lavoro?settimana=${lunedi}&utente=${utenteId}`;
 
-        // Parto da una settimana non confermata (la riapro se serve).
-        await page.goto(urlAdmin);
-        if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) > 0) {
-          await page.getByRole('button', { name: 'Riapri settimana' }).click();
-          await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, riapri' }));
-        }
-        await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible({ timeout: 20_000 });
-
-        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra'), baseURL });
-        const paginaMaestra = await contestoMaestra.newPage();
-        await paginaMaestra.goto(`/dashboard/ore-lavoro?settimana=${lunedi}`);
-        await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
-
-        // L'admin conferma per conto della maestra.
-        await page.getByRole('button', { name: 'Conferma settimana' }).click();
-        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì', exact: true }));
-        await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
-
-        // La pagina della maestra è rimasta indietro: la sua conferma fallisce.
-        await paginaMaestra.getByRole('button', { name: 'Conferma settimana' }).click();
-        await clickEAttendiAzione(paginaMaestra, paginaMaestra.getByRole('button', { name: 'Sì', exact: true }));
-        const popup = popupErrore(paginaMaestra, 'Settimana non confermata');
-        await expect(popup).toBeVisible();
-        await expect(popup).toContainText('già confermata');
-        await nessunaViolazioneA11yGrave(paginaMaestra);
-
-        // Si chiude con Esc e la pagina torna utilizzabile.
-        await paginaMaestra.keyboard.press('Escape');
-        await expect(popup).toBeHidden();
-        await expect(paginaMaestra.getByRole('button', { name: 'Annulla' })).toBeVisible();
-        await contestoMaestra.close();
-      } finally {
-        // Ripristino: settimana riaperta, maestra di nuovo non abilitata.
-        if (urlAdmin) {
-          await page.goto(urlAdmin);
-          if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) > 0) {
-            await page.getByRole('button', { name: 'Riapri settimana' }).click();
-            await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, riapri' }));
-          }
-        }
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
+      // Parto da una settimana non confermata (la riapro se serve).
+      await page.goto(urlAdmin);
+      if ((await page.getByRole('button', { name: 'Riapri settimana' }).count()) > 0) {
+        await page.getByRole('button', { name: 'Riapri settimana' }).click();
+        await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì, riapri' }));
       }
+      await expect(page.getByRole('button', { name: 'Conferma settimana' })).toBeVisible({ timeout: 20_000 });
+
+      const paginaMaestra = await apriComeUtente(dipendente);
+      await paginaMaestra.goto(`/dashboard/ore-lavoro?settimana=${lunedi}`);
+      await expect(paginaMaestra.getByRole('button', { name: 'Conferma settimana' })).toBeVisible();
+
+      // L'admin conferma per conto della maestra.
+      await page.getByRole('button', { name: 'Conferma settimana' }).click();
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì', exact: true }));
+      await expect(page.getByText('Settimana confermata il', { exact: false })).toBeVisible({ timeout: 20_000 });
+
+      // La pagina della maestra è rimasta indietro: la sua conferma fallisce.
+      await paginaMaestra.getByRole('button', { name: 'Conferma settimana' }).click();
+      await clickEAttendiAzione(paginaMaestra, paginaMaestra.getByRole('button', { name: 'Sì', exact: true }));
+      const popup = popupErrore(paginaMaestra, 'Settimana non confermata');
+      await expect(popup).toBeVisible();
+      await expect(popup).toContainText('già confermata');
+      await nessunaViolazioneA11yGrave(paginaMaestra);
+
+      // Si chiude con Esc e la pagina torna utilizzabile.
+      await paginaMaestra.keyboard.press('Escape');
+      await expect(popup).toBeHidden();
+      await expect(paginaMaestra.getByRole('button', { name: 'Annulla' })).toBeVisible();
     });
 
-    test('un parametro utente usato da chi non è admin viene ignorato', async ({ page, browser }) => {
-      await page.goto('/admin/maestre');
-      const rigaAbilita = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-      await rigaAbilita.getByLabel('Ore di lavoro').check();
-      await clickEAttendiAzione(page, rigaAbilita.getByRole('button', { name: 'Aggiorna' }));
+    test('un parametro utente usato da chi non è admin viene ignorato', async ({ creaUtente, apriComeUtente }) => {
+      const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
 
-      try {
-        const contestoMaestra = await browser.newContext({ storageState: statoAutenticazione('maestra') });
-        const paginaMaestra = await contestoMaestra.newPage();
-        // Un id qualunque diverso dal proprio: una maestra non deve mai
-        // vedere le ore di qualcun altro, nemmeno forzando l'URL.
-        await paginaMaestra.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
-        await expect(paginaMaestra.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
-        await expect(paginaMaestra.getByRole('heading', { name: /Ore di lavoro/ })).not.toContainText('—');
-        await expect(paginaMaestra.getByRole('link', { name: 'Torna alla dashboard' })).toBeVisible();
-        await contestoMaestra.close();
-      } finally {
-        await page.goto('/admin/maestre');
-        const rigaRipristina = page.locator('li', { hasText: process.env.E2E_MAESTRA_EMAIL! });
-        await rigaRipristina.getByLabel('Ore di lavoro').uncheck();
-        await rigaRipristina.getByRole('button', { name: 'Aggiorna' }).click();
-        await page.waitForTimeout(1000);
-      }
+      const paginaMaestra = await apriComeUtente(dipendente);
+      // Un id qualunque diverso dal proprio: una maestra non deve mai
+      // vedere le ore di qualcun altro, nemmeno forzando l'URL.
+      await paginaMaestra.goto('/dashboard/ore-lavoro?utente=00000000-0000-0000-0000-000000000000');
+      await expect(paginaMaestra.getByRole('heading', { name: 'Ore di lavoro' })).toBeVisible();
+      await expect(paginaMaestra.getByRole('heading', { name: /Ore di lavoro/ })).not.toContainText('—');
+      await expect(paginaMaestra.getByRole('link', { name: 'Torna alla dashboard' })).toBeVisible();
     });
   });
 });
