@@ -240,6 +240,14 @@ della fermata, e la lista esplicita di **cosa deve fare l'umano** (PR da
 revisionare, migration da applicare, dubbi di classificazione commentati,
 domande rimaste su `needs-info`).
 
+**Link alle issue (sempre).** Ogni volta che il report nomina una issue (nella
+tabella, nel paragrafo, nelle liste "cosa deve fare l'umano", nelle note) la
+scrive in forma breve con link ipertestuale alla issue su GitHub:
+`[#245](https://github.com/matteopelucco/girasole/issues/245)`, mai il solo
+`#245` né l'URL nudo né il titolo al posto del numero. Lo stesso vale per le PR
+(`[#248](https://github.com/matteopelucco/girasole/pull/248)`), compresa la
+colonna "link PR" della tabella. Vale anche per il report di `--dry-run`.
+
 Se ci sono PR `human-in-the-loop` o fallimenti e hai a disposizione
 `PushNotification` (caricalo con ToolSearch), mandane una breve all'utente
 con il riepilogo; altrimenti basta il report.
