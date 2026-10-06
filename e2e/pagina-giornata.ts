@@ -251,8 +251,8 @@ export async function giornoDiChiusura(page: Page): Promise<boolean> {
 // --- Comunicazione pasti a Rojac (specs/16) ---------------------------------
 // Solo selettori: i test NON premono mai la conferma finale (irreversibile).
 
-export function titoloComunicazioneRojac(page: Page): Locator {
-  return page.getByRole('heading', { name: 'Comunicazione pasti a Rojac', exact: true });
+export function titoloComunicazioneRojac(contenitore: Page | Locator): Locator {
+  return contenitore.getByRole('heading', { name: 'Comunicazione pasti a Rojac' });
 }
 
 // Banner "Pasti comunicati a Rojac il ...": presente solo se oggi la
