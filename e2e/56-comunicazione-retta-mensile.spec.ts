@@ -27,12 +27,12 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
   async function creaBambinoConCosti(
     page: import('@playwright/test').Page,
-    opzioni: { email?: string; prezzoMensile?: string; prezzoBuonoPasto?: string } = {}
+    opzioni: { nome?: string; email?: string; prezzoMensile?: string; prezzoBuonoPasto?: string } = {}
   ) {
     const cognome = `E2eComRetta${Date.now()}${Math.floor(Math.random() * 1000)}`;
     await page.goto('/admin');
     const form = formCreaBambino(page);
-    await page.getByPlaceholder('Nome', { exact: true }).fill('ComRetta');
+    await page.getByPlaceholder('Nome', { exact: true }).fill(opzioni.nome ?? 'ComRetta');
     await page.getByPlaceholder('Cognome').fill(cognome);
     await page.getByLabel('Data di nascita').fill('2021-06-06');
     await page.getByLabel('Sesso').selectOption('F');
@@ -329,6 +329,29 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(popup).toBeVisible();
     await expect(popup).toContainText(email);
     await expect(popup.getByRole('button', { name: 'Conferma invio' })).toBeVisible();
+    await nessunaViolazioneA11yGrave(page);
+  });
+
+  test("il markup nel nome del bambino è mostrato come testo nell'anteprima", async ({ page }) => {
+    // Nessuna email viene inviata: l'anteprima non conferma nulla. Il corpo
+    // HTML della mail vera (stessa regola: testo escapato) è coperto dai
+    // test unit di corpoEmailHtmlRetta (lib/comunicazioneRetta.test.ts).
+    const nomeConMarkup = '<b>Marco</b> & "Co"';
+    const cognome = await creaBambinoConCosti(page, {
+      nome: nomeConMarkup,
+      email: `e2e-retta-markup-${Date.now()}@example.com`,
+      prezzoMensile: '200',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await expect(popup).toBeVisible();
+    await expect(popup.getByRole('heading')).toContainText(`${nomeConMarkup} ${cognome}`);
+    await expect(popup.locator('b')).toHaveCount(0);
     await nessunaViolazioneA11yGrave(page);
   });
 
