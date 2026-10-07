@@ -22,7 +22,7 @@
 //   });
 //
 // `creaUtente({ ruolo, abilitato })` crea l'utente dalla stessa schermata
-// che usa l'admin (/admin/maestre, nessuna chiave service_role: il server
+// che usa l'admin (/admin/maestre, helper in ./pagina-personale, nessuna chiave service_role: il server
 // dell'app fa da sé la parte privilegiata), in un contesto di browser a
 // parte con la sessione dell'admin di test. Il ruolo di default è
 // `maestra`; `abilitato: true` spunta "Ore di lavoro" già alla creazione.
@@ -41,7 +41,8 @@
 //
 // Dati sempre fittizi (nome "Fixture", telefono di prova): mai dati reali.
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
-import { eliminaUtenteDaScheda, hasCredenziali, statoAutenticazione } from './helpers';
+import { hasCredenziali, statoAutenticazione } from './helpers';
+import { creaUtenteDaForm, eliminaUtentePerEmail } from './pagina-personale';
 
 // Rispetta la regola di complessità delle password dell'app (REGOLA_PASSWORD).
 const PASSWORD_UTENTE_FIXTURE = 'PasswordE2E!1';
@@ -66,27 +67,15 @@ function emailUnica(): string {
 
 async function creaUtenteDaAdmin(page: Page, opzioni: Required<OpzioniUtenteFixture>): Promise<UtenteFixture> {
   const email = emailUnica();
-  await page.goto('/admin/maestre');
-  const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
-  await page.getByPlaceholder('Nome').first().fill('Fixture');
-  await page.getByPlaceholder('Cognome').first().fill('Utente');
-  await page.getByPlaceholder('Email').fill(email);
-  await page.getByPlaceholder('Telefono').first().fill('3331234567');
-  await page.getByLabel('Password', { exact: true }).fill(PASSWORD_UTENTE_FIXTURE);
-  await page.getByLabel('Conferma password').fill(PASSWORD_UTENTE_FIXTURE);
-  await formCreazione.getByLabel('Ruolo').selectOption(opzioni.ruolo);
-  if (opzioni.abilitato) await formCreazione.getByLabel('Ore di lavoro').check();
-  await page.getByRole('button', { name: 'Crea utente' }).click();
-  await expect(page.getByText(email, { exact: false })).toBeVisible({ timeout: 20_000 });
+  await creaUtenteDaForm(page, {
+    nome: 'Fixture',
+    cognome: 'Utente',
+    email,
+    password: PASSWORD_UTENTE_FIXTURE,
+    ruolo: opzioni.ruolo,
+    oreLavoro: opzioni.abilitato,
+  });
   return { email, password: PASSWORD_UTENTE_FIXTURE, ruolo: opzioni.ruolo };
-}
-
-async function eliminaUtenteDaAdmin(page: Page, email: string): Promise<void> {
-  await page.goto('/admin/maestre');
-  const riga = page.getByText(email, { exact: false }).locator('..');
-  if ((await riga.count()) === 0) return;
-  await eliminaUtenteDaScheda(page, riga);
-  await expect(page.getByText(email, { exact: false })).toHaveCount(0);
 }
 
 export const test = base.extend<{
@@ -122,7 +111,7 @@ export const test = base.extend<{
         try {
           const pagina = await paginaAdmin();
           try {
-            await eliminaUtenteDaAdmin(pagina, utente.email);
+            await eliminaUtentePerEmail(pagina, utente.email);
           } finally {
             await pagina.close();
           }
