@@ -11,7 +11,8 @@ import { aggiornaPromemoria, eliminaPromemoria } from '../../actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function PromemoriaDettaglioPage({ params }: { params: { id: string } }) {
+export default async function PromemoriaDettaglioPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { supabase, user, profilo } = await requireProfilo();
   const ruolo = profilo?.ruolo ?? null;
   if (ruolo !== 'admin' && ruolo !== 'maestra') redirect('/dashboard');

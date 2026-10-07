@@ -45,11 +45,12 @@ export const dynamic = 'force-dynamic';
 // ore. Solo admin (requireAdmin riporta gli altri alla dashboard); il
 // mese richiesto (`?mese=AAAA-MM`) non è mai nel futuro
 // (meseOreLavoroRichiesto).
-export default async function OreLavoroMesePage({
-  searchParams,
-}: {
-  searchParams: { mese?: string; utente?: string };
-}) {
+export default async function OreLavoroMesePage(
+  props: {
+    searchParams: Promise<{ mese?: string; utente?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo } = await requireAdmin();
 
   const utenteId = searchParams.utente;

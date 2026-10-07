@@ -12,11 +12,12 @@ const MESSAGGI_ERRORE: Record<string, string> = {
   generico: 'Non è stato possibile impostare la nuova password. Riprova.',
 };
 
-export default async function ReimpostaPasswordPage({
-  searchParams,
-}: {
-  searchParams: { errore?: string; dettaglio?: string };
-}) {
+export default async function ReimpostaPasswordPage(
+  props: {
+    searchParams: Promise<{ errore?: string; dettaglio?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const supabase = createClient();
   const {
     data: { user },

@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic';
 // in produzione (capitato ad agosto 2026) — elimina presenze e pasti di
 // una data, tutte le classi insieme, mai una singola sezione/bambino
 // (CLAUDE.md, tenere lo strumento semplice per il caso d'uso reale).
-export default async function ResetGiornataPage({ searchParams }: { searchParams: { data?: string } }) {
+export default async function ResetGiornataPage(props: { searchParams: Promise<{ data?: string }> }) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo } = await requireAdmin();
   const data = searchParams.data || oggi();
 

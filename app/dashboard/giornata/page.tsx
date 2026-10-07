@@ -29,7 +29,8 @@ type RigaPastoDb = PastoGiorno & { bambino_id: string };
 // specs/14): per lei la pagina non legge né `pasti` né
 // `pasti_comunicati` (nessuna query, non solo nessun render) — la RLS
 // glielo impedirebbe comunque.
-export default async function GiornataPage({ searchParams }: { searchParams: { data?: string } }) {
+export default async function GiornataPage(props: { searchParams: Promise<{ data?: string }> }) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo, ruolo, data } = await requireStaff(searchParams);
   const conPasti = ruolo !== 'assistente';
 

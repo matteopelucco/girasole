@@ -19,11 +19,12 @@ const TIPI: { valore: Tipo; etichetta: string }[] = [
   { valore: 'giornaliero', etichetta: 'Giornaliero' },
 ];
 
-export default async function ReportPage({
-  searchParams,
-}: {
-  searchParams: { tipo?: string; periodo?: string };
-}) {
+export default async function ReportPage(
+  props: {
+    searchParams: Promise<{ tipo?: string; periodo?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo, ruolo } = await requireStaff({});
   const nomeVisualizzato = profilo?.nome || user.email || '';
   const tipo: Tipo = TIPI.some((t) => t.valore === searchParams.tipo)

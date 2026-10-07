@@ -20,11 +20,12 @@ import { creaPromemoria } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { promemoria?: string };
-}) {
+export default async function DashboardPage(
+  props: {
+    searchParams: Promise<{ promemoria?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo } = await requireProfilo();
 
   const ruolo = profilo?.ruolo ?? null;
