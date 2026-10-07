@@ -62,7 +62,19 @@ export function FormConEsito({
   }, [esito, resetSuOk]);
 
   return (
-    <form key={chiaveForm} ref={formRef} action={formAction} className={className}>
+    <form
+      key={chiaveForm}
+      ref={formRef}
+      action={formAction}
+      className={className}
+      // React 19 svuota da sé i campi non controllati (li riporta al
+      // defaultValue) a ogni invio con `action={funzione}`, anche se
+      // l'azione ha restituito un errore. Qui i dati digitati devono
+      // restare (modifica di dati già salvati, errore da correggere): si
+      // annulla quel reset. Il vero svuotamento dopo una creazione è
+      // `resetSuOk`, con la `key` qui sopra.
+      onReset={(evento) => evento.preventDefault()}
+    >
       {children}
       {!esito.ok && titoloPopupErrore && (
         <DialogErrore
