@@ -20,10 +20,20 @@
 // completa richiede quindi ANCHE una verifica manuale una tantum del
 // click "Conferma", vedi docs/tasks-archivio.md.
 //
+// Eccezione (issue #177): gli scenari dell'ADMIN e del REPORT non dipendono
+// da "oggi". L'admin può aprire e comunicare una data PASSATA, che non
+// disturba nessuno: lì i test preparano da soli una data già comunicata
+// (e2e/giornata-comunicata.ts, senza premere "Conferma" e senza email) e la
+// verificano sempre, senza saltare. Gli scenari della MAESTRA invece
+// richiedono la comunicazione di OGGI (la maestra scrive solo oggi): restano
+// saltati finché qualcuno non l'ha fatta a mano, con il motivo scritto nel
+// messaggio del salto.
+//
 // Lo stesso vale per i nuovi scenari sul blocco di Assente/Malattia dopo
-// la comunicazione (issue #100): si verificano solo se oggi i pasti sono
-// già stati comunicati, altrimenti si saltano. Il box di comunicazione
-// sta in cima alla schermata unica "Presenze e pasti" (specs/10).
+// la comunicazione (issue #100): per la maestra si verificano solo se oggi i
+// pasti sono già stati comunicati, altrimenti si saltano. Il box di
+// comunicazione sta in cima alla schermata unica "Presenze e pasti"
+// (specs/10).
 //
 // Dati propri (issue #229): i due test che costruiscono da sé lo stato
 // (bloccato per presenza mancante; pasto "sì" su un bambino assente) usano
@@ -45,6 +55,7 @@ import {
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
 } from './helpers';
+import { DATA_PASSATA_COMUNICATA, preparaGiornoPassatoComunicato } from './giornata-comunicata';
 import {
   CLASSE_ATTIVO,
   apriGiornata,
@@ -77,9 +88,15 @@ function cardConPasto(page: Page, testoPasto: string): Locator {
     .filter({ hasNot: etichettaPastoMalattia(page) });
 }
 
+// Motivo del salto degli scenari della maestra che richiedono i pasti di OGGI
+// già comunicati. Non si comunica mai "oggi" nei test: non si può annullare e
+// bloccherebbe i pasti di tutto l'asilo per il resto della giornata (#177).
+const MOTIVO_SALTO_OGGI_NON_COMUNICATO =
+  "Saltato di proposito: la maestra può lavorare solo sulla data di oggi, e comunicare i pasti di oggi non si può annullare e bloccherebbe l'intero asilo per la giornata. Il test parte solo se qualcuno ha già comunicato i pasti di oggi a mano.";
+
 async function saltaSeNonComunicato(page: Page) {
   const banner = bannerPastiComunicati(page);
-  test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
+  test.skip((await banner.count()) === 0, MOTIVO_SALTO_OGGI_NON_COMUNICATO);
 }
 
 const TELEFONO_ROJAC = '0331 955630';
@@ -104,7 +121,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       const messaggioBloccato = page.getByText('Non puoi ancora comunicare i pasti', { exact: false });
       test.skip(
         (await messaggioBloccato.count()) === 0,
-        'i pasti di oggi sono già stati comunicati: nessun blocco da verificare'
+        'Saltato: i pasti di oggi sono già stati comunicati (a mano), quindi il blocco per presenza mancante non si vede più.'
       );
 
       await expect(messaggioBloccato).toBeVisible();
@@ -186,7 +203,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
       const bottoneConferma = bottoneConfermaPasti(page);
       test.skip(
         (await bottoneConferma.count()) === 0,
-        'pasti già comunicati oggi (da un run precedente), presenze non ancora tutte segnate, oppure nessuna sezione/bambino per questo account'
+        'Saltato: il pulsante "Conferma pasti" compare solo se TUTTI i bambini dell\'asilo hanno la presenza di oggi, e altri test creano bambini senza presenza nello stesso momento (oppure i pasti di oggi sono già comunicati). Il test non conferma mai nulla.'
       );
 
       await bottoneConferma.click();
@@ -203,7 +220,7 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
 
     test('se i pasti di oggi sono già comunicati, il blocco vale per ogni classe della maestra', async ({ page }) => {
       const banner = bannerPastiComunicati(page);
-      test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
+      test.skip((await banner.count()) === 0, MOTIVO_SALTO_OGGI_NON_COMUNICATO);
       await expect(banner).toBeVisible();
 
       // Navigazione a 2 livelli (specs/12): tutte le classi della maestra
@@ -254,33 +271,48 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
     });
   });
 
-  test.describe('come admin', () => {
+  // Gli scenari dell'admin e del report girano su una data PASSATA già
+  // comunicata (issue #177): niente "oggi", niente conferma da premere.
+  test.describe('come admin, su una data passata già comunicata', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test('l\'admin vede comunque il messaggio, e può sempre modificare i pasti', async ({ page }) => {
+    test("l'admin vede comunque il messaggio, e può sempre modificare i pasti", async ({
+      page,
+      adminDb,
+      bambino,
+    }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      await preparaGiornoPassatoComunicato(adminDb!, bambino);
 
-      await apriGiornata(page, dataOggiRoma());
-      const banner = bannerPastiComunicati(page);
-      test.skip((await banner.count()) === 0, 'pasti non ancora comunicati oggi (nessuna comunicazione da verificare)');
-      await expect(banner).toBeVisible();
+      await apriGiornata(page, DATA_PASSATA_COMUNICATA);
+      await expect(bannerPastiComunicati(page)).toBeVisible();
+      await expect(bottoneConfermaPasti(page)).toHaveCount(0);
 
-      const primoSi = page.getByRole('button', { name: 'Sì', exact: true }).first();
-      test.skip((await primoSi.count()) === 0, 'nessun bambino in questa classe');
-      await expect(primoSi).toBeEnabled();
+      // Il pasto del bambino fixture è "sì" e i pulsanti restano attivi.
+      const card = cardBambino(page, bambino);
+      await expect(card).toBeVisible();
+      await expect(bottonePasto(card, 'Sì')).toBeEnabled();
+      await expect(bottonePasto(card, 'No')).toBeEnabled();
+      await expect(bottonePasto(card, 'Sì')).toHaveClass(CLASSE_ATTIVO.pastoSi);
 
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test("l'admin può segnare Assente o Malattia anche dopo la comunicazione", async ({ page }) => {
+    test("l'admin può segnare Assente o Malattia anche dopo la comunicazione", async ({
+      page,
+      adminDb,
+      bambino,
+    }) => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      await preparaGiornoPassatoComunicato(adminDb!, bambino);
 
-      await apriGiornata(page, dataOggiRoma());
-      await saltaSeNonComunicato(page);
-      // Per l'admin la sezione Pasto resta modificabile: il pasto "sì" è
-      // il pulsante "Sì" evidenziato, non un testo in sola lettura.
-      const card = cardBambini(page).filter({ has: bottonePastoSiSelezionato(page) }).first();
-      test.skip((await card.count()) === 0, 'nessun bambino con pasto "sì" oggi');
+      await apriGiornata(page, DATA_PASSATA_COMUNICATA);
+      await expect(bannerPastiComunicati(page)).toBeVisible();
+      // Il bambino fixture è presente con pasto "sì": per la maestra sarebbe
+      // bloccato, per l'admin no. Per l'admin la sezione Pasto resta
+      // modificabile: il pasto "sì" è il pulsante "Sì" evidenziato.
+      const card = cardBambino(page, bambino);
+      await expect(bottonePastoSiSelezionato(card)).toHaveCount(1);
 
       const presenza = colonnaPresenza(card);
       await expect(bottonePresenza(card, 'Assente')).toBeEnabled();
@@ -292,16 +324,16 @@ test.describe('16 — Comunicazione pasti a Rojac', () => {
   test.describe('report a schermo', () => {
     test.use({ storageState: statoAutenticazione('maestra') });
 
-    test('la sezione "Comunicazione pasti" compare nel report giornaliero se oggi è stato comunicato', async ({
+    test('la sezione "Comunicazione pasti" compare nel report giornaliero di una data con i pasti comunicati', async ({
       page,
+      adminDb,
+      bambino,
     }) => {
       test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      await preparaGiornoPassatoComunicato(adminDb!, bambino);
 
-      await page.goto(`/dashboard/report?tipo=giornaliero&periodo=${dataOggiRoma()}`);
-      const sezioneComunicazione = page.getByRole('heading', { name: 'Comunicazione pasti' });
-      test.skip((await sezioneComunicazione.count()) === 0, 'pasti non ancora comunicati oggi');
-
-      await expect(sezioneComunicazione).toBeVisible();
+      await page.goto(`/dashboard/report?tipo=giornaliero&periodo=${DATA_PASSATA_COMUNICATA}`);
+      await expect(page.getByRole('heading', { name: 'Comunicazione pasti' })).toBeVisible();
       await expect(page.getByText(/pasti \(.+\)/).first()).toBeVisible();
       await expect(page.getByText(/^Totale del periodo: \d+ pasti$/)).toBeVisible();
 

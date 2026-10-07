@@ -120,9 +120,10 @@ E vedo comunque, in cima alla pagina, un messaggio con data, ora e
 numero dei pasti comunicati
 
 ## Scenario: l'admin può sempre modificare, anche dopo la comunicazione
-Dato che sono autenticato come admin e i pasti di oggi sono già stati
-comunicati a Rojac
-Quando apro "Presenze e pasti" per oggi
+Dato che sono autenticato come admin e i pasti della data sono già stati
+comunicati a Rojac (oggi, oppure una data passata: l'admin può aprire e
+comunicare anche una data passata)
+Quando apro "Presenze e pasti" per quella data
 Allora vedo comunque il messaggio con data, ora e numero dei pasti
 comunicati
 E i pulsanti Sì/No restano comunque attivi, per
@@ -158,8 +159,8 @@ Allora i pulsanti "Assente" e "Malattia" restano disponibili: quel
 bambino non è nel conteggio comunicato
 
 ## Scenario: l'admin può segnare Assente o Malattia anche dopo la comunicazione
-Dato che sono autenticato come admin e i pasti di oggi sono già stati
-comunicati a Rojac
+Dato che sono autenticato come admin e i pasti della data sono già stati
+comunicati a Rojac (oggi, oppure una data passata)
 Quando guardo la sezione "Presenza" della card di un bambino con pasto
 "sì"
 Allora i pulsanti "Assente" e "Malattia" restano disponibili (l'admin
@@ -167,7 +168,8 @@ deve poter correggere errori reali; il log della comunicazione resta
 comunque immutabile)
 
 ## Scenario: sezione "Comunicazione pasti" nel report a schermo
-Dato che sto guardando il Report (giornaliero, settimanale o mensile)
+Dato che sto guardando il Report (giornaliero, settimanale o mensile) di un
+periodo che comprende una data con i pasti già comunicati (oggi o passata)
 Quando la pagina mostra i dati del periodo
 Allora vedo una sezione "Comunicazione pasti" con una riga per ciascuna
 comunicazione del periodo, nel formato
