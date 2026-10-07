@@ -305,6 +305,13 @@ finché non risulta tutto verde.
   test non ripetono `getByRole('group', { name: 'Presenza' })` e simili:
   se un'etichetta cambia, si corregge lì. `e2e/helpers.ts` tiene solo
   quanto è generico (login, a11y, date, `clickEAttendiAzione`).
+  Analogamente (issue #250, #173) l'amministrazione del personale sta in
+  `e2e/pagina-personale.ts`: utenti di `/admin/maestre` (form di creazione,
+  riga/scheda, spunta "Ore di lavoro", profilo orario), profili orari
+  (creazione, apertura, eliminazione) e campi del report ore
+  (`campoGiorno(page, 'Differenza ore', 'Lunedì')`, pulsanti di
+  salvataggio/conferma, navigazione tra settimane). La fixture
+  `e2e/fixture-utente.ts` usa lo stesso form di creazione.
 
 ### Unit (Vitest) — solo logica pura
 - **Criterio di ammissione, rigido**: un unit test in `lib/xxx.test.ts`
