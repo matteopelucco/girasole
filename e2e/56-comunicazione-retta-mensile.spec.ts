@@ -409,6 +409,29 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaBAncoraDaInviare.getByRole('button', { name: 'Invia comunicazione' })).toBeVisible();
   });
 
+  // Il Reply-To non è osservabile dall'interfaccia: il payload è verificato
+  // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
+  // reply_to vada a buon fine (Resend rifiuta un payload non valido).
+  test("una risposta dei genitori arriva all'asilo, non al mittente tecnico (Reply-To)", async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-replyto-${Date.now()}@example.com`,
+      prezzoMensile: '120',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await popup.getByRole('button', { name: 'Conferma invio' }).click();
+    await page.waitForTimeout(3000);
+    await page.reload();
+
+    await expect(page.locator('tr', { hasText: cognome }).getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+  });
+
   test("modificare una voce di costo prima dell'invio usa il valore modificato", async ({ page }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 

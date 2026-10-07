@@ -24,22 +24,46 @@ export function destinatarioRojac(): string | null {
   return process.env.ROJAC_EMAIL_DESTINATARIO?.trim() || null;
 }
 
-export async function inviaEmail({
-  a,
-  cc,
-  oggetto,
-  html,
-  allegati,
-}: {
+export type ParametriEmail = {
   // Uno o più destinatari (specs/55, "più indirizzi email di
   // promemoria, separati da ;"): un solo invio con più "to", non
   // un'email separata per destinatario.
   a: string | string[];
   cc?: string;
+  // Header Reply-To: dove arriva una risposta. Solo per le comunicazioni
+  // ai genitori (specs/56): il mittente tecnico (RESEND_MITTENTE) non è
+  // una casella letta da nessuno. Le mail interne non lo impostano.
+  rispondiA?: string;
   oggetto: string;
   html: string;
   allegati?: AllegatoEmail[];
-}): Promise<void> {
+};
+
+// Corpo della richiesta all'API Resend: pura, senza I/O (testabile).
+export function costruisciPayloadEmail({
+  mittente,
+  a,
+  cc,
+  rispondiA,
+  oggetto,
+  html,
+  allegati,
+}: ParametriEmail & { mittente: string }) {
+  return {
+    from: mittente,
+    to: Array.isArray(a) ? a : [a],
+    cc: cc ? [cc] : undefined,
+    reply_to: rispondiA || undefined,
+    subject: oggetto,
+    html,
+    attachments: allegati?.map((allegato) => ({
+      filename: allegato.filename,
+      content: Buffer.from(allegato.content).toString('base64'),
+    })),
+  };
+}
+
+export async function inviaEmail(parametri: ParametriEmail): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY non configurata.');
 
@@ -51,17 +75,7 @@ export async function inviaEmail({
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      from: mittente,
-      to: Array.isArray(a) ? a : [a],
-      cc: cc ? [cc] : undefined,
-      subject: oggetto,
-      html,
-      attachments: allegati?.map((a) => ({
-        filename: a.filename,
-        content: Buffer.from(a.content).toString('base64'),
-      })),
-    }),
+    body: JSON.stringify(costruisciPayloadEmail({ mittente, ...parametri })),
   });
 
   if (!risposta.ok) {
