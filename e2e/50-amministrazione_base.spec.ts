@@ -14,6 +14,7 @@ import {
   clickEAttendiAzione,
 } from './helpers';
 import { cardBambini } from './pagina-giornata';
+import { PERCORSO_UTENTI, aggiornaRigaUtente, schedaUtente, selectRuolo } from './pagina-personale';
 
 function gruppoClassiAssegnate(page: Page) {
   return page.locator('#classi-e-bambini-assegnati');
@@ -212,7 +213,7 @@ test.describe('50 — Amministrazione base', () => {
   });
 
   test('/admin/maestre: elementi presenti + accessibilità', async ({ page }) => {
-    await page.goto('/admin/maestre');
+    await page.goto(PERCORSO_UTENTI);
     await expect(page.getByRole('heading', { name: 'Utenti e ruoli' })).toBeVisible();
     await expect(
       page.getByRole('heading', { name: 'Assegna maestre e assistenti alle sezioni' })
@@ -226,17 +227,16 @@ test.describe('50 — Amministrazione base', () => {
       'richiede E2E_UTENTE_DA_PROMUOVERE_EMAIL: email di un account esistente con ruolo genitore da promuovere'
     );
 
-    await page.goto('/admin/maestre');
-    const riga = page.getByText(process.env.E2E_UTENTE_DA_PROMUOVERE_EMAIL!).locator('..');
-    await riga.locator('select[name="ruolo"]').selectOption('maestra');
-    await riga.getByRole('button', { name: 'Aggiorna' }).click();
+    await page.goto(PERCORSO_UTENTI);
+    const riga = schedaUtente(page, process.env.E2E_UTENTE_DA_PROMUOVERE_EMAIL!);
+    await selectRuolo(riga).selectOption('maestra');
+    await aggiornaRigaUtente(page, riga);
 
-    await page.waitForTimeout(1000);
-    await expect(riga.locator('select[name="ruolo"]')).toHaveValue('maestra');
+    await expect(selectRuolo(riga)).toHaveValue('maestra');
   });
 
   test('assegnare e poi rimuovere una maestra da una sezione', async ({ page }) => {
-    await page.goto('/admin/maestre');
+    await page.goto(PERCORSO_UTENTI);
     const selectMaestra = page.locator('select[name="maestra_id"]');
     const selectSezione = page.locator('select[name="sezione_id"]');
     const opzioniMaestra = selectMaestra.locator('option:not([value=""])');

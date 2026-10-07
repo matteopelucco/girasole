@@ -6,8 +6,30 @@
 // Ogni profilo creato viene eliminato dallo stesso test, e l'assegnazione
 // sull'account admin viene ripristinata a "Nessun profilo orario"
 // (try/finally, stesso pattern di 17-ore-di-lavoro.spec.ts).
+//
+// I selettori di utenti, profili orari e ore di lavoro stanno in
+// `e2e/pagina-personale.ts` (issue #250).
 import { test, expect, type Browser, type Page } from '@playwright/test';
-import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
+import { eliminaUtenteDaScheda, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  PERCORSO_ORE_LAVORO,
+  PERCORSO_PROFILI_ORARI,
+  PERCORSO_PROFILO_ORARIO_PERSONALE,
+  PERCORSO_UTENTI,
+  apriProfiloOrario,
+  campoOreProfilo,
+  creaProfiloOrario,
+  creaUtenteDaForm,
+  eliminaProfiloOrarioAperto,
+  eliminaProfiloOrarioSeEsiste,
+  eliminaUtentePerEmail,
+  impostaProfiloOrario,
+  rigaProfiloOrario,
+  rigaUtente,
+  schedaUtente,
+  selectProfiloOrario,
+  titoloProfiloOrarioPersonale,
+} from './pagina-personale';
 
 test.describe('54 — Profili orari', () => {
   test.describe('come admin', () => {
@@ -18,7 +40,7 @@ test.describe('54 — Profili orari', () => {
     });
 
     test('/admin/profili-orari: elementi presenti + accessibilità', async ({ page }) => {
-      await page.goto('/admin/profili-orari');
+      await page.goto(PERCORSO_PROFILI_ORARI);
       await expect(page.getByRole('heading', { name: 'Profili orari' })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Crea profilo orario' })).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
@@ -27,127 +49,67 @@ test.describe('54 — Profili orari', () => {
     test('creare un profilo orario lo mostra in elenco con il totale settimanale', async ({ page }) => {
       const nome = `E2E 35 ore ${Date.now()}`;
 
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nome);
-      await page.getByLabel('Lunedì').fill('7');
-      await page.getByLabel('Martedì').fill('7');
-      await page.getByLabel('Mercoledì').fill('7');
-      await page.getByLabel('Giovedì').fill('7');
-      await page.getByLabel('Venerdì').fill('7');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
-
-      const riga = page.getByText(nome, { exact: false });
-      await expect(riga).toBeVisible({ timeout: 20_000 });
+      const riga = await creaProfiloOrario(page, nome, [7, 7, 7, 7, 7]);
       await expect(page.getByText(/35\s*h\/settimana/)).toBeVisible();
 
       // Pulizia.
-      await riga.click();
-      await page.waitForURL(/\/admin\/profili-orari\/.+/);
-      await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-      await page.getByRole('button', { name: 'Sì' }).click();
-      await page.waitForURL('/admin/profili-orari');
+      await apriProfiloOrario(page, riga);
+      await eliminaProfiloOrarioAperto(page);
     });
 
     test('modificare un profilo orario aggiorna nome, ore e totale', async ({ page }) => {
       const nome = `E2E modifica ${Date.now()}`;
 
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nome);
-      await page.getByLabel('Lunedì').fill('4');
-      await page.getByLabel('Martedì').fill('4');
-      await page.getByLabel('Mercoledì').fill('4');
-      await page.getByLabel('Giovedì').fill('4');
-      await page.getByLabel('Venerdì').fill('4');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
-
-      const riga = page.getByText(nome, { exact: false });
-      await expect(riga).toBeVisible({ timeout: 20_000 });
-      await riga.click();
-      await page.waitForURL(/\/admin\/profili-orari\/.+/);
+      const riga = await creaProfiloOrario(page, nome, [4, 4, 4, 4, 4]);
+      await apriProfiloOrario(page, riga);
       await nessunaViolazioneA11yGrave(page);
 
-      await page.getByLabel('Venerdì').fill('2');
+      await campoOreProfilo(page, 'Venerdì').fill('2');
       await page.getByRole('button', { name: 'Salva modifiche' }).click();
       await expect(page.getByText(/18\s*h\/settimana/)).toBeVisible({ timeout: 20_000 });
 
       // Resta salvato anche dopo un ricaricamento.
       await page.reload();
-      await expect(page.getByLabel('Venerdì')).toHaveValue('2');
+      await expect(campoOreProfilo(page, 'Venerdì')).toHaveValue('2');
 
       // Pulizia.
-      await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-      await page.getByRole('button', { name: 'Sì' }).click();
+      await eliminaProfiloOrarioAperto(page);
     });
 
     test('eliminare un profilo orario lo rimuove dall\'elenco', async ({ page }) => {
       const nome = `E2E elimina ${Date.now()}`;
 
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nome);
-      await page.getByLabel('Lunedì').fill('3');
-      await page.getByLabel('Martedì').fill('3');
-      await page.getByLabel('Mercoledì').fill('3');
-      await page.getByLabel('Giovedì').fill('3');
-      await page.getByLabel('Venerdì').fill('3');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
+      const riga = await creaProfiloOrario(page, nome, [3, 3, 3, 3, 3]);
+      await apriProfiloOrario(page, riga);
 
-      const riga = page.getByText(nome, { exact: false });
-      await expect(riga).toBeVisible({ timeout: 20_000 });
-      await riga.click();
-      await page.waitForURL(/\/admin\/profili-orari\/.+/);
-
-      await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-      await page.getByRole('button', { name: 'Sì' }).click();
-      await page.waitForURL('/admin/profili-orari');
-      await expect(page.getByText(nome, { exact: false })).toHaveCount(0);
+      await eliminaProfiloOrarioAperto(page);
+      await expect(rigaProfiloOrario(page, nome)).toHaveCount(0);
     });
 
     test('assegnare/rimuovere un profilo orario a un utente esistente, e il profilo eliminato lo svuota', async ({
       page,
     }) => {
       const nome = `E2E assegna ${Date.now()}`;
+      const emailAdmin = process.env.E2E_ADMIN_EMAIL!;
 
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nome);
-      await page.getByLabel('Lunedì').fill('5');
-      await page.getByLabel('Martedì').fill('5');
-      await page.getByLabel('Mercoledì').fill('5');
-      await page.getByLabel('Giovedì').fill('5');
-      await page.getByLabel('Venerdì').fill('5');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
-      await expect(page.getByText(nome, { exact: false })).toBeVisible({ timeout: 20_000 });
+      await creaProfiloOrario(page, nome, [5, 5, 5, 5, 5]);
 
       try {
-        await page.goto('/admin/maestre');
-        const rigaPropria = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await rigaPropria.getByLabel('Profilo orario').selectOption({ label: nome });
-        await clickEAttendiAzione(page, rigaPropria.getByRole('button', { name: 'Aggiorna' }));
+        await page.goto(PERCORSO_UTENTI);
+        await impostaProfiloOrario(page, emailAdmin, nome);
         await page.reload();
         // L'opzione selezionata resta quella scelta anche dopo il
         // ricaricamento (non torna a "Nessun profilo orario").
-        await expect(
-          page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Profilo orario').locator('option:checked')
-        ).toHaveText(nome);
+        await expect(selectProfiloOrario(rigaUtente(page, emailAdmin)).locator('option:checked')).toHaveText(nome);
 
         // Rimozione dell'assegnazione.
-        const rigaDaAggiornare = page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! });
-        await rigaDaAggiornare.getByLabel('Profilo orario').selectOption({ label: 'Nessun profilo orario' });
-        await clickEAttendiAzione(page, rigaDaAggiornare.getByRole('button', { name: 'Aggiorna' }));
+        await impostaProfiloOrario(page, emailAdmin, 'Nessun profilo orario');
         await page.reload();
-        await expect(
-          page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL! }).getByLabel('Profilo orario')
-        ).toHaveValue('');
+        await expect(selectProfiloOrario(rigaUtente(page, emailAdmin))).toHaveValue('');
       } finally {
         // Pulizia del profilo: elimino il profilo, l'utente eventualmente
         // ancora assegnato resta semplicemente senza profilo (specs/54).
-        await page.goto('/admin/profili-orari');
-        const rigaProfilo = page.getByText(nome, { exact: false });
-        if ((await rigaProfilo.count()) > 0) {
-          await rigaProfilo.click();
-          await page.waitForURL(/\/admin\/profili-orari\/.+/);
-          await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-          await page.getByRole('button', { name: 'Sì' }).click();
-        }
+        await eliminaProfiloOrarioSeEsiste(page, nome);
       }
     });
 
@@ -155,44 +117,25 @@ test.describe('54 — Profili orari', () => {
       const nomeProfilo = `E2E creazione ${Date.now()}`;
       const email = `e2e-profilo-orario-${Date.now()}@example.com`;
 
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nomeProfilo);
-      await page.getByLabel('Lunedì').fill('6');
-      await page.getByLabel('Martedì').fill('6');
-      await page.getByLabel('Mercoledì').fill('6');
-      await page.getByLabel('Giovedì').fill('6');
-      await page.getByLabel('Venerdì').fill('6');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
-      await expect(page.getByText(nomeProfilo, { exact: false })).toBeVisible({ timeout: 20_000 });
+      await creaProfiloOrario(page, nomeProfilo, [6, 6, 6, 6, 6]);
 
       try {
-        await page.goto('/admin/maestre');
-        const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
+        await creaUtenteDaForm(page, {
+          nome: 'Prova',
+          cognome: 'ProfiloOrario',
+          email,
+          password: 'PasswordE2E!1',
+          profiloOrario: nomeProfilo,
+        });
 
-        await page.getByPlaceholder('Nome').first().fill('Prova');
-        await page.getByPlaceholder('Cognome').first().fill('ProfiloOrario');
-        await page.getByPlaceholder('Email').fill(email);
-        await page.getByPlaceholder('Telefono').first().fill('3331234567');
-        await page.getByLabel('Password', { exact: true }).fill('PasswordE2E!1');
-        await page.getByLabel('Conferma password').fill('PasswordE2E!1');
-        await formCreazione.getByLabel('Profilo orario').selectOption({ label: nomeProfilo });
-        await page.getByRole('button', { name: 'Crea utente' }).click();
-
-        const riga = page.getByText(email, { exact: false }).locator('..');
+        const riga = schedaUtente(page, email);
         await expect(riga).toBeVisible({ timeout: 20_000 });
-        await expect(riga.getByLabel('Profilo orario')).not.toHaveValue('');
+        await expect(selectProfiloOrario(riga)).not.toHaveValue('');
 
         await eliminaUtenteDaScheda(page, riga);
         await expect(page.getByText(email, { exact: false })).toHaveCount(0);
       } finally {
-        await page.goto('/admin/profili-orari');
-        const rigaProfilo = page.getByText(nomeProfilo, { exact: false });
-        if ((await rigaProfilo.count()) > 0) {
-          await rigaProfilo.click();
-          await page.waitForURL(/\/admin\/profili-orari\/.+/);
-          await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-          await page.getByRole('button', { name: 'Sì' }).click();
-        }
+        await eliminaProfiloOrarioSeEsiste(page, nomeProfilo);
       }
     });
 
@@ -204,7 +147,7 @@ test.describe('54 — Profili orari', () => {
 
         const context = await browser.newContext({ storageState: stato });
         const page = await context.newPage();
-        await page.goto('/admin/profili-orari');
+        await page.goto(PERCORSO_PROFILI_ORARI);
         await page.waitForURL('/dashboard', { timeout: 20_000 });
         await context.close();
       }
@@ -225,53 +168,17 @@ test.describe('54 — Profili orari', () => {
 
     const PASSWORD = 'PasswordE2E!1';
 
-    async function creaProfilo(page: Page, nome: string) {
-      await page.goto('/admin/profili-orari');
-      await page.getByPlaceholder('Nome (es. 35 ore settimanali)').fill(nome);
-      await page.getByLabel('Lunedì').fill('7');
-      await page.getByLabel('Martedì').fill('6.5');
-      await page.getByLabel('Mercoledì').fill('7');
-      await page.getByLabel('Giovedì').fill('4');
-      await page.getByLabel('Venerdì').fill('3');
-      await page.getByRole('button', { name: 'Crea profilo orario' }).click();
-      await expect(page.getByText(nome, { exact: false })).toBeVisible({ timeout: 20_000 });
-    }
-
-    async function eliminaProfilo(page: Page, nome: string) {
-      await page.goto('/admin/profili-orari');
-      const rigaProfilo = page.getByText(nome, { exact: false });
-      if ((await rigaProfilo.count()) > 0) {
-        await rigaProfilo.click();
-        await page.waitForURL(/\/admin\/profili-orari\/.+/);
-        await page.getByRole('button', { name: 'Elimina profilo orario' }).click();
-        await page.getByRole('button', { name: 'Sì' }).click();
-      }
-    }
-
+    // Il ruolo predefinito è genitore (nessun accesso allo staff): serve un ruolo staff.
     async function creaUtente(page: Page, email: string, opzioni: { abilitato: boolean; profilo?: string }) {
-      await page.goto('/admin/maestre');
-      const formCreazione = page.locator('form', { has: page.getByRole('button', { name: 'Crea utente' }) });
-      await page.getByPlaceholder('Nome').first().fill('Prova');
-      await page.getByPlaceholder('Cognome').first().fill('PannelloProfilo');
-      await page.getByPlaceholder('Email').fill(email);
-      await page.getByPlaceholder('Telefono').first().fill('3331234567');
-      await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-      await page.getByLabel('Conferma password').fill(PASSWORD);
-      // Il ruolo predefinito è genitore (nessun accesso allo staff): serve un ruolo staff.
-      await formCreazione.getByLabel('Ruolo').selectOption('maestra');
-      if (opzioni.abilitato) await formCreazione.getByLabel('Ore di lavoro').check();
-      if (opzioni.profilo) await formCreazione.getByLabel('Profilo orario').selectOption({ label: opzioni.profilo });
-      await page.getByRole('button', { name: 'Crea utente' }).click();
-      await expect(page.getByText(email, { exact: false })).toBeVisible({ timeout: 20_000 });
-    }
-
-    async function eliminaUtente(page: Page, email: string) {
-      await page.goto('/admin/maestre');
-      const riga = page.getByText(email, { exact: false }).locator('..');
-      if ((await riga.count()) > 0) {
-        await eliminaUtenteDaScheda(page, riga);
-        await expect(page.getByText(email, { exact: false })).toHaveCount(0);
-      }
+      await creaUtenteDaForm(page, {
+        nome: 'Prova',
+        cognome: 'PannelloProfilo',
+        email,
+        password: PASSWORD,
+        ruolo: 'maestra',
+        oreLavoro: opzioni.abilitato,
+        profiloOrario: opzioni.profilo,
+      });
     }
 
     // Apre una sessione separata come l'utente appena creato.
@@ -293,16 +200,16 @@ test.describe('54 — Profili orari', () => {
     }) => {
       const nomeProfilo = `E2E pannello ${Date.now()}`;
       const email = `e2e-pannello-profilo-${Date.now()}@example.com`;
-      await creaProfilo(page, nomeProfilo);
+      await creaProfiloOrario(page, nomeProfilo, [7, 6.5, 7, 4, 3]);
       try {
         await creaUtente(page, email, { abilitato: true, profilo: nomeProfilo });
         const { contesto, pagina } = await paginaComeUtente(browser, baseURL, email);
         try {
-          await pagina.goto('/dashboard/ore-lavoro');
+          await pagina.goto(PERCORSO_ORE_LAVORO);
           await pagina.getByRole('link', { name: 'Il mio profilo orario' }).click();
-          await pagina.waitForURL('/dashboard/profilo-orario');
+          await pagina.waitForURL(PERCORSO_PROFILO_ORARIO_PERSONALE);
 
-          await expect(pagina.getByRole('heading', { name: 'Il mio profilo orario' })).toBeVisible();
+          await expect(titoloProfiloOrarioPersonale(pagina)).toBeVisible();
           const main = pagina.getByRole('main');
           await expect(main.getByText(nomeProfilo, { exact: false })).toBeVisible();
           for (const giorno of ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì']) {
@@ -319,8 +226,8 @@ test.describe('54 — Profili orari', () => {
           await contesto.close();
         }
       } finally {
-        await eliminaUtente(page, email);
-        await eliminaProfilo(page, nomeProfilo);
+        await eliminaUtentePerEmail(page, email);
+        await eliminaProfiloOrarioSeEsiste(page, nomeProfilo);
       }
     });
 
@@ -330,8 +237,8 @@ test.describe('54 — Profili orari', () => {
         await creaUtente(page, email, { abilitato: true });
         const { contesto, pagina } = await paginaComeUtente(browser, baseURL, email);
         try {
-          await pagina.goto('/dashboard/profilo-orario');
-          await expect(pagina.getByRole('heading', { name: 'Il mio profilo orario' })).toBeVisible();
+          await pagina.goto(PERCORSO_PROFILO_ORARIO_PERSONALE);
+          await expect(titoloProfiloOrarioPersonale(pagina)).toBeVisible();
           await expect(pagina.getByText('Nessun profilo orario assegnato')).toBeVisible();
           await expect(pagina.getByText(/chiedi all.admin/)).toBeVisible();
           await expect(pagina.getByRole('main').getByRole('button')).toHaveCount(0);
@@ -340,7 +247,7 @@ test.describe('54 — Profili orari', () => {
           await contesto.close();
         }
       } finally {
-        await eliminaUtente(page, email);
+        await eliminaUtentePerEmail(page, email);
       }
     });
 
@@ -350,15 +257,15 @@ test.describe('54 — Profili orari', () => {
         await creaUtente(page, email, { abilitato: false });
         const { contesto, pagina } = await paginaComeUtente(browser, baseURL, email);
         try {
-          await pagina.goto('/dashboard/profilo-orario');
+          await pagina.goto(PERCORSO_PROFILO_ORARIO_PERSONALE);
           // goto attende già i redirect: l'URL finale deve essere la dashboard, non il pannello.
           await expect(pagina).toHaveURL(/\/dashboard$/);
-          await expect(pagina.getByRole('heading', { name: 'Il mio profilo orario' })).toHaveCount(0);
+          await expect(titoloProfiloOrarioPersonale(pagina)).toHaveCount(0);
         } finally {
           await contesto.close();
         }
       } finally {
-        await eliminaUtente(page, email);
+        await eliminaUtentePerEmail(page, email);
       }
     });
   });
