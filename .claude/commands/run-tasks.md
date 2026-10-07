@@ -59,7 +59,7 @@ area che conosci meglio): nel dubbio vince la posizione.
 1. Leggi la board (Project 2 dell'utente) **già filtrata**, senza scaricare
    l'output grezzo:
    ```
-   gh project item-list 2 --owner matteopelucco --limit 500 --format json --jq '{complete:(.totalCount==(.items|length)), todo:[.items|to_entries[]|select(.value.status=="Todo" and .value.content.type=="Issue")|{pos:.key, n:.value.content.number, t:.value.title, l:.value.labels}]}'
+   gh project item-list 2 --owner matteopelucco --limit 500 --format json --jq '{complete:(.totalCount==(.items|length)), pr_todo:([.items[]|select(.status=="Todo" and .content.type=="PullRequest")]|length), todo:[.items|to_entries[]|select(.value.status=="Todo" and .value.content.type=="Issue")|{pos:.key, n:.value.content.number, t:.value.title, l:.value.labels}]}'
    ```
    - L'ordine dell'array della board è il ranking: `pos` (da 0) è l'indice nella
      board **prima** del filtro e serve per il report; `todo` resta nell'ordine
@@ -74,7 +74,17 @@ area che conosci meglio): nel dubbio vince la posizione.
    - label `status:needs-info`, `status:blocked`, `status:in-progress`,
      `status:review` (stanno aspettando qualcuno);
    - issue che hanno già una PR aperta collegata;
-   - issue con "Dipende da #X / Axx" non ancora chiuse.
+   - issue con "Dipende da #X / Axx" non ancora chiuse;
+   - **madri con sub-issue aperte**: sono contenitori, non task. Per ogni
+     candidato controlla, senza gonfiare il contesto:
+     `gh api repos/matteopelucco/girasole/issues/<n>/sub_issues --jq '[.[]|select(.state=="open")|.number]'`
+     (array vuoto = nessuna figlia aperta). Se una madre ha **tutte** le figlie
+     chiuse, chiudila con un commento di riepilogo **solo se** i suoi criteri
+     "Fatto quando" sono davvero soddisfatti (come in 3.6); altrimenti lasciala
+     aperta e segnalala all'umano (es. obiettivo numerico non raggiunto).
+   Le schede di PR in Todo non sono task e non vanno contate (il Project le
+   porta in `Done` da solo se i workflow integrati "Pull request merged" e
+   "Item closed" sono attivi: è un'impostazione che fa Matteo a mano).
 3. **Priorità dei bug nel loro intorno.** Un bug è un'issue con label
    `type:bug` (o `bug`), oppure con titolo che inizia per `fix:` / `fix(`
    (convenzione dei titoli in `CLAUDE.md`; le issue storiche `Bug: …` hanno
@@ -134,7 +144,17 @@ accettazione e label `type:`/`area:`/`tier:`/`status:ready` + la propria
 classificazione), aggiungile alla board (`gh project item-add 2 --owner
 matteopelucco --url <url>`) e collegale alla madre come sub-issue
 (`gh api repos/matteopelucco/girasole/issues/<madre>/sub_issues -F sub_issue_id=<id numerico della figlia>`).
-Commenta sulla madre l'elenco. Poi esegui la **prima** sotto-issue in questo
+Commenta sulla madre l'elenco. Quando parte la prima sotto-issue, sposta la
+madre in Status `In Progress` nel Project (solo lettura per trovare gli id, poi
+una sola modifica):
+```
+gh project field-list 2 --owner matteopelucco --format json --jq '.fields[]|select(.name=="Status")|{id,options}'   # id campo Status e id opzione "In Progress"
+gh project view 2 --owner matteopelucco --format json --jq '.id'                                                    # id del Project
+gh project item-list 2 --owner matteopelucco --limit 500 --format json --jq '.items[]|select(.content.number==<madre>)|.id'   # id della scheda
+gh project item-edit --id <id scheda> --project-id <id Project> --field-id <id campo Status> --single-select-option-id <id opzione>
+```
+Gli id non si scrivono a mano nel comando: si rileggono ogni volta con i primi
+tre comandi (le opzioni sono `Todo`, `In Progress`, `Need Info`, `Done`). Poi esegui la **prima** sotto-issue in questo
 ciclo (la madre resta aperta, le PR usano `Refs #<madre>`; le altre
 sotto-issue entrano nel ranking dei cicli successivi). Questo conta come un task.
 
@@ -210,7 +230,12 @@ legittimo (tsc, lint, build, vitest), nemmeno se l'utente di solito può farlo.
   `titolo (#issue) (#pr)`). Poi `git checkout main && git pull --ff-only`.
   Verifica che la issue si sia chiusa (la label `status:done` la mette
   l'automazione A16); se è sotto-issue, controlla se la madre ha finito e in
-  quel caso chiudila con un commento di riepilogo.
+  quel caso chiudila con un commento di riepilogo, ma solo se i suoi criteri
+  "Fatto quando" sono davvero soddisfatti (altrimenti lasciala aperta e
+  segnalala). Alla chiusura della madre lo Status passa a `Done`: di solito lo
+  fa il workflow "Item closed" del Project; se non è attivo (o la scheda resta
+  `In Progress`), fallo con `gh project item-edit` come in 3.2, scegliendo
+  l'opzione `Done`.
 - **`human-in-the-loop`** (anche dopo CI verde): **non mergiare**. Lascia la PR
   aperta (draft se non era già pronta), issue in `status:review`, e un
   commento sulla PR con: cosa è stato fatto, perché serve l'umano (la regola di
@@ -234,7 +259,10 @@ Tabella breve, una riga per task: n° issue · posizione in board (con nota
 non un elenco, 4-8 righe) di cosa è stato fatto nel ciclo: che cosa è
 cambiato per l'app o per il processo, quali task sono andati in porto da soli e
 quali no e perché, se ci sono state scomposizioni, giri di fix o rebase, e
-cosa resta da fare. Pensato per chi legge solo quel paragrafo. Poi: budget prima/dopo (% 5 ore e settimanale, reset), motivo
+cosa resta da fare. Pensato per chi legge solo quel paragrafo. Poi: lo stato
+della colonna `Todo` in due numeri separati, **Todo reali** (task candidabili)
+e **madri/PR in Todo** (madri scartate in Fase 2 più `pr_todo`: non sono
+lavoro da fare); budget prima/dopo (% 5 ore e settimanale, reset), motivo
 della fermata, e la lista esplicita di **cosa deve fare l'umano** (PR da
 revisionare, migration da applicare, dubbi di classificazione commentati,
 domande rimaste su `needs-info`).
