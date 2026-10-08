@@ -249,6 +249,133 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
+  // Campanella e pagina "Allarmi" (specs/07, issue #270). Gli utenti di staff
+  // creati apposta (e2e/fixture-utente.ts) non hanno sezioni: una maestra
+  // abilitata alle ore ha esattamente 1 allarme (la settimana non confermata,
+  // mai confermata), una non abilitata ne ha 0, in qualsiasi giorno e ora.
+  // La campanella è nello stesso HTML della pagina (streaming): dopo goto()
+  // il numero, se c'è, è già presente.
+  test.describe('campanella e pagina Allarmi', () => {
+    const ELENCO_ALLARMI = 'main section ul > li:has(h3)';
+
+    test("la campanella mostra il numero degli allarmi e porta alla pagina, dove l'elenco ha lo stesso numero", async ({
+      creaUtente,
+      apriComeUtente,
+    }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const page = await apriComeUtente(utente);
+
+      // Su più pagine, non solo in dashboard.
+      for (const percorso of ['/dashboard', '/dashboard/profilo-orario']) {
+        await page.goto(percorso);
+        const campanella = page.getByRole('link', { name: '1 allarme' });
+        await expect(campanella).toBeVisible();
+        await expect(campanella.getByTestId('numero-allarmi')).toHaveText('1');
+      }
+
+      await page.getByRole('link', { name: '1 allarme' }).click();
+      await expect(page).toHaveURL(/\/dashboard\/allarmi$/);
+      await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+      await expect(page.locator(ELENCO_ALLARMI)).toHaveCount(1);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('senza allarmi la campanella non mostra nessun numero', async ({ creaUtente, apriComeUtente }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: false });
+      const page = await apriComeUtente(utente);
+
+      await page.goto('/dashboard');
+      await expect(page.getByRole('link', { name: 'Allarmi', exact: true })).toBeVisible();
+      await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test.describe('come genitore', () => {
+      test.use({ storageState: statoAutenticazione('genitore') });
+
+      test('il genitore non ha la campanella', async ({ page }) => {
+        test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
+
+        await page.goto('/dashboard');
+        await expect(page.getByText('Il portale genitori è in arrivo')).toBeVisible();
+        await expect(page.getByRole('link', { name: /allarm/i })).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test('la pagina Allarmi spiega cosa non va e dà un link per sistemarlo', async ({ creaUtente, apriComeUtente }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const page = await apriComeUtente(utente);
+
+      await page.goto('/dashboard/allarmi');
+      const allarme = page.locator(ELENCO_ALLARMI);
+      await expect(allarme).toHaveCount(1);
+      await expect(allarme).toContainText('Ore di lavoro della settimana non confermate');
+      await expect(allarme.getByRole('link')).toHaveAttribute(
+        'href',
+        /^\/dashboard\/ore-lavoro\?settimana=\d{4}-\d{2}-\d{2}$/
+      );
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('la pagina Allarmi senza allarmi lo dice chiaramente', async ({ creaUtente, apriComeUtente }) => {
+      const utente = await creaUtente({ ruolo: 'assistente', abilitato: false });
+      const page = await apriComeUtente(utente);
+
+      await page.goto('/dashboard/allarmi');
+      await expect(page.getByText('Non ci sono allarmi attivi.')).toBeVisible();
+      await expect(page.locator(ELENCO_ALLARMI)).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test.describe('come maestra', () => {
+      test.use({ storageState: statoAutenticazione('maestra') });
+
+      test('la maestra vede solo i propri allarmi, mai il riepilogo del personale', async ({ page }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TESTO_RIEPILOGO_STAFF })).toHaveCount(0);
+        await expect(page.getByRole('list', { name: 'Allarmi del personale' })).toHaveCount(0);
+
+        // Il numero della campanella coincide con l'elenco (qualunque sia
+        // lo stato di presenze e ore in questo momento).
+        const elenco = await page.locator(ELENCO_ALLARMI).count();
+        if (elenco === 0) {
+          await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
+        } else {
+          await expect(page.getByTestId('numero-allarmi')).toHaveText(String(elenco));
+        }
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test.describe('come admin', () => {
+      test.use({ storageState: statoAutenticazione('admin') });
+
+      test("l'admin vede anche il personale in allarme, senza link, e il numero li conta", async ({
+        page,
+        creaUtente,
+      }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        // Un collega abilitato alle ore che non ha mai confermato la settimana è sempre in allarme.
+        await creaUtente({ ruolo: 'maestra', abilitato: true });
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: TESTO_RIEPILOGO_STAFF })).toBeVisible();
+        const righePersonale = page.getByRole('list', { name: 'Allarmi del personale' }).locator('> li');
+        const riga = righePersonale.filter({ hasText: 'Fixture Utente' }).first();
+        await expect(riga).toContainText('non confermata');
+        await expect(riga.getByRole('link')).toHaveCount(0);
+
+        const totale = await page.locator(ELENCO_ALLARMI).count();
+        await expect(page.getByTestId('numero-allarmi')).toHaveText(String(totale));
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+  });
+
   test.describe('cron /api/cron/allarmi', () => {
     test('senza il secret corretto la route rifiuta la richiesta', async ({ request }) => {
       test.skip(!process.env.CRON_SECRET, 'richiede CRON_SECRET configurato per avere qualcosa da verificare');

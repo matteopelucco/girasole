@@ -75,13 +75,19 @@ function ElencoVoci({ ruolo, pathname, onNavigazione }: { ruolo: string | null; 
 // a larghezza mobile. Riceve `children` (il `<main>` della pagina) invece
 // di essere un semplice sibling, perché la sidebar a larghezza fissa deve
 // "spingere" il contenuto con un padding-left solo da lg in su.
-export function NavHeader({
+//
+// È la parte interattiva: le pagine usano `NavHeader` (components/NavHeader.tsx),
+// che vi aggiunge la campanella degli allarmi calcolata sul server.
+export function NavHeaderClient({
   nome,
   ruolo,
+  campanella,
   children,
 }: {
   nome: string;
   ruolo: string | null;
+  // Campanella degli allarmi (specs/07), già pronta dal server; assente per il genitore.
+  campanella?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [menuAperto, setMenuAperto] = useState(false);
@@ -126,6 +132,7 @@ export function NavHeader({
             <Logo />
           </div>
           <div className="ml-auto flex items-center gap-3">
+            {campanella}
             <span className="text-sm text-stone-600">{nome}</span>
             <form action={logout}>
               <PulsanteInvio mantieniTesto className="text-sm text-stone-600 hover:text-stone-900">
