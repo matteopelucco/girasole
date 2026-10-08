@@ -20,11 +20,23 @@
 // toccato e nessun movimento va compensato.
 import { test, expect } from './fixture-utente';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, alertApp, clickEAttendiAzione } from './helpers';
-
-// Form di inserimento di un movimento: le righe dello storico hanno a loro
-// volta un form di modifica con gli stessi nomi di campo.
-const formAggiungi = (page: import('@playwright/test').Page) =>
-  page.locator('form').filter({ has: page.getByRole('button', { name: 'Registra movimento' }) });
+import {
+  apriModificaMovimento,
+  bottoneEliminaMovimento,
+  bottoneRegistraMovimento,
+  bottoneSalvaModificaMovimento,
+  campoNotaMovimento,
+  campoOreMovimento,
+  compilaMovimento,
+  formMovimento,
+  leggiSaldoMonteOre,
+  registraMovimento,
+  rigaMovimento,
+  selectVersoMovimento,
+  testoSaldoMonteOre,
+  titoloCalcoloMesePerMese,
+} from './pagina-monte-ore';
+import { apriOreDipendente, PERCORSO_ELENCO_ORE_LAVORO, PERCORSO_ORE_LAVORO, rigaUtente } from './pagina-personale';
 
 test.describe('19 — Monte ore', () => {
   test.describe('il diretto interessato vede il proprio saldo, in sola lettura', () => {
@@ -38,16 +50,16 @@ test.describe('19 — Monte ore', () => {
     }) => {
       const maestra = await creaUtente({ ruolo: 'maestra', abilitato: true });
       const paginaMaestra = await apriComeUtente(maestra);
-      await paginaMaestra.goto('/dashboard/ore-lavoro');
+      await paginaMaestra.goto(PERCORSO_ORE_LAVORO);
 
-      await expect(paginaMaestra.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
+      await expect(testoSaldoMonteOre(paginaMaestra)).toBeVisible();
       // Scenario: la scheda ore mostra il calcolo mese per mese, in sola
       // lettura (nessun pulsante di modifica/eliminazione dei movimenti).
-      await expect(paginaMaestra.getByRole('heading', { name: 'Calcolo mese per mese' })).toBeVisible();
-      await expect(paginaMaestra.getByText('Modifica', { exact: true })).toHaveCount(0);
-      await expect(paginaMaestra.getByRole('button', { name: 'Elimina' })).toHaveCount(0);
+      await expect(titoloCalcoloMesePerMese(paginaMaestra)).toBeVisible();
+      await expect(apriModificaMovimento(paginaMaestra)).toHaveCount(0);
+      await expect(bottoneEliminaMovimento(paginaMaestra)).toHaveCount(0);
       await expect(paginaMaestra.getByLabel('Nota', { exact: true })).toHaveCount(0);
-      await expect(paginaMaestra.getByRole('button', { name: 'Registra movimento' })).toHaveCount(0);
+      await expect(bottoneRegistraMovimento(paginaMaestra)).toHaveCount(0);
 
       await nessunaViolazioneA11yGrave(paginaMaestra);
     });
@@ -72,8 +84,8 @@ test.describe('19 — Monte ore', () => {
 
       // Scenario: l'admin vede il monte ore di ciascuna persona
       // nell'elenco del personale abilitato.
-      await page.goto('/admin/ore-lavoro');
-      const rigaDipendente = page.locator('li', { hasText: dipendente.email });
+      await page.goto(PERCORSO_ELENCO_ORE_LAVORO);
+      const rigaDipendente = rigaUtente(page, dipendente.email);
       // Convenzione del segno (specs/19): saldo con segno esplicito e
       // significato, mai un numero nudo.
       await expect(rigaDipendente).toContainText(/Monte ore: [+-]?[0-9]+([.][0-9]+)?h (a credito|da recuperare|in pari)/);
@@ -82,42 +94,35 @@ test.describe('19 — Monte ore', () => {
       // L'elenco apre la vista mensile (specs/18), dove l'admin gestisce
       // il monte ore del dipendente (specs/19).
       await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
-      await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
+      await expect(testoSaldoMonteOre(page)).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
 
       // Il saldo si aggiorna quando la pagina ricarica i dati dopo la
       // Server Action, non all'arrivo della sua risposta: lo leggo con
       // expect.poll, che riprova finché non vale quanto atteso (#70).
-      const leggiSaldo = async () => {
-        const testo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-        return Number(testo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
-      };
+      const leggiSaldo = () => leggiSaldoMonteOre(page);
       const saldoIniziale = await leggiSaldo();
       expect(Number.isFinite(saldoIniziale)).toBe(true);
 
       // Label non equivoche: legenda del segno e nessun verso preselezionato.
       await expect(page.getByText('Positivo (+): ore già erogate in più, a credito', { exact: false })).toBeVisible();
-      await expect(formAggiungi(page).locator('select[name="verso"]')).toHaveValue('');
-      await formAggiungi(page).locator('input[name="ore"]').fill('1');
-      await formAggiungi(page).locator('input[name="nota"]').fill('Senza verso E2E');
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+      await expect(selectVersoMovimento(formMovimento(page))).toHaveValue('');
+      await compilaMovimento(page, { ore: '1', nota: 'Senza verso E2E' });
+      await registraMovimento(page);
       await expect(alertApp(page)).toContainText('Scegli');
       // Il form non si azzera su un errore: svuoto la nota per il passo
       // successivo ("senza nota").
-      await formAggiungi(page).locator('input[name="nota"]').fill('');
+      await compilaMovimento(page, { nota: '' });
 
       // Scenario: un movimento manuale senza nota viene rifiutato.
-      await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
-      await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+      await compilaMovimento(page, { ore: '1.5', verso: 'credito' });
+      await registraMovimento(page);
       await expect(alertApp(page)).toContainText('nota');
 
       // Con la nota: accettato, il saldo aumenta di 1.5h e compare
       // nello storico.
-      await formAggiungi(page).locator('input[name="ore"]').fill('1.5');
-      await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
-      await formAggiungi(page).locator('input[name="nota"]').fill('Movimento E2E');
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+      await compilaMovimento(page, { ore: '1.5', verso: 'credito', nota: 'Movimento E2E' });
+      await registraMovimento(page);
       await expect(alertApp(page)).toHaveCount(0);
       // .first(): un eventuale retry del test trova anche il movimento
       // registrato dal tentativo precedente.
@@ -127,10 +132,12 @@ test.describe('19 — Monte ore', () => {
       // Scenario: il monte ore può risultare negativo, senza alcun
       // blocco — una riduzione ben più grande di qualunque saldo
       // realistico (5000h) porta il saldo sotto zero senza errori.
-      await formAggiungi(page).locator('input[name="ore"]').fill('5000');
-      await formAggiungi(page).locator('select[name="verso"]').selectOption('debito');
-      await formAggiungi(page).locator('input[name="nota"]').fill('Riduzione ampia E2E (per testare il saldo negativo)');
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
+      await compilaMovimento(page, {
+        ore: '5000',
+        verso: 'debito',
+        nota: 'Riduzione ampia E2E (per testare il saldo negativo)',
+      });
+      await registraMovimento(page);
       await expect(alertApp(page)).toHaveCount(0);
       await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5 - 5000, 2);
       expect(await leggiSaldo()).toBeLessThan(0);
@@ -146,55 +153,42 @@ test.describe('19 — Monte ore', () => {
       test.slow();
       const dipendente = await creaUtente({ ruolo: 'maestra', abilitato: true });
 
-      await page.goto('/admin/ore-lavoro');
-      const rigaDipendente = page.locator('li', { hasText: dipendente.email });
-      await rigaDipendente.getByRole('link').click();
       // L'elenco apre la vista mensile (specs/18), dove l'admin gestisce
       // il monte ore del dipendente (specs/19).
-      await page.waitForURL(/\/dashboard\/ore-lavoro\/mese\?utente=.+/);
+      await apriOreDipendente(page, dipendente.email);
 
-      const testoSaldo = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-      const saldoIniziale = Number(testoSaldo.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+      const saldoIniziale = await leggiSaldoMonteOre(page);
 
       // Scenario: l'admin modifica un movimento: cambia ore e nota, il
       // saldo si aggiorna e la riga riporta i nuovi valori.
       const notaMovimento = `Movimento E2E da eliminare ${Date.now()}`;
-      await formAggiungi(page).locator('input[name="ore"]').fill('2');
-      await formAggiungi(page).locator('select[name="verso"]').selectOption('credito');
-      await formAggiungi(page).locator('input[name="nota"]').fill(notaMovimento);
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Registra movimento' }));
-      const rigaMovimento = page.locator('li', { hasText: notaMovimento });
-      await expect(rigaMovimento).toBeVisible({ timeout: 20_000 });
+      await compilaMovimento(page, { ore: '2', verso: 'credito', nota: notaMovimento });
+      await registraMovimento(page);
+      const riga = rigaMovimento(page, notaMovimento);
+      await expect(riga).toBeVisible({ timeout: 20_000 });
 
-      const testoSaldoDopoAggiunta = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-      const saldoDopoAggiunta = Number(testoSaldoDopoAggiunta.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+      const saldoDopoAggiunta = await leggiSaldoMonteOre(page);
       expect(saldoDopoAggiunta).toBeCloseTo(saldoIniziale + 2, 2);
 
-      await rigaMovimento.getByText('Modifica', { exact: true }).click();
+      await apriModificaMovimento(riga).click();
       const notaModificata = `${notaMovimento} (modificato)`;
-      await rigaMovimento.locator('input[name="ore"]').fill('3');
-      await rigaMovimento.locator('input[name="nota"]').fill(notaModificata);
-      await clickEAttendiAzione(page, rigaMovimento.getByRole('button', { name: 'Salva modifica' }));
-      const rigaModificata = page.locator('li', { hasText: notaModificata });
+      await campoOreMovimento(riga).fill('3');
+      await campoNotaMovimento(riga).fill(notaModificata);
+      await clickEAttendiAzione(page, bottoneSalvaModificaMovimento(riga));
+      const rigaModificata = rigaMovimento(page, notaModificata);
       await expect(rigaModificata).toBeVisible({ timeout: 20_000 });
-      await expect
-        .poll(async () => {
-          const t = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-          return Number(t.match(/(-?\d+(\.\d+)?)h/)?.[1]);
-        })
-        .toBeCloseTo(saldoIniziale + 3, 2);
+      await expect.poll(() => leggiSaldoMonteOre(page)).toBeCloseTo(saldoIniziale + 3, 2);
 
       // Scenario: l'admin elimina un movimento di monte ore.
       page.once('dialog', (dialog) => dialog.accept());
-      await rigaModificata.getByRole('button', { name: 'Elimina' }).click();
-      await expect(page.locator('li', { hasText: notaMovimento })).toHaveCount(0, { timeout: 20_000 });
+      await bottoneEliminaMovimento(rigaModificata).click();
+      await expect(rigaMovimento(page, notaMovimento)).toHaveCount(0, { timeout: 20_000 });
 
-      const testoSaldoFinale = await page.getByText('Monte ore attuale:', { exact: false }).innerText();
-      const saldoFinale = Number(testoSaldoFinale.match(/(-?\d+(\.\d+)?)h/)?.[1]);
+      const saldoFinale = await leggiSaldoMonteOre(page);
       expect(saldoFinale).toBeCloseTo(saldoIniziale, 2);
 
       // Scenario: il calcolo mese per mese è sempre visibile e completo.
-      await expect(page.getByRole('heading', { name: 'Calcolo mese per mese' })).toBeVisible();
+      await expect(titoloCalcoloMesePerMese(page)).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
   });
