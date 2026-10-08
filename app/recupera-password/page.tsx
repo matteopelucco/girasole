@@ -3,11 +3,12 @@ import Script from 'next/script';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { richiediResetPassword } from './actions';
 
-export default function RecuperaPasswordPage({
-  searchParams,
-}: {
-  searchParams: { inviato?: string };
-}) {
+export default async function RecuperaPasswordPage(
+  props: {
+    searchParams: Promise<{ inviato?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const inviato = searchParams?.inviato === '1';
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 

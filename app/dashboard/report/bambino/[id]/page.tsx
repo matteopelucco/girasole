@@ -21,13 +21,14 @@ const ETICHETTE_PASTO: Record<string, string> = {
   no: 'No',
 };
 
-export default async function DrillDownBambinoPage({
-  params,
-  searchParams,
-}: {
-  params: { id: string };
-  searchParams: { tipo?: string; periodo?: string };
-}) {
+export default async function DrillDownBambinoPage(
+  props: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ tipo?: string; periodo?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const { supabase, user, profilo, ruolo } = await requireStaff({});
   const nomeVisualizzato = profilo?.nome || user.email || '';
   const tipo: Tipo = searchParams.tipo === 'settimanale' ? 'settimanale' : 'mensile';

@@ -67,11 +67,12 @@ export const dynamic = 'force-dynamic';
 // una settimana già confermata (specs/18, sezione "Amministrazione"):
 // `?utente=<id>` (solo per l'admin, altrimenti ignorato) sceglie di chi
 // sono le ore mostrate, di default le proprie.
-export default async function OreLavoroPage({
-  searchParams,
-}: {
-  searchParams: { settimana?: string; utente?: string };
-}) {
+export default async function OreLavoroPage(
+  props: {
+    searchParams: Promise<{ settimana?: string; utente?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo, ruolo } = await requireStaff({});
 
   let utenteTarget = {

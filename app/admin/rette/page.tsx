@@ -239,7 +239,8 @@ function TabellaSezione({ titolo, righe }: { titolo: string; righe: React.ReactN
   );
 }
 
-export default async function RettePage({ searchParams }: { searchParams: { mese?: string } }) {
+export default async function RettePage(props: { searchParams: Promise<{ mese?: string }> }) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo } = await requireAdmin();
 
   const meseReale = meseDaData(oggi());

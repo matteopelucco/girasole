@@ -15,7 +15,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export default async function BambinoDettaglioPage({ params }: { params: { id: string } }) {
+export default async function BambinoDettaglioPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { supabase, user, profilo } = await requireAdmin();
 
   const [{ data: bambino }, { data: sezioni }, { data: costi }, { data: creditiDebiti }] = await Promise.all([

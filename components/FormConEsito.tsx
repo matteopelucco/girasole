@@ -51,6 +51,22 @@ export function FormConEsito({
   const primoRender = useRef(true);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // React 19 svuota da sé i campi non controllati (li riporta al
+  // defaultValue) a ogni invio con `action={funzione}`, anche se l'azione
+  // ha restituito un errore, e lo fa quando la risposta del server è già
+  // arrivata: chi ha già ricominciato a digitare perde i valori. Qui i dati
+  // digitati devono restare (modifica di dati già salvati, errore da
+  // correggere), quindi si annulla quel reset. Serve un ascoltatore nativo:
+  // verificato in e2e, `onReset` di React qui non basta. Il vero svuotamento dopo una creazione è `resetSuOk`, con la
+  // `key` del form.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const annulla = (evento: Event) => evento.preventDefault();
+    form.addEventListener('reset', annulla);
+    return () => form.removeEventListener('reset', annulla);
+  }, [chiaveForm]);
+
   useEffect(() => {
     if (primoRender.current) {
       primoRender.current = false;
@@ -62,7 +78,12 @@ export function FormConEsito({
   }, [esito, resetSuOk]);
 
   return (
-    <form key={chiaveForm} ref={formRef} action={formAction} className={className}>
+    <form
+      key={chiaveForm}
+      ref={formRef}
+      action={formAction}
+      className={className}
+    >
       {children}
       {!esito.ok && titoloPopupErrore && (
         <DialogErrore

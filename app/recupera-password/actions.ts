@@ -5,14 +5,14 @@ import { turnstileValido } from '@/lib/turnstile';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-function ipRichiedente(): string {
-  const elenco = headers().get('x-forwarded-for');
+async function ipRichiedente(): Promise<string> {
+  const elenco = (await headers()).get('x-forwarded-for');
   return elenco?.split(',')[0]?.trim() || 'sconosciuto';
 }
 
 export async function richiediResetPassword(formData: FormData) {
   const email = (formData.get('email') as string)?.trim().toLowerCase();
-  const ip = ipRichiedente();
+  const ip = await ipRichiedente();
   const captchaOk = await turnstileValido(formData.get('cf-turnstile-response'), ip);
 
   if (email && captchaOk) {
@@ -24,7 +24,7 @@ export async function richiediResetPassword(formData: FormData) {
     });
 
     if (consentito) {
-      const origine = headers().get('origin') ?? '';
+      const origine = (await headers()).get('origin') ?? '';
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${origine}/auth/callback?next=/reimposta-password`,
       });

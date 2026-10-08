@@ -8,11 +8,12 @@ const MESSAGGI_ERRORE: Record<string, string> = {
   'link-non-valido': 'Il link non è più valido o è scaduto. Richiedine uno nuovo.',
 };
 
-export default function LoginPage({
-  searchParams,
-}: {
-  searchParams: { errore?: string; reset?: string; email?: string };
-}) {
+export default async function LoginPage(
+  props: {
+    searchParams: Promise<{ errore?: string; reset?: string; email?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   return (
     <main className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">

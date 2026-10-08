@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
@@ -9,7 +10,8 @@ import { aggiornaGiornoChiusura, eliminaGiornoChiusura } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function GiornoChiusuraDettaglioPage({ params }: { params: { id: string } }) {
+export default async function GiornoChiusuraDettaglioPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { supabase, user, profilo } = await requireAdmin();
 
   const { data: giorno } = await supabase
@@ -23,9 +25,9 @@ export default async function GiornoChiusuraDettaglioPage({ params }: { params: 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
-        <a href="/admin/calendario" className="text-sm text-stone-600 hover:text-stone-900">
+        <Link href="/admin/calendario" className="text-sm text-stone-600 hover:text-stone-900">
           ← Torna al calendario scolastico
-        </a>
+        </Link>
 
         <h1 className="text-lg font-medium">Modifica giorno di chiusura</h1>
 

@@ -28,11 +28,12 @@ const CLASSE_FRECCIA =
 // esattamente quelli della mail: nessun ricalcolo, quindi nessuna
 // duplicazione della logica di `lib/comunicazioneRetta.ts`. Letture con la
 // sessione dell'admin (RLS), nessuna chiave di servizio, nessuna scrittura.
-export default async function PagamentiBambinoPage({
-  searchParams,
-}: {
-  searchParams: { bambino?: string; anno?: string };
-}) {
+export default async function PagamentiBambinoPage(
+  props: {
+    searchParams: Promise<{ bambino?: string; anno?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const { supabase, user, profilo } = await requireAdmin();
 
   // Anche i bambini non più attivi: lo storico resta consultabile.
