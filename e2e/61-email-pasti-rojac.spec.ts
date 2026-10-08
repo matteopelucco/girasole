@@ -136,6 +136,20 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
       await expect(page.getByText('Riepilogo inviato a Rojac')).toBeVisible({ timeout: 20_000 });
     });
 
+    // Il Reply-To non è osservabile dall'interfaccia: il payload è verificato
+    // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
+    // reply_to vada a buon fine (Resend rifiuta un payload non valido).
+    test("una risposta di Rojac arriva all'asilo, non al mittente tecnico (Reply-To)", async ({ page }) => {
+      test.skip(!ROJAC || !process.env.RESEND_API_KEY, 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY');
+      await page.goto(MESE_NOTO);
+      await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
+      await page
+        .getByRole('dialog', { name: 'Anteprima mail a Rojac' })
+        .getByRole('button', { name: 'Conferma invio' })
+        .click();
+      await expect(page.getByText('Riepilogo inviato a Rojac')).toBeVisible({ timeout: 20_000 });
+    });
+
     // Ultimo: modifica la riga unica del modello e la ripristina.
     test('modificare il modello: viene salvato, mostra l\'ultimo salvataggio ed è usato dall\'anteprima', async ({
       page,
