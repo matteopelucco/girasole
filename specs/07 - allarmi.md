@@ -2,8 +2,8 @@
 
 ## Attori
 Maestra, assistente, admin (ciascuno vede il proprio allarme personale).
-L'admin vede in più un riepilogo read-only degli allarmi di tutto il
-personale. Nessun utente umano avvia i controlli: un job pianificato
+L'admin vede in più, nella pagina Allarmi, le righe read-only degli
+allarmi di tutto il personale. Nessun utente umano avvia i controlli: un job pianificato
 (Vercel Cron) valuta anche la situazione a livello di intero asilo e
 invia le email, come in
 [52 - report-email-automatico.md](52%20-%20report-email-automatico.md).
@@ -16,14 +16,14 @@ Segnalare tempestivamente, a chi può ancora agire, due situazioni
 anomale che altrimenti passerebbero inosservate finché qualcuno non se
 ne accorge da solo: presenze/pasti dimenticati durante la giornata, e
 una settimana di ore di lavoro non confermata dal personale. Ogni
-allarme ha due canali, sempre entrambi: un banner in dashboard (finché
-la situazione resta anomala) e un'email inviata una sola volta per
-occorrenza. In più, la campanella in alto a destra e la pagina "Allarmi"
-(`/dashboard/allarmi`) raccolgono in un punto solo gli allarmi attivi di
-chi guarda; per ora i banner in dashboard restano (li toglierà un passo
-successivo, issue #271).
+allarme ha due canali, sempre entrambi: la pagina "Allarmi"
+(`/dashboard/allarmi`), raggiungibile dalla campanella in alto a destra
+che ne mostra il numero (finché la situazione resta anomala), e un'email
+inviata una sola volta per occorrenza. Gli allarmi compaiono **solo**
+nella pagina Allarmi e nella campanella: la dashboard non ne mostra
+(niente banner, niente riepilogo del personale).
 
-## Scenario: presenze o pasti non ancora segnati dopo le 10:00 — banner personale
+## Scenario: presenze o pasti non ancora segnati dopo le 10:00 — allarme personale
 Dato che sono autenticata come maestra, assistente o admin
 E oggi è un giorno attivo (non chiuso, vedi
 [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
@@ -34,23 +34,23 @@ oppure (per maestra e admin, non per l'assistente — vedi
 [14 - segna-pasto.md](14%20-%20segna-pasto.md)) i pasti di oggi non sono
 ancora stati comunicati a Rojac (vedi
 [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md))
-Quando apro la dashboard
-Allora vedo un banner di allarme che elenca cosa manca, con un link per
+Quando apro la pagina "Allarmi"
+Allora vedo un allarme "presenze e pasti di oggi" che elenca cosa manca, con un link per
 ciascuna mia sezione che ha ancora presenze da segnare (mi porta a
 "Presenze e pasti" per oggi, `/dashboard/giornata?data=<oggi>`, dove i
 bambini di tutte le mie sezioni sono raggruppati per sezione) e, se
 manca anche la comunicazione pasti, un link alla stessa schermata
 posizionato sul box di comunicazione a Rojac
 (`/dashboard/giornata?data=<oggi>#comunicazione-rojac`)
-E questo banner riguarda solo le mie sezioni: una maestra di un'altra
+E questo allarme riguarda solo le mie sezioni: una maestra di un'altra
 sezione, senza anomalie nelle proprie, non lo vede
 
-## Scenario: nessun banner personale se tutto è a posto, non è ancora l'orario, o il giorno è chiuso
-Quando apro la dashboard prima delle 10:00, oppure dopo le 10:00 ma con
+## Scenario: nessun allarme personale presenze/pasti se tutto è a posto, non è ancora l'orario, o il giorno è chiuso
+Quando apro la pagina "Allarmi" prima delle 10:00, oppure dopo le 10:00 ma con
 le presenze di tutti i bambini delle mie sezioni già segnate e (per
 maestra/admin) i pasti già comunicati, oppure in un giorno di chiusura
 scolastica, oppure non ho ancora nessuna sezione assegnata
-Allora non vedo il banner presenze/pasti
+Allora non vedo l'allarme presenze/pasti (e la campanella non lo conta)
 
 ## Scenario: presenze/pasti non completati entro le 10:00 — email
 Dato che, per il giorno appena valutato, presenze e/o pasti non
@@ -62,37 +62,37 @@ uso per l'email, indipendente dalla sezione)
 E se il job gira di nuovo lo stesso giorno, l'email non viene inviata
 una seconda volta (idempotenza per giorno)
 
-## Scenario: settimana di ore di lavoro non confermata entro venerdì sera — banner personale
+## Scenario: settimana di ore di lavoro non confermata entro venerdì sera — allarme personale
 Dato che sono abilitata al report ore (vedi
 [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
 E sono le 18:00 di venerdì (fuso Europe/Rome) o più tardi nella
 settimana corrente, e quella settimana non risulta ancora confermata
 (vedi [18 - report-ore-lavoro.md](18%20-%20report-ore-lavoro.md))
-Quando apro la dashboard
-Allora vedo un banner personale che mi avvisa della dimenticanza, con
+Quando apro la pagina "Allarmi"
+Allora vedo un allarme personale che mi avvisa della dimenticanza, con
 l'intervallo di date della settimana e un link che apre direttamente
 quella settimana in "Ore di lavoro" per confermarla
-E questo banner lo vedo solo io, non gli altri membri dello staff: è una
+E questo allarme lo vedo solo io, non gli altri membri dello staff: è una
 mia dimenticanza, non un problema dell'intero asilo
 
 Esempio: sono le 19:30 di venerdì e non ho ancora confermato le ore
 della settimana corrente (quella che include oggi, non ancora finita) →
-vedo il banner riferito a questa settimana.
+vedo l'allarme riferito a questa settimana.
 
-## Scenario: settimana di ore di lavoro non confermata prima di venerdì sera — banner personale sulla settimana precedente
+## Scenario: settimana di ore di lavoro non confermata prima di venerdì sera — allarme personale sulla settimana precedente
 Dato che sono abilitata al report ore
 E siamo tra lunedì e venerdì prima delle 18:00 (fuso Europe/Rome), e la
 settimana precedente (lunedì-domenica appena conclusa) non risulta
 ancora confermata
-Quando apro la dashboard
-Allora vedo lo stesso banner personale, riferito però alla settimana
+Quando apro la pagina "Allarmi"
+Allora vedo lo stesso allarme personale, riferito però alla settimana
 precedente
 
-## Scenario: nessun banner "ore" se la settimana di riferimento è già confermata o non sono abilitata
-Quando apro la dashboard e la settimana di riferimento (vedi Regole)
+## Scenario: nessun allarme "ore" se la settimana di riferimento è già confermata o non sono abilitata
+Quando apro la pagina "Allarmi" e la settimana di riferimento (vedi Regole)
 risulta già confermata, oppure il mio profilo non è abilitato al report
 ore
-Allora non vedo il banner "settimana non confermata"
+Allora non vedo l'allarme "settimana non confermata" (e la campanella non lo conta)
 
 ## Scenario: settimana di ore di lavoro non confermata — email
 Dato che, per un utente abilitato al report ore, la settimana di
@@ -113,18 +113,29 @@ E almeno un membro del personale (maestra o assistente) ha, in questo
 momento, un allarme attivo — presenze/pasti non completati nelle sue
 sezioni dopo le 10:00, e/o la sua settimana di riferimento delle ore non
 confermata dopo la relativa soglia
-Quando apro la dashboard
-Allora vedo, oltre al mio eventuale allarme personale, un riepilogo con
+Quando apro la pagina "Allarmi"
+Allora vedo, oltre ai miei eventuali allarmi personali, una sezione "Situazione del personale" con
 una riga per ciascun membro del personale in allarme: nome, cognome e
 cosa gli manca (sezioni con presenze da segnare, pasti non comunicati,
 e/o settimana ore non confermata con l'intervallo di date)
-E questo riepilogo non contiene link né azioni: è solo informativo, non
+E queste righe non contengono link né azioni: è solo informativo, non
 posso correggere la situazione al posto loro (vedi Regole)
+E ciascuna riga conta come un allarme nel numero della campanella
 
 ## Scenario: nessun riepilogo per l'admin se nessuno è in allarme
-Quando apro la dashboard come admin e nessun membro del personale ha
+Quando apro la pagina "Allarmi" come admin e nessun membro del personale ha
 allarmi attivi in questo momento
-Allora non vedo il riepilogo del personale
+Allora non vedo la sezione "Situazione del personale"
+E la campanella non conta nessun collega
+
+## Scenario: la dashboard non mostra più allarmi né riepilogo del personale
+Dato che sono autenticata come maestra, assistente o admin
+E ho almeno un allarme attivo (anche, se sono admin, un collega in allarme)
+Quando apro la dashboard
+Allora non vedo nessun banner di allarme (presenze/pasti, settimana ore) né
+il riepilogo della situazione del personale
+E gli stessi allarmi restano nella pagina "Allarmi" e contati nella
+campanella, senza perdere nessuna informazione
 
 ## Scenario: la campanella mostra il numero degli allarmi attivi
 Dato che sono autenticata come maestra, assistente o admin
@@ -158,7 +169,7 @@ E per ogni allarme vedo che cosa non va (per esempio "Presenze e pasti di
 oggi" con le sezioni da segnare, oppure "Ore di lavoro" con l'intervallo
 di date della settimana da confermare)
 E ogni allarme mio ha un link per sistemarlo, che porta alla stessa
-destinazione del banner in dashboard (Presenze e pasti di oggi, il box di
+destinazione di cui sopra (Presenze e pasti di oggi, il box di
 comunicazione a Rojac, la settimana in Ore di lavoro)
 
 ## Scenario: la pagina Allarmi senza allarmi lo dice chiaramente
@@ -174,29 +185,19 @@ Allora vedo solo i miei allarmi: presenze/pasti delle mie sezioni (senza i
 pasti se sono assistente) e la mia settimana di ore di lavoro
 E non vedo il riepilogo del personale né gli allarmi di altre persone
 
-## Scenario: l'admin vede nella pagina Allarmi anche il personale, in sola lettura
-Dato che sono autenticato come admin
-E almeno un membro del personale ha un allarme attivo
-Quando apro la pagina "Allarmi"
-Allora vedo, oltre ai miei allarmi, una riga per ciascun membro del
-personale in allarme, con nome, cognome e cosa gli manca (come nel
-riepilogo della dashboard)
-E queste righe non contengono link né azioni
-E ciascuna riga conta come un allarme nel numero della campanella
-
 ## Regole
-- Ogni maestra/assistente vede il proprio banner presenze/pasti
+- Ogni maestra/assistente vede il proprio allarme presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
   già usata per "Presenze e pasti", nessun permesso nuovo necessario);
   l'admin lo vede calcolato su tutte le sezioni attive, essendo la sua
   "sezione" l'intero asilo (stessa visibilità già in uso altrove per
-  l'admin). A differenza di una prima versione di questo requisito, il
-  banner personale non richiede più la service_role key: ognuno legge
+  l'admin). A differenza di una prima versione di questo requisito, l'allarme
+  personale non richiede più la service_role key: ognuno legge
   solo ciò che la propria sessione può già vedere via RLS.
 - "Presenze non complete" = esiste almeno un bambino attivo, in una
   sezione visibile all'utente, senza alcuna riga in `presenze` per oggi
   — non conta se il bambino risulta assente/malato (quello è comunque
-  "segnato"), solo l'assenza totale di un dato. Il banner elenca le
+  "segnato"), solo l'assenza totale di un dato. L'allarme elenca le
   singole sezioni interessate (non solo un riepilogo aggregato); ogni
   voce linka a `/dashboard/giornata?data=<oggi>` (la schermata unica
   "Presenze e pasti", [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
@@ -208,12 +209,12 @@ E ciascuna riga conta come un allarme nel numero della campanella
   `pasti_comunicati` per oggi (specs/16): la comunicazione a Rojac è
   un'unica cosa al giorno per l'intero asilo, non per classe. Riguarda
   solo maestra e admin: l'assistente non ha accesso al registro pasti
-  (specs/03, specs/14) e non vede questa parte del banner né la conta
+  (specs/03, specs/14) e non vede questa parte dell'allarme né la conta
   tra i suoi allarmi nel riepilogo dell'admin.
 - Se l'utente non ha nessuna sezione assegnata, il controllo presenze
   non scatta (nulla da segnare) — resta comunque valido, per lui,
   l'eventuale allarme "settimana ore".
-- Il banner "settimana ore non confermata" usa la sessione normale
+- L'allarme "settimana ore non confermata" usa la sessione normale
   dell'utente (RLS): legge solo la propria riga di
   `ore_lavoro_settimane`, già permesso dalla policy esistente
   (`ore_lavoro_settimane_select_own_or_admin`, specs/18) — nessun nuovo
@@ -231,11 +232,11 @@ E ciascuna riga conta come un allarme nel numero della campanella
     confermabile con i giorni futuri precaricati dal profilo orario
     (specs/18), esattamente come già previsto per la conferma
     anticipata di una settimana in corso.
-  - Il banner (e l'email) riguardano sempre e solo questa singola
+  - L'allarme (e l'email) riguardano sempre e solo questa singola
     settimana più recente, non un arretrato di più settimane mai
     confermate (fuori scope, vedi sotto) — stessa scelta già presente
     nella versione precedente di questo requisito.
-- Il riepilogo dell'admin ("vede gli allarmi di ogni dipendente") copre
+- Le righe del personale dell'admin ("vede gli allarmi di ogni dipendente") copre
   maestre e assistenti (gli utenti che possono avere sezioni assegnate o
   essere abilitati al report ore); è calcolato con la sessione normale
   dell'admin, che ha già visibilità RLS su tutte le sezioni/bambini/
@@ -243,7 +244,7 @@ E ciascuna riga conta come un allarme nel numero della campanella
   necessaria. È **read-only**: nessun link, nessuna azione per
   "correggere" al posto del dipendente — l'admin può comunque, come
   sempre, aprire di persona "Presenze e pasti"/Ore di lavoro e intervenire
-  con il proprio account, ma non da questo riepilogo.
+  con il proprio account, ma non da queste righe.
 - Il ruolo **Segretaria** non esiste ancora nel sistema (vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)): per ora solo
   l'admin vede il riepilogo di tutto il personale (vedi Fuori scope).
@@ -254,7 +255,7 @@ E ciascuna riga conta come un allarme nel numero della campanella
   ha una sessione utente da cui ereditare la RLS (uno dei pochi usi
   ammessi della service_role, con il resto dei cron e la gestione utenti:
   `npm run check:service-role`, ADR-0002). Soglia oraria 10:00
-  (Europe/Rome), stessa soglia del banner personale.
+  (Europe/Rome), stessa soglia dell'allarme personale.
 - Idempotenza delle email tracciata in un'unica tabella
   `allarmi_inviati` (`tipo`, `chiave`, `inviato_at`): `chiave` è la data
   per l'allarme presenze/pasti, `{utente_id}_{settimana_inizio}` per
@@ -274,8 +275,8 @@ E ciascuna riga conta come un allarme nel numero della campanella
   specs/52).
 
 - Composizione dell'elenco della campanella e della pagina "Allarmi":
-  è una sola, calcolata sul server riusando le stesse funzioni dei
-  banner (`lib/allarmi.ts`), così numero ed elenco coincidono per
+  è una sola, calcolata sul server riusando le funzioni di
+  `lib/allarmi.ts` (le stesse del cron), così numero ed elenco coincidono per
   costruzione. Conta un allarme per ciascuna di queste voci: "presenze e
   pasti di oggi" (una sola voce, con dentro le sezioni da segnare e/o i
   pasti da comunicare), "settimana ore non confermata" e, solo per
