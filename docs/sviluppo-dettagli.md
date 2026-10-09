@@ -170,8 +170,14 @@ Contesto operativo per Claude Code su questo progetto.
   codice ma una macchina locale non configurata, e la build reale gira
   comunque in CI prima del merge.
 - Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
-  unit test + duplicati; per il type-check separato, `npx tsc --noEmit`;
-  per la build, `npm run build`).
+  unit test + duplicati; per il type-check separato, `npx next typegen`
+  e poi `npx tsc --noEmit`; per la build, `npm run build`).
+- `next-env.d.ts` non è versionato (è in `.gitignore`): Next 15 lo riscrive
+  a ogni build e sporcava le PR. Lo crea, insieme ai tipi delle rotte in
+  `.next/types/` richiesti da `tsconfig.json`, `npx next typegen` (comando
+  ufficiale di Next 15.5, senza build completa). Per questo il job `statico`
+  della CI e l'hook `pre-push` lo lanciano prima di `tsc`; su un clone nuovo
+  senza quel passo `tsc` non trova i tipi (la build li crea da sola).
 - Se `jscpd` segnala una duplicazione reale (stessa logica ripetuta,
   non solo forma simile), il modo giusto per risolverla è estrarre una
   funzione condivisa (vedi `lib/auth.ts`, `requireAdmin`/`requireProfilo`/

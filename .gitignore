@@ -1,5 +1,7 @@
 node_modules
 .next
+# Generato da Next (build / `next typegen`), non va versionato (issue #275)
+next-env.d.ts
 .env.local
 .env*.local
 .vercel
