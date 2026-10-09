@@ -30,8 +30,8 @@ export type ParametriEmail = {
   // un'email separata per destinatario.
   a: string | string[];
   cc?: string;
-  // Header Reply-To: dove arriva una risposta. Solo per le comunicazioni
-  // ai genitori (specs/56): il mittente tecnico (RESEND_MITTENTE) non è
+  // Header Reply-To: dove arriva una risposta. Solo per le mail a
+  // destinatari esterni (genitori, specs/56; Rojac, specs/61): il mittente tecnico (RESEND_MITTENTE) non è
   // una casella letta da nessuno. Le mail interne non lo impostano.
   rispondiA?: string;
   oggetto: string;

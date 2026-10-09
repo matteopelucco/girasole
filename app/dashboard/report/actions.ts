@@ -29,7 +29,15 @@ export async function inviaEmailRojac(_stato: EsitoAzione, formData: FormData): 
   try {
     const { riepilogo, template } = await caricaDatiEmailRojac(supabase, mese);
     const { oggetto, html } = componiEmailRojac(template, riepilogo);
-    await inviaEmail({ a: destinatario, cc: destinatarioNotifiche(), oggetto, html });
+    // Reply-To all'asilo: le risposte di Rojac non tornano al mittente
+    // tecnico (specs/61, issue #263).
+    await inviaEmail({
+      a: destinatario,
+      cc: destinatarioNotifiche(),
+      rispondiA: destinatarioNotifiche(),
+      oggetto,
+      html,
+    });
   } catch (errore) {
     return {
       ok: false,

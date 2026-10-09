@@ -226,7 +226,8 @@ Allora la risposta ("Rispondi") va all'indirizzo dell'asilo
 tecnico (`RESEND_MITTENTE`, es. `girasole@asilosartorio.it`, che non è
 una casella letta da nessuno)
 E i genitori restano in A (TO) e l'asilo in CC, invariati
-E il `Reply-To` vale solo per le comunicazioni ai genitori: le mail
+E il `Reply-To` vale solo per le mail a destinatari esterni (genitori;
+Rojac, specs/61): le mail
 interne (report notturno specs/52, allarmi specs/07, notifiche
 all'asilo) non lo impostano
 

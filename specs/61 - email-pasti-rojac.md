@@ -65,6 +65,14 @@ Quando premo "Conferma invio"
 Allora parte una sola mail a Rojac, con l'indirizzo dell'asilo in CC
 E nel riquadro compare la conferma "Riepilogo inviato a Rojac"
 
+## Scenario: una risposta di Rojac arriva all'asilo, non al mittente tecnico
+Dato che la mail mensile è stata inviata a Rojac
+Quando Rojac preme "Rispondi"
+Allora la risposta va all'indirizzo dell'asilo
+(`destinatarioNotifiche()`, `Reply-To`) e non all'indirizzo mittente
+tecnico (`RESEND_MITTENTE`, che non è una casella letta da nessuno)
+E Rojac resta in A (TO) e l'asilo in CC, invariati
+
 ## Scenario: indirizzo di Rojac non configurato
 Dato che l'indirizzo email di Rojac non è configurato
 Allora al posto dell'invio il riquadro mi avvisa che l'indirizzo di Rojac
@@ -111,6 +119,10 @@ Allora vengo reindirizzato alla dashboard
   `info@asilosartorio.it`).
 - Il modello è una tabella a riga singola `impostazioni_email_rojac`
   (migration 0060), leggibile e modificabile solo dall'admin (RLS).
+- Lo stesso indirizzo dell'asilo è impostato anche come `Reply-To`
+  (parametro `rispondiA` di `inviaEmail`, come per le comunicazioni ai
+  genitori di specs/56; issue #263): senza, la risposta di Rojac
+  tornerebbe al mittente tecnico.
 - L'invio usa lo stesso servizio degli altri invii (`lib/email.ts`,
   Resend). Questo requisito non registra un log degli invii: ogni invio
   richiede un'anteprima e una conferma esplicita.
