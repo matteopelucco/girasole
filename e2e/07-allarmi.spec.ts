@@ -15,8 +15,16 @@
 // da cosa è stato confermato sull'account condiviso né da altri test che lo
 // abilitano o disabilitano in parallelo. L'account admin condiviso non viene
 // più toccato e "senza abilitazione..." lo usa così com'è.
-import { test, expect } from './fixture-utente';
+import { mergeTests } from '@playwright/test';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { test as testUtente, expect } from './fixture-utente';
+import { test as testBambino, type BambinoFixture } from './fixture-bambino';
 import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+
+// Fixture utente (creaUtente, apriComeUtente) e bambino (bambino, adminDb)
+// insieme: servono entrambe, gli scenari "rette non comunicate" usano un
+// bambino proprio del test.
+const test = mergeTests(testUtente, testBambino);
 
 function oraRomaAdesso(): number {
   return Number(
@@ -55,6 +63,46 @@ function lunediSettimanaPrecedenteRoma(): string {
   const lunedi = new Date(`${lunediSettimanaRoma()}T12:00:00Z`);
   lunedi.setUTCDate(lunedi.getUTCDate() - 7);
   return lunedi.toISOString().slice(0, 10);
+}
+
+// Giorno del mese di oggi (fuso Europe/Rome). L'allarme "rette non comunicate"
+// scatta dal giorno 3 (lib/allarmeRette.ts:GIORNO_ALLARME_RETTE): gli scenari
+// che dipendono dal giorno si adattano e si saltano, con il motivo, quando
+// oggi non è il giorno giusto.
+function giornoDelMeseRoma(): number {
+  return Number(dataOggiRoma().slice(8, 10));
+}
+
+const TITOLO_ALLARME_RETTE = 'Comunicazioni delle rette non inviate';
+const EMAIL_RETTE_E2E = 'e2e-rette-allarme@example.test';
+
+// Rende il bambino fixture "comunicabile" come nella tabella Rette: email di
+// promemoria configurata (specs/55). Dati fittizi, spariscono con il bambino
+// (ON DELETE CASCADE).
+async function configuraEmailPromemoria(db: SupabaseClient, bambino: BambinoFixture) {
+  const { error } = await db
+    .from('costi_bambini')
+    .insert({ bambino_id: bambino.id, email_promemoria: EMAIL_RETTE_E2E });
+  if (error) throw new Error(`Configurazione dell'email di prova non riuscita: ${error.message}`);
+}
+
+// Comunicazione della retta già registrata per il mese corrente (come
+// dopo un invio): inserita direttamente, senza passare da Resend.
+async function registraComunicazione(db: SupabaseClient, bambino: BambinoFixture) {
+  const { error } = await db.from('comunicazioni_retta').insert({
+    bambino_id: bambino.id,
+    mese: dataOggiRoma().slice(0, 7),
+    retta_mensile: 0,
+    costo_pasti: 0,
+    conguaglio_pasti: 0,
+    costo_pre_asilo: 0,
+    costo_post_asilo: 0,
+    costi_extra: 0,
+    totale: 0,
+    email_destinatario: EMAIL_RETTE_E2E,
+    inviata_da_nome: 'E2E',
+  });
+  if (error) throw new Error(`Registrazione della comunicazione di prova non riuscita: ${error.message}`);
 }
 
 const TESTO_BANNER_PERSONALE = 'non risultano completati';
@@ -376,6 +424,166 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
+  // Allarme "rette non comunicate" (specs/07, issue #265). I test lavorano su
+  // un bambino proprio (con l'email di promemoria) e guardano SOLO lui: nel DB
+  // di test altri bambini possono mancare o no, quindi il numero totale di
+  // allarmi dell'admin non è fisso. Il numero della campanella si confronta
+  // sempre con l'elenco della pagina, mai con una cifra.
+  test.describe('rette non comunicate', () => {
+    const ELENCO = 'main section ul > li:has(h3)';
+
+    async function campanellaCoincideConElenco(page: import('@playwright/test').Page) {
+      const elenco = await page.locator(ELENCO).count();
+      if (elenco === 0) await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
+      else await expect(page.getByTestId('numero-allarmi')).toHaveText(String(elenco));
+    }
+
+    test.describe('come admin', () => {
+      test.use({ storageState: statoAutenticazione('admin') });
+
+      test.beforeEach(async () => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      });
+
+      test('prima del giorno 3 nessun allarme rette, anche se manca una comunicazione', async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() >= 3, 'verificabile solo il giorno 1 o 2 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_RETTE })).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test("dal giorno 3 l'allarme dice quanti bambini mancano e quali, con il link a Rette", async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        const allarme = page.locator(ELENCO).filter({ hasText: TITOLO_ALLARME_RETTE });
+        await expect(allarme).toHaveCount(1);
+
+        // Il bambino è elencato con nome, cognome e sezione.
+        const voci = allarme.getByRole('listitem');
+        await expect(voci.filter({ hasText: bambino.nomeCompleto })).toHaveText(
+          new RegExp(`${bambino.nomeCompleto} \\(.+\\)`)
+        );
+        // Il numero nel testo coincide con i bambini elencati (tutte le voci
+        // tranne la prima, che è il riepilogo con il link).
+        const riepilogo = voci.first();
+        const mancanti = (await voci.count()) - 1;
+        expect(mancanti).toBeGreaterThanOrEqual(1);
+        await expect(riepilogo).toContainText(
+          mancanti === 1 ? 'Manca 1 comunicazione' : `Mancano ${mancanti} comunicazioni`
+        );
+        await expect(riepilogo.getByRole('link')).toHaveAttribute('href', '/admin/rette');
+
+        // La campanella conta anche questo allarme: stesso numero dell'elenco.
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test('il link porta alla tabella Rette del mese', async ({ page, adminDb, bambino }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        await page.getByRole('link', { name: /vai su Rette per inviarle/ }).click();
+        await expect(page).toHaveURL(/\/admin\/rette$/);
+        await expect(page.getByRole('heading', { name: /Rette —/ })).toBeVisible();
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test("con la comunicazione inviata il bambino sparisce dall'allarme, se è annullata torna", async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByText(bambino.nomeCompleto)).toBeVisible();
+
+        await registraComunicazione(adminDb!, bambino);
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+
+        // Annullo l'invio (come "Annulla invio" in Rette, specs/56): torna da inviare.
+        const { error } = await adminDb!.from('comunicazioni_retta').delete().eq('bambino_id', bambino.id);
+        expect(error).toBeNull();
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByText(bambino.nomeCompleto)).toBeVisible();
+      });
+
+      test("un bambino senza email di promemoria non fa scattare l'allarme e non è nominato", async ({
+        page,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        // Nessuna riga in costi_bambini: il bambino non può ricevere la comunicazione.
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+      });
+
+      test("in un mese di chiusura totale non c'è l'allarme rette", async () => {
+        // Servirebbe chiudere l'intero mese corrente nel DB di test condiviso,
+        // bloccando presenze e pasti di oggi per tutti i test in parallelo.
+        // Lo scenario è coperto dai test unit di lib/allarmeRette.test.ts
+        // (meseInteramenteChiuso, allarmeRetteDaControllare).
+        test.skip(true, 'non verificabile in e2e senza chiudere il mese corrente: coperto dai test unit');
+      });
+    });
+
+    test.describe('come maestra', () => {
+      test.use({ storageState: statoAutenticazione('maestra') });
+
+      test("la maestra non vede l'allarme rette né i nomi dei bambini", async ({ page, adminDb, bambino }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_RETTE })).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await expect(page.getByRole('link', { name: /vai su Rette/ })).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test.describe('come assistente', () => {
+      test.use({ storageState: statoAutenticazione('assistente') });
+
+      test("l'assistente non vede l'allarme rette né i nomi dei bambini", async ({ page, adminDb, bambino }) => {
+        test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_RETTE })).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+      });
+    });
+  });
+
   test.describe('cron /api/cron/allarmi', () => {
     test('senza il secret corretto la route rifiuta la richiesta', async ({ request }) => {
       test.skip(!process.env.CRON_SECRET, 'richiede CRON_SECRET configurato per avere qualcosa da verificare');
@@ -409,6 +617,17 @@ test.describe('07 — Allarmi', () => {
       // nella seconda: è già tracciata in allarmi_inviati.
       for (const email of corpo1.risultati.settimanaOre) {
         expect(corpo2.risultati.settimanaOre).not.toContain(email);
+      }
+
+      // Rette non comunicate (specs/07): il registro deve accettare il tipo
+      // (migration 0061) e l'email è una sola per mese. Prima del giorno 3
+      // l'allarme non scatta mai.
+      expect(corpo1.risultati.retteNonComunicate).not.toBe('errore_registro');
+      if (giornoDelMeseRoma() < 3) {
+        expect(corpo1.risultati.retteNonComunicate).toBe('non_applicabile');
+      }
+      if (corpo1.risultati.retteNonComunicate === 'inviato' || corpo1.risultati.retteNonComunicate === 'gia_inviato') {
+        expect(corpo2.risultati.retteNonComunicate).toBe('gia_inviato');
       }
     });
   });
