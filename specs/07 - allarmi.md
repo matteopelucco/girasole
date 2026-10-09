@@ -10,6 +10,7 @@ invia le email, come in
 Destinatario delle email: una casella email dello staff (di default
 `info@asilosartorio.it`, stessa variabile d'ambiente
 `REPORT_EMAIL_DESTINATARIO` di specs/52), non un utente dell'app.
+L'allarme "rette non comunicate" (vedi sotto) riguarda solo l'admin.
 
 ## Obiettivo
 Segnalare tempestivamente, a chi può ancora agire, due situazioni
@@ -184,6 +185,72 @@ riepilogo della dashboard)
 E queste righe non contengono link né azioni
 E ciascuna riga conta come un allarme nel numero della campanella
 
+## Scenario: prima del giorno 3 del mese nessun allarme "rette non comunicate"
+Dato che sono autenticato come admin
+E oggi è il giorno 1 o 2 del mese (fuso Europe/Rome)
+E almeno un bambino a cui si può comunicare la retta non ha ancora la
+comunicazione del mese corrente
+Quando apro la pagina "Allarmi"
+Allora non vedo l'allarme "rette non comunicate" (e la campanella non lo
+conta)
+E il cron non invia nessuna email per questo allarme
+
+## Scenario: dal giorno 3 del mese, rette non comunicate — allarme per l'admin
+Dato che sono autenticato come admin
+E oggi è il giorno 3 del mese o un giorno successivo (fuso Europe/Rome)
+E il mese corrente non è interamente chiuso (vedi
+[53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
+E almeno un bambino a cui si può comunicare la retta (attivo, con
+l'email di promemoria configurata, gli stessi della tabella "Rette",
+[56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md))
+non ha una comunicazione registrata per il mese corrente
+Quando apro la pagina "Allarmi"
+Allora vedo l'allarme "rette non comunicate", che dice quanti bambini
+mancano e quali (nome, cognome e sezione)
+E ha un link alla tabella "Rette" del mese (`/admin/rette`)
+E conta 1 nel numero della campanella
+
+## Scenario: l'allarme "rette non comunicate" sparisce quando tutte le comunicazioni sono inviate
+Dato che l'allarme "rette non comunicate" è attivo
+Quando tutti i bambini a cui si può comunicare la retta hanno la
+comunicazione del mese corrente registrata
+Allora l'allarme non compare più nella pagina "Allarmi" e la campanella
+non lo conta
+E se una comunicazione viene annullata (specs/56) l'allarme torna attivo
+E il mese dopo riparte da zero: conta solo la comunicazione del nuovo mese
+
+## Scenario: un bambino senza email di promemoria non fa scattare l'allarme
+Dato che un bambino attivo non ha l'email di promemoria configurata
+(specs/55) e quindi non può ricevere la comunicazione
+Quando tutti gli altri bambini hanno la comunicazione del mese
+Allora l'allarme "rette non comunicate" non è attivo: quel bambino non
+viene contato né nominato (altrimenti l'allarme non si spegnerebbe mai)
+
+## Scenario: nei mesi di chiusura totale non c'è l'allarme "rette non comunicate"
+Dato che tutti i giorni feriali del mese corrente sono giorni di chiusura
+(es. agosto, specs/53)
+Quando apro la pagina "Allarmi" dopo il giorno 3, o gira il cron
+Allora non vedo l'allarme "rette non comunicate" e non parte nessuna email
+
+## Scenario: solo l'admin vede l'allarme "rette non comunicate"
+Dato che l'allarme "rette non comunicate" sarebbe attivo
+Quando apro la pagina "Allarmi" come maestra o assistente
+Allora non lo vedo, la campanella non lo conta e non vedo i nomi dei
+bambini a cui manca la comunicazione
+E il genitore non ha la campanella (vedi sopra)
+
+## Scenario: rette non comunicate — email, una sola volta per mese
+Dato che, dal giorno 3 del mese, l'allarme "rette non comunicate" è
+attivo
+Quando il job pianificato gira
+Allora viene inviata una email all'indirizzo configurato, con quanti
+bambini mancano e il loro nome, cognome e sezione
+E se il job gira di nuovo nello stesso mese l'email non viene inviata
+una seconda volta (idempotenza per mese, anche se nel frattempo
+l'allarme è sparito e tornato)
+E se l'invio fallisce, l'occorrenza non resta segnata come inviata e un
+tentativo successivo può ritentare
+
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
@@ -255,6 +322,26 @@ E ciascuna riga conta come un allarme nel numero della campanella
   ammessi della service_role, con il resto dei cron e la gestione utenti:
   `npm run check:service-role`, ADR-0002). Soglia oraria 10:00
   (Europe/Rome), stessa soglia del banner personale.
+- **Rette non comunicate**: le soglie e la composizione sono in
+  `lib/allarmeRette.ts`. Il giorno minimo è la costante
+  `GIORNO_ALLARME_RETTE` (3, fisso: si cambia nel codice). Conta il mese
+  corrente (fuso Europe/Rome). I bambini considerati sono quelli della
+  tabella "Rette" del mese ([56](56%20-%20comunicazione-retta-mensile.md)):
+  attivi, con `costi_bambini.email_promemoria` valorizzata; mancano se non
+  hanno una riga in `comunicazioni_retta` per il mese. Un mese senza
+  nessun giorno aperto (weekend e chiusure registrate esclusi,
+  `lib/comunicazioneRetta.ts:giorniAperturaMese` = 0) non ha l'allarme.
+  Solo l'admin: il calcolo (nomi dei bambini compresi) non parte per gli
+  altri ruoli. Il cron lo calcola con la service_role key, come gli
+  altri allarmi.
+- Idempotenza dell'email "rette non comunicate": riga in
+  `allarmi_inviati` con `tipo = 'rette_non_comunicate'` e `chiave` = mese
+  `YYYY-MM`. A differenza degli altri due allarmi, il cron registra la
+  riga **prima** di inviare (l'unicità `(tipo, chiave)` fa da
+  prenotazione) e la cancella se l'invio fallisce, così si può ritentare.
+  Se il registro rifiuta il valore (migration 0061 non applicata) l'email
+  non parte affatto: niente invio ripetuto ogni giorno. La migration va
+  applicata in produzione prima del deploy.
 - Idempotenza delle email tracciata in un'unica tabella
   `allarmi_inviati` (`tipo`, `chiave`, `inviato_at`): `chiave` è la data
   per l'allarme presenze/pasti, `{utente_id}_{settimana_inizio}` per
@@ -263,8 +350,9 @@ E ciascuna riga conta come un allarme nel numero della campanella
   conferma di una settimana ore (specs/18), qui condiviso in una sola
   tabella con un discriminatore invece di una tabella per tipo, non
   essendoci altri campi da conservare oltre alla chiave. I valori del
-  discriminatore `tipo` restano quelli già in uso in produzione
-  (`presenze_pasti_mezzogiorno`, `settimana_ore_non_confermata`): sono
+  discriminatore `tipo` sono `presenze_pasti_mezzogiorno`,
+  `settimana_ore_non_confermata` e `rette_non_comunicate` (aggiunto dalla
+  migration 0061, che estende il vincolo CHECK): sono
   identificatori interni, non testo mostrato all'utente, quindi non è
   stato necessario rinominarli né fare una migration solo per questo.
 - Il job è protetto dallo stesso meccanismo già in uso per gli altri
@@ -295,6 +383,8 @@ E ciascuna riga conta come un allarme nel numero della campanella
   Europe/Rome — non due cron separati, per restare comodamente dentro
   il limite di Vercel Hobby (2 cron job per progetto, già a 1 con
   `report-presenze`; vedi `CLAUDE.md`).
+- Lo stesso cron valuta anche le rette non comunicate (terzo controllo,
+  nessun cron nuovo).
 - Il destinatario riusa la stessa variabile d'ambiente
   `REPORT_EMAIL_DESTINATARIO` di specs/52 (`lib/email.ts:destinatarioNotifiche`).
 

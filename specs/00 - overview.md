@@ -49,8 +49,9 @@ della maestra, `5x` amministrazione.
   warning quando presenza/pasto/pre-asilo/post-asilo di un bambino sono
   incoerenti fra loro, in "Presenze e pasti", Report e report email
 - [07 - allarmi.md](07%20-%20allarmi.md) — campanella con pagina "Allarmi", banner in dashboard ed email
-  automatiche per presenze/pasti non completati entro mezzogiorno e per
-  settimane di ore di lavoro non confermate
+  automatiche per presenze/pasti non completati entro mezzogiorno, per
+  settimane di ore di lavoro non confermate e (solo admin) per rette non
+  comunicate dal giorno 3 del mese
 - [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md) — schermata
   unica "Presenze e pasti": una card per bambino con la presenza a
   sinistra e il pasto a destra (solo presenza per l'assistente),
