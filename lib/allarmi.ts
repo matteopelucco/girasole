@@ -4,8 +4,8 @@ import { settimanaCorrente, settimanaPrecedente } from './date';
 import { escapeHtml } from './htmlEscape';
 
 // Soglia oraria (fuso Europe/Rome) dell'allarme "presenze/pasti non
-// completati" (specs/07 - allarmi.md): condivisa dal banner personale in
-// dashboard e dall'email aggregata inviata dal cron. Funzione pura:
+// completati" (specs/07 - allarmi.md): condivisa dall'allarme personale della
+// pagina Allarmi e dall'email aggregata inviata dal cron. Funzione pura:
 // riceve l'istante da controllare invece di leggere `new Date()` al suo
 // interno, per restare testabile.
 export function dopoOrarioAllarmePresenzePasti(adesso: Date): boolean {
@@ -63,7 +63,7 @@ export function allarmeAsiloAttivo(adesso: Date, giornoAttivo: boolean, stato: S
 }
 
 // Descrizione testuale di cosa manca, condivisa tra l'email aggregata e
-// (in passato) il banner in dashboard (specs/07), per non scrivere la
+// (in passato) il banner della dashboard (specs/07), per non scrivere la
 // stessa frase in due posti. Stringa vuota se non manca nulla.
 export function descrizioneStatoOperativo(stato: StatoOperativoGiorno): string {
   const parti: string[] = [];
@@ -129,7 +129,7 @@ export type StatoPersonaleGiorno = {
   pastiNonConfermati: boolean;
 };
 
-// Vero se scatta il banner personale "presenze/pasti non ancora
+// Vero se scatta l'allarme personale "presenze/pasti non ancora
 // segnati" (specs/07) per l'utente corrente — a differenza di
 // allarmeAsiloAttivo, non richiede "nessunDatoAtteso" perché
 // calcolaStatoPersonaleGiorno già restituisce liste/flag vuoti quando
@@ -217,8 +217,8 @@ export function htmlAllarmeSettimanaOreNonConfermata(utente: UtenteSettimanaNonC
 
 // Tutti gli utenti abilitati al report ore la cui settimana
 // `settimanaInizio` non risulta confermata (fa I/O) — usata dal cron
-// (specs/07, con la service_role key) e dal riepilogo dell'admin in
-// dashboard (con la sua sessione normale, che vede già tutti via RLS).
+// (specs/07, con la service_role key) e dalle righe del personale della
+// pagina Allarmi (con la sua sessione normale, che vede già tutti via RLS).
 export async function utentiConSettimanaNonConfermata(
   supabase: SupabaseClient,
   settimanaInizio: string
