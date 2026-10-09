@@ -11,12 +11,12 @@
 // I test dell'allarme "settimana ore non confermata" lavorano su un utente
 // di staff creato apposta, abilitato alle ore di lavoro ed eliminato a fine
 // test (e2e/fixture-utente.ts, issue #177 e #230): un utente nuovo non ha mai
-// confermato nessuna settimana, quindi il banner c'è sempre, senza dipendere
+// confermato nessuna settimana, quindi l'allarme c'è sempre, senza dipendere
 // da cosa è stato confermato sull'account condiviso né da altri test che lo
 // abilitano o disabilitano in parallelo. L'account admin condiviso non viene
 // più toccato e "senza abilitazione..." lo usa così com'è.
 import { test, expect } from './fixture-utente';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { alertApp, dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 function oraRomaAdesso(): number {
   return Number(
@@ -57,54 +57,56 @@ function lunediSettimanaPrecedenteRoma(): string {
   return lunedi.toISOString().slice(0, 10);
 }
 
-const TESTO_BANNER_PERSONALE = 'non risultano completati';
-const TESTO_BANNER_SETTIMANA_ORE = 'Non hai confermato le ore della settimana';
+const TITOLO_ALLARME_PRESENZE_PASTI = 'Presenze e pasti di oggi da completare';
+const TITOLO_ALLARME_SETTIMANA_ORE = 'Ore di lavoro della settimana non confermate';
 const TESTO_RIEPILOGO_STAFF = 'Situazione del personale';
+const LINK_CONFERMA_ORE = /vai su Ore di lavoro per confermarla/;
+// Un allarme dell'elenco della pagina Allarmi.
+const ELENCO_ALLARMI = 'main section ul > li:has(h3)';
 
 test.describe('07 — Allarmi', () => {
-  test.describe('presenze/pasti non ancora segnati dopo le 10:00 — banner personale', () => {
+  test.describe('presenze/pasti non ancora segnati dopo le 10:00 — allarme personale', () => {
     test.describe('come maestra', () => {
       test.use({ storageState: statoAutenticazione('maestra') });
 
-      test.beforeEach(async ({ page }) => {
+      test.beforeEach(async () => {
         test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
       });
 
-      test('prima delle 10:00 il banner non compare', async ({ page }) => {
+      test("prima delle 10:00 l'allarme non compare", async ({ page }) => {
         test.skip(
           oraRomaAdesso() >= 10,
           'la suite gira dopo le 10:00: lo scenario "prima delle 10:00" non è verificabile ora'
         );
 
-        await page.goto('/dashboard');
-        await expect(page.getByText(TESTO_BANNER_PERSONALE, { exact: false })).toHaveCount(0);
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_PRESENZE_PASTI })).toHaveCount(0);
       });
 
-      test('in un giorno di chiusura (weekend) il banner non compare, anche dopo le 10:00', async ({ page }) => {
+      test("in un giorno di chiusura (weekend) l'allarme non compare, anche dopo le 10:00", async ({ page }) => {
         test.skip(
           oggiEGiornoFeriale(),
           'oggi non è un weekend: lo scenario "giorno di chiusura" non è verificabile ora'
         );
 
-        await page.goto('/dashboard');
-        await expect(page.getByText(TESTO_BANNER_PERSONALE, { exact: false })).toHaveCount(0);
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_PRESENZE_PASTI })).toHaveCount(0);
       });
 
-      test('dopo le 10:00 in un giorno feriale, se compare il banner elenca solo le mie sezioni con un link diretto', async ({
+      test("dopo le 10:00 in un giorno feriale, se compare l'allarme elenca solo le mie sezioni con un link diretto", async ({
         page,
       }) => {
         test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
 
-        await page.goto('/dashboard');
-        const banner = page.getByRole('alert').filter({ hasText: TESTO_BANNER_PERSONALE });
-        const presente = (await banner.count()) > 0;
+        await page.goto('/dashboard/allarmi');
+        const allarme = page.locator(ELENCO_ALLARMI).filter({ hasText: TITOLO_ALLARME_PRESENZE_PASTI });
+        const presente = (await allarme.count()) > 0;
         test.skip(!presente, 'oggi presenze e pasti risultano già completati per le mie sezioni: nessuna anomalia da verificare ora');
 
-        await expect(banner).toContainText('10:00');
-        // Ogni link del banner porta direttamente alla schermata unica
-        // "Presenze e pasti" di oggi (specs/10), eventualmente sul box di
-        // comunicazione a Rojac — mai a una pagina generica.
-        const link = banner.getByRole('link').first();
+        // Ogni link porta direttamente alla schermata unica "Presenze e
+        // pasti" di oggi (specs/10), eventualmente sul box di comunicazione
+        // a Rojac — mai a una pagina generica.
+        const link = allarme.getByRole('link').first();
         await expect(link).toHaveAttribute(
           'href',
           /^\/dashboard\/giornata\?data=\d{4}-\d{2}-\d{2}(#comunicazione-rojac)?$/
@@ -116,50 +118,50 @@ test.describe('07 — Allarmi', () => {
     test.describe('come assistente', () => {
       test.use({ storageState: statoAutenticazione('assistente') });
 
-      test('anche se il banner compare, non menziona mai i pasti (nessun accesso al registro pasti)', async ({
+      test("anche se l'allarme compare, non menziona mai i pasti (nessun accesso al registro pasti)", async ({
         page,
       }) => {
         test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
         test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
 
-        await page.goto('/dashboard');
-        const banner = page.getByRole('alert').filter({ hasText: TESTO_BANNER_PERSONALE });
-        const presente = (await banner.count()) > 0;
+        await page.goto('/dashboard/allarmi');
+        const allarme = page.locator(ELENCO_ALLARMI).filter({ hasText: TITOLO_ALLARME_PRESENZE_PASTI });
+        const presente = (await allarme.count()) > 0;
         test.skip(!presente, 'oggi le presenze delle mie sezioni risultano già complete: nessuna anomalia da verificare ora');
 
-        await expect(banner.getByRole('link', { name: /pasti/i })).toHaveCount(0);
+        await expect(allarme.getByRole('link', { name: /pasti/i })).toHaveCount(0);
       });
     });
   });
 
-  test.describe('settimana di ore di lavoro non confermata — banner personale', () => {
+  test.describe('settimana di ore di lavoro non confermata — allarme personale', () => {
     test.describe('come admin', () => {
       test.use({ storageState: statoAutenticazione('admin') });
 
-      test.beforeEach(async ({ page }) => {
+      test.beforeEach(async () => {
         test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
       });
 
-      test('senza abilitazione al report ore, nessun banner personale', async ({ page }) => {
-        await page.goto('/dashboard');
-        await expect(page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false })).toHaveCount(0);
+      test('senza abilitazione al report ore, nessun allarme personale', async ({ page }) => {
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_SETTIMANA_ORE })).toHaveCount(0);
       });
 
       // Utente di staff nuovo, abilitato alle ore: non ha mai confermato
-      // una settimana, quindi il banner c'è sempre. Il caso "non abilitato"
+      // una settimana, quindi l'allarme c'è sempre. Il caso "non abilitato"
       // è quello del test precedente (admin condiviso, mai abilitato).
-      test('abilitata senza aver mai confermato la settimana di riferimento, il banner compare con il link alla settimana', async ({
+      test("abilitata senza aver mai confermato la settimana di riferimento, l'allarme compare con il link alla settimana", async ({
         creaUtente,
         apriComeUtente,
       }) => {
         const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
         const page = await apriComeUtente(utente);
 
-        await page.goto('/dashboard');
-        await expect(page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false })).toBeVisible();
-        // Il banner porta direttamente alla settimana da confermare
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_SETTIMANA_ORE })).toBeVisible();
+        // L'allarme porta direttamente alla settimana da confermare
         // (specs/07, specs/18 — navigazione tra settimane).
-        await expect(page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' })).toHaveAttribute(
+        await expect(page.getByRole('link', { name: LINK_CONFERMA_ORE })).toHaveAttribute(
           'href',
           /\/dashboard\/ore-lavoro\?settimana=\d{4}-\d{2}-\d{2}/
         );
@@ -175,8 +177,8 @@ test.describe('07 — Allarmi', () => {
         const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
         const page = await apriComeUtente(utente);
 
-        await page.goto('/dashboard');
-        const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
+        await page.goto('/dashboard/allarmi');
+        const link = page.getByRole('link', { name: LINK_CONFERMA_ORE });
         await expect(link).toBeVisible();
         const href = await link.getAttribute('href');
         const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
@@ -192,8 +194,8 @@ test.describe('07 — Allarmi', () => {
         const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
         const page = await apriComeUtente(utente);
 
-        await page.goto('/dashboard');
-        const link = page.getByRole('link', { name: 'Vai su Ore di lavoro per confermarla.' });
+        await page.goto('/dashboard/allarmi');
+        const link = page.getByRole('link', { name: LINK_CONFERMA_ORE });
         await expect(link).toBeVisible();
         const href = await link.getAttribute('href');
         const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
@@ -202,50 +204,54 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
-  test.describe('riepilogo del personale per l\'admin', () => {
+  test.describe("riepilogo del personale per l'admin", () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
     test('nessun riepilogo se nessuno del personale è in allarme', async ({ page }) => {
-      await page.goto('/dashboard');
-      const riepilogo = page.getByText(TESTO_RIEPILOGO_STAFF, { exact: false });
+      await page.goto('/dashboard/allarmi');
+      const riepilogo = page.getByRole('heading', { name: TESTO_RIEPILOGO_STAFF });
       const assente = (await riepilogo.count()) === 0;
       test.skip(
         !assente,
         'almeno un membro del personale ha in questo momento un allarme attivo: lo scenario "nessuno in allarme" non è verificabile ora'
       );
       await expect(riepilogo).toHaveCount(0);
+      await expect(page.getByRole('list', { name: 'Allarmi del personale' })).toHaveCount(0);
     });
+  });
 
-    test('se presente, il riepilogo non contiene link (solo informativo)', async ({ page }) => {
+  test.describe('la dashboard non mostra più allarmi né riepilogo', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
+
+    test('con allarmi attivi la dashboard (maestra e admin) non ha banner né riepilogo, ma la campanella li conta', async ({
+      page,
+      creaUtente,
+      apriComeUtente,
+    }) => {
+      // Un collega abilitato alle ore che non ha mai confermato la settimana
+      // ha sempre un allarme; l'admin lo vede anche come riga del personale.
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const paginaMaestra = await apriComeUtente(utente);
+
+      await paginaMaestra.goto('/dashboard');
+      await expect(paginaMaestra.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
+      await expect(alertApp(paginaMaestra)).toHaveCount(0);
+      await expect(paginaMaestra.getByText('Non hai confermato le ore della settimana')).toHaveCount(0);
+      await expect(paginaMaestra.getByText('non risultano completati')).toHaveCount(0);
+      await expect(paginaMaestra.getByTestId('numero-allarmi')).toHaveText('1');
+      await nessunaViolazioneA11yGrave(paginaMaestra);
+
       await page.goto('/dashboard');
-      const riepilogo = page.getByText(TESTO_RIEPILOGO_STAFF, { exact: false });
-      const presente = (await riepilogo.count()) > 0;
-      test.skip(!presente, 'nessun membro del personale ha allarmi attivi in questo momento');
-
-      // Solo il riquadro del riepilogo (genitore diretto del titolo): con
-      // locator('div', { has }) si prendevano anche tutti i div antenati,
-      // layout e sidebar compresi, con i loro link (issue #70).
-      const sezione = riepilogo.locator('..');
-      await expect(sezione.getByRole('link')).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
+      await expect(page.getByText(TESTO_RIEPILOGO_STAFF)).toHaveCount(0);
+      await expect(page.getByText('Non hai confermato le ore della settimana')).toHaveCount(0);
+      await expect(page.getByText('non risultano completati')).toHaveCount(0);
+      await expect(page.getByTestId('numero-allarmi')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
-    });
-
-    test('un genitore o account senza sezioni non compare mai nel riepilogo del personale', async ({ page, browser }) => {
-      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD per un confronto');
-      // Verifica indiretta: il riepilogo, quando presente, elenca solo
-      // nome e cognome di personale reale (maestra/assistente), mai
-      // l'admin stesso (che vede il proprio allarme nel proprio banner
-      // personale, non nel riepilogo).
-      await page.goto('/dashboard');
-      const riepilogo = page.getByText(TESTO_RIEPILOGO_STAFF, { exact: false });
-      const presente = (await riepilogo.count()) > 0;
-      test.skip(!presente, 'nessun membro del personale ha allarmi attivi in questo momento');
-
-      await expect(page.locator('li', { hasText: process.env.E2E_ADMIN_EMAIL ?? ' nomatch' })).toHaveCount(0);
     });
   });
 
@@ -256,8 +262,6 @@ test.describe('07 — Allarmi', () => {
   // La campanella è nello stesso HTML della pagina (streaming): dopo goto()
   // il numero, se c'è, è già presente.
   test.describe('campanella e pagina Allarmi', () => {
-    const ELENCO_ALLARMI = 'main section ul > li:has(h3)';
-
     test("la campanella mostra il numero degli allarmi e porta alla pagina, dove l'elenco ha lo stesso numero", async ({
       creaUtente,
       apriComeUtente,
@@ -354,7 +358,7 @@ test.describe('07 — Allarmi', () => {
     test.describe('come admin', () => {
       test.use({ storageState: statoAutenticazione('admin') });
 
-      test("l'admin vede anche il personale in allarme, senza link, e il numero li conta", async ({
+      test("l'admin vede gli allarmi di tutto il personale, senza link, e il numero li conta", async ({
         page,
         creaUtente,
       }) => {
