@@ -50,6 +50,7 @@ import {
   titoloOreLavoroDipendente,
   urlOreLavoro,
 } from './pagina-personale';
+import { testoSaldoMonteOre } from './pagina-monte-ore';
 
 const totaleErogato = (page: Page, giorno: string) => page.getByRole('status', { name: `Totale ore erogate ${giorno}` });
 
@@ -532,7 +533,7 @@ test.describe('18 — Report ore di lavoro', () => {
       expect(await giorniMese.count()).toBeGreaterThanOrEqual(28);
       await expect(oreInRiquadro(page, 'Ore previste')).toContainText(/[0-9]+([.][0-9]+)?h/);
       await expect(oreInRiquadro(page, 'Differenza ore')).toContainText(/[+-]?[0-9]+([.][0-9]+)?h/);
-      await expect(page.getByText('Monte ore attuale:', { exact: false })).toBeVisible();
+      await expect(testoSaldoMonteOre(page)).toBeVisible();
       await expect(page.getByText('Settimane del mese')).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
 
