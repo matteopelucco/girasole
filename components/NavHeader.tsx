@@ -1,80 +1,13 @@
-'use client';
+import { Suspense } from 'react';
+import { CampanellaAllarmi, CampanellaAllarmiCaricamento } from '@/components/CampanellaAllarmi';
+import { NavHeaderClient } from '@/components/NavHeaderClient';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { PulsanteInvio } from '@/components/PulsanteInvio';
-import { logout } from '@/app/actions';
-import { eGruppoConStato, vociMenuConStato, type VoceMenuConStato } from '@/lib/navigazione';
-
-function Logo() {
-  return (
-    <Link href="/dashboard" className="flex items-center gap-2 font-heading text-base font-semibold text-stone-900">
-      <span aria-hidden className="text-lg">
-        🌻
-      </span>
-      Girasole
-    </Link>
-  );
-}
-
-function VoceLink({
-  voce,
-  figlia,
-  onNavigazione,
-}: {
-  voce: VoceMenuConStato;
-  figlia?: boolean;
-  onNavigazione?: () => void;
-}) {
-  return (
-    <Link
-      href={voce.href}
-      onClick={onNavigazione}
-      aria-current={voce.attivo ? 'page' : undefined}
-      className={`flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors ${
-        figlia ? 'pl-9 pr-3' : 'px-3'
-      } ${
-        voce.attivo ? 'bg-emerald-50 text-emerald-800' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
-      }`}
-    >
-      <span aria-hidden>{voce.icona}</span>
-      {voce.etichetta}
-    </Link>
-  );
-}
-
-function ElencoVoci({ ruolo, pathname, onNavigazione }: { ruolo: string | null; pathname: string; onNavigazione?: () => void }) {
-  return (
-    <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
-      {vociMenuConStato(ruolo, pathname).map((elemento) =>
-        eGruppoConStato(elemento) ? (
-          // Gruppo (specs/60): intestazione senza pagina, con le voci figlie rientrate sotto.
-          <div key={elemento.etichetta} role="group" aria-label={elemento.etichetta} className="flex flex-col gap-1">
-            <span className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-stone-500">
-              <span aria-hidden>{elemento.icona}</span>
-              {elemento.etichetta}
-            </span>
-            {elemento.figli.map((figlio) => (
-              <VoceLink key={figlio.href} voce={figlio} figlia onNavigazione={onNavigazione} />
-            ))}
-          </div>
-        ) : (
-          <VoceLink key={elemento.href} voce={elemento} onNavigazione={onNavigazione} />
-        )
-      )}
-    </nav>
-  );
-}
-
-// Shell dell'app per ogni pagina autenticata: sidebar fissa a sinistra da
-// schermo lg in su (ispirata a TailAdmin, vedi specs/01 - ux.md), che
-// sotto quella soglia si trasforma in un drawer aperto/chiuso da un
-// pulsante hamburger — l'unico modo per far stare comodamente le voci di
-// amministrazione, che in una singola riga orizzontale non ci stavano più
-// a larghezza mobile. Riceve `children` (il `<main>` della pagina) invece
-// di essere un semplice sibling, perché la sidebar a larghezza fissa deve
-// "spingere" il contenuto con un padding-left solo da lg in su.
+// Shell dell'app per ogni pagina autenticata (sidebar, intestazione con
+// nome, campanella e "Esci": vedi NavHeaderClient). Componente server:
+// aggiunge la campanella degli allarmi (specs/07 - allarmi.md) per admin,
+// maestra e assistente — non per il genitore, per cui non si calcola
+// nulla. Il numero è dentro un Suspense: la pagina non aspetta il calcolo
+// degli allarmi, la campanella si completa appena è pronto.
 export function NavHeader({
   nome,
   ruolo,
@@ -84,59 +17,20 @@ export function NavHeader({
   ruolo: string | null;
   children: React.ReactNode;
 }) {
-  const [menuAperto, setMenuAperto] = useState(false);
-  const pathname = usePathname();
-
+  const conCampanella = ruolo === 'admin' || ruolo === 'maestra' || ruolo === 'assistente';
   return (
-    <div className="flex min-h-screen flex-1">
-      {menuAperto && (
-        <button
-          type="button"
-          aria-label="Chiudi il menu"
-          onClick={() => setMenuAperto(false)}
-          className="fixed inset-0 z-20 bg-stone-900/40 lg:hidden"
-        />
-      )}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r-2 border-amber-400 bg-white transition-transform lg:translate-x-0 ${
-          menuAperto ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <div className="border-b border-stone-200 px-4 py-4">
-          <Logo />
-        </div>
-        <ElencoVoci ruolo={ruolo} pathname={pathname} onNavigazione={() => setMenuAperto(false)} />
-      </aside>
-
-      <div className="flex flex-1 flex-col lg:pl-64">
-        <header className="sticky top-0 z-10 flex items-center border-b-2 border-amber-400 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-3 lg:hidden">
-            <button
-              type="button"
-              aria-label="Apri il menu"
-              aria-expanded={menuAperto}
-              onClick={() => setMenuAperto(true)}
-              className="-ml-1 rounded-lg p-2 text-stone-600 hover:bg-stone-100"
-            >
-              <span aria-hidden className="text-lg">
-                ☰
-              </span>
-            </button>
-            <Logo />
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-sm text-stone-600">{nome}</span>
-            <form action={logout}>
-              <PulsanteInvio mantieniTesto className="text-sm text-stone-600 hover:text-stone-900">
-                Esci
-              </PulsanteInvio>
-            </form>
-          </div>
-        </header>
-
-        {children}
-      </div>
-    </div>
+    <NavHeaderClient
+      nome={nome}
+      ruolo={ruolo}
+      campanella={
+        conCampanella ? (
+          <Suspense fallback={<CampanellaAllarmiCaricamento />}>
+            <CampanellaAllarmi />
+          </Suspense>
+        ) : undefined
+      }
+    >
+      {children}
+    </NavHeaderClient>
   );
 }

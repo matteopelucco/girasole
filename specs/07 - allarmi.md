@@ -18,7 +18,10 @@ ne accorge da solo: presenze/pasti dimenticati durante la giornata, e
 una settimana di ore di lavoro non confermata dal personale. Ogni
 allarme ha due canali, sempre entrambi: un banner in dashboard (finché
 la situazione resta anomala) e un'email inviata una sola volta per
-occorrenza.
+occorrenza. In più, la campanella in alto a destra e la pagina "Allarmi"
+(`/dashboard/allarmi`) raccolgono in un punto solo gli allarmi attivi di
+chi guarda; per ora i banner in dashboard restano (li toglierà un passo
+successivo, issue #271).
 
 ## Scenario: presenze o pasti non ancora segnati dopo le 10:00 — banner personale
 Dato che sono autenticata come maestra, assistente o admin
@@ -123,6 +126,64 @@ Quando apro la dashboard come admin e nessun membro del personale ha
 allarmi attivi in questo momento
 Allora non vedo il riepilogo del personale
 
+## Scenario: la campanella mostra il numero degli allarmi attivi
+Dato che sono autenticata come maestra, assistente o admin
+E ho almeno un allarme attivo (presenze/pasti dopo le 10:00, settimana
+ore non confermata, oppure — se sono admin — un membro del personale in
+allarme)
+Quando apro una qualsiasi pagina dell'app
+Allora vedo in alto a destra, nella barra di navigazione, la campanella
+con un pallino che contiene il numero degli allarmi attivi
+E lo screen reader legge un testo come "3 allarmi" ("1 allarme" se ce n'è
+uno solo)
+E il numero è uguale al numero di allarmi elencati nella pagina "Allarmi"
+
+## Scenario: la campanella senza allarmi non mostra nessun numero
+Dato che sono autenticata come maestra, assistente o admin
+E non ho nessun allarme attivo
+Quando apro una qualsiasi pagina dell'app
+Allora vedo la campanella senza alcun pallino né numero
+
+## Scenario: il genitore non ha la campanella
+Dato che sono autenticato come genitore
+Quando apro una qualsiasi pagina dell'app
+Allora non vedo la campanella
+E nessun controllo sugli allarmi viene calcolato per me
+
+## Scenario: la pagina Allarmi elenca cosa non va e come sistemarlo
+Dato che ho almeno un allarme attivo
+Quando clicco la campanella
+Allora si apre la pagina "Allarmi" (`/dashboard/allarmi`)
+E per ogni allarme vedo che cosa non va (per esempio "Presenze e pasti di
+oggi" con le sezioni da segnare, oppure "Ore di lavoro" con l'intervallo
+di date della settimana da confermare)
+E ogni allarme mio ha un link per sistemarlo, che porta alla stessa
+destinazione del banner in dashboard (Presenze e pasti di oggi, il box di
+comunicazione a Rojac, la settimana in Ore di lavoro)
+
+## Scenario: la pagina Allarmi senza allarmi lo dice chiaramente
+Dato che non ho nessun allarme attivo
+Quando apro la pagina "Allarmi"
+Allora leggo che non ci sono allarmi attivi
+E non vedo nessun elenco di allarmi
+
+## Scenario: maestra e assistente vedono solo i propri allarmi
+Dato che sono autenticata come maestra o assistente
+Quando apro la pagina "Allarmi"
+Allora vedo solo i miei allarmi: presenze/pasti delle mie sezioni (senza i
+pasti se sono assistente) e la mia settimana di ore di lavoro
+E non vedo il riepilogo del personale né gli allarmi di altre persone
+
+## Scenario: l'admin vede nella pagina Allarmi anche il personale, in sola lettura
+Dato che sono autenticato come admin
+E almeno un membro del personale ha un allarme attivo
+Quando apro la pagina "Allarmi"
+Allora vedo, oltre ai miei allarmi, una riga per ciascun membro del
+personale in allarme, con nome, cognome e cosa gli manca (come nel
+riepilogo della dashboard)
+E queste righe non contengono link né azioni
+E ciascuna riga conta come un allarme nel numero della campanella
+
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
@@ -211,6 +272,22 @@ Allora non vedo il riepilogo del personale
 - Un errore nell'invio non deve marcare l'occorrenza come "inviata": un
   tentativo successivo deve poter ritentare (stesso principio di
   specs/52).
+
+- Composizione dell'elenco della campanella e della pagina "Allarmi":
+  è una sola, calcolata sul server riusando le stesse funzioni dei
+  banner (`lib/allarmi.ts`), così numero ed elenco coincidono per
+  costruzione. Conta un allarme per ciascuna di queste voci: "presenze e
+  pasti di oggi" (una sola voce, con dentro le sezioni da segnare e/o i
+  pasti da comunicare), "settimana ore non confermata" e, solo per
+  l'admin, una voce per ogni membro del personale in allarme. Il calcolo
+  usa la sessione normale dell'utente (RLS): nessun permesso nuovo,
+  nessuna service_role key. Non entrano per ora le incoerenze
+  presenze/pasti ([06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)),
+  né le email (che non cambiano).
+- Per non rallentare le altre pagine il numero della campanella è
+  calcolato in streaming (la pagina non aspetta), non si calcola prima
+  delle 10:00 o in un giorno di chiusura ciò che dipende da quella soglia,
+  e per il genitore non si calcola nulla.
 
 ## Note di implementazione
 - Route `app/api/cron/allarmi/route.ts` (Vercel Cron), un solo cron che
