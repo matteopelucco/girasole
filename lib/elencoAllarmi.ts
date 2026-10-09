@@ -1,3 +1,4 @@
+import { descrizioneBambinoRetta, type BambinoRetta } from './allarmeRette';
 import { allarmePersonalePresenzePastiAttivo, type AllarmeDipendente, type StatoPersonaleGiorno } from './allarmi';
 import { formattaIntervalloItaliano } from './date';
 import { percorsoGiornata } from './giornata';
@@ -35,6 +36,9 @@ export type InputElencoAllarmi = {
   settimanaOreNonConfermata: SettimanaOre | null;
   // Solo per l'admin; vuoto per gli altri.
   personale: AllarmeDipendente[];
+  // Bambini a cui manca la comunicazione della retta del mese (specs/07):
+  // solo per l'admin e solo dal giorno 3; vuoto per gli altri.
+  retteNonComunicate: BambinoRetta[];
 };
 
 function vociPersonale(allarme: AllarmeDipendente): VoceAllarme[] {
@@ -75,6 +79,22 @@ export function componiAllarmi(input: InputElencoAllarmi): Allarme[] {
           testo: `Settimana ${formattaIntervalloItaliano(inizio, fine)}: vai su Ore di lavoro per confermarla`,
           href: `/dashboard/ore-lavoro?settimana=${inizio}`,
         },
+      ],
+    });
+  }
+
+  if (input.retteNonComunicate.length > 0) {
+    const quanti = input.retteNonComunicate.length;
+    elenco.push({
+      id: 'rette-non-comunicate',
+      tipo: 'proprio',
+      titolo: 'Comunicazioni delle rette non inviate',
+      voci: [
+        {
+          testo: `${quanti === 1 ? 'Manca 1 comunicazione' : `Mancano ${quanti} comunicazioni`}: vai su Rette per inviarle`,
+          href: '/admin/rette',
+        },
+        ...input.retteNonComunicate.map((bambino) => ({ testo: descrizioneBambinoRetta(bambino) })),
       ],
     });
   }

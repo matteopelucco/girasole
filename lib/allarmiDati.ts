@@ -7,6 +7,7 @@ import {
   settimanaDiRiferimentoOre,
   type StatoPersonaleGiorno,
 } from '@/lib/allarmi';
+import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import { oggi } from '@/lib/date';
 import { componiAllarmi, type Allarme } from '@/lib/elencoAllarmi';
@@ -52,10 +53,13 @@ export async function calcolaAllarmiUtente(
       ? settimanaRiferimento
       : null;
 
-  const [statoPersonaleGiorno, settimanaOreNonConfermata, personale] = await Promise.all([
+  // Solo l'admin vede le rette non comunicate (e i nomi dei bambini):
+  // per gli altri ruoli non si legge nulla (specs/07).
+  const [statoPersonaleGiorno, settimanaOreNonConfermata, personale, retteNonComunicate] = await Promise.all([
     statoPersonale(),
     settimanaOre(),
     ruolo === 'admin' ? allarmiPerDipendenti(supabase, dataOggi, giornoAttivo, adesso, userId) : [],
+    ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
   ]);
 
   return componiAllarmi({
@@ -65,5 +69,6 @@ export async function calcolaAllarmiUtente(
     statoPersonale: statoPersonaleGiorno,
     settimanaOreNonConfermata,
     personale,
+    retteNonComunicate,
   });
 }
