@@ -55,7 +55,7 @@ test.describe('54 — Profili orari', () => {
       const profili = gruppo.getByRole('link', { name: 'Profili orari' });
       const oreLavoro = gruppo.getByRole('link', { name: 'Ore di lavoro del personale' });
       await expect(profili).toHaveAttribute('href', PERCORSO_PROFILI_ORARI);
-      await expect(oreLavoro).toHaveAttribute('href', PERCORSO_ORE_LAVORO);
+      await expect(oreLavoro).toHaveAttribute('href', '/admin/ore-lavoro');
 
       // Il gruppo sta dopo "Calendario scolastico" e prima di "Pagamenti".
       const y = async (l: typeof gruppo) => (await l.boundingBox())!.y;

@@ -39,7 +39,7 @@ test.describe('57 — Reset giornata', () => {
     await expect(voci.nth(-2)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
     await expect(voci.last()).toHaveText(/Utenti/);
     await expect(voci.last()).toHaveAttribute('href', '/admin/maestre');
-    await expect(menu.getByRole('link', { name: 'Impostazioni', exact: true })).toHaveCount(0);
+    await expect(menu.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
 
     // "Utenti" sta sotto "Impostazioni" e rientrata; non è più prima di "Calendario scolastico".
     const y = async (l: typeof utenti) => (await l.boundingBox())!.y;
