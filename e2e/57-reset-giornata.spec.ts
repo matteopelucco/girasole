@@ -25,21 +25,39 @@ test.describe('57 — Reset giornata', () => {
 
   // I tre test seguenti non dipendono dal calendario né scrivono dati:
   // controllano solo menu e pagina intermedia (nessun reset eseguito).
-  test('"Impostazioni avanzate" è l\'ultima voce del menu e "Reset giornata" non è di primo livello', async ({
+  test('"Impostazioni" è in fondo al menu con "Utenti" rientrata sotto, e "Reset giornata" non è di primo livello', async ({
     page,
   }) => {
     await page.goto('/admin');
-    const voci = page.getByRole('navigation').getByRole('link');
-    await expect(voci.last()).toHaveText(/Impostazioni avanzate/);
-    await expect(voci.last()).toHaveAttribute('href', '/admin/impostazioni-avanzate');
-    await expect(page.getByRole('navigation').getByRole('link', { name: 'Reset giornata' })).toHaveCount(0);
+    const menu = page.getByRole('navigation');
+    const voci = menu.getByRole('link');
+    const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
+    const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
+
+    // Ultime due voci: "Impostazioni" e, subito sotto, "Utenti".
+    await expect(voci.nth(-2)).toHaveText(/Impostazioni/);
+    await expect(voci.nth(-2)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
+    await expect(voci.last()).toHaveText(/Utenti/);
+    await expect(voci.last()).toHaveAttribute('href', '/admin/maestre');
+    await expect(menu.getByRole('link', { name: 'Impostazioni', exact: true })).toHaveCount(0);
+
+    // "Utenti" sta sotto "Impostazioni" e rientrata; non è più prima di "Calendario scolastico".
+    const y = async (l: typeof utenti) => (await l.boundingBox())!.y;
+    const x = async (l: typeof utenti) => (await l.locator('span').first().boundingBox())!.x;
+    expect(await y(impostazioni)).toBeLessThan(await y(utenti));
+    expect(await x(utenti)).toBeGreaterThan(await x(impostazioni));
+    expect(await y(menu.getByRole('link', { name: 'Calendario scolastico', exact: true }))).toBeLessThan(
+      await y(impostazioni)
+    );
+
+    await expect(menu.getByRole('link', { name: 'Reset giornata' })).toHaveCount(0);
   });
 
-  test('la pagina Impostazioni avanzate elenca "Reset giornata" e porta alla pagina di reset', async ({
+  test('la pagina Impostazioni elenca "Reset giornata" e porta alla pagina di reset', async ({
     page,
   }) => {
     await page.goto('/admin/impostazioni-avanzate');
-    await expect(page.getByRole('heading', { name: 'Impostazioni avanzate' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Impostazioni', exact: true })).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
 
     const azione = page.getByRole('link', { name: /Reset giornata/ });
@@ -51,8 +69,8 @@ test.describe('57 — Reset giornata', () => {
     await azione.click();
     await page.waitForURL('/admin/reset-giornata');
     await expect(page.getByRole('heading', { name: 'Reset presenze e pasti di una giornata' })).toBeVisible();
-    // Sulla pagina dell'azione la voce di menu "Impostazioni avanzate" resta evidenziata.
-    await expect(page.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveAttribute('aria-current', 'page');
+    // Sulla pagina dell'azione la voce di menu "Impostazioni" resta evidenziata.
+    await expect(page.getByRole('link', { name: 'Impostazioni', exact: true })).toHaveAttribute('aria-current', 'page');
   });
 
   test('pagina raggiungibile con selettore data + accessibilità', async ({ page }) => {
@@ -113,7 +131,7 @@ test.describe('57 — Reset giornata', () => {
       // La voce non compare nel menu di chi non è admin...
       await page.goto('/dashboard');
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Impostazioni', exact: true })).toHaveCount(0);
 
       // ...e le pagine admin respingono alla dashboard.
       for (const url of ['/admin/impostazioni-avanzate', '/admin/reset-giornata']) {
