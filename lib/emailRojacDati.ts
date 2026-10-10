@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { oggi, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
-import { riepilogoMensileRojac, type RiepilogoMensileRojac } from '@/lib/emailRojac';
+import { riepilogoMensileRojac, ultimoInvioRojac, type RiepilogoMensileRojac } from '@/lib/emailRojac';
 
 // Modello della mail a Rojac usato quando la riga manca (non dovrebbe
 // succedere: la migration 0060 la inserisce).
@@ -32,4 +32,14 @@ export async function caricaDatiEmailRojac(
     riepilogo: riepilogoMensileRojac({ mese, pastiBambini, chiusure, oggiData: oggi() }),
     template: template ?? MODELLO_DI_RIPIEGO,
   };
+}
+
+// Istante dell'ultimo invio a Rojac registrato per il mese (specs/61,
+// "Ultimo invio"), o null se non ce ne sono. Con la sessione dell'admin
+// (RLS: solo lui legge il registro). Un errore di lettura vale "nessun
+// invio noto": il riquadro non deve rompersi per una riga informativa.
+// grant-check: authenticated
+export async function caricaUltimoInvioRojac(supabase: SupabaseClient, mese: string): Promise<string | null> {
+  const { data } = await supabase.from('invii_rojac').select('inviato_il').eq('mese', mese);
+  return ultimoInvioRojac((data ?? []).map((r) => r.inviato_il as string));
 }

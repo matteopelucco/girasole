@@ -15,7 +15,7 @@ import { DialogErrore } from './DialogErrore';
 // quando un'azione ne rileva più d'una in un colpo solo (es. il
 // salvataggio della settimana di ore di lavoro, specs/18): mostrato in
 // lista dal banner e dal popup bloccante.
-export type EsitoAzione = { ok: true } | { ok: false; messaggio: string; dettaglio?: string; elenco?: string[] };
+export type EsitoAzione = { ok: true; avviso?: string } | { ok: false; messaggio: string; dettaglio?: string; elenco?: string[] };
 
 export const ESITO_INIZIALE: EsitoAzione = { ok: true };
 

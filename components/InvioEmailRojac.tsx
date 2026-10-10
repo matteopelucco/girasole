@@ -26,11 +26,14 @@ export function InvioEmailRojac({
 }) {
   const [aperta, setAperta] = useState(false);
   const [inviato, setInviato] = useState(false);
+  // Avviso con la mail già partita (es. invio non registrato): non è un errore.
+  const [avviso, setAvviso] = useState<string | null>(null);
 
   async function azioneEInforma(stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
     const esito = await azione(stato, formData);
     if (esito.ok) {
       setInviato(true);
+      setAvviso(esito.avviso ?? null);
       setAperta(false);
     }
     return esito;
@@ -42,6 +45,7 @@ export function InvioEmailRojac({
         type="button"
         onClick={() => {
           setInviato(false);
+          setAvviso(null);
           setAperta(true);
         }}
         className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
@@ -52,6 +56,12 @@ export function InvioEmailRojac({
       {inviato && (
         <p role="status" className="text-sm font-medium text-emerald-800">
           <span aria-hidden="true">✓ </span>Riepilogo inviato a Rojac
+        </p>
+      )}
+
+      {inviato && avviso && (
+        <p role="alert" className="max-w-md rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
+          {avviso}
         </p>
       )}
 

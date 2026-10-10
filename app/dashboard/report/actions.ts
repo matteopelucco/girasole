@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { meseDaData, oggi } from '@/lib/date';
 import { destinatarioNotifiche, destinatarioRojac, inviaEmail } from '@/lib/email';
-import { componiEmailRojac, meseInviabileRojac } from '@/lib/emailRojac';
+import { componiEmailRojac, esitoDopoInvioRojac, meseInviabileRojac } from '@/lib/emailRojac';
 import { caricaDatiEmailRojac } from '@/lib/emailRojacDati';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -13,8 +13,10 @@ import type { EsitoAzione } from '@/components/FormConEsito';
 // (requireAdmin reindirizza gli altri). I numeri sono sempre ricalcolati
 // qui dal database, mai presi dal form: il client manda solo il mese.
 // L'invio è una sola mail, a Rojac con l'indirizzo dell'asilo in CC.
+// Solo dopo che la mail è partita si scrive il registro degli invii
+// (`invii_rojac`): un invio fallito non registra nulla.
 export async function inviaEmailRojac(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
   const mese = ((formData.get('mese') as string) || '').trim();
 
   if (!meseInviabileRojac(mese, meseDaData(oggi()))) {
@@ -46,6 +48,13 @@ export async function inviaEmailRojac(_stato: EsitoAzione, formData: FormData): 
     };
   }
 
+  // La mail è partita: da qui in poi non si torna indietro. Se il registro
+  // non si scrive l'azione resta "ok" (non va rimandata), con un avviso:
+  // senza riga il mese potrebbe risultare non inviato (specs/61).
+  const { error: erroreRegistro } = await supabase
+    .from('invii_rojac')
+    .insert({ mese, inviato_da: user.id });
+
   revalidatePath('/dashboard/report');
-  return { ok: true };
+  return esitoDopoInvioRojac(!erroreRegistro);
 }
