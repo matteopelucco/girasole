@@ -60,7 +60,7 @@ function ElencoVoci({ ruolo, pathname, onNavigazione }: { ruolo: string | null; 
             ))}
           </div>
         ) : (
-          <VoceLink key={elemento.href} voce={elemento} onNavigazione={onNavigazione} />
+          <VoceLink key={elemento.href} voce={elemento} figlia={elemento.rientrata} onNavigazione={onNavigazione} />
         )
       )}
     </nav>

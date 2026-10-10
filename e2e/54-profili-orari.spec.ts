@@ -39,6 +39,45 @@ test.describe('54 — Profili orari', () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
+    test('il menu raggruppa "Profili orari" e "Ore di lavoro del personale" sotto "Ore dipendenti"', async ({
+      page,
+    }) => {
+      await page.goto('/admin');
+      const menu = page.getByRole('navigation');
+
+      // "Ore dipendenti" è solo l'intestazione del gruppo, non un link.
+      const gruppo = menu.getByRole('group', { name: 'Ore dipendenti', exact: true });
+      await expect(gruppo).toBeVisible();
+      await expect(menu.getByRole('link', { name: 'Ore dipendenti', exact: true })).toHaveCount(0);
+
+      // Le due voci stanno dentro il gruppo, nell'ordine.
+      await expect(gruppo.getByRole('link')).toHaveText([/Profili orari/, /Ore di lavoro del personale/]);
+      const profili = gruppo.getByRole('link', { name: 'Profili orari' });
+      const oreLavoro = gruppo.getByRole('link', { name: 'Ore di lavoro del personale' });
+      await expect(profili).toHaveAttribute('href', PERCORSO_PROFILI_ORARI);
+      await expect(oreLavoro).toHaveAttribute('href', '/admin/ore-lavoro');
+
+      // Il gruppo sta dopo "Calendario scolastico" e prima di "Pagamenti".
+      const y = async (l: typeof gruppo) => (await l.boundingBox())!.y;
+      const calendario = menu.getByRole('link', { name: 'Calendario scolastico', exact: true });
+      const pagamenti = menu.getByRole('group', { name: 'Pagamenti', exact: true });
+      expect(await y(calendario)).toBeLessThan(await y(gruppo));
+      expect(await y(gruppo)).toBeLessThan(await y(pagamenti));
+
+      // Le voci sono rientrate rispetto a quelle di primo livello.
+      const x = async (l: typeof profili) => (await l.locator('span').first().boundingBox())!.x;
+      expect(await x(profili)).toBeGreaterThan(await x(calendario));
+      expect(await x(oreLavoro)).toBeGreaterThan(await x(calendario));
+
+      await profili.click();
+      await page.waitForURL(PERCORSO_PROFILI_ORARI);
+      await expect(page.getByRole('link', { name: 'Profili orari', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      await nessunaViolazioneA11yGrave(page);
+    });
+
     test('/admin/profili-orari: elementi presenti + accessibilità', async ({ page }) => {
       await page.goto(PERCORSO_PROFILI_ORARI);
       await expect(page.getByRole('heading', { name: 'Profili orari' })).toBeVisible();
@@ -147,6 +186,11 @@ test.describe('54 — Profili orari', () => {
 
         const context = await browser.newContext({ storageState: stato });
         const page = await context.newPage();
+        // Il gruppo "Ore dipendenti" non compare nel menu di chi non è admin...
+        await page.goto('/dashboard');
+        await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+        await expect(page.getByRole('group', { name: 'Ore dipendenti' })).toHaveCount(0);
+        // ...e la pagina dei profili orari respinge alla dashboard.
         await page.goto(PERCORSO_PROFILI_ORARI);
         await page.waitForURL('/dashboard', { timeout: 20_000 });
         await context.close();

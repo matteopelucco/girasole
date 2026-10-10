@@ -11,29 +11,31 @@ agosto 2026). Funziona anche su una data passata: le maestre possono
 scrivere solo sulla data odierna (specs/13, specs/14), ma l'admin deve
 poter correggere anche un giorno già trascorso.
 
-## Scenario: "Impostazioni avanzate" compare in fondo al menu solo per l'admin
+## Scenario: "Impostazioni" compare in fondo al menu solo per l'admin, con "Utenti" sotto
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
-Allora l'ultima voce del menu è "Impostazioni avanzate"
-E "Reset giornata" non è più una voce di primo livello del menu
+Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanzate`)
+E subito sotto, rientrata, la voce "Utenti" (`/admin/maestre`), che è l'ultima
+E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
+E "Reset giornata" non è una voce di primo livello del menu
 
-## Scenario: la pagina Impostazioni avanzate elenca le azioni avanzate
+## Scenario: la pagina Impostazioni elenca le azioni avanzate
 Dato che sono autenticato come admin
-Quando apro "Impostazioni avanzate" dal menu (`/admin/impostazioni-avanzate`)
+Quando apro "Impostazioni" dal menu (`/admin/impostazioni-avanzate`)
 Allora vedo l'elenco delle azioni di amministrazione avanzate, ciascuna
 con titolo e breve descrizione; oggi l'unica è "Reset giornata"
 E premendo "Reset giornata" arrivo alla pagina `/admin/reset-giornata`
 
-## Scenario: maestra, assistente e genitore non vedono Impostazioni avanzate
+## Scenario: maestra, assistente e genitore non vedono Impostazioni
 Dato che sono autenticato come maestra, assistente o genitore
 Quando guardo la sidebar di navigazione
-Allora non vedo la voce "Impostazioni avanzate"
+Allora non vedo la voce "Impostazioni"
 E se provo ad aprire `/admin/impostazioni-avanzate` vengo reindirizzato
 alla dashboard
 
 ## Scenario: vedere cosa c'è da resettare prima di confermare
 Dato che sono autenticato come admin e apro "Reset giornata" da
-"Impostazioni avanzate"
+"Impostazioni"
 Quando scelgo una data (di default oggi, con lo stesso selettore
 ←/→/calendario già usato in "Presenze e pasti")
 Allora vedo quante presenze e quanti pasti sono registrati per quella
@@ -73,12 +75,14 @@ Quando provo ad aprire `/admin/reset-giornata`
 Allora vengo reindirizzato alla dashboard
 
 ## Regole
-- "Impostazioni avanzate" è una pagina intermedia, riservata all'admin
+- "Impostazioni" (già "Impostazioni avanzate": cambia solo l'etichetta, il
+  titolo della pagina e il percorso `/admin/impostazioni-avanzate` restano
+  quelli) è una pagina intermedia, riservata all'admin
   (`requireAdmin`, come le altre pagine `/admin/*`), pensata per ospitare
   nel tempo altre azioni di amministrazione avanzate oltre al reset: ogni
   azione è una voce dell'elenco in `lib/impostazioniAvanzate.ts`
-  (titolo, descrizione, href). La voce di menu è l'ultima della sidebar
-  (`lib/navigazione.ts`) e resta evidenziata anche mentre si è su una
+  (titolo, descrizione, href). La voce di menu è in fondo alla sidebar, seguita
+  solo da "Utenti" rientrata sotto di lei (`lib/navigazione.ts`) e resta evidenziata anche mentre si è su una
   delle pagine delle sue azioni (es. `/admin/reset-giornata`).
   Il percorso `/admin/reset-giornata` e la logica del reset non cambiano.
 - Il reset elimina TUTTE le righe di `presenze` e `pasti` con quella

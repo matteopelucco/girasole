@@ -87,10 +87,10 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(gruppo).toBeVisible();
       await expect(menu.getByRole('link', { name: 'Pagamenti', exact: true })).toHaveCount(0);
 
-      const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
+      const calendario = menu.getByRole('link', { name: 'Calendario scolastico', exact: true });
       const rette = menu.getByRole('link', { name: 'Rette', exact: true });
       const pagamentiBambino = menu.getByRole('link', { name: 'Pagamenti bambino', exact: true });
-      const avanzate = menu.getByRole('link', { name: 'Impostazioni avanzate' });
+      const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
       await expect(rette).toBeVisible();
       await expect(pagamentiBambino).toBeVisible();
 
@@ -100,10 +100,10 @@ test.describe('60 — Pagamenti bambino', () => {
       const x = async (l: typeof rette) => (await l.locator('span').first().boundingBox())!.x;
       expect(await y(gruppo)).toBeLessThan(await y(rette));
       expect(await y(rette)).toBeLessThan(await y(pagamentiBambino));
-      expect(await y(pagamentiBambino)).toBeLessThan(await y(avanzate));
+      expect(await y(pagamentiBambino)).toBeLessThan(await y(impostazioni));
       // "Rette" non è più di primo livello: è rientrata rispetto alle voci di primo livello.
-      expect(await x(rette)).toBeGreaterThan(await x(utenti));
-      expect(await x(pagamentiBambino)).toBeGreaterThan(await x(utenti));
+      expect(await x(rette)).toBeGreaterThan(await x(calendario));
+      expect(await x(pagamentiBambino)).toBeGreaterThan(await x(calendario));
 
       await rette.click();
       await page.waitForURL('/admin/rette');

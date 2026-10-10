@@ -34,14 +34,39 @@ describe('vociMenu', () => {
     expect(vociLink(voci).map((v) => v.href)).toEqual([
       '/dashboard',
       '/admin',
-      '/admin/maestre',
       '/admin/calendario',
       '/admin/profili-orari',
       '/admin/ore-lavoro',
       '/admin/rette',
       '/admin/pagamenti-bambino',
       '/admin/impostazioni-avanzate',
+      '/admin/maestre',
     ]);
+  });
+
+  it('raggruppa "Profili orari" e "Ore di lavoro del personale" sotto "Ore dipendenti", dopo il calendario e prima di "Pagamenti" (specs/54)', () => {
+    const voci = vociMenu('admin');
+    const gruppo = voci.find((v) => v.etichetta === 'Ore dipendenti');
+    expect(gruppo && eGruppo(gruppo)).toBe(true);
+    expect(gruppo && eGruppo(gruppo) && gruppo.figli.map((f) => [f.etichetta, f.href])).toEqual([
+      ['Profili orari', '/admin/profili-orari'],
+      ['Ore di lavoro del personale', '/admin/ore-lavoro'],
+    ]);
+    // Le due voci non sono più di primo livello.
+    const primoLivello = voci.filter((v) => !eGruppo(v)).map((v) => v.etichetta);
+    expect(primoLivello).not.toContain('Profili orari');
+    expect(primoLivello).not.toContain('Ore di lavoro del personale');
+    const ordine = voci.map((v) => v.etichetta);
+    expect(ordine.indexOf('Calendario scolastico')).toBeLessThan(ordine.indexOf('Ore dipendenti'));
+    expect(ordine.indexOf('Ore dipendenti')).toBeLessThan(ordine.indexOf('Pagamenti'));
+  });
+
+  it('non mostra "Ore dipendenti" né le sue voci a chi non è admin', () => {
+    for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
+      const voci = vociMenu(ruolo);
+      expect(voci.some((v) => v.etichetta === 'Ore dipendenti')).toBe(false);
+      expect(vociLink(voci).some((v) => v.href === '/admin/profili-orari' || v.href === '/admin/ore-lavoro')).toBe(false);
+    }
   });
 
   it('raggruppa "Rette" e "Pagamenti bambino" sotto "Pagamenti", che non è una pagina (specs/60)', () => {
@@ -64,9 +89,12 @@ describe('vociMenu', () => {
     }
   });
 
-  it('mette "Impostazioni avanzate" per ultima, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
+  it('mette "Impostazioni" in fondo con "Utenti" rientrata sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
     const voci = vociMenu('admin');
-    expect(voci[voci.length - 1].etichetta).toBe('Impostazioni avanzate');
+    expect(voci.slice(-2).map((v) => v.etichetta)).toEqual(['Impostazioni', 'Utenti']);
+    const utenti = voci[voci.length - 1];
+    expect(!eGruppo(utenti) && utenti.rientrata).toBe(true);
+    expect(vociLink(voci).filter((v) => v.href === '/admin/maestre')).toHaveLength(1);
     expect(vociLink(voci).some((v) => v.href === '/admin/reset-giornata')).toBe(false);
     for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/impostazioni-avanzate')).toBe(false);
@@ -109,11 +137,16 @@ describe('vociMenuConStato', () => {
     expect(gruppo && eGruppoConStato(gruppo)).toBe(true);
   });
 
-  it('evidenzia "Impostazioni avanzate" anche sulle pagine delle sue azioni', () => {
+  it('evidenzia "Impostazioni" anche sulle pagine delle sue azioni', () => {
     for (const pathname of ['/admin/impostazioni-avanzate', '/admin/reset-giornata']) {
       const attive = voceAttive('admin', pathname);
       expect(attive.map((v) => v.href)).toEqual(['/admin/impostazioni-avanzate']);
     }
+  });
+
+  it('evidenzia le voci del gruppo "Ore dipendenti" sulle loro pagine', () => {
+    expect(voceAttive('admin', '/admin/profili-orari').map((v) => v.href)).toEqual(['/admin/profili-orari']);
+    expect(voceAttive('admin', '/admin/ore-lavoro/qualcosa').map((v) => v.href)).toEqual(['/admin/ore-lavoro']);
   });
 
   it('non evidenzia nulla su un pathname che non corrisponde a nessuna voce', () => {
