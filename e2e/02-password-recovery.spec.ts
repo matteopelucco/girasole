@@ -84,6 +84,23 @@ test.describe('02 — Password recovery', () => {
     ).toBeVisible();
   });
 
+  test('destinazione dopo il link email: con codice non valido si torna al login, qualunque sia la destinazione', async ({
+    request,
+  }) => {
+    // Nessuna email reale: con un codice non valido la route rimanda al login.
+    // Il controllo della destinazione con codice valido è coperto dai test
+    // unitari di lib/destinazioneDopoAccesso.ts.
+    for (const next of ['/reimposta-password', '//altro-sito', '']) {
+      const risposta = await request.get(
+        `/auth/callback?code=codice-non-valido&next=${encodeURIComponent(next)}`,
+        { maxRedirects: 0 }
+      );
+      expect(risposta.status()).toBeGreaterThanOrEqual(300);
+      expect(risposta.status()).toBeLessThan(400);
+      expect(risposta.headers()['location']).toContain('/login?errore=link-non-valido');
+    }
+  });
+
   test('widget captcha: presente solo se configurato, nessuna rottura se assente', async ({
     page,
   }) => {
