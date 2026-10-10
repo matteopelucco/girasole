@@ -25,6 +25,10 @@ export type Allarme = {
   voci: VoceAllarme[];
 };
 
+// Identificativo dell'allarme rette: la dashboard lo cerca nell'elenco
+// invece di ricalcolarlo (specs/07).
+export const ID_ALLARME_RETTE = 'rette-non-comunicate';
+
 export type SettimanaOre = { inizio: string; fine: string };
 
 export type InputElencoAllarmi = {
@@ -86,7 +90,7 @@ export function componiAllarmi(input: InputElencoAllarmi): Allarme[] {
   if (input.retteNonComunicate.length > 0) {
     const quanti = input.retteNonComunicate.length;
     elenco.push({
-      id: 'rette-non-comunicate',
+      id: ID_ALLARME_RETTE,
       tipo: 'proprio',
       titolo: 'Comunicazioni delle rette non inviate',
       voci: [

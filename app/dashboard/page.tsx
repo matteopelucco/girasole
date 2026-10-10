@@ -16,7 +16,9 @@ import {
   settimanaConfermata,
   allarmiPerDipendenti,
 } from '@/lib/allarmi';
+import { ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
 import { creaPromemoria } from './actions';
+import { caricaAllarmiCorrenti } from './allarmi/dati';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,6 +79,12 @@ export default async function DashboardPage(
   const allarmiStaff =
     ruolo === 'admin' ? await allarmiPerDipendenti(supabase, dataOggi, giornoAttivoOggi, oraAttuale, user.id) : [];
 
+  // Allarme 4 (specs/07): rette non comunicate, solo per l'admin. Non si
+  // ricalcola: si prende dall'elenco condiviso con la pagina Allarmi e la
+  // campanella (stessa funzione, una lettura per richiesta).
+  const allarmeRette =
+    ruolo === 'admin' ? ((await caricaAllarmiCorrenti()) ?? []).find((a) => a.id === ID_ALLARME_RETTE) : undefined;
+
   const bambini = await bambiniAttiviVisibili(
     supabase,
     ruolo,
@@ -124,6 +132,25 @@ export default async function DashboardPage(
                 Vai su Ore di lavoro per confermarla.
               </Link>
             </p>
+          </div>
+        )}
+
+        {allarmeRette && (
+          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+            <p className="font-semibold">⚠️ {allarmeRette.titolo}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {allarmeRette.voci.map((voce, indice) => (
+                <li key={`${indice}-${voce.testo}`}>
+                  {voce.href ? (
+                    <Link href={voce.href} className="underline">
+                      {voce.testo}
+                    </Link>
+                  ) : (
+                    voce.testo
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
