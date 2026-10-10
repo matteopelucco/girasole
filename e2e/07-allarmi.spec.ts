@@ -105,6 +105,11 @@ async function registraComunicazione(db: SupabaseClient, bambino: BambinoFixture
   if (error) throw new Error(`Registrazione della comunicazione di prova non riuscita: ${error.message}`);
 }
 
+// Banner dell'allarme rette in dashboard (specs/07, issue #277).
+function bannerRette(page: import('@playwright/test').Page) {
+  return page.getByRole('alert').filter({ hasText: TITOLO_ALLARME_RETTE });
+}
+
 const TESTO_BANNER_PERSONALE = 'non risultano completati';
 const TESTO_BANNER_SETTIMANA_ORE = 'Non hai confermato le ore della settimana';
 const TESTO_RIEPILOGO_STAFF = 'Situazione del personale';
@@ -548,6 +553,81 @@ test.describe('07 — Allarmi', () => {
         // (meseInteramenteChiuso, allarmeRetteDaControllare).
         test.skip(true, 'non verificabile in e2e senza chiudere il mese corrente: coperto dai test unit');
       });
+
+      // --- Banner in dashboard (issue #277) ---
+
+      test('dal giorno 3 il banner in dashboard dice quanti bambini mancano e quali, con il link a Rette', async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        const banner = bannerRette(page);
+        await expect(banner).toHaveCount(1);
+        await expect(banner.getByRole('listitem').filter({ hasText: bambino.nomeCompleto })).toHaveText(
+          new RegExp(`${bambino.nomeCompleto} \\(.+\\)`)
+        );
+        // Il numero nel testo coincide con i bambini elencati (tutte le voci
+        // tranne la prima, che è il riepilogo con il link).
+        const voci = banner.getByRole('listitem');
+        const mancanti = (await voci.count()) - 1;
+        expect(mancanti).toBeGreaterThanOrEqual(1);
+        await expect(voci.first()).toContainText(
+          mancanti === 1 ? 'Manca 1 comunicazione' : `Mancano ${mancanti} comunicazioni`
+        );
+        await expect(banner.getByRole('link')).toHaveAttribute('href', '/admin/rette');
+        await nessunaViolazioneA11yGrave(page);
+
+        // Stessi dati della pagina Allarmi: lo stesso numero di bambini.
+        await page.goto('/dashboard/allarmi');
+        const allarme = page.locator(ELENCO).filter({ hasText: TITOLO_ALLARME_RETTE });
+        await expect(allarme.getByRole('listitem')).toHaveCount(mancanti + 1);
+      });
+
+      test('il link del banner in dashboard porta alla tabella Rette', async ({ page, adminDb, bambino }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        await bannerRette(page).getByRole('link', { name: /vai su Rette per inviarle/ }).click();
+        await expect(page).toHaveURL(/\/admin\/rette$/);
+      });
+
+      test('prima del giorno 3 il banner rette non compare in dashboard', async ({ page, adminDb, bambino }) => {
+        test.skip(giornoDelMeseRoma() >= 3, 'verificabile solo il giorno 1 o 2 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(bannerRette(page)).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test('con la comunicazione inviata il bambino sparisce dal banner in dashboard, se è annullata torna', async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        await expect(bannerRette(page).getByText(bambino.nomeCompleto)).toBeVisible();
+
+        await registraComunicazione(adminDb!, bambino);
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+
+        const { error } = await adminDb!.from('comunicazioni_retta').delete().eq('bambino_id', bambino.id);
+        expect(error).toBeNull();
+        await page.goto('/dashboard');
+        await expect(bannerRette(page).getByText(bambino.nomeCompleto)).toBeVisible();
+      });
     });
 
     test.describe('come maestra', () => {
@@ -566,6 +646,23 @@ test.describe('07 — Allarmi', () => {
         await campanellaCoincideConElenco(page);
         await nessunaViolazioneA11yGrave(page);
       });
+
+      test("la maestra non vede il banner rette in dashboard né i nomi dei bambini", async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(bannerRette(page)).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await expect(page.getByRole('link', { name: /vai su Rette/ })).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      });
     });
 
     test.describe('come assistente', () => {
@@ -580,6 +677,23 @@ test.describe('07 — Allarmi', () => {
         await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
         await expect(page.getByRole('heading', { name: TITOLO_ALLARME_RETTE })).toHaveCount(0);
         await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+      });
+
+      test("l'assistente non vede il banner rette in dashboard né i nomi dei bambini", async ({
+        page,
+        adminDb,
+        bambino,
+      }) => {
+        test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+        test.skip(giornoDelMeseRoma() < 3, 'verificabile solo dal giorno 3 del mese (fuso Europe/Rome)');
+        await configuraEmailPromemoria(adminDb!, bambino);
+
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(bannerRette(page)).toHaveCount(0);
+        await expect(page.getByText(bambino.nomeCompleto)).toHaveCount(0);
+        await expect(page.getByRole('link', { name: /vai su Rette/ })).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
       });
     });
   });
