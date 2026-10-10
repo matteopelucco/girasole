@@ -21,8 +21,7 @@ allarme ha due canali, sempre entrambi: un banner in dashboard (finché
 la situazione resta anomala) e un'email inviata una sola volta per
 occorrenza. In più, la campanella in alto a destra e la pagina "Allarmi"
 (`/dashboard/allarmi`) raccolgono in un punto solo gli allarmi attivi di
-chi guarda; per ora i banner in dashboard restano (li toglierà un passo
-successivo, issue #271).
+chi guarda; i banner in dashboard restano.
 
 ## Scenario: presenze o pasti non ancora segnati dopo le 10:00 — banner personale
 Dato che sono autenticata come maestra, assistente o admin
@@ -239,6 +238,30 @@ Allora non lo vedo, la campanella non lo conta e non vedo i nomi dei
 bambini a cui manca la comunicazione
 E il genitore non ha la campanella (vedi sopra)
 
+## Scenario: dal giorno 3 del mese, rette non comunicate — banner in dashboard per l'admin
+Dato che sono autenticato come admin
+E l'allarme "rette non comunicate" è attivo (stesse condizioni dello
+scenario "dal giorno 3 del mese, rette non comunicate")
+Quando apro la dashboard
+Allora vedo un banner di allarme "Comunicazioni delle rette non inviate",
+con quanti bambini mancano e quali (nome, cognome e sezione)
+E il banner ha un link alla tabella "Rette" del mese (`/admin/rette`)
+E i dati sono gli stessi della pagina "Allarmi" (una sola funzione)
+
+## Scenario: nessun banner "rette non comunicate" in dashboard se l'allarme non è attivo
+Dato che sono autenticato come admin
+Quando apro la dashboard il giorno 1 o 2 del mese, in un mese interamente
+chiuso, oppure quando tutti i bambini a cui si può comunicare la retta hanno
+la comunicazione del mese corrente
+Allora non vedo il banner "rette non comunicate"
+E se una comunicazione viene annullata il banner ricompare
+
+## Scenario: maestra e assistente non vedono il banner "rette non comunicate" in dashboard
+Dato che l'allarme "rette non comunicate" sarebbe attivo
+Quando apro la dashboard come maestra o assistente
+Allora non vedo il banner né i nomi dei bambini a cui manca la comunicazione
+E per me il calcolo di questo allarme non parte
+
 ## Scenario: rette non comunicate — email, una sola volta per mese
 Dato che, dal giorno 3 del mese, l'allarme "rette non comunicate" è
 attivo
@@ -334,6 +357,12 @@ tentativo successivo può ritentare
   Solo l'admin: il calcolo (nomi dei bambini compresi) non parte per gli
   altri ruoli. Il cron lo calcola con la service_role key, come gli
   altri allarmi.
+- Il banner "rette non comunicate" in dashboard (solo admin) non fa un
+  calcolo suo: prende la voce `rette-non-comunicate` dall'elenco di
+  `caricaAllarmiCorrenti` (`lib/allarmiDati.ts`), lo stesso della pagina
+  "Allarmi" e della campanella (una sola lettura per richiesta). Per
+  maestra e assistente quell'elenco non contiene la voce e non legge i
+  dati delle rette.
 - Idempotenza dell'email "rette non comunicate": riga in
   `allarmi_inviati` con `tipo = 'rette_non_comunicate'` e `chiave` = mese
   `YYYY-MM`. A differenza degli altri due allarmi, il cron registra la
