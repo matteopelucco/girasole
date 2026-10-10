@@ -34,11 +34,24 @@ IMPORTANTE:
 ## Scenario: un attaccante prova a fare enumeration o a recuperare password di altri
 Non ci riesce. Il sistema è sufficientemente sicuro per evitare di fare enumeration o attacchi di hacking.
 
+## Scenario: destinazione dopo il link ricevuto via email
+Given l'utente apre dal link ricevuto via email la route `/auth/callback` con un codice valido e una destinazione `next`
+When la destinazione è un percorso interno del sito (es. `/reimposta-password`)
+Then dopo lo scambio del codice l'utente viene portato proprio su quella pagina
+When invece la destinazione è assente, vuota o non è un percorso interno (indirizzo esterno, forma anomala, caratteri non ammessi)
+Then l'utente viene portato su `/dashboard`
+When il codice non è valido o è scaduto
+Then l'utente viene portato su `/login` con il messaggio "Il link non è più valido o è scaduto. Richiedine uno nuovo." qualunque sia la destinazione richiesta
+
 ## Note di implementazione
 - Pagine: [/recupera-password](../app/recupera-password/page.tsx) (richiesta
   email), [/reimposta-password](../app/reimposta-password/page.tsx) (nuova
   password), route tecnica `/auth/callback` (scambia il link ricevuto via
-  email per una sessione, standard Supabase SSR).
+  email per una sessione, standard Supabase SSR). La destinazione `next`
+  è validata da `lib/destinazioneDopoAccesso.ts` (solo percorsi interni,
+  altrimenti `/dashboard`): la logica è coperta da test unitari; l'e2e
+  copre solo il caso di codice non valido, perché un codice valido
+  richiederebbe una vera email di recupero.
 - Anti-enumeration: `/recupera-password` mostra sempre lo stesso messaggio
   generico, indipendentemente dal fatto che l'email esista, sia
   rate-limitata, o l'invio sia riuscito. `supabase.auth.resetPasswordForEmail`
