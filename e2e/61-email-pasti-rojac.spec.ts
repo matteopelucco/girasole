@@ -11,18 +11,49 @@
 // 56-comunicazione-retta-mensile.spec.ts; usa solo indirizzi @example.com
 // per Rojac (mai un indirizzo reale).
 import { test, expect } from '@playwright/test';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { accediComeAdminDb } from './fixture-bambino';
 import {
   chiudiPopupErrore,
+  credenziali,
   hasCredenziali,
   meseSuccessivoRoma,
   nessunaViolazioneA11yGrave,
   popupErrore,
   statoAutenticazione,
+  type Ruolo,
 } from './helpers';
 
 const MESE_NOTO = '/dashboard/report?tipo=mensile&periodo=2020-01';
+// Mesi per il registro degli invii: 2019-03 riceve righe inserite dal test
+// (due invii, vince il più recente); 2019-02 non ne riceve mai. 2020-01
+// riceve una riga solo se un test invia davvero la mail (RESEND_API_KEY).
+const MESE_CON_INVII = '/dashboard/report?tipo=mensile&periodo=2019-03';
+const MESE_SENZA_INVII = '/dashboard/report?tipo=mensile&periodo=2019-02';
 const ROJAC = process.env.ROJAC_EMAIL_DESTINATARIO;
 const ASILO = process.env.REPORT_EMAIL_DESTINATARIO || 'info@asilosartorio.it';
+
+// Client con la chiave anon e il login del ruolo (mai service_role): le
+// letture e le scritture passano dalla RLS come nell'app.
+async function accediComeDb(ruolo: Ruolo): Promise<SupabaseClient | null> {
+  const cred = credenziali(ruolo);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const chiaveAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!cred || !url || !chiaveAnon) return null;
+  const db = createClient(url, chiaveAnon, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await db.auth.signInWithPassword(cred);
+  if (error) throw new Error(`Login ${ruolo} non riuscito: ${error.message}`);
+  return db;
+}
+
+async function confermaInvio(page: import('@playwright/test').Page) {
+  await page.goto(MESE_NOTO);
+  await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
+  await page
+    .getByRole('dialog', { name: 'Anteprima mail a Rojac' })
+    .getByRole('button', { name: 'Conferma invio' })
+    .click();
+}
 
 function riquadro(page: import('@playwright/test').Page) {
   return page.getByRole('region', { name: 'Mail mensile a Rojac' });
@@ -136,6 +167,63 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
       await expect(page.getByText('Riepilogo inviato a Rojac')).toBeVisible({ timeout: 20_000 });
     });
 
+    test('un invio riuscito viene registrato e compare come ultimo invio', async ({ page }) => {
+      test.skip(!ROJAC || !process.env.RESEND_API_KEY, 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY');
+      await confermaInvio(page);
+      await expect(page.getByText('Riepilogo inviato a Rojac')).toBeVisible({ timeout: 20_000 });
+      const db = await accediComeAdminDb();
+      const { data } = await db!.from('invii_rojac').select('mese, inviato_il, inviato_da').eq('mese', '2020-01');
+      expect(data!.length).toBeGreaterThan(0);
+      expect(data![0].inviato_da).toBeTruthy();
+      await expect(riquadro(page).getByText(/Ultimo invio: \d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)).toBeVisible();
+    });
+
+    test('un invio fallito non registra nulla', async ({ page }) => {
+      test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
+      test.skip(!!process.env.RESEND_API_KEY, "con RESEND_API_KEY l'invio riesce davvero");
+      await confermaInvio(page);
+      const errore = popupErrore(page, 'Mail non inviata');
+      await expect(errore).toBeVisible({ timeout: 20_000 });
+      await chiudiPopupErrore(errore);
+      const db = await accediComeAdminDb();
+      const { data } = await db!.from('invii_rojac').select('id').eq('mese', '2020-01');
+      expect(data).toEqual([]);
+      await page.goto(MESE_NOTO);
+      await expect(riquadro(page).getByText(/Ultimo invio:/)).toHaveCount(0);
+    });
+
+    // Non riproducibile da e2e: non si può far fallire la scrittura sul
+    // database di test con la sessione dell'admin. La scelta dell'esito
+    // (ok con avviso, mail non rimandata) è coperta dai test unit di
+    // esitoDopoInvioRojac in lib/emailRojac.test.ts.
+    test('la mail parte ma il registro non si aggiorna: ok con avviso (coperto da unit)', async () => {
+      test.skip(true, 'coperto da lib/emailRojac.test.ts (esitoDopoInvioRojac)');
+    });
+
+    test("il riquadro mostra l'ultimo invio del mese (il più recente)", async ({ page }) => {
+      const db = await accediComeAdminDb();
+      test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+      const { data: utente } = await db!.auth.getUser();
+      const inviatoDa = utente.user!.id;
+      // 08:30 UTC di aprile = 10:30 a Roma (ora legale). Il registro è in
+      // sola aggiunta: le righe restano fino al reset del DB di test.
+      const { error } = await db!.from('invii_rojac').insert([
+        { mese: '2019-03', inviato_il: '2019-04-02T07:00:00Z', inviato_da: inviatoDa },
+        { mese: '2019-03', inviato_il: '2019-04-15T08:30:00Z', inviato_da: inviatoDa },
+      ]);
+      expect(error).toBeNull();
+
+      await page.goto(MESE_CON_INVII);
+      await expect(riquadro(page).getByText('Ultimo invio: 15/04/2019 10:30')).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('un mese senza invii non mostra nessuna riga "Ultimo invio"', async ({ page }) => {
+      await page.goto(MESE_SENZA_INVII);
+      await expect(riquadro(page)).toBeVisible();
+      await expect(riquadro(page).getByText(/Ultimo invio:/)).toHaveCount(0);
+    });
+
     // Il Reply-To non è osservabile dall'interfaccia: il payload è verificato
     // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
     // reply_to vada a buon fine (Resend rifiuta un payload non valido).
@@ -221,4 +309,20 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
       await page.waitForURL('/dashboard');
     });
   });
+
+  // Scenario "il registro è solo dell'admin": il database stesso rifiuta
+  // lettura e scrittura agli altri ruoli (RLS). Le regole complete sono
+  // nei test pgTAP supabase/tests/database/invii_rojac.test.sql.
+  for (const ruolo of ['maestra', 'assistente', 'genitore'] as const) {
+    test(`${ruolo}: il registro degli invii a Rojac non si legge né si scrive`, async () => {
+      test.skip(!hasCredenziali(ruolo), `richiede E2E_${ruolo.toUpperCase()}_EMAIL/PASSWORD`);
+      const db = await accediComeDb(ruolo);
+      test.skip(!db, 'richiedono le variabili Supabase');
+      const lettura = await db!.from('invii_rojac').select('id');
+      expect(lettura.data ?? []).toEqual([]);
+      const { data: utente } = await db!.auth.getUser();
+      const scrittura = await db!.from('invii_rojac').insert({ mese: '2019-03', inviato_da: utente.user!.id });
+      expect(scrittura.error).not.toBeNull();
+    });
+  }
 });
