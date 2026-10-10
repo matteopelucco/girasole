@@ -13,8 +13,8 @@ function ElencoAllarmi({ allarmi, etichetta }: { allarmi: Allarme[]; etichetta: 
         <li key={allarme.id} className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
           <h3 className="font-semibold">{allarme.titolo}</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {allarme.voci.map((voce) => (
-              <li key={voce.testo}>
+            {allarme.voci.map((voce, indice) => (
+              <li key={`${indice}-${voce.testo}`}>
                 {voce.href ? (
                   <Link href={voce.href} className="underline">
                     {voce.testo}

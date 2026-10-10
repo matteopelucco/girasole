@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, destinatarioNotifiche } from '@/lib/email';
-import { oggi, formattaDataItaliana, formattaIntervalloItaliano } from '@/lib/date';
+import { oggi, formattaDataItaliana, formattaIntervalloItaliano, formattaMeseItaliano } from '@/lib/date';
+import {
+  calcolaRetteNonComunicate,
+  chiaveAllarmeRette,
+  htmlAllarmeRetteNonComunicate,
+} from '@/lib/allarmeRette';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import {
   dopoOrarioAllarmePresenzePasti,
@@ -33,6 +38,7 @@ export async function GET(request: Request) {
   const risultati = {
     mezzogiorno: 'non_applicabile' as 'non_applicabile' | 'inviato' | 'gia_inviato',
     settimanaOre: [] as string[],
+    retteNonComunicate: 'non_applicabile' as 'non_applicabile' | 'inviato' | 'gia_inviato' | 'errore_registro',
   };
 
   // Allarme 1: presenze/pasti non completati entro le 10:00 (specs/07),
@@ -90,6 +96,42 @@ export async function GET(request: Request) {
     });
     await supabase.from('allarmi_inviati').insert({ tipo: 'settimana_ore_non_confermata', chiave });
     risultati.settimanaOre.push(utente.email);
+  }
+
+  // Allarme 3: comunicazioni delle rette non inviate (specs/07, specs/56),
+  // dal giorno 3 del mese: una sola email per mese (chiave "YYYY-MM").
+  // A differenza dei due allarmi sopra, qui si registra in `allarmi_inviati`
+  // PRIMA di inviare: l'unicità (tipo, chiave) prenota l'invio, e se il
+  // registro rifiuta la riga (es. migration 0061 non ancora applicata, o
+  // un altro giro del cron l'ha già presa) l'email non parte, così non può
+  // ripartire ogni giorno. Se l'invio fallisce la riga viene cancellata
+  // e un tentativo successivo può ritentare.
+  const mancanti = await calcolaRetteNonComunicate(supabase, dataOggi);
+  if (mancanti.length > 0) {
+    const chiave = chiaveAllarmeRette(dataOggi);
+    const { error: erroreRegistro } = await supabase
+      .from('allarmi_inviati')
+      .insert({ tipo: 'rette_non_comunicate', chiave });
+
+    if (erroreRegistro) {
+      // 23505 = unique_violation: già inviata questo mese.
+      risultati.retteNonComunicate = erroreRegistro.code === '23505' ? 'gia_inviato' : 'errore_registro';
+      if (risultati.retteNonComunicate === 'errore_registro') {
+        console.error(`Allarme rette non comunicate: registro rifiutato, email non inviata (${erroreRegistro.code})`);
+      }
+    } else {
+      try {
+        await inviaEmail({
+          a: destinatarioNotifiche(),
+          oggetto: `Allarme: comunicazioni rette non inviate — ${formattaMeseItaliano(chiave)}`,
+          html: htmlAllarmeRetteNonComunicate(chiave, mancanti),
+        });
+      } catch (errore) {
+        await supabase.from('allarmi_inviati').delete().eq('tipo', 'rette_non_comunicate').eq('chiave', chiave);
+        throw errore;
+      }
+      risultati.retteNonComunicate = 'inviato';
+    }
   }
 
   return NextResponse.json({ ok: true, data: dataOggi, risultati });

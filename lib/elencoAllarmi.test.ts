@@ -15,6 +15,7 @@ const base: InputElencoAllarmi = {
   statoPersonale: { sezioniPresenzeIncomplete: [], pastiNonConfermati: false },
   settimanaOreNonConfermata: null,
   personale: [],
+  retteNonComunicate: [],
 };
 
 const SETTIMANA = { inizio: '2026-01-05', fine: '2026-01-11' };
@@ -123,6 +124,55 @@ describe('componiAllarmi', () => {
     });
     expect(elenco.map((a) => a.id)).toEqual(['presenze-pasti', 'settimana-ore', 'personale-u1']);
     expect(elenco.map((a) => a.tipo)).toEqual(['proprio', 'proprio', 'personale']);
+  });
+
+  it('rette non comunicate: un solo allarme con il numero, i nomi e il link alla tabella Rette', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      retteNonComunicate: [
+        { id: 'b1', nome: 'Anna', cognome: 'Verdi', sezione: 'Sole' },
+        { id: 'b2', nome: 'Carlo', cognome: 'Bianchi', sezione: null },
+      ],
+    });
+    expect(elenco).toHaveLength(1);
+    expect(elenco[0].id).toBe('rette-non-comunicate');
+    expect(elenco[0].tipo).toBe('proprio');
+    expect(elenco[0].voci).toEqual([
+      { testo: 'Mancano 2 comunicazioni: vai su Rette per inviarle', href: '/admin/rette' },
+      { testo: 'Anna Verdi (Sole)' },
+      { testo: 'Carlo Bianchi (Senza sezione)' },
+    ]);
+  });
+
+  it('rette non comunicate: singolare per un solo bambino', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      retteNonComunicate: [{ id: 'b1', nome: 'Anna', cognome: 'Verdi', sezione: 'Sole' }],
+    });
+    expect(elenco[0].voci[0].testo).toBe('Manca 1 comunicazione: vai su Rette per inviarle');
+  });
+
+  it('rette non comunicate: nessun allarme se non manca nessuno', () => {
+    expect(componiAllarmi({ ...base, retteNonComunicate: [] })).toEqual([]);
+  });
+
+  it('rette non comunicate: vengono dopo gli altri allarmi propri e prima del personale', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      settimanaOreNonConfermata: SETTIMANA,
+      retteNonComunicate: [{ id: 'b1', nome: 'Anna', cognome: 'Verdi', sezione: null }],
+      personale: [
+        {
+          utenteId: 'u1',
+          nome: 'Anna',
+          cognome: 'Rossi',
+          sezioniPresenzeIncomplete: [],
+          pastiNonConfermati: false,
+          settimanaOreNonConfermata: SETTIMANA,
+        },
+      ],
+    });
+    expect(elenco.map((a) => a.id)).toEqual(['settimana-ore', 'rette-non-comunicate', 'personale-u1']);
   });
 });
 

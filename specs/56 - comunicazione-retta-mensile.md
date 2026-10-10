@@ -288,6 +288,12 @@ Allora vengo reindirizzato alla dashboard
   negativo se credito, positivo se debito). Può risultare negativo
   (credito verso la famiglia) se conguaglio e/o credito superano gli
   altri importi: non viene forzato a zero.
+- Se dal giorno 3 del mese manca la comunicazione a uno o più bambini a
+  cui si può inviare (attivi, con email di promemoria, quindi quelli con
+  "Da inviare" in tabella), l'admin riceve un allarme (pagina Allarmi,
+  campanella, email una volta al mese) che rimanda a questa tabella:
+  vedi [07 - allarmi.md](07%20-%20allarmi.md). Inviare o annullare una
+  comunicazione spegne o riaccende l'allarme.
 - Un bambino senza una riga in `costi_bambini`, o con `email_promemoria`
   vuota, è mostrato in tabella con un avviso e un link alla sua scheda
   per completare i dati (specs/55); non riceve nessuna comunicazione
