@@ -7,6 +7,10 @@ export type VoceMenu = {
   // Altri percorsi che tengono evidenziata la voce (es. le pagine delle
   // azioni elencate da una pagina intermedia).
   percorsiCorrelati?: string[];
+  // Voce di primo livello mostrata rientrata, come le figlie di un gruppo
+  // (es. "Utenti" sotto "Impostazioni"): resta un elemento a sé, senza
+  // intestazione di gruppo.
+  rientrata?: boolean;
 };
 
 // Gruppo di voci (specs/60): solo un'intestazione, senza pagina propria,
@@ -40,10 +44,16 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
   if (ruolo === 'admin') {
     voci.push(
       { href: '/admin', etichetta: 'Sezioni e bambini', icona: '🏫' },
-      { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥' },
       { href: '/admin/calendario', etichetta: 'Calendario scolastico', icona: '📅' },
-      { href: '/admin/profili-orari', etichetta: 'Profili orari', icona: '🕒' },
-      { href: '/admin/ore-lavoro', etichetta: 'Ore di lavoro del personale', icona: '⏱️' },
+      // Gruppo "Ore dipendenti": "Profili orari" (specs/54) e "Ore di lavoro del personale" (specs/17).
+      {
+        etichetta: 'Ore dipendenti',
+        icona: '👔',
+        figli: [
+          { href: '/admin/profili-orari', etichetta: 'Profili orari', icona: '🕒' },
+          { href: '/admin/ore-lavoro', etichetta: 'Ore di lavoro del personale', icona: '⏱️' },
+        ],
+      },
       // Gruppo "Pagamenti" (specs/60): "Rette" (specs/56) e "Pagamenti bambino".
       {
         etichetta: 'Pagamenti',
@@ -53,13 +63,15 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
           { href: '/admin/pagamenti-bambino', etichetta: 'Pagamenti bambino', icona: '👶' },
         ],
       },
-      // Ultima voce (specs/57): pagina intermedia con le azioni avanzate, tra cui il reset.
+      // In fondo (specs/57): pagina intermedia con le azioni avanzate, tra cui il reset,
+      // e sotto di lei, rientrata, "Utenti".
       {
         href: '/admin/impostazioni-avanzate',
-        etichetta: 'Impostazioni avanzate',
+        etichetta: 'Impostazioni',
         icona: '⚙️',
         percorsiCorrelati: AZIONI_AVANZATE.map((a) => a.href),
-      }
+      },
+      { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥', rientrata: true }
     );
   }
 
