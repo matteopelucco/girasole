@@ -15,7 +15,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:anteprima": "playwright test -c playwright.anteprima.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
