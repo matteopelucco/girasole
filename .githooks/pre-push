@@ -11,6 +11,9 @@
 set -e
 
 echo "── Type-check (tsc) ──────────────────────────────"
+# next typegen crea next-env.d.ts e .next/types (non versionati): serve
+# su un clone pulito, prima di tsc.
+npx next typegen
 npx tsc --noEmit
 
 echo "── Lint (ESLint) ─────────────────────────────────"

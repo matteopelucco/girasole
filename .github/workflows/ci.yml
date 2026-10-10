@@ -199,7 +199,9 @@ jobs:
           fi
 
       - name: 1. Type-check (tsc)
-        run: npx tsc --noEmit
+        # `next typegen` crea next-env.d.ts e .next/types (non versionati):
+        # senza, tsc non li trova su un clone pulito.
+        run: npx next typegen && npx tsc --noEmit
 
       - name: 2. Lint (ESLint)
         run: npm run lint
