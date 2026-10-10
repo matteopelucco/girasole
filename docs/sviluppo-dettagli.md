@@ -563,6 +563,91 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   - La data di build non va più tracciata a mano: `DATA_BUILD` la deriva
     da sé ad ogni `next build`/`next dev` (vedi `next.config.mjs`).
 
+## Giro di fumo sull'anteprima di Vercel (issue #267)
+Secondo controllo, **separato dall'e2e** di `ci.yml` e **non bloccante**:
+dopo il deploy di anteprima di Vercel, Playwright prova l'app vera, quella
+che Vercel serve, dove l'e2e di CI vede solo un `next start` locale. Serve
+a vedere un'anteprima rotta (variabili d'ambiente Vercel, build, collegamento
+al DB) prima del merge. Decisioni di Matteo: anteprime non protette (niente
+chiave di bypass), controllo non obbligatorio, mai insieme a un'altra e2e.
+Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
+
+- **Cosa fa**: workflow `.github/workflows/anteprima-fumo.yml`, evento
+  `deployment_status` (stato `success`, ambiente `Preview`). Cinque test in
+  `e2e-anteprima/fumo.spec.ts` (config dedicata
+  `playwright.anteprima.config.ts`, `testDir` e cartelle di report/output
+  proprie): anonimo (login visibile, pagine protette rimandano al login);
+  admin, maestra, assistente, genitore (login vero, pagine principali senza
+  errori né schermate vuote, uscita). Admin, maestra e assistente salvano
+  anche un avviso `Fumo anteprima <ruolo> <tempo>` e lo cancellano nello
+  stesso test; il genitore è in sola lettura e deve restare fuori da
+  `/admin` e dalle pagine dello staff. Su ogni pagina: nessun `console.error`,
+  nessun errore JS non gestito, nessuna risposta 5xx, axe-core senza
+  violazioni gravi (`nessunaViolazioneA11yGrave`, importato da
+  `e2e/helpers.ts` senza modificarlo). Credenziali mancanti = test rosso
+  (nel fumo uno skip sarebbe un falso verde).
+- **Non tocca l'e2e**: cartella, config, report e output sono separati; la
+  regola `specs/NN` <-> `e2e/NN` riguarda solo `e2e/`. Nessun `spec` per il
+  giro (è infrastruttura di CI). `npm run analyze`, `jscpd`, lint, `tsc` e
+  `vitest` non cambiano: `tsc` compila anche la nuova cartella, gli altri
+  controlli guardano solo `app/`, `components/`, `lib/`.
+- **Guardia (prima di toccare i secret)**: il job `guardia` usa la logica
+  pura `lib/guardiaAnteprima.ts` (unit test co-locati) tramite
+  `scripts/guardia-anteprima.mts`. Rifiuta, con un errore chiaro: stato
+  diverso da `success`; ambiente diverso da `Preview`; indirizzo che non sia
+  `https://girasole-<...>.vercel.app` (quindi non la produzione
+  `girasole.vercel.app`, non l'indirizzo di ramo di `main`, non altri domini,
+  non altri progetti Vercel, non credenziali/porte nell'indirizzo); commit
+  senza nessuna PR di questo repository o con una PR che arriva da un fork.
+  La logica della guardia viene dal ramo principale, non dal commit
+  dell'anteprima. La stessa verifica sull'indirizzo gira anche in
+  `playwright.anteprima.config.ts`: un giro lanciato a mano contro la
+  produzione o `localhost` si ferma subito.
+- **Coda del DB**: il job `fumo` sta nel gruppo `db-test-girasole-dev`
+  (`cancel-in-progress: false`, `queue: max`), lo stesso del job `e2e` di
+  `ci.yml` (ADR-0008): non interrompe né fa cancellare nessuna e2e, e
+  aspetta se ne sta girando una. Solo `fumo` entra nella coda: `guardia`
+  no. Non reimposta il DB.
+- **Secret**: solo gli otto `E2E_<RUOLO>_EMAIL/PASSWORD` di admin, maestra,
+  assistente, genitore. Niente `service_role`, niente token Supabase. Gli
+  account li ricrea la CI e2e dopo ogni reset del DB (`scripts/crea-utenti-e2e.mjs`):
+  il giro di fumo **non** li ricrea (servirebbe la `service_role`). Se il
+  login è rifiutato, il test dice di controllare che l'anteprima punti al DB
+  di test e che la CI e2e abbia girato dopo l'ultimo reset. Gli account
+  esistono solo nel DB di test: contro un'anteprima che puntasse per errore
+  al DB di produzione, il login fallirebbe.
+- **Dati di prova**: avvisi `Fumo anteprima ...`, cancellati a fine test
+  (anche se il test fallisce). Se un worker muore a metà, l'avviso orfano è
+  innocuo e lo azzera il reset del DB di test della prossima CI (ADR-0006).
+- **Dove si vede l'esito**: tab Actions, workflow "Anteprima fumo", una run
+  per ogni deploy di anteprima riuscito; il report HTML di Playwright è
+  l'artifact `anteprima-fumo-report` (14 giorni). Non compare tra i check
+  della PR come blocco.
+- **Come si rilancia**: dalla pagina della run, "Re-run all jobs" (o
+  `gh run rerun <run-id>`); oppure fa un nuovo push sulla PR (nuovo
+  deploy, nuova run). A mano in locale, con le `E2E_*` in `.env.local`:
+  `ANTEPRIMA_URL=https://girasole-... npm run test:anteprima`.
+- **Come si rende obbligatorio**: oggi il workflow non è nel ruleset di
+  `main`, quindi non blocca. Per renderlo bloccante: (1) stabilizzare il
+  giro (alcune run di fila verdi); (2) il check da richiedere sarebbe
+  `Anteprima fumo / fumo`, ma `deployment_status` crea il check sul commit
+  del deploy e arriva dopo il deploy: un check richiesto che non arriva mai
+  (deploy fallito, PR "non codice") blocca il merge, come ricorda
+  `ci.yml` per `CI / verifica`. Prima di aggiungerlo al ruleset conviene
+  quindi un job-gate che passi anche quando il fumo non parte, o spostare il
+  giro dentro `ci.yml` aspettando il deploy. Decisione da rivedere con
+  Matteo: non è in scope della #267.
+- **Limiti da conoscere**: (a) `deployment_status` parte solo da un workflow
+  presente su `main`: la prima run reale arriva **dopo il merge** della PR
+  che lo introduce; (b) se la run del fumo parte prima della CI e2e della
+  stessa PR e la PR contiene una migration, l'anteprima può parlare con uno
+  schema del DB di test ancora vecchio: un rosso in quel caso va riletto
+  dopo l'e2e (rilancio); (c) il nome dell'ambiente `Preview` è quello che
+  Vercel dà alle anteprime (con più progetti diventa `Preview – <progetto>`,
+  accettato): se alla prima run non parte nulla, controllare il nome
+  dell'ambiente nella tab Deployments del repo; (d) le variabili d'ambiente
+  "Preview" di Vercel devono puntare al progetto Supabase di **test**.
+
 ## Review automatica di Claude in CI: interruttore (issue #160)
 - Il job `review` di `claude-board.yml` (review di ogni PR con Sonnet) è
   **spento di default** per costo: parte solo se la variabile di repository
