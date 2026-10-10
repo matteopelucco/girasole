@@ -5,7 +5,7 @@
 // "Avviso") sul progetto Supabase di test — vedi la nota in
 // 13-segna-presenza.spec.ts.
 import { test, expect, type Page } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 // Sceglie destinatario "Un bambino" e prova le prime sezioni finché non
 // ne trova una con almeno un bambino attivo, selezionandolo. Ritorna
@@ -174,19 +174,19 @@ test.describe('15 — Avvisi', () => {
     await page.evaluate(() => {
       document.querySelectorAll('select[required]').forEach((el) => el.removeAttribute('required'));
     });
-    await page.getByRole('button', { name: 'Pubblica avviso' }).click();
-
-    await page.waitForTimeout(500);
+    // La validazione è lato server: attendo la risposta dell'azione.
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Pubblica avviso' }));
     await expect(page.getByText(titolo)).toHaveCount(0);
   });
 
   test('titolo o testo vuoti non creano un avviso (validazione server-side)', async ({ page }) => {
     const avvisiPrima = await page.locator('main >> text=Nessun avviso').count();
     await page.getByRole('button', { name: 'Pubblica avviso' }).click();
-    await page.waitForTimeout(500);
+    // Titolo e testo sono `required`: il browser blocca l'invio (nessuna
+    // azione parte, quindi niente da attendere) e segna i campi non validi.
+    await expect(page.locator('input[name="titolo"]:invalid')).toHaveCount(1);
 
-    // La action ritorna senza inserire nulla: il conteggio "Nessun
-    // avviso pubblicato" resta identico, oppure la lista non cresce.
+    // Il conteggio "Nessun avviso pubblicato" resta identico.
     const avvisiDopo = await page.locator('main >> text=Nessun avviso').count();
     expect(avvisiDopo).toBe(avvisiPrima);
   });

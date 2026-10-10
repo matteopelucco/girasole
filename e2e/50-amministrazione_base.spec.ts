@@ -268,8 +268,7 @@ test.describe('50 — Amministrazione base', () => {
 
     await selectMaestra.selectOption({ index: 1 });
     await selectSezione.selectOption({ index: 1 });
-    await page.getByRole('button', { name: 'Assegna' }).click();
-    await page.waitForTimeout(1000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Assegna' }));
 
     if (assegnazioneGiaEsistente) return;
 
