@@ -2,17 +2,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { InvioEmailRojac } from '@/components/InvioEmailRojac';
 import { destinatarioNotifiche, destinatarioRojac } from '@/lib/email';
-import { componiEmailRojac, PASTI_INSEGNANTI_AL_GIORNO } from '@/lib/emailRojac';
-import { caricaDatiEmailRojac } from '@/lib/emailRojacDati';
+import { componiEmailRojac, formattaUltimoInvioRojac, PASTI_INSEGNANTI_AL_GIORNO } from '@/lib/emailRojac';
+import { caricaDatiEmailRojac, caricaUltimoInvioRojac } from '@/lib/emailRojacDati';
 import { inviaEmailRojac } from './actions';
 
 // Riquadro "Mail mensile a Rojac" del Report mensile, solo admin
 // (specs/61 - email-pasti-rojac.md): i numeri del mese (pasti bambini,
-// pasti insegnanti, totale), l'invio con anteprima e il link al modello.
+// pasti insegnanti, totale), l'ultimo invio registrato per il mese, l'invio
+// con anteprima e il link al modello.
 // La pagina lo renderizza solo per l'admin, in vista mensile, per il mese
 // corrente o passato.
 export async function BoxEmailRojac({ supabase, mese }: { supabase: SupabaseClient; mese: string }) {
-  const { riepilogo, template } = await caricaDatiEmailRojac(supabase, mese);
+  const [{ riepilogo, template }, ultimoInvio] = await Promise.all([
+    caricaDatiEmailRojac(supabase, mese),
+    caricaUltimoInvioRojac(supabase, mese),
+  ]);
   const destinatario = destinatarioRojac();
   const { oggetto, testo } = componiEmailRojac(template, riepilogo);
 
@@ -37,6 +41,11 @@ export async function BoxEmailRojac({ supabase, mese }: { supabase: SupabaseClie
           <dd className="font-semibold">{riepilogo.totalePasti}</dd>
         </div>
       </dl>
+      {ultimoInvio && (
+        <p className="mt-2 text-sm text-emerald-900">
+          Ultimo invio: <span className="font-medium">{formattaUltimoInvioRojac(ultimoInvio)}</span>
+        </p>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
         {destinatario ? (

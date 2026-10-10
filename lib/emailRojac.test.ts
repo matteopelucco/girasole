@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AVVISO_INVIO_NON_REGISTRATO,
   PASTI_INSEGNANTI_AL_GIORNO,
   componiEmailRojac,
+  esitoDopoInvioRojac,
+  formattaUltimoInvioRojac,
   giorniScuolaMese,
   meseInviabileRojac,
   riepilogoMensileRojac,
+  ultimoInvioRojac,
 } from './emailRojac';
 
 const chiusura = (dataInizio: string, dataFine: string) => ({ id: 'x', dataInizio, dataFine, nota: null });
@@ -107,5 +111,53 @@ describe('componiEmailRojac', () => {
   it('escapa il markup del modello (testo, non HTML)', () => {
     const { html } = componiEmailRojac({ oggetto: 'x', corpo: '<b>Pasti</b> & altro' }, riepilogo);
     expect(html).toBe('&lt;b&gt;Pasti&lt;/b&gt; &amp; altro');
+  });
+});
+
+describe('ultimoInvioRojac', () => {
+  it('nessun invio nel mese: null', () => {
+    expect(ultimoInvioRojac([])).toBeNull();
+  });
+
+  it('un solo invio: quello', () => {
+    expect(ultimoInvioRojac(['2026-10-03T08:00:00Z'])).toBe('2026-10-03T08:00:00Z');
+  });
+
+  it('più invii: il più recente, in qualunque ordine arrivino', () => {
+    const istanti = ['2026-10-03T08:00:00Z', '2026-10-05T16:20:00Z', '2026-10-04T09:00:00Z'];
+    expect(ultimoInvioRojac(istanti)).toBe('2026-10-05T16:20:00Z');
+  });
+
+  it('confronta gli istanti reali, non le stringhe (fusi diversi)', () => {
+    // 23:30 +02:00 = 21:30 UTC, quindi precedente a 22:00 UTC
+    expect(ultimoInvioRojac(['2026-10-05T23:30:00+02:00', '2026-10-05T22:00:00Z'])).toBe('2026-10-05T22:00:00Z');
+  });
+
+  it('ignora i valori non validi', () => {
+    expect(ultimoInvioRojac(['non-una-data', '2026-10-03T08:00:00Z'])).toBe('2026-10-03T08:00:00Z');
+    expect(ultimoInvioRojac(['non-una-data'])).toBeNull();
+  });
+});
+
+describe('formattaUltimoInvioRojac', () => {
+  it('gg/mm/aaaa hh:mm in ora legale (Europe/Rome)', () => {
+    expect(formattaUltimoInvioRojac('2026-08-26T15:30:00Z')).toBe('26/08/2026 17:30');
+  });
+
+  it('gg/mm/aaaa hh:mm in ora solare, con zeri iniziali', () => {
+    expect(formattaUltimoInvioRojac('2026-01-05T07:09:00Z')).toBe('05/01/2026 08:09');
+  });
+});
+
+describe('esitoDopoInvioRojac', () => {
+  it('registro scritto: ok senza avvisi', () => {
+    expect(esitoDopoInvioRojac(true)).toEqual({ ok: true });
+  });
+
+  it("registro non scritto: ok (la mail è partita) con l'avviso, non un errore", () => {
+    const esito = esitoDopoInvioRojac(false);
+    expect(esito.ok).toBe(true);
+    expect(esito.avviso).toBe(AVVISO_INVIO_NON_REGISTRATO);
+    expect(esito.avviso).toMatch(/non rimandarla/);
   });
 });

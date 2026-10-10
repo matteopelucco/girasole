@@ -1,7 +1,13 @@
 import { escapeHtml } from '@/lib/htmlEscape';
 import { sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
 import { isGiornoChiuso, type GiornoChiusura } from '@/lib/calendarioScolastico';
-import { formattaMeseItaliano, giorniInRange, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
+import {
+  formattaDataOraItaliana,
+  formattaMeseItaliano,
+  giorniInRange,
+  primoGiornoMese,
+  ultimoGiornoMese,
+} from '@/lib/date';
 
 // Mail mensile dei pasti a Rojac (specs/61 - email-pasti-rojac.md):
 // funzioni pure, nessun I/O — chi chiama (la pagina Report, l'azione di
@@ -75,4 +81,37 @@ export function componiEmailRojac(
     testo,
     html: escapeHtml(testo).replace(/\n/g, '<br>'),
   };
+}
+
+// Registro degli invii a Rojac (specs/61): funzioni pure sull'elenco degli
+// istanti (`inviato_il`, ISO) già letti per un mese.
+
+// Istante dell'invio più recente, o null se il mese non ha invii. Il
+// confronto è sull'istante reale (non sulla stringa: i fusi possono
+// differire); un valore non valido viene ignorato.
+export function ultimoInvioRojac(istanti: string[]): string | null {
+  let migliore: string | null = null;
+  let milli = Number.NEGATIVE_INFINITY;
+  for (const istante of istanti) {
+    const t = new Date(istante).getTime();
+    if (Number.isNaN(t) || t <= milli) continue;
+    milli = t;
+    migliore = istante;
+  }
+  return migliore;
+}
+
+// "gg/mm/aaaa hh:mm" nel fuso Europe/Rome, per la riga "Ultimo invio".
+export function formattaUltimoInvioRojac(istante: string): string {
+  return formattaDataOraItaliana(istante).replace('_', ' ');
+}
+
+export const AVVISO_INVIO_NON_REGISTRATO =
+  "La mail è partita, ma non è stato possibile registrare l'invio: non rimandarla. Il mese potrebbe risultare non inviato; avvisa chi gestisce l'app.";
+
+// Esito dell'azione dopo che la mail è partita: ok sempre (la mail è
+// partita e non va rimandata); se il registro non è stato scritto, con un
+// avviso chiaro.
+export function esitoDopoInvioRojac(registrato: boolean): { ok: true; avviso?: string } {
+  return registrato ? { ok: true } : { ok: true, avviso: AVVISO_INVIO_NON_REGISTRATO };
 }
