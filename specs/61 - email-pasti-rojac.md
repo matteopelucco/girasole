@@ -84,6 +84,47 @@ Quando premo "Conferma invio" e il servizio email risponde con un errore
 Allora vedo un messaggio d'errore chiaro (specs/05) e nessun invio è
 considerato riuscito
 
+## Scenario: un invio riuscito viene registrato
+Dato che l'anteprima è aperta e la mail a Rojac parte davvero
+Quando premo "Conferma invio"
+Allora nel registro degli invii a Rojac viene scritta una riga con il
+mese a cui si riferisce, la data e l'ora dell'invio e l'admin che ha
+inviato
+E nel riquadro compare "Ultimo invio" con quella data e quell'ora
+
+## Scenario: un invio fallito non registra nulla
+Dato che l'anteprima è aperta
+Quando premo "Conferma invio" e il servizio email risponde con un errore
+Allora nel registro degli invii a Rojac non viene scritta nessuna riga
+E nel riquadro non compare nessun "Ultimo invio" nuovo
+
+## Scenario: la mail parte ma il registro non si aggiorna
+Dato che l'anteprima è aperta e la mail a Rojac parte davvero
+Quando premo "Conferma invio" e la scrittura nel registro fallisce
+Allora vedo la conferma "Riepilogo inviato a Rojac" (la mail è partita,
+non va rimandata)
+E vedo un avviso chiaro: l'invio non è stato registrato e il mese
+potrebbe risultare non inviato
+E la mail non viene rimandata in automatico
+
+## Scenario: vedere l'ultimo invio nel riquadro
+Dato che per il mese che sto guardando esiste almeno un invio registrato
+Allora nel riquadro "Mail mensile a Rojac" vedo "Ultimo invio:
+gg/mm/aaaa hh:mm" (fuso Europe/Rome), con la data e l'ora dell'invio più
+recente di quel mese
+
+## Scenario: nessun invio registrato per il mese
+Dato che per il mese che sto guardando non esiste nessun invio registrato
+Allora nel riquadro "Mail mensile a Rojac" non compare nessuna riga
+"Ultimo invio"
+
+## Scenario: il registro è solo dell'admin
+Dato che sono autenticato come maestra, assistente o genitore, oppure
+non sono autenticato
+Quando provo a leggere o a scrivere nel registro degli invii a Rojac
+Allora il database me lo impedisce (RLS): solo l'admin legge e inserisce,
+e nessuno modifica o cancella le righe
+
 ## Scenario: modificare il modello della mail
 Dato che sono su "Modello email Rojac" (raggiungibile dal riquadro nel
 report)
@@ -124,11 +165,28 @@ Allora vengo reindirizzato alla dashboard
   genitori di specs/56; issue #263): senza, la risposta di Rojac
   tornerebbe al mittente tecnico.
 - L'invio usa lo stesso servizio degli altri invii (`lib/email.ts`,
-  Resend). Questo requisito non registra un log degli invii: ogni invio
-  richiede un'anteprima e una conferma esplicita.
+  Resend). Ogni invio richiede un'anteprima e una conferma esplicita.
+- Registro degli invii: tabella `invii_rojac` (migration 0062), una riga
+  per invio riuscito: `mese` ("YYYY-MM"), `inviato_il` (istante),
+  `inviato_da` (admin). RLS e GRANT: solo l'admin con SELECT e INSERT;
+  nessun UPDATE né DELETE, nessun accesso per `anon` e `service_role`.
+  Il registro serve anche all'allarme "mail a Rojac non inviata" (issue
+  #282, requisito a parte).
+- La riga si scrive solo dopo che `inviaEmail` è riuscito. Se la scrittura
+  fallisce l'azione risponde comunque ok, con un avviso: la mail è partita
+  e non si rimanda.
+- "Ultimo invio" = l'`inviato_il` più recente del mese, mostrato come
+  "gg/mm/aaaa hh:mm" (Europe/Rome). Logica pura in `lib/emailRojac.ts`
+  (con unit test). Lo scenario "la mail parte ma il registro non si
+  aggiorna" è coperto solo da unit test (l'e2e non può far fallire la
+  scrittura sul database di test).
+- La stessa migration 0062 aggiunge il valore `rojac_non_inviata` al
+  vincolo su `allarmi_inviati.tipo`, per l'allarme della parte b: nessun
+  allarme in questo requisito.
 
 ## Fuori scope
 - Invio automatico a fine mese e modifica dell'indirizzo di Rojac da
   interfaccia.
-- Registro persistente degli invii a Rojac e blocco del doppio invio
-  dello stesso mese.
+- Blocco del doppio invio dello stesso mese (il registro lo permette, il
+  blocco no: ogni invio resta una scelta esplicita dell'admin).
+- Allarme se la mail di un mese non è stata inviata (issue #282).
