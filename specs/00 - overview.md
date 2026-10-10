@@ -110,7 +110,7 @@ della maestra, `5x` amministrazione.
   calcolati, invio delle email di promemoria ai genitori e template
   configurabile
 - [57 - reset-giornata.md](57%20-%20reset-giornata.md) — voce di menu
-  "Impostazioni avanzate" (pagina intermedia admin, in fondo al menu) e
+  "Impostazioni" (pagina intermedia admin, in fondo al menu, con "Utenti" sotto) e
   azione "Reset giornata": l'admin elimina tutte le presenze e i pasti di una
   data (anche passata), con doppia conferma e disclaimer sulle
   comunicazioni già inviate

@@ -19,6 +19,17 @@ confronto usato per calcolare il monte ore (vedi
 abilitato può inoltre consultare, in sola lettura, il proprio profilo
 orario assegnato in un pannello dedicato (`/dashboard/profilo-orario`).
 
+## Scenario: il menu raggruppa "Profili orari" e "Ore di lavoro del personale" sotto "Ore dipendenti"
+Dato che sono autenticato come admin
+Quando guardo il menu laterale
+Allora vedo la voce "Ore dipendenti" (un'intestazione di gruppo, non una pagina)
+con sotto, nell'ordine, "Profili orari" (`/admin/profili-orari`) e "Ore di
+lavoro del personale" (`/admin/ore-lavoro`), rientrate
+E le due voci non compaiono più come voci di primo livello
+E il gruppo sta dopo "Calendario scolastico" e prima di "Pagamenti"
+E maestra, assistente e genitore non vedono il gruppo (il menu non cambia
+per loro)
+
 ## Scenario: creare un profilo orario
 Dato che sono autenticato come admin
 Quando su `/admin/profili-orari` inserisco un nome (es. "35 ore
