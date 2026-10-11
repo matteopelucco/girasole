@@ -1,0 +1,163 @@
+name: Anteprima fumo
+
+# Giro di test di fumo sull'anteprima di Vercel (issue #267). Quando Vercel
+# finisce il deploy di anteprima di una PR di questo repo, Playwright entra
+# ed esce con i quattro ruoli (admin, maestra, assistente, genitore), apre le
+# pagine principali, salva un avviso di prova per ruolo e lo cancella
+# (e2e-anteprima/fumo.spec.ts). Scopo: accorgersi di un'anteprima rotta
+# (variabili d'ambiente, build, collegamento al DB) che l'e2e di `ci.yml`,
+# che gira su `next start` locale, non può vedere.
+#
+# NON è un check obbligatorio: non sta nel ruleset di `main` e un rosso non
+# blocca nessuna PR (decisione di Matteo, issue #267). Per renderlo
+# obbligatorio vedi docs/sviluppo-dettagli.md, "Giro di fumo sull'anteprima
+# di Vercel". È distinto da `ci.yml` e non lo modifica.
+#
+# Come si rilancia: "Re-run all jobs" dalla pagina del run (Actions > Anteprima
+# fumo), oppure `gh run rerun <run-id>`. A mano in locale:
+# `ANTEPRIMA_URL=https://girasole-... npm run test:anteprima`.
+#
+# Due job, perché la guardia non deve mai finire nella coda del DB né vedere
+# i secret:
+#   guardia  nessun secret (solo il token del workflow, in sola lettura).
+#            Controlla con `lib/guardiaAnteprima.ts` che il deploy sia
+#            riuscito, in ambiente Preview, a un indirizzo di anteprima di
+#            QUESTO progetto (mai la produzione `girasole.vercel.app`, mai
+#            il ramo `main`, mai un altro dominio) e che il commit venga da
+#            una PR dello stesso repository (nessun fork). Logica e motivi
+#            dei rifiuti sono nei test unit di quel modulo. Se rifiuta, il
+#            run diventa rosso con un messaggio chiaro e `fumo` non parte.
+#   fumo     usa i secret E2E_*. Parte solo dopo `guardia`, nello stesso
+#            gruppo di concorrenza `db-test-girasole-dev` dell'e2e di
+#            `ci.yml` (ADR-0008): un solo job alla volta sul DB di test,
+#            `cancel-in-progress: false` e `queue: max` come là, quindi non
+#            interrompe né fa saltare l'e2e di nessuna PR e aspetta in coda
+#            se ne sta girando una.
+#
+# `deployment_status` parte solo se il file del workflow esiste sul ramo
+# `main`: il primo giro reale arriva dopo il merge di questa PR, non sulla
+# PR stessa.
+#
+# Gli account E2E_* non vengono ricreati qui: li ricrea la CI e2e
+# (`scripts/crea-utenti-e2e.mjs`) dopo ogni reset del DB di test, e servono
+# la service_role key, che questo workflow non riceve. Se il login fallisce
+# perché gli account non ci sono, il test lo dice a chiare lettere.
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  guardia:
+    # Primo filtro, prima ancora di avviare una macchina: solo deploy
+    # riusciti in un ambiente "Preview". La guardia li ricontrolla.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      startsWith(github.event.deployment.environment, 'Preview')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Serve a trovare la PR del commit (e da che repository arriva).
+      pull-requests: read
+    outputs:
+      url: ${{ steps.guardia.outputs.url }}
+    steps:
+      # La logica della guardia viene sempre dal ramo principale, non dal
+      # commit dell'anteprima: una PR non può modificare le regole con cui
+      # viene giudicata.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Da quali repository vengono le PR di questo commit
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          # Un commit di un fork può non esistere in questo repository: l'API
+          # risponde con un errore e l'elenco resta vuoto, cioè "rifiuta".
+          if ! ELENCO=$(gh api "repos/${REPOSITORY}/commits/${SHA}/pulls" \
+                --jq '[.[] | (.head.repo.full_name // "ignoto")]' 2>/dev/null); then
+            ELENCO='[]'
+          fi
+          echo "PR del commit, repository di partenza: ${ELENCO}"
+          echo "repo-testa-pr=$(echo "${ELENCO}" | tr -d '\n ')" >> "$GITHUB_OUTPUT"
+
+      - name: Guardia — indirizzo, ambiente, PR dello stesso repository
+        id: guardia
+        env:
+          REPOSITORY: ${{ github.repository }}
+          STATO: ${{ github.event.deployment_status.state }}
+          AMBIENTE: ${{ github.event.deployment.environment }}
+          URL_ANTEPRIMA: ${{ github.event.deployment_status.environment_url }}
+          REPO_TESTA_PR: ${{ steps.pr.outputs.repo-testa-pr }}
+        run: node --no-warnings --experimental-strip-types scripts/guardia-anteprima.mts
+
+  fumo:
+    needs: guardia
+    runs-on: ubuntu-latest
+    # Esecuzione reale (pochi minuti); l'attesa in coda non conta.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    # Stesso gruppo e stesse regole del job `e2e` di ci.yml (ADR-0008): il
+    # nome è unico per tutto il repo, non cambiarlo da una parte sola.
+    concurrency:
+      group: db-test-girasole-dev
+      cancel-in-progress: false
+      queue: max
+    steps:
+      # Il commit dell'anteprima (come fa ci.yml con la PR): i test di fumo
+      # stanno al passo con l'app che provano. La guardia ha già verificato
+      # che il commit venga da una PR di questo repository.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Installa Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      - name: Giro di fumo sull'anteprima (Playwright)
+        run: npm run test:anteprima
+        env:
+          # Indirizzo già validato dal job `guardia`; la configurazione
+          # Playwright lo ricontrolla con la stessa logica.
+          ANTEPRIMA_URL: ${{ needs.guardia.outputs.url }}
+          # Solo i quattro account di test. Nessuna service_role key, nessun
+          # accesso diretto al DB: l'app in anteprima parla con il DB di test.
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
+          E2E_MAESTRA_PASSWORD: ${{ secrets.E2E_MAESTRA_PASSWORD }}
+          E2E_ASSISTENTE_EMAIL: ${{ secrets.E2E_ASSISTENTE_EMAIL }}
+          E2E_ASSISTENTE_PASSWORD: ${{ secrets.E2E_ASSISTENTE_PASSWORD }}
+          E2E_GENITORE_EMAIL: ${{ secrets.E2E_GENITORE_EMAIL }}
+          E2E_GENITORE_PASSWORD: ${{ secrets.E2E_GENITORE_PASSWORD }}
+
+      - name: Carica il report HTML di Playwright (anche se i test falliscono)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: anteprima-fumo-report
+          path: playwright-report-anteprima/
+          retention-days: 14
+          if-no-files-found: ignore

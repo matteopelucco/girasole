@@ -17,3 +17,5 @@ next-env.d.ts
 /playwright/.cache/
 /playwright/.auth/
 .review/
+/test-results-anteprima/
+/playwright-report-anteprima/
