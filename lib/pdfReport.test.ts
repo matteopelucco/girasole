@@ -125,6 +125,29 @@ describe('generaPdfTabellare', () => {
   });
 });
 
+describe('colonne pesate nel PDF giornaliero (specs/52)', () => {
+  it('una sezione con pesiColonne mostra tutte le sei colonne, incluse stato e nota', async () => {
+    const bytes = await generaPdfTabellare(
+      'Report giornaliero',
+      'sabato 10 ottobre 2026',
+      [
+        {
+          nome: 'Girasoli',
+          intestazioni: ['Bambino', 'Presenza', 'Pre-asilo', 'Post-asilo', 'Pasto', 'Nota'],
+          righe: [['Anna Bianchi', 'Malattia', '-', '-', '-', 'febbre']],
+          pesiColonne: [3, 2, 1.3, 1.3, 1.2, 4],
+        },
+      ],
+      GENERATO_IL
+    );
+    const testo = await testoPagina(bytes, 0);
+    expect(testo).toContain('Presenza');
+    expect(testo).toContain('Malattia');
+    expect(testo).toContain('Nota');
+    expect(testo).toContain('febbre');
+  });
+});
+
 describe('testo lungo nelle celle (specs/52)', () => {
   const DETTAGLIO = 'Pre-asilo al posto di Lucia (1.5) + 3h SARA: da definire, poi recupero concordato con la direzione';
 

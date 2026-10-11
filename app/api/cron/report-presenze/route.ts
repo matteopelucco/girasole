@@ -4,7 +4,8 @@ import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { inviaEmail, destinatarioNotifiche, type AllegatoEmail } from '@/lib/email';
 import {
-  generaTabellaGiornalieraHtml,
+  formattaTabellaReportHtml,
+  aggregaGiornoTutteLeClassi,
   aggregaReportPeriodoTutteLeClassi,
   recuperaComunicazioniPastiPeriodo,
   type SezioneConRighe,
@@ -12,6 +13,16 @@ import {
 import { generaPdfTabellare, type SezionePdf, type ComunicazionePastiPdf } from '@/lib/pdfReport';
 import { rigaComunicazione, totalePasti, type ComunicazionePasto } from '@/lib/comunicazionePasti';
 import type { RigaReportBambino } from '@/lib/report';
+import {
+  INTESTAZIONI_GIORNALIERO,
+  PESI_COLONNE_GIORNALIERO,
+  anomalieDati,
+  celleGiornaliere,
+  descrizioniAllegati,
+  formattaCorpoIntroduttivoHtml,
+  type SezioneGiornaliera,
+  type TipoReportNotturno,
+} from '@/lib/reportNotturno';
 import { generaRiepilogoOreLavoroSettimanaHtml, pdfOreLavoroMensile } from '@/lib/reportOreLavoro';
 import {
   oggi,
@@ -27,8 +38,6 @@ import {
 } from '@/lib/date';
 
 export const dynamic = 'force-dynamic';
-
-type TipoReportNotturno = 'giornaliero' | 'settimanale' | 'mensile';
 
 // specs/52 - report-email-automatico.md: 'sempre' (default) ricalcola e
 // invia settimanale/mensile ogni notte "a tutt'oggi"; 'fine_periodo' li
@@ -90,15 +99,24 @@ async function allegatoPeriodico(
   return { filename: `report-${tipo}-${fine}.pdf`, content: pdf };
 }
 
-async function allegatoGiornaliero(data: string, generatoIl: Date): Promise<AllegatoEmail> {
-  const [sezioniDati, comunicazioni] = await Promise.all([
-    aggregaReportPeriodoTutteLeClassi(data, data),
-    recuperaComunicazioniPastiPeriodo(data, data),
-  ]);
+// Il report giornaliero ha stato di presenza e nota (specs/52, "report
+// giornaliero con stato di presenza e nota"): sezioni già aggregate dal
+// chiamante, che le riusa anche per corpo email e anomalie.
+async function allegatoGiornaliero(
+  data: string,
+  sezioni: SezioneGiornaliera[],
+  comunicazioni: ComunicazionePasto[],
+  generatoIl: Date
+): Promise<AllegatoEmail> {
   const pdf = await generaPdfTabellare(
     'Report giornaliero',
     formattaDataItaliana(data),
-    sezioniPdf(sezioniDati, ['Bambino', 'Presente', 'Pre-asilo', 'Post-asilo', 'Pasto']),
+    sezioni.map((s) => ({
+      nome: s.nome,
+      intestazioni: INTESTAZIONI_GIORNALIERO,
+      righe: s.righe.map(celleGiornaliere),
+      pesiColonne: PESI_COLONNE_GIORNALIERO,
+    })),
     generatoIl,
     comunicazionePastiPdf(comunicazioni)
   );
@@ -131,7 +149,7 @@ export async function GET(request: Request) {
   const generatoIl = new Date();
   const supabase = createAdminClient();
 
-  const risultati: Record<TipoReportNotturno, 'inviato' | 'gia_inviato' | 'saltato'> = {
+  const risultati: Record<TipoReportNotturno, 'inviato' | 'gia_inviato' | 'saltato' | 'errore'> = {
     giornaliero: 'saltato',
     settimanale: 'saltato',
     mensile: 'saltato',
@@ -142,6 +160,9 @@ export async function GET(request: Request) {
   // gli altri uno solo — un array uniforme evita un caso speciale nel
   // punto di invio sotto.
   const daPreparare: { tipo: TipoReportNotturno; genera: () => Promise<AllegatoEmail[]> }[] = [];
+  // Dati del giorno, letti una volta sola dal giornaliero e riusati per
+  // corpo dell'email e anomalie.
+  const giorno: { sezioni?: SezioneGiornaliera[] } = {};
 
   const { data: giornalieroInviato } = await supabase
     .from('report_giornalieri_inviati')
@@ -151,7 +172,17 @@ export async function GET(request: Request) {
   if (giornalieroInviato) {
     risultati.giornaliero = 'gia_inviato';
   } else {
-    daPreparare.push({ tipo: 'giornaliero', genera: async () => [await allegatoGiornaliero(dataReport, generatoIl)] });
+    daPreparare.push({
+      tipo: 'giornaliero',
+      genera: async () => {
+        const [sezioni, comunicazioni] = await Promise.all([
+          aggregaGiornoTutteLeClassi(dataReport),
+          recuperaComunicazioniPastiPeriodo(dataReport, dataReport),
+        ]);
+        giorno.sezioni = sezioni;
+        return [await allegatoGiornaliero(dataReport, sezioni, comunicazioni, generatoIl)];
+      },
+    });
   }
 
   const modalita = modalitaPeriodici();
@@ -205,24 +236,65 @@ export async function GET(request: Request) {
     }
   }
 
+  const allegatiNomi: string[] = [];
+
   if (daPreparare.length) {
-    const allegati = (await Promise.all(daPreparare.map((d) => d.genera()))).flat();
+    // Un report che non si riesce a produrre non blocca gli altri
+    // (specs/52, "anomalia nella produzione di un report"): finisce tra le
+    // anomalie della mail, senza dettagli tecnici (restano nei log), e non
+    // viene marcato come inviato, così la prossima esecuzione lo ritenta.
+    const esiti = await Promise.allSettled(daPreparare.map((d) => d.genera()));
+    const riusciti: typeof daPreparare = [];
+    const allegati: AllegatoEmail[] = [];
+    const anomalie: string[] = [];
+    esiti.forEach((esito, i) => {
+      const d = daPreparare[i];
+      if (esito.status === 'fulfilled') {
+        riusciti.push(d);
+        allegati.push(...esito.value);
+      } else {
+        console.error(`Report notturno ${d.tipo} non prodotto:`, esito.reason);
+        risultati[d.tipo] = 'errore';
+        anomalie.push(`Il report ${d.tipo} non è stato prodotto: verrà ritentato alla prossima esecuzione.`);
+      }
+    });
+
+    if (giorno.sezioni) anomalie.push(...anomalieDati(giorno.sezioni, dataReport));
+
     // Il riepilogo ore di lavoro (specs/52, specs/19) è parte del corpo
     // "dettagliato" giornaliero, non un allegato a parte: compare solo
-    // quando quel corpo viene davvero (ri)generato, stessa condizione
-    // della tabella di presenze/pasti sopra.
-    const htmlGiornaliero = daPreparare.some((d) => d.tipo === 'giornaliero')
-      ? (await generaTabellaGiornalieraHtml(dataReport)) + (await generaRiepilogoOreLavoroSettimanaHtml(supabase, dataReport))
-      : `<p>In allegato: ${daPreparare.map((d) => d.tipo).join(', ')}.</p>`;
+    // quando il giornaliero è stato davvero (ri)generato.
+    let corpoGiornaliero = '';
+    if (giorno.sezioni) {
+      corpoGiornaliero = formattaTabellaReportHtml(`Presenze del ${formattaDataItaliana(dataReport)}`, giorno.sezioni);
+      try {
+        corpoGiornaliero += await generaRiepilogoOreLavoroSettimanaHtml(supabase, dataReport);
+      } catch (errore) {
+        console.error('Riepilogo ore di lavoro non prodotto:', errore);
+        anomalie.push('Il riepilogo delle ore di lavoro non è stato prodotto.');
+      }
+    }
+
+    const html =
+      formattaCorpoIntroduttivoHtml({
+        dataReport,
+        generatoIl,
+        descrizioni: descrizioniAllegati(
+          riusciti.map((d) => d.tipo),
+          dataReport
+        ),
+        anomalie,
+      }) + corpoGiornaliero;
 
     await inviaEmail({
       a: destinatarioNotifiche(),
       oggetto: `Report del ${formattaDataItaliana(dataReport)}`,
-      html: htmlGiornaliero,
+      html,
       allegati,
     });
+    allegatiNomi.push(...allegati.map((a) => a.filename));
 
-    for (const d of daPreparare) {
+    for (const d of riusciti) {
       if (d.tipo === 'giornaliero') {
         await supabase.from('report_giornalieri_inviati').insert({ data: dataReport });
       } else {
@@ -230,7 +302,9 @@ export async function GET(request: Request) {
       }
       risultati[d.tipo] = 'inviato';
     }
+
+    return NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: anomalie.length });
   }
 
-  return NextResponse.json({ ok: true, data: dataReport, risultati });
+  return NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: 0 });
 }

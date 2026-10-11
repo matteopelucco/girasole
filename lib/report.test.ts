@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { aggregaConteggiPresenzePasti, risolviPeriodoReport } from './report';
+import { aggregaConteggiPresenzePasti, aggiungiDettaglioGiorno, risolviPeriodoReport, type RigaReportBambino } from './report';
 
 describe('risolviPeriodoReport — mensile', () => {
   it('risolve un mese esplicito', () => {
@@ -161,5 +161,45 @@ describe('aggregaConteggiPresenzePasti', () => {
   it('mantiene l\'ordine e la lista dei bambini passati in input', () => {
     const righe = aggregaConteggiPresenzePasti(bambini, [], []);
     expect(righe.map((r) => r.id)).toEqual(['b1', 'b2']);
+  });
+});
+
+describe('aggiungiDettaglioGiorno', () => {
+  const base = (id: string): RigaReportBambino => ({
+    id,
+    nome: 'Anna',
+    cognome: 'Bianchi',
+    presenze: 0,
+    preAsilo: 0,
+    postAsilo: 0,
+    pasti: 0,
+    inconsistenze: [],
+  });
+
+  it('riporta lo stato e la nota della presenza del giorno', () => {
+    const righe = aggiungiDettaglioGiorno(
+      [base('a'), base('b'), base('c')],
+      [
+        { bambino_id: 'a', stato: 'presente', note: null },
+        { bambino_id: 'b', stato: 'malattia', note: '  febbre alta ' },
+        { bambino_id: 'c', stato: 'assente', note: 'in vacanza' },
+      ]
+    );
+    expect(righe.map((r) => [r.stato, r.nota])).toEqual([
+      ['presente', null],
+      ['malattia', 'febbre alta'],
+      ['assente', 'in vacanza'],
+    ]);
+  });
+
+  it('un bambino senza riga di presenza è "non_segnato" e una nota vuota vale null', () => {
+    const righe = aggiungiDettaglioGiorno([base('a'), base('b')], [{ bambino_id: 'b', stato: 'assente', note: '   ' }]);
+    expect(righe[0]).toMatchObject({ stato: 'non_segnato', nota: null });
+    expect(righe[1]).toMatchObject({ stato: 'assente', nota: null });
+  });
+
+  it('mantiene i conteggi della riga di partenza', () => {
+    const righe = aggiungiDettaglioGiorno([{ ...base('a'), presenze: 1, pasti: 1 }], [{ bambino_id: 'a', stato: 'presente' }]);
+    expect(righe[0]).toMatchObject({ presenze: 1, pasti: 1 });
   });
 });

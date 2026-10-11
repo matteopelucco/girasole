@@ -166,3 +166,26 @@ export function aggregaConteggiPresenzePasti(
     return { id: b.id, nome: b.nome, cognome: b.cognome, ...voce, inconsistenze: [...inconsistenze] };
   });
 }
+
+export type StatoGiorno = 'presente' | 'assente' | 'malattia' | 'non_segnato';
+
+// Riga del report di un solo giorno (specs/52 - report-email-automatico.md,
+// "report giornaliero con stato di presenza e nota"): ai conteggi 0/1 di
+// RigaReportBambino aggiunge lo stato di presenza e la nota di quel giorno.
+export type RigaReportGiornaliera = RigaReportBambino & { stato: StatoGiorno; nota: string | null };
+
+// Aggiunge stato e nota del giorno alle righe già aggregate per lo stesso
+// giorno: funzione pura, nessun I/O. Un bambino senza riga di presenza è
+// "non_segnato"; una nota vuota o di soli spazi vale null.
+export function aggiungiDettaglioGiorno(
+  righe: RigaReportBambino[],
+  presenze: { bambino_id: string; stato: string; note?: string | null }[]
+): RigaReportGiornaliera[] {
+  const perBambino = new Map(presenze.map((p) => [p.bambino_id, p]));
+  return righe.map((r) => {
+    const p = perBambino.get(r.id);
+    const stato: StatoGiorno =
+      p?.stato === 'presente' || p?.stato === 'assente' || p?.stato === 'malattia' ? p.stato : 'non_segnato';
+    return { ...r, stato, nota: p?.note?.trim() || null };
+  });
+}

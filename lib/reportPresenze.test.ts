@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { righeOSollevaErrore, formattaTabellaReportHtml, type SezioneConRighe } from './reportPresenze';
-import type { RigaReportBambino } from './report';
+import { righeOSollevaErrore, formattaTabellaReportHtml } from './reportPresenze';
+import type { SezioneGiornaliera } from './reportNotturno';
+import type { RigaReportGiornaliera } from './report';
 
 // righeOSollevaErrore è l'unica funzione pura di questo modulo (le altre
 // fanno query Supabase, coperte solo da e2e — vedi CLAUDE.md). Copre il
@@ -24,7 +25,7 @@ describe('righeOSollevaErrore', () => {
   });
 });
 
-function riga(sovrascrizioni: Partial<RigaReportBambino> = {}): RigaReportBambino {
+function riga(sovrascrizioni: Partial<RigaReportGiornaliera> = {}): RigaReportGiornaliera {
   return {
     id: '1',
     nome: 'Anna',
@@ -34,6 +35,8 @@ function riga(sovrascrizioni: Partial<RigaReportBambino> = {}): RigaReportBambin
     postAsilo: 1,
     pasti: 1,
     inconsistenze: [],
+    stato: 'presente',
+    nota: null,
     ...sovrascrizioni,
   };
 }
@@ -43,8 +46,25 @@ function riga(sovrascrizioni: Partial<RigaReportBambino> = {}): RigaReportBambin
 // I/O, chi chiama passa i dati già aggregati (stessa forma usata dalla
 // pagina Report a schermo e dai PDF email — vedi lib/pdfReport.test.ts).
 describe('formattaTabellaReportHtml', () => {
+  it('mostra stato di presenza e nota per assenze e malattie, escapando la nota', () => {
+    const sezioni: SezioneGiornaliera[] = [
+      {
+        nome: 'Girasoli',
+        righe: [
+          riga({ stato: 'malattia', nota: 'febbre <b>alta</b> & tosse', presenze: 0, pasti: 0, postAsilo: 0 }),
+          riga({ id: '2', stato: 'non_segnato', presenze: 0, pasti: 0, postAsilo: 0 }),
+        ],
+      },
+    ];
+    const html = formattaTabellaReportHtml('Presenze', sezioni);
+    expect(html).toContain('Malattia');
+    expect(html).toContain('Non segnato');
+    expect(html).toContain('febbre &lt;b&gt;alta&lt;/b&gt; &amp; tosse');
+    expect(html).not.toContain('<b>alta');
+  });
+
   it('genera una tabella (non un elenco puntato) con le colonne del report a schermo', () => {
-    const sezioni: SezioneConRighe[] = [{ nome: 'Girasoli', righe: [riga()] }];
+    const sezioni: SezioneGiornaliera[] = [{ nome: 'Girasoli', righe: [riga()] }];
     const html = formattaTabellaReportHtml('Presenze del 24 agosto 2026', sezioni);
 
     expect(html).not.toContain('<ul>');
@@ -53,10 +73,11 @@ describe('formattaTabellaReportHtml', () => {
     expect(html).toContain('Girasoli');
     expect(html).toContain('Anna Bianchi');
     expect(html).toContain('Bambino');
-    expect(html).toContain('Presenze');
+    expect(html).toContain('Presenza');
     expect(html).toContain('Pre-asilo');
     expect(html).toContain('Post-asilo');
-    expect(html).toContain('Pasti');
+    expect(html).toContain('Pasto');
+    expect(html).toContain('Nota');
   });
 
   it('senza classi mostra "Nessuna classe attiva"', () => {
@@ -65,7 +86,7 @@ describe('formattaTabellaReportHtml', () => {
   });
 
   it('una classe senza bambini mostra "Nessun bambino in questa classe" (stessa dicitura dello schermo)', () => {
-    const sezioni: SezioneConRighe[] = [{ nome: 'Margherite', righe: [] }];
+    const sezioni: SezioneGiornaliera[] = [{ nome: 'Margherite', righe: [] }];
     const html = formattaTabellaReportHtml('Presenze del 24 agosto 2026', sezioni);
     expect(html).toContain('Margherite');
     expect(html).toContain('Nessun bambino in questa classe.');
@@ -73,7 +94,7 @@ describe('formattaTabellaReportHtml', () => {
   });
 
   it('un bambino con inconsistenze mostra l\'avviso ⚠️', () => {
-    const sezioni: SezioneConRighe[] = [
+    const sezioni: SezioneGiornaliera[] = [
       { nome: 'Girasoli', righe: [riga({ inconsistenze: ['Pasto segnato ma presenza assente.'] })] },
     ];
     const html = formattaTabellaReportHtml('Presenze del 24 agosto 2026', sezioni);
@@ -82,13 +103,13 @@ describe('formattaTabellaReportHtml', () => {
   });
 
   it('un bambino senza inconsistenze non mostra alcun avviso', () => {
-    const sezioni: SezioneConRighe[] = [{ nome: 'Girasoli', righe: [riga()] }];
+    const sezioni: SezioneGiornaliera[] = [{ nome: 'Girasoli', righe: [riga()] }];
     const html = formattaTabellaReportHtml('Presenze del 24 agosto 2026', sezioni);
     expect(html).not.toContain('⚠️');
   });
 
   it('rende come testo nome, cognome, sezione e titolo con markup, & e virgolette', () => {
-    const sezioni: SezioneConRighe[] = [
+    const sezioni: SezioneGiornaliera[] = [
       {
         nome: '<script>alert("s")</script> & Co',
         righe: [riga({ nome: '<img src=x onerror=alert(1)>', cognome: 'Rossi & "Figli"' })],
@@ -104,14 +125,14 @@ describe('formattaTabellaReportHtml', () => {
   });
 
   it("un apostrofo (D'Angelo) è escapato come &#39;, che l'HTML mostra come apostrofo", () => {
-    const sezioni: SezioneConRighe[] = [{ nome: "Sant'Anna", righe: [riga({ cognome: "D'Angelo" })] }];
+    const sezioni: SezioneGiornaliera[] = [{ nome: "Sant'Anna", righe: [riga({ cognome: "D'Angelo" })] }];
     const html = formattaTabellaReportHtml('Presenze', sezioni);
     expect(html).toContain('Anna D&#39;Angelo');
     expect(html).toContain('<h2>Sant&#39;Anna</h2>');
   });
 
   it("le inconsistenze con virgolette non rompono l'attributo title", () => {
-    const sezioni: SezioneConRighe[] = [
+    const sezioni: SezioneGiornaliera[] = [
       { nome: 'Girasoli', righe: [riga({ inconsistenze: ['Pasto segnato "sì" ma il bambino risulta assente.'] })] },
     ];
     const html = formattaTabellaReportHtml('Presenze', sezioni);
