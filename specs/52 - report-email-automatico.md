@@ -247,7 +247,10 @@ sostituito da "?" senza far fallire la generazione
 - Il job è protetto dallo stesso meccanismo già in uso per il cron
   esistente (header `Authorization: Bearer $CRON_SECRET` inviato in
   automatico da Vercel Cron quando la variabile d'ambiente `CRON_SECRET`
-  è configurata).
+  è configurata, confrontato a tempo costante). Su Vercel (produzione e
+  anteprime) senza `CRON_SECRET` la route rifiuta **ogni** chiamata (401,
+  messaggio generico); solo in locale e nella CI, senza la variabile,
+  resta aperta (issue #300, `lib/autorizzazioneCron.ts`).
 - Un errore nell'invio (es. servizio email non raggiungibile) non deve
   marcare il periodo come "inviato": un tentativo successivo deve poter
   ritentare lo stesso periodo (vedi scenario idempotenza).
