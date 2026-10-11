@@ -3,9 +3,7 @@ import {
   GIORNO_ALLARME_RETTE,
   allarmeRetteDaControllare,
   bambiniRetteNonComunicate,
-  chiaveAllarmeRette,
   descrizioneBambinoRetta,
-  htmlAllarmeRetteNonComunicate,
   meseInteramenteChiuso,
   type BambinoRetta,
 } from './allarmeRette';
@@ -72,17 +70,6 @@ describe('allarmeRetteDaControllare', () => {
   it('una chiusura parziale non spegne l\'allarme', () => {
     const settimana: GiornoChiusura = { id: 'c2', dataInizio: '2026-10-05', dataFine: '2026-10-09', nota: null };
     expect(allarmeRetteDaControllare('2026-10-10', [settimana])).toBe(true);
-  });
-});
-
-describe('chiaveAllarmeRette', () => {
-  it('è il mese YYYY-MM della data', () => {
-    expect(chiaveAllarmeRette('2026-10-03')).toBe('2026-10');
-    expect(chiaveAllarmeRette('2027-01-31')).toBe('2027-01');
-  });
-
-  it('cambia con il mese, quindi un nuovo mese riparte da zero', () => {
-    expect(chiaveAllarmeRette('2026-10-31')).not.toBe(chiaveAllarmeRette('2026-11-03'));
   });
 });
 
@@ -160,36 +147,5 @@ describe('descrizioneBambinoRetta', () => {
     expect(descrizioneBambinoRetta({ id: 'b', nome: 'Anna', cognome: 'Verdi', sezione: null })).toBe(
       'Anna Verdi (Senza sezione)'
     );
-  });
-});
-
-describe('htmlAllarmeRetteNonComunicate', () => {
-  const elenco: BambinoRetta[] = [
-    { id: 'b1', nome: 'Anna', cognome: 'Verdi', sezione: 'Girasoli' },
-    { id: 'b2', nome: 'Carlo', cognome: 'Bianchi', sezione: null },
-  ];
-
-  it('dice il mese, quanti bambini mancano e chi sono', () => {
-    const html = htmlAllarmeRetteNonComunicate('2026-10', elenco);
-    expect(html).toContain('ottobre 2026');
-    expect(html).toContain('2 bambini');
-    expect(html).toContain('Anna Verdi (Girasoli)');
-    expect(html).toContain('Carlo Bianchi (Senza sezione)');
-  });
-
-  it('usa il singolare per un solo bambino', () => {
-    const html = htmlAllarmeRetteNonComunicate('2026-10', [elenco[0]]);
-    expect(html).toContain('1 bambino');
-    expect(html).not.toContain('1 bambini');
-  });
-
-  it('esegue l\'escape di nomi e sezioni (dati liberi)', () => {
-    const html = htmlAllarmeRetteNonComunicate('2026-10', [
-      { id: 'b1', nome: '<script>x</script>', cognome: 'O\'Neil & Co', sezione: '<b>S</b>' },
-    ]);
-    expect(html).not.toContain('<script>');
-    expect(html).not.toContain('<b>');
-    expect(html).toContain('&lt;script&gt;');
-    expect(html).toContain('&amp;');
   });
 });

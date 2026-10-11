@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { SezioneAttiva } from './sezioni';
 import { settimanaCorrente, settimanaPrecedente } from './date';
-import { escapeHtml } from './htmlEscape';
 
 // Soglia oraria (fuso Europe/Rome) dell'allarme "presenze/pasti non
 // completati" (specs/07 - allarmi.md): condivisa dal banner personale in
@@ -52,29 +51,9 @@ export type StatoOperativoGiorno = {
   pastiNonConfermati: boolean;
 };
 
-// Vero se scatta l'allarme email "presenze/pasti non completati",
-// aggregato sull'intero asilo (specs/07) — usato solo dal cron, chi
-// chiama ha già calcolato se il giorno è attivo (specs/53) e lo stato
-// operativo del giorno (I/O, vedi calcolaStatoOperativoGiorno sotto).
-export function allarmeAsiloAttivo(adesso: Date, giornoAttivo: boolean, stato: StatoOperativoGiorno): boolean {
-  if (!giornoAttivo || stato.nessunDatoAtteso) return false;
-  if (!dopoOrarioAllarmePresenzePasti(adesso)) return false;
-  return stato.presenzeIncomplete || stato.pastiNonConfermati;
-}
-
-// Descrizione testuale di cosa manca, condivisa tra l'email aggregata e
-// (in passato) il banner in dashboard (specs/07), per non scrivere la
-// stessa frase in due posti. Stringa vuota se non manca nulla.
-export function descrizioneStatoOperativo(stato: StatoOperativoGiorno): string {
-  const parti: string[] = [];
-  if (stato.presenzeIncomplete) parti.push('non tutte le presenze sono state segnate');
-  if (stato.pastiNonConfermati) parti.push('i pasti non sono stati comunicati a Rojac');
-  return parti.join(' e ');
-}
-
 // Stato operativo di `data` su TUTTO l'asilo (fa I/O, resta coperta
 // solo da e2e — vedi CLAUDE.md, criterio unit test): usata solo dal
-// cron per l'email aggregata, richiede la service_role key
+// cron per l'email di riepilogo, richiede la service_role key
 // (`lib/supabase/admin.ts`) perché non ha una sessione utente da cui
 // ereditare la RLS.
 export async function calcolaStatoOperativoGiorno(supabase: SupabaseClient, data: string): Promise<StatoOperativoGiorno> {
@@ -207,13 +186,6 @@ export async function settimanaConfermata(
 }
 
 export type UtenteSettimanaNonConfermata = { utenteId: string; nome: string; cognome: string; email: string };
-
-// Corpo HTML dell'allarme "settimana ore non confermata" (specs/07), puro
-// (nessun I/O). Nome, cognome ed email sono dati liberi dell'utente:
-// vanno escapati (issue #220) per non essere interpretati come markup.
-export function htmlAllarmeSettimanaOreNonConfermata(utente: UtenteSettimanaNonConfermata, intervallo: string): string {
-  return `<p>${escapeHtml(utente.nome)} ${escapeHtml(utente.cognome)} (${escapeHtml(utente.email)}) non ha ancora confermato le ore della settimana ${intervallo}.</p>`;
-}
 
 // Tutti gli utenti abilitati al report ore la cui settimana
 // `settimanaInizio` non risulta confermata (fa I/O) — usata dal cron
