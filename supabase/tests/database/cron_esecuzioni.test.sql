@@ -5,7 +5,9 @@
 -- (SELECT); nessun utente inserisce, modifica o cancella; maestra,
 -- assistente, genitore e anonimo non leggono nulla; anon nessun privilegio;
 -- service_role (i cron) ha SELECT, INSERT e UPDATE ma non DELETE; vincoli su
--- nome, esito e lunghezza del messaggio di errore.
+-- nome, esito e lunghezza del messaggio di errore. Migration 0064 (issue
+-- #302): colonna `estemporaneo` (lanci a mano), non nulla, falsa di default,
+-- senza privilegi nuovi: authenticated non la scrive, service_role sì.
 --
 -- Tutto dentro una transazione chiusa da `rollback`. Dati fittizi
 -- (email @example.test, nome job `pgtap-prova`). Si esegue con
@@ -45,7 +47,7 @@ begin
 end;
 $$;
 
-select plan(31);
+select plan(38);
 
 -- Helper (temporanei: spariscono con la transazione) ----------------------
 create function pg_temp.impersona(p_uid uuid) returns void
@@ -231,6 +233,27 @@ select throws_ok(
 select lives_ok(
   $q$insert into public.cron_esecuzioni (nome) values ('pgtap-prova')$q$,
   'un lancio appena iniziato (senza fine né esito) è accettato'
+);
+
+-- Colonna estemporaneo (migration 0064) --------------------------------------
+select col_not_null('public', 'cron_esecuzioni', 'estemporaneo', 'estemporaneo: non nulla');
+select col_default_is('public', 'cron_esecuzioni', 'estemporaneo', 'false', 'estemporaneo: falsa di default');
+select is(
+  (select estemporaneo from public.cron_esecuzioni where id = 'c0000000-0000-0000-0000-000000000001'),
+  false,
+  'un lancio scritto senza la colonna (come i cron pianificati) non è estemporaneo'
+);
+select ok(not has_column_privilege('authenticated', 'public.cron_esecuzioni', 'estemporaneo', 'UPDATE'),
+  'authenticated: nessun UPDATE sulla colonna estemporaneo');
+select ok(not has_column_privilege('authenticated', 'public.cron_esecuzioni', 'estemporaneo', 'INSERT'),
+  'authenticated: nessun INSERT sulla colonna estemporaneo');
+select ok(has_column_privilege('service_role', 'public.cron_esecuzioni', 'estemporaneo', 'INSERT'),
+  'service_role: scrive la colonna estemporaneo (lancio a mano)');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.cron_esecuzioni set estemporaneo = true where nome = 'pgtap-prova'$q$),
+  '42501',
+  'admin: non può segnare un lancio come estemporaneo con la propria sessione'
 );
 
 select * from finish();

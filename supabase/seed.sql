@@ -28,7 +28,8 @@ on conflict (id) do nothing;
 -- Lanci di prova dei job pianificati (specs/63, e2e/63-cron-job.spec.ts):
 -- date lontane e fisse (2019), mai lanci reali. 25 lanci del report notturno
 -- (più di una pagina da 20, per "Carica altri") e 3 del riepilogo allarmi:
--- uno OK, uno KO con messaggio, uno senza esito (interrotto).
+-- uno OK, uno KO con messaggio, uno senza esito (interrotto); più un lancio
+-- a mano (estemporaneo), più sotto.
 insert into public.cron_esecuzioni (id, nome, iniziato_il, finito_il, esito)
 select
   ('00000000-0000-0000-0000-0000000063' || lpad(g::text, 2, '0'))::uuid,
@@ -45,4 +46,12 @@ values
   ('00000000-0000-0000-0000-000000006392', 'allarmi', '2019-02-02 09:30:00+00', null, null, null),
   ('00000000-0000-0000-0000-000000006393', 'allarmi', '2019-02-03 09:30:00+00', '2019-02-03 09:30:05+00', 'ko',
    'Invio email fallito (500): servizio non disponibile')
+on conflict (id) do nothing;
+
+-- Un lancio a mano dell'admin (issue #302, colonna `estemporaneo` della
+-- migration 0064): stesso job, date fittizie del 2019, tag "estemporaneo"
+-- nella pagina.
+insert into public.cron_esecuzioni (id, nome, iniziato_il, finito_il, esito, estemporaneo)
+values
+  ('00000000-0000-0000-0000-000000006394', 'allarmi', '2019-02-03 14:00:00+00', '2019-02-03 14:00:03+00', 'ok', true)
 on conflict (id) do nothing;
