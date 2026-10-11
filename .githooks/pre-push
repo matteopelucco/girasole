@@ -17,7 +17,7 @@ npx next typegen
 npx tsc --noEmit
 
 echo "── Lint (ESLint) ─────────────────────────────────"
-npx next lint
+npx eslint .
 
 echo "── Service-role-check (createAdminClient) ────────"
 npm run --silent check:service-role

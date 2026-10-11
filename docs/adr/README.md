@@ -24,3 +24,4 @@ nuovo che lo riferisce).
 | [0007](0007-versione-app-derivata-a-build-time.md) | `VERSIONE_APP`/`DATA_BUILD` derivate a build-time, non scritte a mano | Accettata |
 | [0008](0008-coda-globale-e2e-db-di-test.md) | Le e2e di CI usano il DB di test una alla volta (coda globale) | Accettata |
 | [0009](0009-giro-di-fumo-sull-anteprima-vercel.md) | Giro di fumo sull'anteprima di Vercel: workflow a parte, non bloccante | Accettata |
+| [0010](0010-next-16-proxy-e-eslint-cli.md) | Next 16: `proxy.ts` al posto di `middleware.ts`, ESLint senza `next lint` | Accettata |

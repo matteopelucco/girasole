@@ -100,7 +100,7 @@ ordine dal più veloce al più lento, divisi in due job — `statico` (1-5) ed
 #105, ADR-0008) — più il job `verifica`, il gate che ne riassume l'esito
 (dettagli in `docs/sviluppo-dettagli.md`):
 1. `tsc --noEmit` — type-check
-2. `next lint` — ESLint
+2. `eslint .` — ESLint (`npm run lint`)
 3. `jscpd` — codice duplicato
 4. `npx vitest run` — unit test (nessun I/O, nessun secret)
 5. `next build` — build di produzione, lo stesso bundler di Vercel:

@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export function createClient() {
-  // In Next 15 cookies() è asincrona: la si attende dentro i metodi di
+  // Da Next 15 cookies() è asincrona: la si attende dentro i metodi di
   // @supabase/ssr (che accettano Promise), così createClient() resta sincrona.
   const cookieStore = cookies();
 
@@ -19,7 +19,7 @@ export function createClient() {
             const store = await cookieStore;
             cookiesToSet.forEach(({ name, value, options }) => store.set(name, value, options));
           } catch {
-            // Chiamato da un Server Component: ignorabile, ci pensa il middleware
+            // Chiamato da un Server Component: ignorabile, ci pensa il proxy
             // a rinfrescare la sessione ad ogni richiesta.
           }
         },

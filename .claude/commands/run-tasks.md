@@ -175,7 +175,7 @@ e queste istruzioni aggiuntive:
 
 ### 3.4 Review di sicurezza e riclassificazione
 Guarda il diff della PR (`gh pr diff <pr> --name-only`). Se tocca
-`supabase/migrations/`, policy RLS, auth/middleware, ruoli o la issue ha
+`supabase/migrations/`, policy RLS, auth/proxy (ex middleware), ruoli o la issue ha
 `area:db`, `area:rls-auth`, `type:security`:
 1. invoca l'agente **rls-guardian** sulla PR;
 2. `BLOCCO` → una sola tornata di correzione con l'implementer, poi nuova

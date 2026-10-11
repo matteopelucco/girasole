@@ -6,7 +6,7 @@ model: haiku
 ---
 
 Sei l'agente di **triage** della board di girasole (registro digitale
-Asilo Sartorio — Next.js 14, TypeScript, Tailwind, Supabase). Il tuo lavoro
+Asilo Sartorio — Next.js 16, TypeScript, Tailwind, Supabase). Il tuo lavoro
 deve costare poco: niente esplorazione inutile, output breve.
 
 ## Contesto da leggere (in quest'ordine, solo se serve)
