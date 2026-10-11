@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { LancioManualeCron } from '@/components/LancioManualeCron';
 import { requireAdmin } from '@/lib/auth';
 import {
   LIMITE_MASSIMO,
+  etichettaLancio,
   formattaInizioLancio,
   gruppiCron,
   hrefCaricaAltri,
@@ -11,8 +13,15 @@ import {
   type StatoLancio,
 } from '@/lib/cronEsecuzioni';
 import { leggiLanciCron } from '@/lib/cronEsecuzioniDati';
+import { lanciaCronAMano } from './actions';
 
 export const dynamic = 'force-dynamic';
+
+// Durata massima della funzione, che vale anche per il lancio a mano (Server
+// Action di questa pagina, specs/63): 60 secondi, limite accettato anche dal
+// piano gratuito di Vercel. Un lancio che lo supera viene interrotto e, senza
+// esito, risulta "KO" (interrotto) dopo 15 minuti.
+export const maxDuration = 60;
 
 // Stringhe letterali: Tailwind non vede le classi composte a runtime.
 const CLASSI_STATO: Record<StatoLancio['stato'], string> = {
@@ -24,7 +33,9 @@ const CLASSI_STATO: Record<StatoLancio['stato'], string> = {
 // specs/63 - cron-job.md: lanci dei job pianificati, letti dal registro
 // `cron_esecuzioni` con la sessione dell'admin (la RLS lascia leggere solo a
 // lui). Un blocco per job; "Carica altri" allarga di 20 il solo blocco scelto
-// (parametro nella query string), senza JavaScript lato client.
+// (parametro nella query string), senza JavaScript lato client. Ogni blocco ha
+// il pulsante "Lancia ora" (lancio a mano, issue #302): i lanci a mano hanno il
+// tag "estemporaneo".
 export default async function CronJobPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
@@ -59,12 +70,15 @@ export default async function CronJobPage(props: {
               <p className="mt-0.5 text-sm text-stone-600">{gruppo.descrizione}</p>
             </div>
 
+            <LancioManualeCron nome={gruppo.nome} titolo={gruppo.titolo} azione={lanciaCronAMano} />
+
             {gruppo.lanci.length === 0 ? (
               <p className="text-sm text-stone-600">Nessun lancio registrato.</p>
             ) : (
               <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white shadow-sm">
                 {gruppo.lanci.map((lancio) => {
                   const { stato, messaggio } = statoLancio(lancio, adesso);
+                  const etichetta = etichettaLancio(lancio);
                   return (
                     <li key={lancio.id} className="px-4 py-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -74,6 +88,14 @@ export default async function CronJobPage(props: {
                           <time dateTime={new Date(lancio.iniziato_il).toISOString()}>
                             {formattaInizioLancio(lancio.iniziato_il)}
                           </time>
+                          {etichetta && (
+                            <span
+                              data-testid="tag-estemporaneo"
+                              className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
+                            >
+                              {etichetta}
+                            </span>
+                          )}
                         </span>
                         <span
                           data-testid="stato-lancio"

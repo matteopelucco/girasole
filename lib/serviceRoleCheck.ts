@@ -61,6 +61,11 @@ export const FILE_AMMESSI: readonly VoceAmmessa[] = [
     motivo: 'Aggregazione del report notturno, chiamata solo dal cron report-presenze (stessa ragione del cron).',
   },
   {
+    percorso: 'app/admin/cron-job/actions.ts',
+    motivo:
+      "Lancio a mano dei cron da parte dell'admin (specs/63, issue #302): stesso lavoro del cron, dopo requireAdmin().",
+  },
+  {
     percorso: 'lib/grantCheck.ts',
     motivo: 'Analisi statica del grant-check: nomina createAdminClient dentro letterali regex, non lo chiama.',
   },
