@@ -15,7 +15,7 @@
 // da cosa è stato confermato sull'account condiviso né da altri test che lo
 // abilitano o disabilitano in parallelo. L'account admin condiviso non viene
 // più toccato e "senza abilitazione..." lo usa così com'è.
-import { mergeTests } from '@playwright/test';
+import { mergeTests, type Locator, type Page } from '@playwright/test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { test as testUtente, expect } from './fixture-utente';
 import { test as testBambino, type BambinoFixture } from './fixture-bambino';
@@ -106,8 +106,55 @@ async function registraComunicazione(db: SupabaseClient, bambino: BambinoFixture
 }
 
 // Banner dell'allarme rette in dashboard (specs/07, issue #277).
-function bannerRette(page: import('@playwright/test').Page) {
+function bannerRette(page: Page) {
   return page.getByRole('alert').filter({ hasText: TITOLO_ALLARME_RETTE });
+}
+
+// Elenco della pagina Allarmi: un <li> con titolo <h3> per ogni allarme.
+const ELENCO_ALLARMI = 'main section ul > li:has(h3)';
+
+// Allarme rette nella pagina Allarmi.
+function allarmeRettePagina(page: Page) {
+  return page.locator(ELENCO_ALLARMI).filter({ hasText: TITOLO_ALLARME_RETTE });
+}
+
+// Testi delle voci dell'allarme rette (banner o pagina Allarmi): la prima è
+// il riepilogo con il link, le altre un bambino ciascuna.
+async function vociRette(allarme: Locator): Promise<string[]> {
+  return (await allarme.getByRole('listitem').allInnerTexts()).map((testo) => testo.trim());
+}
+
+// Il numero scritto nel riepilogo coincide con i bambini elencati sotto.
+// Numero e voci si rileggono insieme dentro expect.poll (regole anti-flaky,
+// #174): sono dati calcolati dal server, mai letti una volta sola.
+async function riepilogoCoincideConBambini(allarme: Locator) {
+  await expect
+    .poll(
+      async () => {
+        const [riepilogo, ...bambini] = await vociRette(allarme);
+        if (riepilogo === undefined || bambini.length === 0) return 'nessun bambino elencato';
+        const atteso = bambini.length === 1 ? 'Manca 1 comunicazione' : `Mancano ${bambini.length} comunicazioni`;
+        return riepilogo.startsWith(atteso) ? 'coincide' : `riepilogo "${riepilogo}", bambini elencati: ${bambini.length}`;
+      },
+      { message: 'il numero nel riepilogo deve coincidere con i bambini elencati' }
+    )
+    .toBe('coincide');
+}
+
+// Il numero della campanella coincide con l'elenco della stessa pagina
+// (stesso calcolo, stessa richiesta). Riletti insieme con expect.poll.
+async function campanellaCoincideConElenco(page: Page) {
+  await expect
+    .poll(
+      async () => {
+        const elenco = await page.locator(ELENCO_ALLARMI).count();
+        const pallino = page.getByTestId('numero-allarmi');
+        const campanella = (await pallino.count()) === 0 ? 0 : Number(await pallino.innerText());
+        return campanella === elenco ? 'coincide' : `campanella ${campanella}, elenco ${elenco}`;
+      },
+      { message: 'il numero della campanella deve coincidere con l\'elenco della pagina Allarmi' }
+    )
+    .toBe('coincide');
 }
 
 const TESTO_BANNER_PERSONALE = 'non risultano completati';
@@ -309,8 +356,6 @@ test.describe('07 — Allarmi', () => {
   // La campanella è nello stesso HTML della pagina (streaming): dopo goto()
   // il numero, se c'è, è già presente.
   test.describe('campanella e pagina Allarmi', () => {
-    const ELENCO_ALLARMI = 'main section ul > li:has(h3)';
-
     test("la campanella mostra il numero degli allarmi e porta alla pagina, dove l'elenco ha lo stesso numero", async ({
       creaUtente,
       apriComeUtente,
@@ -394,12 +439,7 @@ test.describe('07 — Allarmi', () => {
 
         // Il numero della campanella coincide con l'elenco (qualunque sia
         // lo stato di presenze e ore in questo momento).
-        const elenco = await page.locator(ELENCO_ALLARMI).count();
-        if (elenco === 0) {
-          await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
-        } else {
-          await expect(page.getByTestId('numero-allarmi')).toHaveText(String(elenco));
-        }
+        await campanellaCoincideConElenco(page);
         await nessunaViolazioneA11yGrave(page);
       });
     });
@@ -422,8 +462,7 @@ test.describe('07 — Allarmi', () => {
         await expect(riga).toContainText('non confermata');
         await expect(riga.getByRole('link')).toHaveCount(0);
 
-        const totale = await page.locator(ELENCO_ALLARMI).count();
-        await expect(page.getByTestId('numero-allarmi')).toHaveText(String(totale));
+        await campanellaCoincideConElenco(page);
         await nessunaViolazioneA11yGrave(page);
       });
     });
@@ -434,15 +473,16 @@ test.describe('07 — Allarmi', () => {
   // di test altri bambini possono mancare o no, quindi il numero totale di
   // allarmi dell'admin non è fisso. Il numero della campanella si confronta
   // sempre con l'elenco della pagina, mai con una cifra.
+  //
+  // Issue #295: il numero totale di bambini senza comunicazione cambia mentre
+  // il test gira, perché i test in parallelo (questo file, 55, 56, 58, 59, 60)
+  // creano e cancellano bambini con l'email di promemoria o ne registrano e
+  // annullano la comunicazione. Due pagine caricate una dopo l'altra possono
+  // quindi mostrare totali diversi senza nessun errore dell'app: i confronti
+  // tra pagine diverse si ripetono con expect.poll, ricaricando entrambe,
+  // finché i due elenchi coincidono. Dentro la stessa pagina i dati vengono
+  // da un solo calcolo (caricaAllarmiCorrenti, una volta per richiesta).
   test.describe('rette non comunicate', () => {
-    const ELENCO = 'main section ul > li:has(h3)';
-
-    async function campanellaCoincideConElenco(page: import('@playwright/test').Page) {
-      const elenco = await page.locator(ELENCO).count();
-      if (elenco === 0) await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
-      else await expect(page.getByTestId('numero-allarmi')).toHaveText(String(elenco));
-    }
-
     test.describe('come admin', () => {
       test.use({ storageState: statoAutenticazione('admin') });
 
@@ -475,7 +515,7 @@ test.describe('07 — Allarmi', () => {
         await configuraEmailPromemoria(adminDb!, bambino);
 
         await page.goto('/dashboard/allarmi');
-        const allarme = page.locator(ELENCO).filter({ hasText: TITOLO_ALLARME_RETTE });
+        const allarme = allarmeRettePagina(page);
         await expect(allarme).toHaveCount(1);
 
         // Il bambino è elencato con nome, cognome e sezione.
@@ -485,13 +525,8 @@ test.describe('07 — Allarmi', () => {
         );
         // Il numero nel testo coincide con i bambini elencati (tutte le voci
         // tranne la prima, che è il riepilogo con il link).
-        const riepilogo = voci.first();
-        const mancanti = (await voci.count()) - 1;
-        expect(mancanti).toBeGreaterThanOrEqual(1);
-        await expect(riepilogo).toContainText(
-          mancanti === 1 ? 'Manca 1 comunicazione' : `Mancano ${mancanti} comunicazioni`
-        );
-        await expect(riepilogo.getByRole('link')).toHaveAttribute('href', '/admin/rette');
+        await riepilogoCoincideConBambini(allarme);
+        await expect(voci.first().getByRole('link')).toHaveAttribute('href', '/admin/rette');
 
         // La campanella conta anche questo allarme: stesso numero dell'elenco.
         await campanellaCoincideConElenco(page);
@@ -572,19 +607,34 @@ test.describe('07 — Allarmi', () => {
         );
         // Il numero nel testo coincide con i bambini elencati (tutte le voci
         // tranne la prima, che è il riepilogo con il link).
-        const voci = banner.getByRole('listitem');
-        const mancanti = (await voci.count()) - 1;
-        expect(mancanti).toBeGreaterThanOrEqual(1);
-        await expect(voci.first()).toContainText(
-          mancanti === 1 ? 'Manca 1 comunicazione' : `Mancano ${mancanti} comunicazioni`
-        );
+        await riepilogoCoincideConBambini(banner);
         await expect(banner.getByRole('link')).toHaveAttribute('href', '/admin/rette');
         await nessunaViolazioneA11yGrave(page);
 
-        // Stessi dati della pagina Allarmi: lo stesso numero di bambini.
-        await page.goto('/dashboard/allarmi');
-        const allarme = page.locator(ELENCO).filter({ hasText: TITOLO_ALLARME_RETTE });
-        await expect(allarme.getByRole('listitem')).toHaveCount(mancanti + 1);
+        // Stessi dati della pagina Allarmi (stessa funzione): stesse voci,
+        // riepilogo compreso. Dashboard e pagina Allarmi sono due richieste
+        // distinte e nel frattempo i test in parallelo possono aggiungere o
+        // togliere un bambino (issue #295): si ricaricano entrambe finché
+        // coincidono. Se l'app calcolasse il banner in modo diverso dalla
+        // pagina, la differenza resterebbe e il test fallirebbe.
+        await expect
+          .poll(
+            async () => {
+              await page.goto('/dashboard');
+              const nelBanner = await vociRette(bannerRette(page));
+              await page.goto('/dashboard/allarmi');
+              const nellaPagina = await vociRette(allarmeRettePagina(page));
+              return {
+                bambinoDelTestInEntrambi:
+                  nelBanner.some((voce) => voce.includes(bambino.nomeCompleto)) &&
+                  nellaPagina.some((voce) => voce.includes(bambino.nomeCompleto)),
+                soloNelBanner: nelBanner.filter((voce) => !nellaPagina.includes(voce)),
+                soloNellaPagina: nellaPagina.filter((voce) => !nelBanner.includes(voce)),
+              };
+            },
+            { message: 'il banner in dashboard e la pagina Allarmi devono elencare gli stessi bambini', timeout: 30_000 }
+          )
+          .toEqual({ bambinoDelTestInEntrambi: true, soloNelBanner: [], soloNellaPagina: [] });
       });
 
       test('il link del banner in dashboard porta alla tabella Rette', async ({ page, adminDb, bambino }) => {
