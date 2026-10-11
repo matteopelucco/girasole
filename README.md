@@ -4,7 +4,7 @@ App per la gestione quotidiana di presenze, pasti e comunicazioni
 dell'asilo, con viste dedicate per staff (admin/maestre) e genitori.
 
 ## Stack
-Next.js 14 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Vercel
+Next.js 16 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Vercel
 
 ## Setup locale
 1. `npm install`

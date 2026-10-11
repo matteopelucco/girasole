@@ -7,7 +7,9 @@ quell'argomento (CI, pre-push, reset del DB, versioning, test).
 Contesto operativo per Claude Code su questo progetto.
 
 ## Stack
-- Next.js 14 (App Router, Server Actions, Server Components di default)
+- Next.js 16 (App Router, Server Actions, Server Components di default;
+  build con Turbopack, il default di Next 16; `proxy.ts` al posto di
+  `middleware.ts`, vedi [ADR 0010](adr/0010-next-16-proxy-e-eslint-cli.md))
 - TypeScript
 - Tailwind CSS
 - Supabase (Postgres + Auth + Row Level Security) — client in `lib/supabase/`
@@ -151,7 +153,9 @@ Contesto operativo per Claude Code su questo progetto.
 - Un git hook `pre-push` (`.githooks/pre-push`, attivato in automatico
   da `npm install` tramite lo script `prepare` in `package.json`, che
   imposta `core.hooksPath`) lancia type-check (`tsc --noEmit`), ESLint
-  (`next lint`, configurato in `.eslintrc.json` con `next/core-web-vitals`),
+  (`eslint .`, configurato in `eslint.config.mjs` con
+  `eslint-config-next/core-web-vitals`: `next lint` non esiste più da
+  Next 16),
   gli unit test Vitest (`npx vitest run` — vedi sotto), la ricerca di
   codice duplicato (`jscpd`, configurato in `.jscpd.json`) e la build di
   produzione (`next build`, A15) prima di ogni `git push`. Il push viene
@@ -172,10 +176,10 @@ Contesto operativo per Claude Code su questo progetto.
 - Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
   unit test + duplicati; per il type-check separato, `npx next typegen`
   e poi `npx tsc --noEmit`; per la build, `npm run build`).
-- `next-env.d.ts` non è versionato (è in `.gitignore`): Next 15 lo riscrive
+- `next-env.d.ts` non è versionato (è in `.gitignore`): Next lo riscrive
   a ogni build e sporcava le PR. Lo crea, insieme ai tipi delle rotte in
   `.next/types/` richiesti da `tsconfig.json`, `npx next typegen` (comando
-  ufficiale di Next 15.5, senza build completa). Per questo il job `statico`
+  ufficiale di Next dalla 15.5, senza build completa). Per questo il job `statico`
   della CI e l'hook `pre-push` lo lanciano prima di `tsc`; su un clone nuovo
   senza quel passo `tsc` non trova i tipi (la build li crea da sola).
 - Se `jscpd` segnala una duplicazione reale (stessa logica ripetuta,

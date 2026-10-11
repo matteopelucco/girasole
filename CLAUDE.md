@@ -7,7 +7,7 @@ hook, DB, versioning) e il "perché" delle scelte deliberate sono in
 la tua task lo richiede.
 
 ## Stack
-Next.js 14 (App Router, Server Actions, Server Components), TypeScript,
+Next.js 16 (App Router, Server Actions, Server Components), TypeScript,
 Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel (free tier).
 
 ## Convenzioni
