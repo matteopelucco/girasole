@@ -8,9 +8,11 @@ raggiungono la pagina.
 Dare all'admin una sezione, sotto "Impostazioni", dove consultare e
 (in seguito) modificare alcune variabili di funzionamento oggi legate
 all'ambiente di esecuzione, che servono spesso o devono almeno essere
-visibili all'amministratore. In questa prima fase la pagina contiene solo
-il titolo e una breve descrizione: le sezioni vere e proprie arriveranno
-con le issue successive.
+visibili all'amministratore. La pagina ha un titolo, una breve descrizione
+e, sotto, le sezioni una dopo l'altra. La prima è "Variabili d'ambiente"
+(issue #287): l'elenco, in sola lettura, delle variabili d'ambiente scelte
+in una lista nel codice, con i valori nascosti finché l'admin non
+reinserisce la propria password.
 
 ## Scenario: "Parametri di funzionamento" compare nel menu sotto "Impostazioni", solo per l'admin
 Dato che sono autenticato come admin
@@ -31,12 +33,84 @@ E la pagina non ha violazioni di accessibilità gravi
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/parametri-funzionamento`
 Allora vengo reindirizzato alla dashboard
+E quindi non vedo nemmeno la sezione "Variabili d'ambiente"
+
+## Scenario: la sezione "Variabili d'ambiente" elenca i parametri con i valori nascosti
+Dato che sono autenticato come admin
+E che nell'ambiente è configurata almeno una variabile della lista dei parametri visibili
+Quando apro `/admin/parametri-funzionamento`
+Allora vedo la sezione "Variabili d'ambiente" con una breve descrizione
+E una tabella con i nomi delle variabili presenti, in ordine alfabetico
+E al posto di ogni valore un segnaposto fisso (uguale per tutti, che non lascia capire la lunghezza)
+E i valori veri non compaiono da nessuna parte nella risposta della pagina (né nell'HTML né nei dati inviati al browser)
+E la risposta della pagina non può essere salvata in cache (`Cache-Control: no-store`)
+E vedo il pulsante "Mostra valori"
+E la pagina non ha violazioni di accessibilità gravi
+
+## Scenario: con la password sbagliata i valori restano nascosti
+Dato che sono autenticato come admin sulla pagina "Parametri di funzionamento"
+Quando clicco "Mostra valori" e inserisco una password sbagliata
+Allora vedo un messaggio d'errore generico ("Password non corretta.")
+E i valori restano nascosti
+
+## Scenario: con la propria password i valori compaiono in chiaro
+Dato che sono autenticato come admin sulla pagina "Parametri di funzionamento"
+Quando clicco "Mostra valori" e inserisco la mia password
+Allora i valori compaiono in chiaro nella tabella, uno per ogni variabile elencata
+E il pulsante diventa "Nascondi valori"
+E resto collegato come prima (la verifica non cambia la mia sessione)
+
+## Scenario: ricaricando la pagina i valori tornano nascosti
+Dato che ho verificato la password e vedo i valori in chiaro
+Quando ricarico la pagina
+Allora i valori sono di nuovo nascosti
+E per rivederli devo reinserire la password
+
+## Scenario: ricliccando il pulsante i valori si nascondono di nuovo
+Dato che ho verificato la password e vedo i valori in chiaro
+Quando clicco "Nascondi valori"
+Allora i valori tornano nascosti e spariscono dalla pagina
+E il pulsante torna "Mostra valori"
 
 ## Regole
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
-  `/admin/*`. Nessun dato letto o scritto: non servono migration né RLS.
+  `/admin/*`. Nessun dato letto o scritto sul database: non servono
+  migration né RLS.
 - La voce di menu è in `lib/navigazione.ts`, rientrata (`rientrata: true`)
   tra "Impostazioni" e "Utenti".
 - La pagina è pensata per ospitare più sezioni, una sotto l'altra, ciascuna
   con un proprio titolo: aggiungerne una è aggiungere un blocco sotto
   l'intestazione.
+
+### Variabili d'ambiente
+- **Lista dei parametri visibili** (`lib/parametriVisibili.ts`): solo i nomi
+  elencati lì vengono letti e mostrati; tutte le altre variabili d'ambiente
+  non vengono mai lette da questa pagina né inviate al browser. Per rendere
+  visibile una variabile si aggiunge il suo nome alla lista. I segreti
+  critici (`SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `RESEND_API_KEY`,
+  `TURNSTILE_SECRET_KEY`) sono volutamente esclusi: abilitarli è una
+  decisione di Matteo.
+- Una variabile della lista che non è configurata nell'ambiente non compare.
+  Se nessuna variabile della lista è configurata, al posto della tabella
+  compare un messaggio di cortesia ("Nessuna variabile d'ambiente da
+  mostrare.") e nessun pulsante.
+- **Valori mai nella pagina iniziale**: il server invia al browser solo i
+  nomi; il segnaposto è fisso. I valori arrivano solo come risposta della
+  Server Action di verifica, dopo che la password è stata controllata.
+- **Verifica della password lato server**: la Server Action ricontrolla che
+  l'utente sia admin (`requireAdmin`), prende l'email dalla sessione (mai dal
+  browser) e verifica la password con un client Supabase usa-e-getta, senza
+  cookie né sessione salvata, così la sessione corrente dell'admin non
+  cambia. La sessione di verifica viene subito chiusa (`signOut` con
+  `scope: 'local'`, che chiude solo quella). Password errata o errore di
+  Supabase: sempre lo stesso messaggio generico.
+- **Limite tentativi** (`lib/limiteTentativi.ts`): dopo 5 tentativi falliti
+  di seguito lo stesso utente è bloccato per 15 minuti ("Troppi tentativi.
+  Riprova tra N minuti."); una verifica riuscita azzera il conteggio. Il
+  conteggio vive nella memoria del server: su Vercel ogni istanza ha il suo
+  e si azzera a un riavvio, quindi è un freno, non una barriera assoluta
+  (resta anche la protezione anti-brute-force di Supabase Auth).
+- Lo sblocco vive solo nello stato della pagina nel browser: niente cookie,
+  `localStorage` o parametri nell'URL. Ricaricando o lasciando la pagina la
+  verifica va ripetuta; nascondendo i valori vengono cancellati dallo stato.
+- Nessun valore né password finisce nei log, in console o negli URL.

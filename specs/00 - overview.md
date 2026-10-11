@@ -132,7 +132,9 @@ della maestra, `5x` amministrazione.
   modello della mail modificabile da interfaccia
 - [62 - parametri-di-funzionamento.md](62%20-%20parametri-di-funzionamento.md) —
   voce di menu "Parametri di funzionamento" sotto "Impostazioni" (solo admin):
-  pagina con titolo e breve descrizione, pronta a ospitare le sezioni future
+  pagina con titolo e breve descrizione, pronta a ospitare le sezioni future;
+  prima sezione "Variabili d'ambiente" (sola lettura, valori nascosti finché
+  l'admin non reinserisce la propria password)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
