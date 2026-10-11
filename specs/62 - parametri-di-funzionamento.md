@@ -29,6 +29,14 @@ E vedo il titolo "Parametri di funzionamento" e una breve descrizione della sezi
 E la voce di menu "Parametri di funzionamento" risulta evidenziata
 E la pagina non ha violazioni di accessibilità gravi
 
+## Scenario: la sezione "Parametri delle funzionalità" dice che è in costruzione
+Dato che sono autenticato come admin
+Quando apro `/admin/parametri-funzionamento`
+Allora vedo la sezione "Parametri delle funzionalità" con una breve descrizione
+E la sezione dice che la funzionalità è in corso di costruzione e che le prossime storie porteranno qui i parametri oggi nel codice
+E non vedo alcuna tabella né campi modificabili (per ora nessun parametro è configurato)
+E la pagina non ha violazioni di accessibilità gravi
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/parametri-funzionamento`
@@ -73,6 +81,11 @@ Allora i valori tornano nascosti e spariscono dalla pagina
 E il pulsante torna "Mostra valori"
 
 ## Regole
+- La sezione "Parametri delle funzionalità" (componente
+  `components/ParametriFunzionalita.tsx`) in futuro elencherà i parametri in
+  tabella (nome + valore in un campo modificabile); l'admin non può aggiungerne
+  di nuovi, perché servono alle funzionalità dell'app. Per ora non ne esiste
+  nessuno: nessuna tabella DB, solo il messaggio "in costruzione".
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
   `/admin/*`. Nessun dato letto o scritto sul database: non servono
   migration né RLS.

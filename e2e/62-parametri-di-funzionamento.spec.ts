@@ -178,6 +178,18 @@ test.describe('62 — Parametri di funzionamento', () => {
         await attendiValoriNascosti(page);
       });
     });
+
+    test('la sezione "Parametri delle funzionalità" dice che è in costruzione', async ({ page }) => {
+      await page.goto(PERCORSO);
+
+      const sezione = page.getByRole('region', { name: 'Parametri delle funzionalità' });
+      await expect(sezione.getByRole('heading', { name: 'Parametri delle funzionalità', level: 2 })).toBeVisible();
+      await expect(sezione.getByTestId('descrizione-funzionalita')).not.toBeEmpty();
+      await expect(sezione.getByTestId('funzionalita-in-costruzione')).toContainText('in corso di costruzione');
+      await expect(sezione.getByRole('table')).toHaveCount(0);
+      await expect(sezione.getByRole('textbox')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
   });
 
   test('maestra, assistente e genitore non vedono la voce e vengono reindirizzati', async ({ browser }) => {
