@@ -15,7 +15,8 @@ poter correggere anche un giorno già trascorso.
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanzate`)
-E subito sotto, rientrata, la voce "Utenti" (`/admin/maestre`), che è l'ultima
+E sotto, rientrate, "Parametri di funzionamento" (specs/62) e poi "Utenti"
+(`/admin/maestre`), che è l'ultima
 E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
 E "Reset giornata" non è una voce di primo livello del menu
 
@@ -82,7 +83,7 @@ Allora vengo reindirizzato alla dashboard
   nel tempo altre azioni di amministrazione avanzate oltre al reset: ogni
   azione è una voce dell'elenco in `lib/impostazioniAvanzate.ts`
   (titolo, descrizione, href). La voce di menu è in fondo alla sidebar, seguita
-  solo da "Utenti" rientrata sotto di lei (`lib/navigazione.ts`) e resta evidenziata anche mentre si è su una
+  solo da "Parametri di funzionamento" (specs/62) e "Utenti" rientrate sotto di lei (`lib/navigazione.ts`) e resta evidenziata anche mentre si è su una
   delle pagine delle sue azioni (es. `/admin/reset-giornata`).
   Il percorso `/admin/reset-giornata` e la logica del reset non cambiano.
 - Il reset elimina TUTTE le righe di `presenze` e `pasti` con quella
