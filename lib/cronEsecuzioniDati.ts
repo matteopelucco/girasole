@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   CRON_JOB,
+  inizioFinestraInCorso,
   messaggioErroreSicuro,
   type LimitiCron,
   type NomeCron,
@@ -9,17 +10,24 @@ import {
 
 // Lettura e scrittura del registro dei lanci dei job pianificati
 // (`cron_esecuzioni`, specs/63 - cron-job.md). Il client arriva da chi
-// chiama: la service_role dei cron in app/api/cron/ per la scrittura, la
-// sessione dell'admin (RLS) per la lettura. La logica pura è in
-// lib/cronEsecuzioni.ts.
+// chiama: la service_role per la scrittura (i cron in app/api/cron/ e il
+// lancio a mano dell'admin in app/admin/cron-job/actions.ts), la sessione
+// dell'admin (RLS) per la lettura. La logica pura è in lib/cronEsecuzioni.ts.
+
+const COLONNE = 'id, nome, iniziato_il, finito_il, esito, messaggio_errore, estemporaneo';
 
 // Tempo massimo di ogni scrittura nel registro: oltre, si rinuncia.
 const TEMPO_MASSIMO_REGISTRO_MS = 3000;
 
-// Esito del lavoro di un cron: la risposta HTTP da restituire così com'è e,
-// se una parte non è riuscita senza sollevare errori, una frase fissa che la
-// descrive (il lancio risulta KO).
-export type EsitoLavoroCron = { risposta: Response; problema?: string | null };
+// Esito del lavoro di un cron: i dati della risposta (la route li restituisce
+// in JSON così come sono) e, se una parte non è riuscita senza sollevare
+// errori, una frase fissa che la descrive (il lancio risulta KO).
+export type EsitoLavoroCron<T> = { dati: T; problema?: string | null };
+
+// `estemporaneo`: lancio a mano dell'admin (specs/63, "Lancio a mano"). Il
+// lavoro non legge né scrive i registri che evitano i doppi invii dei lanci
+// pianificati, e la riga del registro ha `estemporaneo = true`.
+export type OpzioniLavoroCron = { estemporaneo: boolean };
 
 type FineLancio = Pick<RigaCronEsecuzione, 'esito' | 'messaggio_errore'>;
 
@@ -47,16 +55,20 @@ async function scriviNelRegistro(
 //   * un errore del registro non arriva mai al lavoro (scriviNelRegistro).
 // Il registro è una tabella a sé: non tocca `allarmi_inviati` né le tabelle
 // dei report inviati, quindi non cambia l'idempotenza delle email.
+// I lanci pianificati non scrivono la colonna `estemporaneo` (resta il default
+// false): funzionano anche prima della migration 0064.
 // grant-check: service_role
-export async function eseguiConRegistro(
+export async function eseguiConRegistro<T>(
   supabase: SupabaseClient,
   nome: NomeCron,
-  lavoro: () => Promise<EsitoLavoroCron>
-): Promise<Response> {
+  lavoro: () => Promise<EsitoLavoroCron<T>>,
+  { estemporaneo }: OpzioniLavoroCron = { estemporaneo: false }
+): Promise<EsitoLavoroCron<T>> {
   const id = crypto.randomUUID();
   const iniziatoIl = new Date().toISOString();
+  const riga = { id, nome, iniziato_il: iniziatoIl, ...(estemporaneo ? { estemporaneo: true } : {}) };
   const inizio = scriviNelRegistro(`inizio di ${nome}`, (segnale) =>
-    supabase.from('cron_esecuzioni').insert({ id, nome, iniziato_il: iniziatoIl }).abortSignal(segnale)
+    supabase.from('cron_esecuzioni').insert(riga).abortSignal(segnale)
   );
 
   const scriviFine = async (fine: FineLancio) => {
@@ -64,12 +76,12 @@ export async function eseguiConRegistro(
     await scriviNelRegistro(`fine di ${nome}`, (segnale) =>
       supabase
         .from('cron_esecuzioni')
-        .upsert({ id, nome, iniziato_il: iniziatoIl, finito_il: new Date().toISOString(), ...fine })
+        .upsert({ ...riga, finito_il: new Date().toISOString(), ...fine })
         .abortSignal(segnale)
     );
   };
 
-  let esito: EsitoLavoroCron;
+  let esito: EsitoLavoroCron<T>;
   try {
     esito = await lavoro();
   } catch (errore) {
@@ -77,7 +89,7 @@ export async function eseguiConRegistro(
     throw errore;
   }
   await scriviFine(esito.problema ? { esito: 'ko', messaggio_errore: esito.problema } : { esito: 'ok', messaggio_errore: null });
-  return esito.risposta;
+  return esito;
 }
 
 // Ultimi lanci di ogni job, con la sessione dell'admin (la RLS lascia leggere
@@ -92,7 +104,7 @@ export async function leggiLanciCron(
     CRON_JOB.map(({ nome }) =>
       supabase
         .from('cron_esecuzioni')
-        .select('id, nome, iniziato_il, finito_il, esito, messaggio_errore')
+        .select(COLONNE)
         .eq('nome', nome)
         .order('iniziato_il', { ascending: false })
         .limit(limiti[nome] + 1)
@@ -101,4 +113,24 @@ export async function leggiLanciCron(
   const errore = risultati.some((r) => r.error);
   if (errore) console.error('Cron Job: lettura del registro non riuscita');
   return { righe: risultati.flatMap((r) => (r.data ?? []) as RigaCronEsecuzione[]), errore };
+}
+
+// Lanci del job senza esito partiti negli ultimi 15 minuti, con la sessione
+// dell'admin: servono a rifiutare un lancio a mano mentre un altro è in corso
+// (lib/cronEsecuzioni.ts, lancioInCorso). `errore` vero = registro non
+// leggibile: chi chiama non lancia (prudenza).
+// grant-check: authenticated
+export async function leggiLanciSenzaEsito(
+  supabase: SupabaseClient,
+  nome: NomeCron,
+  adesso: Date
+): Promise<{ righe: RigaCronEsecuzione[]; errore: boolean }> {
+  const { data, error } = await supabase
+    .from('cron_esecuzioni')
+    .select(COLONNE)
+    .eq('nome', nome)
+    .is('esito', null)
+    .gte('iniziato_il', inizioFinestraInCorso(adesso));
+  if (error) console.error('Cron Job: controllo dei lanci in corso non riuscito');
+  return { righe: (data ?? []) as RigaCronEsecuzione[], errore: Boolean(error) };
 }

@@ -35,6 +35,8 @@ export type RigaCronEsecuzione = {
   finito_il: string | null;
   esito: 'ok' | 'ko' | null;
   messaggio_errore: string | null;
+  // Vero per i lanci avviati a mano dall'admin (migration 0064, issue #302).
+  estemporaneo: boolean;
 };
 
 export type GruppoCron = {
@@ -96,6 +98,55 @@ export function statoLancio(riga: RigaCronEsecuzione, adesso: Date): StatoLancio
   const minuti = (adesso.getTime() - new Date(riga.iniziato_il).getTime()) / 60_000;
   if (minuti < MINUTI_PRIMA_DI_INTERROTTO) return { stato: 'In corso', messaggio: null };
   return { stato: 'KO', messaggio: 'Esecuzione interrotta: nessun esito registrato.' };
+}
+
+// Tag mostrato accanto a un lancio: solo i lanci a mano lo hanno.
+export function etichettaLancio(riga: Pick<RigaCronEsecuzione, 'estemporaneo'>): 'estemporaneo' | null {
+  return riga.estemporaneo ? 'estemporaneo' : null;
+}
+
+// --- Lancio a mano (specs/63, "Lancio a mano"; issue #302) -----------------
+
+export const MESSAGGIO_CONFERMA_LANCIO = 'Questo lancio invia davvero le email. Procedere?';
+export const MESSAGGIO_GIA_IN_CORSO = 'È già in corso un lancio di questo job: attendi che finisca.';
+export const MESSAGGIO_REGISTRO_NON_LEGGIBILE =
+  'Non è stato possibile controllare se il job è già in corso: lancio non avviato. Riprova più tardi.';
+export const MESSAGGIO_JOB_SCONOSCIUTO = 'Job non riconosciuto: lancio non avviato.';
+
+// Esito di un lancio a mano, mostrato all'admin: 'rifiutato' = il job non è
+// partito (già in corso, registro non leggibile, nome non valido).
+export type EsitoLancioManuale =
+  | { stato: 'OK' }
+  | { stato: 'KO'; messaggio: string }
+  | { stato: 'rifiutato'; messaggio: string };
+
+// Il nome arriva dal browser: si accettano solo i job dell'elenco.
+export function nomeCronValido(valore: unknown): valore is NomeCron {
+  return typeof valore === 'string' && CRON_JOB.some((job) => job.nome === valore);
+}
+
+// Inizio della finestra in cui un lancio senza esito è ancora "In corso".
+export function inizioFinestraInCorso(adesso: Date): string {
+  return new Date(adesso.getTime() - MINUTI_PRIMA_DI_INTERROTTO * 60_000).toISOString();
+}
+
+// Vero se c'è un lancio del job (pianificato o a mano) ancora "In corso",
+// con la stessa regola mostrata nella pagina (statoLancio): un solo lancio
+// alla volta per job.
+export function lancioInCorso(righe: RigaCronEsecuzione[], nome: NomeCron, adesso: Date): boolean {
+  return righe.some((r) => r.nome === nome && statoLancio(r, adesso).stato === 'In corso');
+}
+
+// Esito di un lancio a mano finito: OK, oppure KO con la frase fissa che
+// descrive la parte non riuscita (stessa regola del registro).
+export function esitoLancioManuale(problema: string | null | undefined): EsitoLancioManuale {
+  return problema ? { stato: 'KO', messaggio: problema } : { stato: 'OK' };
+}
+
+// Esito di un lancio a mano il cui lavoro ha sollevato un errore: KO con il
+// messaggio ripulito (mai lo stack, chiavi, token o email).
+export function esitoLancioFallito(errore: unknown): EsitoLancioManuale {
+  return { stato: 'KO', messaggio: messaggioErroreSicuro(errore) };
 }
 
 // "gg/mm/aaaa alle hh:mm" nel fuso Europe/Rome.
