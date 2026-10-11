@@ -2,11 +2,14 @@
 
 ## Attori
 Solo Admin. Maestra, assistente e genitore non vedono la voce di menu, non
-raggiungono la pagina e non leggono il registro dei lanci (nemmeno in
-lettura). Nessun utente umano scrive nel registro: lo scrivono solo i job
-pianificati (Vercel Cron), cioè l'email di riepilogo degli allarmi
-([07 - allarmi.md](07%20-%20allarmi.md)) e il report notturno
-([52 - report-email-automatico.md](52%20-%20report-email-automatico.md)).
+raggiungono la pagina, non leggono il registro dei lanci (nemmeno in
+lettura) e non possono lanciare un job a mano. Nessun utente umano scrive
+direttamente nel registro: lo scrivono solo i job, cioè l'email di
+riepilogo degli allarmi ([07 - allarmi.md](07%20-%20allarmi.md)) e il
+report notturno
+([52 - report-email-automatico.md](52%20-%20report-email-automatico.md)),
+sia quando li lancia Vercel Cron sia quando li lancia l'admin a mano dalla
+pagina (issue #302).
 
 ## Obiettivo
 Dare all'admin un po' di visibilità sui lanci dei job pianificati: quando
@@ -55,10 +58,33 @@ Quando il job finisce (bene o con un errore)
 Allora nel registro c'è una riga con il suo nome, l'istante di inizio, l'istante di fine e l'esito
 E una chiamata senza il secret corretto non viene registrata
 
+## Scenario: ogni job ha il pulsante "Lancia ora", che chiede conferma prima di partire
+Dato che sono autenticato come admin
+Quando apro "Cron Job"
+Allora in ogni blocco vedo il pulsante "Lancia ora"
+Quando lo premo
+Allora compare la richiesta di conferma "Questo lancio invia davvero le email. Procedere?" con i pulsanti "Sì, lancia ora" e "Annulla"
+E il job non è ancora partito
+Quando premo "Annulla"
+Allora la richiesta di conferma sparisce e nell'elenco non compare nessun lancio nuovo
+E la pagina non ha violazioni di accessibilità gravi
+
+## Scenario: lancio a mano: avviso di esecuzione in corso, esito e tag "estemporaneo"
+Dato che sono autenticato come admin
+E ho premuto "Lancia ora" nel blocco "Riepilogo allarmi"
+Quando confermo con "Sì, lancia ora"
+Allora finché il job lavora vedo l'avviso "Esecuzione in corso…" e non posso lanciarlo di nuovo
+Quando il job finisce
+Allora vedo l'esito: "Lancio a mano completato: OK", oppure "Lancio a mano completato: KO" con sotto il messaggio di errore (già ripulito, vedi Regole)
+E in cima al blocco compare il nuovo lancio, con lo stesso stato e il tag "estemporaneo"
+E i lanci partiti da Vercel Cron non hanno il tag
+E la pagina non ha violazioni di accessibilità gravi
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/cron-job`
 Allora vengo reindirizzato alla dashboard
+E non ho nessun modo di lanciare un job a mano
 
 ## Regole
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
@@ -66,9 +92,10 @@ Allora vengo reindirizzato alla dashboard
   (`rientrata: true`) tra "Parametri di funzionamento" e "Utenti".
 - Registro: tabella `cron_esecuzioni` (migration 0063), una riga per lancio
   con nome del job, inizio, fine, esito (`ok`/`ko`, vuoto finché il lancio è
-  in corso) e messaggio di errore. RLS attiva: solo l'admin legge; nessun
-  utente inserisce, modifica o cancella. Scrivono solo i job, con la
-  service_role (SELECT, INSERT, UPDATE; nessun DELETE).
+  in corso), messaggio di errore e `estemporaneo` (migration 0064: vero per
+  i lanci a mano). RLS attiva: solo l'admin legge; nessun utente inserisce,
+  modifica o cancella. Scrivono solo i job, con la service_role (SELECT,
+  INSERT, UPDATE; nessun DELETE).
 - Nomi dei job registrati: `report-presenze` ("Report notturno") e
   `allarmi` ("Riepilogo allarmi"), lo stesso percorso della route in
   `app/api/cron/`. Un job nuovo si aggiunge all'elenco in
@@ -99,7 +126,53 @@ Allora vengo reindirizzato alla dashboard
 - Nessuna pulizia automatica dei lanci vecchi: due lanci al giorno sono
   circa 730 righe all'anno (vedi Fuori scope).
 
+### Lancio a mano ("estemporaneo", issue #302)
+Scelte prudenti, **da confermare** con Matteo in review:
+- Chi: solo l'admin. Il pulsante è nella pagina (già riservata all'admin) e
+  l'azione sul server rifà da sé `requireAdmin()` prima di fare qualunque
+  cosa; accetta solo il nome di un job dell'elenco (`report-presenze`,
+  `allarmi`), ogni altro valore è rifiutato.
+- Come: una Server Action (`app/admin/cron-job/actions.ts`) esegue lo stesso
+  lavoro del job pianificato (le funzioni condivise in `lib/cron/`), senza
+  passare dall'indirizzo `/api/cron/*`: il secret dei cron (`CRON_SECRET`)
+  non arriva mai al browser e resta controllato solo dalle route
+  pianificate. Il lavoro usa la service_role come il cron (eccezione
+  dichiarata in ADR-0002 e in `lib/serviceRoleCheck.ts`).
+- Conferma: prima di partire si chiede "Questo lancio invia davvero le
+  email. Procedere?". Il lancio a mano invia le email davvero, come il job
+  pianificato: il codice non ha una modalità "solo controllo" e non se ne
+  aggiunge una.
+- Sempre lanciabile, anche dopo il lancio automatico del giorno. Per questo
+  il lancio a mano **non legge e non scrive** i registri che evitano i doppi
+  invii dei lanci pianificati (`allarmi_inviati`,
+  `report_giornalieri_inviati`, `report_periodici_inviati`): ricalcola e
+  invia ogni volta, e il lancio pianificato successivo parte comunque come
+  se il lancio a mano non ci fosse stato. Per il resto il lavoro è lo stesso:
+  il riepilogo allarmi invia l'email solo se c'è qualcosa da sistemare; il
+  report notturno riguarda il giorno prima e segue la stessa regola per
+  settimanale e mensile (`REPORT_EMAIL_MODALITA_PERIODICI`).
+- Registro: il lancio a mano è una riga di `cron_esecuzioni` come le altre,
+  con in più `estemporaneo = true` (migration 0064; i lanci pianificati
+  restano `false`). Nella pagina ha il tag "estemporaneo".
+- Un solo lancio alla volta per job: se nel registro c'è un lancio di quel
+  job (pianificato o a mano) ancora "In corso" (senza esito, partito da meno
+  di 15 minuti), il lancio a mano è rifiutato con "È già in corso un lancio
+  di questo job: attendi che finisca." Se il registro non si riesce a
+  leggere, il lancio è rifiutato (prudenza). Il controllo legge il registro
+  con la sessione dell'admin. Coperto da unit test (`lancioInCorso`): l'e2e
+  non può creare un lancio in corso senza scrivere nel registro.
+- Tempo massimo: la pagina dichiara `maxDuration = 60` secondi (limite
+  valido anche sul piano gratuito di Vercel); se il lavoro supera il limite
+  la funzione viene interrotta e il lancio, rimasto senza esito, diventa
+  "KO" (interrotto) dopo 15 minuti come ogni altro lancio.
+- Esito mostrato: "OK", oppure "KO" con il messaggio già ripulito (stesse
+  regole del messaggio nel registro: niente stack, chiavi, token, email).
+  L'avviso dell'esito è richiesto esplicitamente dall'issue #302: è
+  un'eccezione voluta alla regola "l'effetto è la conferma" (ADR-0003).
+  Nessun segreto nelle risposte né nei log.
+
 ## Fuori scope
-- Lanciare un job a mano dalla pagina.
+- Lanciare a mano un job scegliendo la data o una modalità "solo
+  controllo" (senza email).
 - Pulizia/retention automatica delle righe vecchie.
 - Durata del lancio e dettaglio delle email inviate.
