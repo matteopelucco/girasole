@@ -3,19 +3,24 @@ import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { oggi } from '@/lib/date';
 import { chiusuraPerData, isGiornoChiuso, messaggioChiusura } from '@/lib/calendarioScolastico';
+import { decidiAutorizzazioneCron } from '@/lib/autorizzazioneCron';
 
 // Vero se una richiesta a una route di cron (specs/52 -
 // report-email-automatico.md; specs/07 - allarmi.md) porta il secret
 // giusto in Authorization: Bearer $CRON_SECRET (inviato in automatico da
 // Vercel Cron quando la variabile d'ambiente CRON_SECRET è configurata
-// sul progetto) — senza quella variabile, chiunque può chiamare la
-// route (comportamento pre-esistente, utile in locale). Condivisa tra
-// le route di cron per non duplicare lo stesso controllo in ciascuna
-// (CLAUDE.md, jscpd).
+// sul progetto). Senza quella variabile, su Vercel (produzione e
+// anteprime) non passa nulla; solo in locale e nella CI la route resta
+// aperta (issue #300). La decisione, confronto a tempo costante incluso,
+// è in lib/autorizzazioneCron.ts (logica pura, con test unit): qui si
+// leggono solo l'ambiente e l'header. Condivisa tra le route di cron
+// per non duplicare lo stesso controllo in ciascuna (CLAUDE.md, jscpd).
 export function autorizzaCron(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
-  return request.headers.get('authorization') === `Bearer ${secret}`;
+  return decidiAutorizzazioneCron({
+    secret: process.env.CRON_SECRET,
+    authorization: request.headers.get('authorization'),
+    ambiente: { vercelEnv: process.env.VERCEL_ENV, vercel: process.env.VERCEL },
+  });
 }
 
 export type Profilo = {
