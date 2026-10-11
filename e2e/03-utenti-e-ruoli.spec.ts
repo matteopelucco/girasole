@@ -6,6 +6,7 @@
 // dallo stesso test per non accumulare account fittizi nel progetto.
 import { test, expect } from '@playwright/test';
 import {
+  clickEAttendiAzione,
   eliminaUtenteDaScheda,
   finestraEliminaUtente,
   hasCredenziali,
@@ -46,8 +47,7 @@ test.describe('03 — Utenti e ruoli', () => {
 
     // Modifica: cambio il ruolo a maestra dal form della riga.
     await riga.locator('select[name="ruolo"]').selectOption('maestra');
-    await riga.getByRole('button', { name: 'Aggiorna' }).click();
-    await page.waitForTimeout(1000);
+    await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Aggiorna' }));
     await expect(riga.locator('select[name="ruolo"]')).toHaveValue('maestra');
 
     // Eliminazione: l'account non deve più comparire in elenco.

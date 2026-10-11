@@ -6,7 +6,7 @@
 // reali in comunicazioni_retta/crediti_debiti_bambini sul progetto
 // Supabase di test.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 test.describe('59 — Verifica del bonifico di una retta', () => {
   // Stesso motivo di 56-comunicazione-retta-mensile.spec.ts: "Invia
@@ -47,8 +47,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     // uno per riga — vive fuori dalla tabella (app/admin/rette/page.tsx,
     // `piePagina`).
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
 
     const rigaInviata = page.locator('tr', { hasText: cognome });

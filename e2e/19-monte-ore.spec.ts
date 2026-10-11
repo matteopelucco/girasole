@@ -140,7 +140,7 @@ test.describe('19 — Monte ore', () => {
       await registraMovimento(page);
       await expect(alertApp(page)).toHaveCount(0);
       await expect.poll(leggiSaldo, { timeout: 20_000 }).toBeCloseTo(saldoIniziale + 1.5 - 5000, 2);
-      expect(await leggiSaldo()).toBeLessThan(0);
+      await expect.poll(leggiSaldo).toBeLessThan(0);
     });
 
     test("l'admin modifica ed elimina un movimento di monte ore, e vede il calcolo mese per mese", async ({

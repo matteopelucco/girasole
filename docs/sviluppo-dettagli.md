@@ -285,6 +285,24 @@ finché non risulta tutto verde.
   calcolato dal server deve usare `clickEAttendiAzione`
   (`e2e/helpers.ts`); i valori calcolati dal server si leggono con
   `expect.poll` per attendere il calcolo asincrono.
+- **Regole anti-flaky (issue #77, #174)**, valide anche per i test nuovi:
+  1. Ogni bottone che avvia una Server Action (Salva, Registra, Aggiorna,
+     Assegna, Invia, Annulla invio...) si clicca con `clickEAttendiAzione`,
+     mai con `.click()` seguito da `reload`/`goto`. Eccezione: se il click
+     non lancia nessuna azione (popup nativo rifiutato, validazione `required`
+     del browser), `clickEAttendiAzione` resterebbe in attesa per sempre:
+     si usa `.click()` e si asserisce l'effetto (es. `input:invalid`).
+  2. Un valore calcolato dal server (saldo, totali, differenza ore) non si
+     legge con `expect(await leggi()).toBe(...)` ma con
+     `await expect.poll(leggi).toBe(...)`: la pagina si aggiorna dopo la
+     risposta dell'azione, non insieme a essa.
+  3. Niente `page.waitForTimeout(...)`: si attende l'esito (URL, elemento,
+     risposta dell'azione, segnale esposto dall'app come
+     `data-barra-caricamento-pronta`). Per un controllo "non compare nulla"
+     dopo un click si attende un evento (es. due `requestAnimationFrame`),
+     non un ritardo fisso.
+  4. Dati propri con le fixture `bambino`/`utente`, selettori nei file
+     `e2e/pagina-*.ts` (vedi sotto).
 - **Dati propri per test (issue #228, #172)**: un test che scrive su un
   bambino non usa quelli del seed ma la fixture `bambino` di
   `e2e/fixture-bambino.ts` (`test.extend`): crea un bambino con nome unico

@@ -65,6 +65,9 @@ lascia "per ora").
 scoperto né test orfano. Credenziali da
 `E2E_<RUOLO>_EMAIL/PASSWORD` (ambiente); DB = progetto test, mai
 produzione. Controllo a11y con axe-core su ogni pagina toccata.
+Regole anti-flaky: salvataggi con `clickEAttendiAzione`; valori calcolati
+dal server con `expect.poll`; mai `waitForTimeout`; dati propri via
+fixture, selettori in `e2e/pagina-*.ts`.
 
 **Unit**: Solo logica pura in `lib/`, co-locati (`lib/date.ts` →
 `lib/date.test.ts`). Niente Supabase, `fetch`, filesystem o `redirect()`

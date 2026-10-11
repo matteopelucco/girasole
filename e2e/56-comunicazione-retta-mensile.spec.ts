@@ -302,8 +302,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await riga.getByLabel(new RegExp(`Nota costi extra per.*${cognome}`)).fill('Materiale didattico');
 
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
@@ -394,8 +393,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const rigaA = page.locator('tr', { hasText: cognomeA });
     await rigaA.getByRole('button', { name: 'Invia comunicazione' }).click();
     const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognomeA}`) });
-    await popup.getByRole('button', { name: 'Conferma invio' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, popup.getByRole('button', { name: 'Conferma invio' }));
     await page.reload();
 
     // Solo il bambino scelto (A) risulta comunicato; l'altro (B) no.
@@ -425,8 +423,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const riga = page.locator('tr', { hasText: cognome });
     await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
     const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
-    await popup.getByRole('button', { name: 'Conferma invio' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, popup.getByRole('button', { name: 'Conferma invio' }));
     await page.reload();
 
     await expect(page.locator('tr', { hasText: cognome }).getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
@@ -450,8 +447,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await riga.getByLabel(new RegExp(`Pre-asilo per.*${cognome}`)).fill('20');
 
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
@@ -513,15 +509,13 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
     await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
 
-    await rigaInviata.getByRole('button', { name: 'Annulla invio' }).click();
-    await page.waitForTimeout(1000);
+    await clickEAttendiAzione(page, rigaInviata.getByRole('button', { name: 'Annulla invio' }));
     await page.reload();
 
     // Tornato "da inviare": niente più "Inviata il", ricompaiono i campi.
@@ -531,8 +525,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     // E può essere effettivamente reinviato.
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
     const rigaReinviata = page.locator('tr', { hasText: cognome });
     await expect(rigaReinviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
@@ -551,8 +544,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     page.once('dialog', (dialog) => dialog.dismiss());
+    // Il popup nativo si chiude dentro click(): nessuna azione parte, quindi
+    // non c'è nessuna risposta da attendere.
     await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(1000);
 
     // Nessun invio: il bambino resta "da inviare".
     const riga = page.locator('tr', { hasText: cognome });
@@ -571,8 +565,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     page.once('dialog', (dialog) => dialog.accept());
-    await page.getByRole('button', { name: 'Invia comunicazioni' }).click();
-    await page.waitForTimeout(3000);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
     await page.reload();
 
     const riga = page.locator('tr', { hasText: cognome });

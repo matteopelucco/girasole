@@ -136,9 +136,10 @@ test.describe('01 — UX/UI', () => {
 
       for (const nome of ['Dashboard', 'Girasole']) {
         await page.getByRole('link', { name: nome, exact: true }).first().click();
-        // Il click si registra subito: lascio un attimo al render per un
-        // eventuale (errato) setInCorso, poi la barra deve essere assente.
-        await page.waitForTimeout(300);
+        // Il click si registra subito: aspetto due frame di rendering (un
+        // eventuale, errato, setInCorso sarebbe già applicato), poi la
+        // barra deve essere assente.
+        await page.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok))));
         await expect(barra).toHaveCount(0);
         await expect(page).toHaveURL(/\/dashboard$/);
       }

@@ -272,7 +272,6 @@ test.describe('18 — Report ore di lavoro', () => {
         await expect(alertApp(page)).toHaveCount(0);
         // Scenario "se il salvataggio va a buon fine non compare alcun popup".
         await expect(page.getByRole('alertdialog')).toHaveCount(0);
-        await page.waitForTimeout(1000);
         await page.reload();
         await expect(campoGiorno(page, 'Differenza ore', 'Lunedì')).toHaveValue('-0.5');
         await expect(totaleErogato(page, 'Lunedì')).toContainText('6.5h');
@@ -611,9 +610,12 @@ test.describe('18 — Report ore di lavoro', () => {
       const campiDifferenza = page.getByLabel(/^Differenza ore (Lunedì|Martedì|Mercoledì|Giovedì|Venerdì|Sabato|Domenica)$/);
       const valoriDifferenza = await campiDifferenza.evaluateAll((els) => els.map((el) => Number((el as HTMLInputElement).value)));
       const sommaDifferenze = Math.round(valoriDifferenza.reduce((t, v) => t + v, 0) * 100) / 100;
-      const testoDifferenza = (await oreInRiquadro(page, 'Differenza ore').textContent()) ?? '';
-      const differenzaRiquadro = Number(testoDifferenza.match(/Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/)![1]);
-      expect(differenzaRiquadro).toBe(sommaDifferenze);
+      await expect
+        .poll(async () => {
+          const testoDifferenza = (await oreInRiquadro(page, 'Differenza ore').textContent()) ?? '';
+          return Number(testoDifferenza.match(/Differenza ore: *([+-]?[0-9]+(?:[.][0-9]+)?)h/)?.[1]);
+        })
+        .toBe(sommaDifferenze);
 
       // Scenario: l'admin naviga tra le settimane di un dipendente —
       // resta sulle ore della stessa persona (il parametro `utente`
