@@ -698,7 +698,33 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
+  // Email di riepilogo del cron (specs/07, "Email di riepilogo"). Il test non
+  // legge la casella di posta: guarda l'esito che la route restituisce
+  // (`riepilogo` e lo stato di ogni controllo). Servono CRON_SECRET e
+  // RESEND_API_KEY perché, se c'è qualcosa da sistemare, la route invia
+  // davvero l'email.
   test.describe('cron /api/cron/allarmi', () => {
+    type EsitoCron = {
+      riepilogo: 'tutto_ok' | 'inviato' | 'gia_inviato' | 'errore_registro';
+      controlli: Record<string, 'ok' | 'da_sistemare' | 'non_applicabile' | 'non_controllato'>;
+    };
+
+    async function chiamaCron(request: import('@playwright/test').APIRequestContext): Promise<EsitoCron> {
+      test.skip(
+        !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
+        'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      );
+      const risposta = await request.get('/api/cron/allarmi', {
+        headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+      });
+      expect(risposta.ok()).toBe(true);
+      return risposta.json();
+    }
+
+    function haDaSistemare(esito: EsitoCron): boolean {
+      return Object.values(esito.controlli).includes('da_sistemare');
+    }
+
     test('senza il secret corretto la route rifiuta la richiesta', async ({ request }) => {
       test.skip(!process.env.CRON_SECRET, 'richiede CRON_SECRET configurato per avere qualcosa da verificare');
 
@@ -708,41 +734,86 @@ test.describe('07 — Allarmi', () => {
       expect(risposta.status()).toBe(401);
     });
 
-    test('il job invocato due volte non invia due volte la stessa email (idempotenza)', async ({ request }) => {
-      test.skip(
-        !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-        'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+    test("email di riepilogo — un'unica email al giorno: il job invocato due volte non invia due volte", async ({
+      request,
+    }) => {
+      const prima = await chiamaCron(request);
+      const seconda = await chiamaCron(request);
+
+      // Il registro deve accettare la riga (nessun errore) e il riepilogo
+      // parte solo se c'è qualcosa da sistemare.
+      expect(prima.riepilogo).not.toBe('errore_registro');
+      if (haDaSistemare(prima)) {
+        expect(['inviato', 'gia_inviato']).toContain(prima.riepilogo);
+        expect(seconda.riepilogo).toBe('gia_inviato');
+      }
+    });
+
+    test('email di riepilogo — se tutto è a posto non parte nessuna email', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      test.skip(haDaSistemare(esito), 'nel DB di test c è almeno un controllo da sistemare: lo scenario tutto a posto non è verificabile ora');
+      expect(esito.riepilogo).toBe('tutto_ok');
+    });
+
+    test('email di riepilogo — il riepilogo riporta tutti i controlli, anche quelli a posto', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      expect(Object.keys(esito.controlli).sort()).toEqual(
+        ['appello', 'mail-rojac-mensile', 'ore-lavoro', 'pasti-rojac', 'rette-genitori'].sort()
       );
+    });
 
-      const intestazioni = { Authorization: `Bearer ${process.env.CRON_SECRET}` };
+    test('email di riepilogo — appello e pasti solo dopo le 10:00 in un giorno di apertura', async ({ request }) => {
+      test.skip(
+        oraRomaAdesso() >= 10 && oggiEGiornoFeriale(),
+        'verificabile solo prima delle 10:00 o in un weekend (fuso Europe/Rome)'
+      );
+      const esito = await chiamaCron(request);
+      expect(esito.controlli.appello).toBe('non_applicabile');
+      expect(esito.controlli['pasti-rojac']).toBe('non_applicabile');
+    });
 
-      const prima = await request.get('/api/cron/allarmi', { headers: intestazioni });
-      expect(prima.ok()).toBe(true);
-      const corpo1 = await prima.json();
+    test('email di riepilogo — appello incompleto: il controllo è da sistemare e il riepilogo parte', async ({
+      request,
+    }) => {
+      test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
+      const esito = await chiamaCron(request);
+      test.skip(esito.controlli.appello !== 'da_sistemare', 'oggi tutti i bambini del DB di test hanno una voce di presenza');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
 
-      const seconda = await request.get('/api/cron/allarmi', { headers: intestazioni });
-      expect(seconda.ok()).toBe(true);
-      const corpo2 = await seconda.json();
+    test('email di riepilogo — pasti non comunicati a Rojac: il controllo è da sistemare e il riepilogo parte', async ({
+      request,
+    }) => {
+      test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
+      const esito = await chiamaCron(request);
+      test.skip(esito.controlli['pasti-rojac'] !== 'da_sistemare', 'oggi i pasti risultano già comunicati a Rojac');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
 
-      if (corpo1.risultati.mezzogiorno === 'inviato' || corpo1.risultati.mezzogiorno === 'gia_inviato') {
-        expect(corpo2.risultati.mezzogiorno).toBe('gia_inviato');
-      }
-      // Ogni email inviata dalla prima chiamata non deve ricomparire
-      // nella seconda: è già tracciata in allarmi_inviati.
-      for (const email of corpo1.risultati.settimanaOre) {
-        expect(corpo2.risultati.settimanaOre).not.toContain(email);
-      }
-
-      // Rette non comunicate (specs/07): il registro deve accettare il tipo
-      // (migration 0061) e l'email è una sola per mese. Prima del giorno 3
-      // l'allarme non scatta mai.
-      expect(corpo1.risultati.retteNonComunicate).not.toBe('errore_registro');
+    test('email di riepilogo — rette ai genitori: dal giorno 3 il controllo è attivo, prima no', async ({ request }) => {
+      const esito = await chiamaCron(request);
       if (giornoDelMeseRoma() < 3) {
-        expect(corpo1.risultati.retteNonComunicate).toBe('non_applicabile');
+        expect(esito.controlli['rette-genitori']).toBe('non_applicabile');
+      } else {
+        expect(['ok', 'da_sistemare']).toContain(esito.controlli['rette-genitori']);
+        if (esito.controlli['rette-genitori'] === 'da_sistemare') {
+          expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+        }
       }
-      if (corpo1.risultati.retteNonComunicate === 'inviato' || corpo1.risultati.retteNonComunicate === 'gia_inviato') {
-        expect(corpo2.risultati.retteNonComunicate).toBe('gia_inviato');
-      }
+    });
+
+    test('email di riepilogo — settimane di ore di lavoro da confermare', async ({ request, creaUtente }) => {
+      // Un utente abilitato che non ha mai confermato nessuna settimana
+      // rende il controllo sempre da sistemare, e fa partire il riepilogo.
+      await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const esito = await chiamaCron(request);
+      expect(esito.controlli['ore-lavoro']).toBe('da_sistemare');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
+
+    test('email di riepilogo — la mail mensile dei pasti a Rojac non è ancora controllata', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      expect(esito.controlli['mail-rojac-mensile']).toBe('non_controllato');
     });
   });
 });
