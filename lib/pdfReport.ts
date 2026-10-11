@@ -19,6 +19,9 @@ export type SezionePdf = {
   nome: string;
   intestazioni: string[];
   righe: string[][];
+  // Larghezze relative delle colonne (opzionale): se manca, la prima
+  // colonna è più larga e le altre uguali (larghezzeColonne).
+  pesiColonne?: number[];
 };
 
 // Log delle comunicazioni pasti a Rojac nel periodo (specs/16 -
@@ -217,7 +220,9 @@ export async function generaPdfTabellare(
       continue;
     }
 
-    const larghezze = larghezzeColonne(sezione.intestazioni.length);
+    const larghezze = sezione.pesiColonne
+      ? larghezzeColonnePesate(sezione.pesiColonne)
+      : larghezzeColonne(sezione.intestazioni.length);
     disegnaRiga(g, font, fontGrassetto, sezione.intestazioni, larghezze, true);
     for (const riga of sezione.righe) {
       disegnaRiga(g, font, fontGrassetto, riga, larghezze, false);
