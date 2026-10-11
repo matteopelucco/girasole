@@ -50,10 +50,68 @@ disegnata a ogni nuova pagina da un solo primitivo condiviso
 sulle pagine create dall'interruzione automatica e dalla pagina per persona
 E il corpo stesso dell'email (non solo gli allegati PDF) mostra il
 riepilogo del giorno appena concluso in forma tabellare — una tabella
-per classe attiva, con le stesse colonne del report giornaliero a
-schermo (Bambino, Presenze, Pre-asilo, Post-asilo, Pasti) — non più un
+per classe attiva, con le stesse colonne del report giornaliero (vedi lo
+scenario "report giornaliero con stato di presenza e nota") — non più un
 elenco puntato: così il contenuto è leggibile anche senza aprire un
 allegato, sia su client email desktop che mobile
+
+## Scenario: report giornaliero con stato di presenza e nota
+Dato che il report giornaliero (allegato PDF e tabella nel corpo
+dell'email) riguarda un solo giorno
+Quando viene generato
+Allora, per ogni bambino della classe, riporta le colonne: Bambino, Presenza
+(Presente, Assente, Malattia oppure Non segnato), Pre-asilo (Sì o -),
+Post-asilo (Sì o -), Pasto (Sì o -) e Nota
+E la colonna Nota riporta la nota libera della presenza di quel giorno
+(`presenze.note`, vedi [13 - segna-presenza.md](13%20-%20segna-presenza.md)),
+vuota se non c'è: così assenze e malattie si leggono insieme al loro motivo
+E il Pasto "Sì" corrisponde allo stato pasto "sì" (vedi
+[14 - segna-pasto.md](14%20-%20segna-pasto.md))
+E i report settimanale e mensile restano a conteggi (Presenze, Pre-asilo,
+Post-asilo, Pasti), come in [51 - report.md](51%20-%20report.md)
+
+## Scenario: corpo della mail con descrizione, data di invio e anomalie
+Dato che il job pianificato sta per inviare la mail
+Quando genero il corpo
+Allora il corpo si apre con una sintesi testuale che riporta, in
+quest'ordine: la descrizione della mail (che cos'è e a quale giorno si
+riferisce), l'elenco degli allegati inclusi con una riga di spiegazione
+ciascuno (report giornaliero; report settimanale se previsto; report
+mensile "fino alla data odierna"; report mensile delle ore del personale, con
+settimane confermate, monte ore e note), la data e l'ora di invio
+(gg/mm/aaaa alle hh:mm, fuso Europe/Rome) e la sezione "Anomalie
+riscontrate"
+E la sezione anomalie elenca le anomalie trovate, oppure dice
+esplicitamente "Nessuna anomalia riscontrata" (mai omessa)
+E sotto la sintesi seguono, come prima, la tabella giornaliera e il
+riepilogo delle ore di lavoro (se il giornaliero viene inviato quella notte)
+E l'oggetto della mail resta quello di sempre, "Report del gg/mm/aaaa",
+invariato
+E ogni testo libero (nomi, note, anomalie) è escapato nell'HTML
+
+## Scenario: anomalie nei dati
+Dato che i dati del giorno appena concluso hanno qualcosa di anomalo
+Quando il job genera la mail
+Allora la sezione anomalie segnala, con il nome del bambino o della classe:
+- nessuna classe attiva;
+- una classe senza bambini attivi;
+- le inconsistenze tra presenza, pre/post-asilo e pasto (vedi
+  [06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md));
+- i bambini con presenza non segnata, oppure, se nessuno è stato segnato,
+  una sola riga "nessuna presenza registrata per il giorno" (può essere
+  una giornata di chiusura)
+
+## Scenario: anomalia nella produzione di un report
+Dato che la produzione di uno dei report (o del riepilogo ore nel corpo)
+fallisce, per esempio per un errore di lettura dei dati
+Quando il job gira
+Allora la mail viene comunque inviata con gli altri allegati, e la sezione
+anomalie dice quale report non è stato prodotto, senza dettagli tecnici
+(che restano nei log del server)
+E il report fallito non viene marcato come inviato, così la prossima
+esecuzione lo ritenta (vedi "idempotenza per giorno")
+E la risposta del job indica l'esito "errore" per quel report e il numero
+di anomalie, insieme all'elenco dei nomi file allegati
 
 ## Scenario: idempotenza per giorno
 Dato che il job è già stato eseguito con successo per il giorno X
