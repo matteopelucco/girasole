@@ -17,9 +17,9 @@ Segnalare tempestivamente, a chi può ancora agire, due situazioni
 anomale che altrimenti passerebbero inosservate finché qualcuno non se
 ne accorge da solo: presenze/pasti dimenticati durante la giornata, e
 una settimana di ore di lavoro non confermata dal personale. Ogni
-allarme ha due canali, sempre entrambi: un banner in dashboard (finché
-la situazione resta anomala) e un'email inviata una sola volta per
-occorrenza. In più, la campanella in alto a destra e la pagina "Allarmi"
+allarme ha due canali: un banner in dashboard (finché la situazione
+resta anomala) e l'email di riepilogo dei controlli, inviata dal job una
+volta al giorno se c'è almeno un controllo da sistemare. In più, la campanella in alto a destra e la pagina "Allarmi"
 (`/dashboard/allarmi`) raccolgono in un punto solo gli allarmi attivi di
 chi guarda; i banner in dashboard restano.
 
@@ -52,15 +52,80 @@ maestra/admin) i pasti già comunicati, oppure in un giorno di chiusura
 scolastica, oppure non ho ancora nessuna sezione assegnata
 Allora non vedo il banner presenze/pasti
 
-## Scenario: presenze/pasti non completati entro le 10:00 — email
-Dato che, per il giorno appena valutato, presenze e/o pasti non
-risultano completati in almeno una sezione dell'asilo dopo le 10:00
-Quando il job pianificato gira
-Allora viene inviata una email all'indirizzo configurato, che elenca
-cosa manca a livello di intero asilo (stesso riepilogo aggregato già in
-uso per l'email, indipendente dalla sezione)
+## Scenario: email di riepilogo dei controlli — un'unica email al giorno
+Dato che il job pianificato gira dopo le 10:00 (fuso Europe/Rome)
+E almeno uno dei controlli ha esito "da sistemare" (vedi Regole)
+Quando il job gira
+Allora viene inviata una sola email di riepilogo all'indirizzo configurato
+E il corpo riporta SEMPRE tutti i controlli, anche quelli a posto: per
+ciascuno il nome, l'ora in cui è stato fatto, lo stato ("ok", "da
+sistemare", "non applicabile oggi" o "non ancora controllato") e, se è da
+sistemare, che cosa manca e l'azione da fare per risolvere
 E se il job gira di nuovo lo stesso giorno, l'email non viene inviata
 una seconda volta (idempotenza per giorno)
+E se l'invio fallisce, l'occorrenza non resta segnata come inviata e un
+tentativo successivo può ritentare
+
+## Scenario: email di riepilogo — se tutto è a posto non parte nessuna email
+Dato che il job pianificato gira e nessun controllo è "da sistemare"
+Quando il job gira
+Allora non viene inviata nessuna email
+
+## Scenario: email di riepilogo — appello e pasti solo dopo le 10:00 in un giorno di apertura
+Dato che il job gira prima delle 10:00 oppure in un giorno di chiusura
+(vedi [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md))
+Quando viene costruito il riepilogo
+Allora i controlli "appello" e "pasti a Rojac" compaiono nell'email con
+stato "non applicabile oggi" e il motivo (prima delle 10:00, oppure giorno
+di chiusura), e non fanno scattare l'email
+
+## Scenario: email di riepilogo — appello incompleto
+Dato che dopo le 10:00 di un giorno di apertura almeno un bambino attivo
+non ha alcuna presenza, assenza o malattia segnata per oggi
+Quando il job gira
+Allora il controllo "appello" è "da sistemare" e l'email chiede di
+segnare presenze, assenze o malattie di tutti i bambini in "Presenze e
+pasti"
+E pre-asilo e post-asilo non contano come controllo: sono servizi
+facoltativi, e se selezionati generano già una presenza (vedi
+[10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md))
+
+## Scenario: email di riepilogo — pasti non comunicati a Rojac
+Dato che dopo le 10:00 di un giorno di apertura i pasti di oggi non sono
+stati comunicati a Rojac (vedi
+[16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md))
+Quando il job gira
+Allora il controllo "pasti a Rojac" è "da sistemare" e l'email chiede di
+comunicarli (può farlo una delle due insegnanti o le assistenti)
+
+## Scenario: email di riepilogo — rette ai genitori non inviate dal giorno 3
+Dato che oggi è il giorno 3 del mese o successivo (fuso Europe/Rome)
+E almeno un bambino a cui si può comunicare la retta non ha la
+comunicazione del mese corrente (stessi bambini e stesse regole
+dell'allarme "rette non comunicate")
+Quando il job gira
+Allora il controllo "rette ai genitori" è "da sistemare", l'email dice
+quanti bambini mancano e quali (nome, cognome e sezione) e chiede di
+inviarle dalla tabella "Rette"
+E prima del giorno 3 lo stesso controllo compare come "non applicabile
+oggi" (motivo: prima del giorno 3) e non fa scattare l'email
+
+## Scenario: email di riepilogo — settimane di ore di lavoro da confermare
+Dato che, per uno o più utenti abilitati al report ore, la settimana di
+riferimento (vedi Regole) non risulta confermata
+Quando il job gira
+Allora il controllo "ore di lavoro" è "da sistemare" e l'email indica
+quale utente e quale settimana, chiedendo di confermarla in "Ore di
+lavoro"
+E se tutti l'hanno confermata il controllo è "ok"
+
+## Scenario: email di riepilogo — la mail mensile dei pasti a Rojac non è ancora controllata
+Quando il job gira
+Allora l'email contiene anche la voce "mail mensile dei pasti a Rojac"
+con stato "non ancora controllato" e non fa mai scattare l'email da sola
+(il controllo vero e proprio è tracciato nell'issue
+[#282](https://github.com/matteopelucco/girasole/issues/282), in attesa
+del registro degli invii, issue #281)
 
 ## Scenario: settimana di ore di lavoro non confermata entro venerdì sera — banner personale
 Dato che sono abilitata al report ore (vedi
@@ -93,19 +158,6 @@ Quando apro la dashboard e la settimana di riferimento (vedi Regole)
 risulta già confermata, oppure il mio profilo non è abilitato al report
 ore
 Allora non vedo il banner "settimana non confermata"
-
-## Scenario: settimana di ore di lavoro non confermata — email
-Dato che, per un utente abilitato al report ore, la settimana di
-riferimento (vedi Regole) non risulta confermata
-Quando il job pianificato gira
-Allora viene inviata una email all'indirizzo configurato, che indica
-quale utente e quale settimana
-E questo vale indipendentemente per ciascun utente abilitato: se più
-persone non hanno confermato, ciascuna genera una propria email
-E se il job gira di nuovo per la stessa settimana e lo stesso utente,
-l'email non viene inviata una seconda volta (idempotenza per
-utente+settimana) — anche se nel frattempo quell'utente ha confermato
-un'altra settimana
 
 ## Scenario: l'admin vede gli allarmi di tutto il personale
 Dato che sono autenticato come admin
@@ -262,18 +314,6 @@ Quando apro la dashboard come maestra o assistente
 Allora non vedo il banner né i nomi dei bambini a cui manca la comunicazione
 E per me il calcolo di questo allarme non parte
 
-## Scenario: rette non comunicate — email, una sola volta per mese
-Dato che, dal giorno 3 del mese, l'allarme "rette non comunicate" è
-attivo
-Quando il job pianificato gira
-Allora viene inviata una email all'indirizzo configurato, con quanti
-bambini mancano e il loro nome, cognome e sezione
-E se il job gira di nuovo nello stesso mese l'email non viene inviata
-una seconda volta (idempotenza per mese, anche se nel frattempo
-l'allarme è sparito e tornato)
-E se l'invio fallisce, l'occorrenza non resta segnata come inviata e un
-tentativo successivo può ritentare
-
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
@@ -337,14 +377,38 @@ tentativo successivo può ritentare
 - Il ruolo **Segretaria** non esiste ancora nel sistema (vedi
   [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)): per ora solo
   l'admin vede il riepilogo di tutto il personale (vedi Fuori scope).
-- L'allarme email "presenze/pasti" resta un riepilogo aggregato
-  sull'intero asilo (non una email per sezione o per maestra), calcolato
-  lato server con la service_role key (`lib/supabase/admin.ts`), stesso
-  motivo già documentato per il report notturno (specs/52) — il job non
-  ha una sessione utente da cui ereditare la RLS (uno dei pochi usi
-  ammessi della service_role, con il resto dei cron e la gestione utenti:
-  `npm run check:service-role`, ADR-0002). Soglia oraria 10:00
-  (Europe/Rome), stessa soglia del banner personale.
+- **Email di riepilogo**: il job (un'unica email al giorno, a
+  `REPORT_EMAIL_DESTINATARIO`) valuta questi controlli e li riporta
+  SEMPRE tutti nel corpo, nell'ordine, ciascuno con nome, ora in cui è
+  stato fatto (HH:MM, Europe/Rome), stato e, se da sistemare, che cosa
+  manca e l'azione per risolvere:
+  1. **Appello** (di giornata): tutti i bambini attivi hanno una riga in
+     `presenze` per oggi (presente, assente o malato). Pre-asilo e
+     post-asilo non contano come controllo (facoltativi).
+  2. **Pasti a Rojac** (di giornata): esiste la riga in
+     `pasti_comunicati` per oggi (da maestra, admin o assistente, come da
+     specs/16).
+  3. **Rette ai genitori** (mensile, dal giorno 3): vedi la regola
+     "Rette non comunicate".
+  4. **Mail mensile dei pasti a Rojac** (mensile): sempre "non ancora
+     controllato" finché non c'è il registro degli invii (issue #281,
+     controllo in #282). Nessun effetto sull'invio dell'email.
+  5. **Ore di lavoro**: la settimana di riferimento è confermata da ogni
+     utente abilitato (una riga per utente da sistemare).
+  Gli stati sono: "ok", "da sistemare", "non applicabile oggi" (con il
+  motivo: prima delle 10:00, giorno di chiusura, nessun bambino attivo,
+  prima del giorno 3) e "non ancora controllato". L'email parte solo se
+  almeno un controllo è "da sistemare": se è tutto a posto non si manda
+  nulla (interpretazione prudente: niente posta quotidiana inutile).
+  I controlli di giornata (1 e 2) si fanno solo dopo le 10:00
+  (Europe/Rome) in un giorno di apertura, perché alcune anomalie sono
+  correggibili solo entro la giornata. L'email non contiene link
+  all'app. Il calcolo è aggregato sull'intero asilo, lato server con la
+  service_role key (`lib/supabase/admin.ts`), stesso motivo del report
+  notturno (specs/52): il job non ha una sessione utente da cui ereditare
+  la RLS (uno dei pochi usi ammessi, `npm run check:service-role`,
+  ADR-0002). Il corpo si costruisce in `lib/riepilogoAllarmi.ts` (puro,
+  con test unit).
 - **Rette non comunicate**: le soglie e la composizione sono in
   `lib/allarmeRette.ts`. Il giorno minimo è la costante
   `GIORNO_ALLARME_RETTE` (3, fisso: si cambia nel codice). Conta il mese
@@ -355,40 +419,31 @@ tentativo successivo può ritentare
   nessun giorno aperto (weekend e chiusure registrate esclusi,
   `lib/comunicazioneRetta.ts:giorniAperturaMese` = 0) non ha l'allarme.
   Solo l'admin: il calcolo (nomi dei bambini compresi) non parte per gli
-  altri ruoli. Il cron lo calcola con la service_role key, come gli
-  altri allarmi.
+  altri ruoli. Il cron lo calcola con la service_role key e lo riporta
+  nell'email di riepilogo (controllo 3); per decisione di prodotto
+  l'allarme sulle rette ai genitori e quelli sulle mail ai genitori
+  scattano insieme dallo stesso giorno 3, non dal 5.
 - Il banner "rette non comunicate" in dashboard (solo admin) non fa un
   calcolo suo: prende la voce `rette-non-comunicate` dall'elenco di
   `caricaAllarmiCorrenti` (`lib/allarmiDati.ts`), lo stesso della pagina
   "Allarmi" e della campanella (una sola lettura per richiesta). Per
   maestra e assistente quell'elenco non contiene la voce e non legge i
   dati delle rette.
-- Idempotenza dell'email "rette non comunicate": riga in
-  `allarmi_inviati` con `tipo = 'rette_non_comunicate'` e `chiave` = mese
-  `YYYY-MM`. A differenza degli altri due allarmi, il cron registra la
+- Idempotenza dell'email di riepilogo: una riga in `allarmi_inviati`
+  con `chiave` = data `YYYY-MM-DD` ("esistenza della riga = già
+  inviato", come per i report notturni, specs/52). Il cron registra la
   riga **prima** di inviare (l'unicità `(tipo, chiave)` fa da
-  prenotazione) e la cancella se l'invio fallisce, così si può ritentare.
-  Se il registro rifiuta il valore (migration 0061 non applicata) l'email
-  non parte affatto: niente invio ripetuto ogni giorno. La migration va
-  applicata in produzione prima del deploy.
-- Idempotenza delle email tracciata in un'unica tabella
-  `allarmi_inviati` (`tipo`, `chiave`, `inviato_at`): `chiave` è la data
-  per l'allarme presenze/pasti, `{utente_id}_{settimana_inizio}` per
-  l'allarme ore di lavoro — stesso principio "esistenza della riga =
-  già inviato" già in uso per i report notturni (specs/52) e la
-  conferma di una settimana ore (specs/18), qui condiviso in una sola
-  tabella con un discriminatore invece di una tabella per tipo, non
-  essendoci altri campi da conservare oltre alla chiave. I valori del
-  discriminatore `tipo` sono `presenze_pasti_mezzogiorno`,
-  `settimana_ore_non_confermata` e `rette_non_comunicate` (aggiunto dalla
-  migration 0061, che estende il vincolo CHECK): sono
-  identificatori interni, non testo mostrato all'utente, quindi non è
-  stato necessario rinominarli né fare una migration solo per questo.
+  prenotazione) e la cancella se l'invio fallisce, così si può ritentare;
+  se il registro rifiuta la riga per un motivo diverso dal duplicato
+  l'email non parte, per non ripetersi ogni giorno. Per non richiedere
+  una migration si riusa il valore già ammesso dal vincolo CHECK
+  `presenze_pasti_mezzogiorno` (identificatore interno, non mostrato
+  all'utente): oggi significa "riepilogo giornaliero inviato". I valori
+  `settimana_ore_non_confermata` e `rette_non_comunicate` (migration
+  0061) restano ammessi ma il cron non li scrive più: le righe
+  esistenti sono storico innocuo.
 - Il job è protetto dallo stesso meccanismo già in uso per gli altri
   cron (header `Authorization: Bearer $CRON_SECRET`).
-- Un errore nell'invio non deve marcare l'occorrenza come "inviata": un
-  tentativo successivo deve poter ritentare (stesso principio di
-  specs/52).
 
 - Composizione dell'elenco della campanella e della pagina "Allarmi":
   è una sola, calcolata sul server riusando le stesse funzioni dei
@@ -408,12 +463,12 @@ tentativo successivo può ritentare
 
 ## Note di implementazione
 - Route `app/api/cron/allarmi/route.ts` (Vercel Cron), un solo cron che
-  valuta entrambi gli allarmi una volta al giorno, dopo le 10:00
+  valuta tutti i controlli una volta al giorno, dopo le 10:00
   Europe/Rome — non due cron separati, per restare comodamente dentro
   il limite di Vercel Hobby (2 cron job per progetto, già a 1 con
   `report-presenze`; vedi `CLAUDE.md`).
-- Lo stesso cron valuta anche le rette non comunicate (terzo controllo,
-  nessun cron nuovo).
+- Tutti i controlli confluiscono in un'unica email di riepilogo
+  (`lib/riepilogoAllarmi.ts`), nessun cron nuovo.
 - Il destinatario riusa la stessa variabile d'ambiente
   `REPORT_EMAIL_DESTINATARIO` di specs/52 (`lib/email.ts:destinatarioNotifiche`).
 
