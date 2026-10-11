@@ -11,20 +11,23 @@ agosto 2026). Funziona anche su una data passata: le maestre possono
 scrivere solo sulla data odierna (specs/13, specs/14), ma l'admin deve
 poter correggere anche un giorno già trascorso.
 
-## Scenario: "Impostazioni" compare in fondo al menu solo per l'admin, con "Utenti" sotto
+## Scenario: "Impostazioni" compare in fondo al menu solo per l'admin, con le sottosezioni sotto
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanzate`)
-E sotto, rientrate, "Parametri di funzionamento" (specs/62), "Cron Job"
-(specs/63) e poi "Utenti" (`/admin/maestre`), che è l'ultima
+E sotto, rientrate, nell'ordine: "Reset giornata" (`/admin/reset-giornata`),
+"Parametri di funzionamento" (specs/62), "Cron Job" (specs/63) e poi
+"Utenti" (`/admin/maestre`), che è l'ultima
 E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
-E "Reset giornata" non è una voce di primo livello del menu
+E sulla pagina del reset la voce "Reset giornata" risulta evidenziata
 
-## Scenario: la pagina Impostazioni elenca le azioni avanzate
+## Scenario: la pagina Impostazioni è l'indice di tutte le sottosezioni
 Dato che sono autenticato come admin
 Quando apro "Impostazioni" dal menu (`/admin/impostazioni-avanzate`)
-Allora vedo l'elenco delle azioni di amministrazione avanzate, ciascuna
-con titolo e breve descrizione; oggi l'unica è "Reset giornata"
+Allora vedo quattro riquadri, nello stesso ordine delle voci rientrate del
+menu: "Reset giornata", "Parametri di funzionamento", "Cron Job" e "Utenti",
+ciascuno con titolo e breve descrizione
+E la pagina non ha violazioni di accessibilità gravi
 E premendo "Reset giornata" arrivo alla pagina `/admin/reset-giornata`
 
 ## Scenario: maestra, assistente e genitore non vedono Impostazioni
@@ -81,10 +84,11 @@ Allora vengo reindirizzato alla dashboard
   quelli) è una pagina intermedia, riservata all'admin
   (`requireAdmin`, come le altre pagine `/admin/*`), pensata per ospitare
   nel tempo altre azioni di amministrazione avanzate oltre al reset: ogni
-  azione è una voce dell'elenco in `lib/impostazioniAvanzate.ts`
-  (titolo, descrizione, href). La voce di menu è in fondo alla sidebar, seguita
-  solo da "Parametri di funzionamento" (specs/62) e "Utenti" rientrate sotto di lei (`lib/navigazione.ts`) e resta evidenziata anche mentre si è su una
-  delle pagine delle sue azioni (es. `/admin/reset-giornata`).
+  sottosezione è una voce dell'elenco in `lib/impostazioniAvanzate.ts`
+  (titolo, descrizione, icona, href), che è l'unica fonte: da lì derivano sia
+  i riquadri della pagina sia le voci rientrate del menu
+  (`lib/navigazione.ts`), così non possono divergere. La voce "Impostazioni"
+  è in fondo alla sidebar, seguita solo dalle sue sottosezioni rientrate.
   Il percorso `/admin/reset-giornata` e la logica del reset non cambiano.
 - Il reset elimina TUTTE le righe di `presenze` e `pasti` con quella
   `data`, indipendentemente dalla sezione o dal bambino — non è

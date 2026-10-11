@@ -18,7 +18,7 @@ database, l'inizio e la fine di ogni proprio lancio, con l'esito.
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora vedo la voce "Cron Job" (`/admin/cron-job`)
-E sta sotto "Impostazioni", rientrata, dopo "Parametri di funzionamento" e prima di "Utenti"
+E sta sotto "Impostazioni", rientrata, dopo "Reset giornata" e "Parametri di funzionamento" e prima di "Utenti"
 E se sono maestra, assistente o genitore non vedo questa voce
 
 ## Scenario: i lanci sono raggruppati per job, con nome, data e ora, stato

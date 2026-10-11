@@ -73,17 +73,19 @@ test.describe('62 — Parametri di funzionamento', () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
-    test('la voce è nel menu sotto "Impostazioni", rientrata, prima di "Utenti"', async ({ page }) => {
+    test('la voce è nel menu sotto "Impostazioni", rientrata, dopo "Reset giornata" e prima di "Utenti"', async ({ page }) => {
       await page.goto('/admin');
       const menu = page.getByRole('navigation');
       const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
+      const reset = menu.getByRole('link', { name: 'Reset giornata', exact: true });
       const parametri = menu.getByRole('link', { name: 'Parametri di funzionamento', exact: true });
       const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
 
       await expect(parametri).toHaveAttribute('href', PERCORSO);
       const y = async (l: typeof parametri) => (await l.boundingBox())!.y;
       const x = async (l: typeof parametri) => (await l.locator('span').first().boundingBox())!.x;
-      expect(await y(impostazioni)).toBeLessThan(await y(parametri));
+      expect(await y(impostazioni)).toBeLessThan(await y(reset));
+      expect(await y(reset)).toBeLessThan(await y(parametri));
       expect(await y(parametri)).toBeLessThan(await y(utenti));
       expect(await x(parametri)).toBeGreaterThan(await x(impostazioni));
     });

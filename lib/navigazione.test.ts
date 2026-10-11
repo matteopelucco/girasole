@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SOTTOSEZIONI_IMPOSTAZIONI } from './impostazioniAvanzate';
 import { eGruppo, eGruppoConStato, eStessaPagina, vociLink, vociMenu, vociMenuConStato } from './navigazione';
 
 describe('eStessaPagina', () => {
@@ -40,6 +41,7 @@ describe('vociMenu', () => {
       '/admin/rette',
       '/admin/pagamenti-bambino',
       '/admin/impostazioni-avanzate',
+      '/admin/reset-giornata',
       '/admin/parametri-funzionamento',
       '/admin/cron-job',
       '/admin/maestre',
@@ -91,20 +93,26 @@ describe('vociMenu', () => {
     }
   });
 
-  it('mette "Impostazioni" in fondo con "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
+  it('mette "Impostazioni" in fondo con le sottosezioni rientrate sotto, nello stesso ordine dei riquadri, solo per l\'admin', () => {
     const voci = vociMenu('admin');
-    expect(voci.slice(-4).map((v) => v.etichetta)).toEqual([
+    expect(voci.slice(-5).map((v) => v.etichetta)).toEqual([
       'Impostazioni',
+      'Reset giornata',
       'Parametri di funzionamento',
       'Cron Job',
       'Utenti',
     ]);
-    for (const rientrata of voci.slice(-3)) {
+    // Le voci rientrate vengono dallo stesso elenco dei riquadri della pagina.
+    expect(voci.slice(-4).map((v) => !eGruppo(v) && v.href)).toEqual(
+      SOTTOSEZIONI_IMPOSTAZIONI.map((s) => s.href)
+    );
+    for (const rientrata of voci.slice(-4)) {
       expect(!eGruppo(rientrata) && rientrata.rientrata).toBe(true);
     }
     expect(vociLink(voci).filter((v) => v.href === '/admin/maestre')).toHaveLength(1);
-    expect(vociLink(voci).some((v) => v.href === '/admin/reset-giornata')).toBe(false);
+    expect(vociLink(voci).filter((v) => v.href === '/admin/reset-giornata')).toHaveLength(1);
     for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
+      expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/reset-giornata')).toBe(false);
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/impostazioni-avanzate')).toBe(false);
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/parametri-funzionamento')).toBe(false);
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/cron-job')).toBe(false);
@@ -147,11 +155,11 @@ describe('vociMenuConStato', () => {
     expect(gruppo && eGruppoConStato(gruppo)).toBe(true);
   });
 
-  it('evidenzia "Impostazioni" anche sulle pagine delle sue azioni', () => {
-    for (const pathname of ['/admin/impostazioni-avanzate', '/admin/reset-giornata']) {
-      const attive = voceAttive('admin', pathname);
-      expect(attive.map((v) => v.href)).toEqual(['/admin/impostazioni-avanzate']);
-    }
+  it('evidenzia "Impostazioni" sulla sua pagina e "Reset giornata" sulla pagina del reset', () => {
+    expect(voceAttive('admin', '/admin/impostazioni-avanzate').map((v) => v.href)).toEqual([
+      '/admin/impostazioni-avanzate',
+    ]);
+    expect(voceAttive('admin', '/admin/reset-giornata').map((v) => v.href)).toEqual(['/admin/reset-giornata']);
   });
 
   it('evidenzia "Parametri di funzionamento" sulla sua pagina e non "Impostazioni"', () => {

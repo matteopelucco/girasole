@@ -19,7 +19,7 @@ test.describe('63 — Cron Job', () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
-    test('"Cron Job" è nel menu sotto "Impostazioni", rientrata, tra "Parametri di funzionamento" e "Utenti"', async ({
+    test('"Cron Job" è nel menu sotto "Impostazioni", rientrata, dopo "Parametri di funzionamento" e prima di "Utenti"', async ({
       page,
     }) => {
       await page.goto('/admin');

@@ -24,56 +24,77 @@ test.describe('57 — Reset giornata', () => {
   });
 
   // I tre test seguenti non dipendono dal calendario né scrivono dati:
-  // controllano solo menu e pagina intermedia (nessun reset eseguito).
-  test('"Impostazioni" è in fondo al menu con "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto, e "Reset giornata" non è di primo livello', async ({
+  // controllano solo menu e pagina indice (nessun reset eseguito).
+  test('"Impostazioni" è in fondo al menu con "Reset giornata", "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto', async ({
     page,
   }) => {
     await page.goto('/admin');
     const menu = page.getByRole('navigation');
     const voci = menu.getByRole('link');
     const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
+    const reset = menu.getByRole('link', { name: 'Reset giornata', exact: true });
     const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
 
-    // Ultime quattro voci: "Impostazioni", "Parametri di funzionamento" (specs/62),
-    // "Cron Job" (specs/63) e "Utenti".
-    await expect(voci.nth(-4)).toHaveText(/Impostazioni/);
-    await expect(voci.nth(-4)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
+    // Ultime cinque voci: "Impostazioni", "Reset giornata", "Parametri di funzionamento"
+    // (specs/62), "Cron Job" (specs/63) e "Utenti".
+    await expect(voci.nth(-5)).toHaveText(/Impostazioni/);
+    await expect(voci.nth(-5)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
+    await expect(voci.nth(-4)).toHaveAttribute('href', '/admin/reset-giornata');
     await expect(voci.nth(-3)).toHaveAttribute('href', '/admin/parametri-funzionamento');
     await expect(voci.nth(-2)).toHaveAttribute('href', '/admin/cron-job');
     await expect(voci.last()).toHaveText(/Utenti/);
     await expect(voci.last()).toHaveAttribute('href', '/admin/maestre');
     await expect(menu.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
 
-    // "Utenti" sta sotto "Impostazioni" e rientrata; non è più prima di "Calendario scolastico".
+    // Le sottosezioni stanno sotto "Impostazioni" e rientrate; "Utenti" non è prima di "Calendario scolastico".
     const y = async (l: typeof utenti) => (await l.boundingBox())!.y;
     const x = async (l: typeof utenti) => (await l.locator('span').first().boundingBox())!.x;
-    expect(await y(impostazioni)).toBeLessThan(await y(utenti));
+    expect(await y(impostazioni)).toBeLessThan(await y(reset));
+    expect(await y(reset)).toBeLessThan(await y(utenti));
+    expect(await x(reset)).toBeGreaterThan(await x(impostazioni));
     expect(await x(utenti)).toBeGreaterThan(await x(impostazioni));
     expect(await y(menu.getByRole('link', { name: 'Calendario scolastico', exact: true }))).toBeLessThan(
       await y(impostazioni)
     );
 
-    await expect(menu.getByRole('link', { name: 'Reset giornata' })).toHaveCount(0);
+    // Sulla pagina del reset la voce "Reset giornata" è evidenziata.
+    await reset.click();
+    await page.waitForURL('/admin/reset-giornata');
+    await expect(menu.getByRole('link', { name: 'Reset giornata', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
   });
 
-  test('la pagina Impostazioni elenca "Reset giornata" e porta alla pagina di reset', async ({
+  test('la pagina Impostazioni mostra i quattro riquadri delle sottosezioni e "Reset giornata" porta alla pagina di reset', async ({
     page,
   }) => {
     await page.goto('/admin/impostazioni-avanzate');
     await expect(page.getByRole('heading', { name: 'Impostazioni', exact: true })).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
 
-    const azione = page.getByRole('link', { name: /Reset giornata/ });
-    await expect(azione).toBeVisible();
-    await expect(azione).toContainText('presenze e i pasti');
+    // Riquadri nello stesso ordine delle voci rientrate del menu, ciascuno con descrizione.
+    const riquadri = page.getByRole('main').getByRole('link');
+    await expect(riquadri).toHaveCount(4);
+    const attesi = [
+      ['Reset giornata', '/admin/reset-giornata', 'presenze e i pasti'],
+      ['Parametri di funzionamento', '/admin/parametri-funzionamento', 'ambiente'],
+      ['Cron Job', '/admin/cron-job', 'job pianificati'],
+      ['Utenti', '/admin/maestre', 'ruoli'],
+    ] as const;
+    for (const [i, [titolo, href, testo]] of attesi.entries()) {
+      await expect(riquadri.nth(i)).toContainText(titolo);
+      await expect(riquadri.nth(i)).toContainText(testo);
+      await expect(riquadri.nth(i)).toHaveAttribute('href', href);
+    }
+
+    const azione = riquadri.first();
     const riquadro = await azione.boundingBox();
     expect(riquadro?.height ?? 0).toBeGreaterThanOrEqual(44);
 
     await azione.click();
     await page.waitForURL('/admin/reset-giornata');
     await expect(page.getByRole('heading', { name: 'Reset presenze e pasti di una giornata' })).toBeVisible();
-    // Sulla pagina dell'azione la voce di menu "Impostazioni" resta evidenziata.
-    await expect(page.getByRole('link', { name: 'Impostazioni', exact: true })).toHaveAttribute('aria-current', 'page');
   });
 
   test('pagina raggiungibile con selettore data + accessibilità', async ({ page }) => {
