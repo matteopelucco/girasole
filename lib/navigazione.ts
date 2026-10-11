@@ -64,7 +64,7 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
         ],
       },
       // In fondo (specs/57): pagina intermedia con le azioni avanzate, tra cui il reset,
-      // e sotto di lei, rientrate, "Parametri di funzionamento" e "Utenti".
+      // e sotto di lei, rientrate, "Parametri di funzionamento", "Cron Job" e "Utenti".
       {
         href: '/admin/impostazioni-avanzate',
         etichetta: 'Impostazioni',
@@ -73,6 +73,8 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
       },
       // Sotto "Impostazioni", rientrata (specs/62): parametri di funzionamento oggi in env.
       { href: '/admin/parametri-funzionamento', etichetta: 'Parametri di funzionamento', icona: '🎛️', rientrata: true },
+      // Sotto "Impostazioni", rientrata (specs/63): lanci dei job pianificati.
+      { href: '/admin/cron-job', etichetta: 'Cron Job', icona: '⏰', rientrata: true },
       { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥', rientrata: true }
     );
   }

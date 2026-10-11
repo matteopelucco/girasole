@@ -24,3 +24,25 @@ on conflict (id) do nothing;
 -- insert into public.maestre_sezioni (maestra_id, sezione_id)
 -- values ('<uuid-del-profilo-maestra>', '00000000-0000-0000-0000-000000000001')
 -- on conflict do nothing;
+
+-- Lanci di prova dei job pianificati (specs/63, e2e/63-cron-job.spec.ts):
+-- date lontane e fisse (2019), mai lanci reali. 25 lanci del report notturno
+-- (più di una pagina da 20, per "Carica altri") e 3 del riepilogo allarmi:
+-- uno OK, uno KO con messaggio, uno senza esito (interrotto).
+insert into public.cron_esecuzioni (id, nome, iniziato_il, finito_il, esito)
+select
+  ('00000000-0000-0000-0000-0000000063' || lpad(g::text, 2, '0'))::uuid,
+  'report-presenze',
+  timestamptz '2019-01-01 23:00:00+00' + (g - 1) * interval '1 day',
+  timestamptz '2019-01-01 23:00:07+00' + (g - 1) * interval '1 day',
+  'ok'
+from generate_series(1, 25) as g
+on conflict (id) do nothing;
+
+insert into public.cron_esecuzioni (id, nome, iniziato_il, finito_il, esito, messaggio_errore)
+values
+  ('00000000-0000-0000-0000-000000006391', 'allarmi', '2019-02-01 09:30:00+00', '2019-02-01 09:30:04+00', 'ok', null),
+  ('00000000-0000-0000-0000-000000006392', 'allarmi', '2019-02-02 09:30:00+00', null, null, null),
+  ('00000000-0000-0000-0000-000000006393', 'allarmi', '2019-02-03 09:30:00+00', '2019-02-03 09:30:05+00', 'ko',
+   'Invio email fallito (500): servizio non disponibile')
+on conflict (id) do nothing;

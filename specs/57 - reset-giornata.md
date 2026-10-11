@@ -15,8 +15,8 @@ poter correggere anche un giorno già trascorso.
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanzate`)
-E sotto, rientrate, "Parametri di funzionamento" (specs/62) e poi "Utenti"
-(`/admin/maestre`), che è l'ultima
+E sotto, rientrate, "Parametri di funzionamento" (specs/62), "Cron Job"
+(specs/63) e poi "Utenti" (`/admin/maestre`), che è l'ultima
 E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
 E "Reset giornata" non è una voce di primo livello del menu
 

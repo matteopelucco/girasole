@@ -460,6 +460,10 @@ E per me il calcolo di questo allarme non parte
   calcolato in streaming (la pagina non aspetta), non si calcola prima
   delle 10:00 o in un giorno di chiusura ciò che dipende da quella soglia,
   e per il genitore non si calcola nulla.
+- Ogni lancio del job dell'email di riepilogo (nome `allarmi`) è
+  registrato in `cron_esecuzioni` con inizio, fine ed esito, visibile
+  all'admin in "Cron Job" ([63 - cron-job.md](63%20-%20cron-job.md)). Il
+  registro non tocca `allarmi_inviati` né l'idempotenza dell'email.
 
 ## Note di implementazione
 - Route `app/api/cron/allarmi/route.ts` (Vercel Cron), un solo cron che

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { eseguiConRegistro, type EsitoLavoroCron } from '@/lib/cronEsecuzioniDati';
+import { problemaReportNotturno } from '@/lib/cronEsecuzioni';
 import { inviaEmail, destinatarioNotifiche, type AllegatoEmail } from '@/lib/email';
 import {
   formattaTabellaReportHtml,
@@ -137,17 +139,27 @@ function allegatoOreLavoroMensile(supabase: SupabaseClient, mese: string, genera
 // - report-email-automatico.md). Protetta dal secret che Vercel Cron
 // invia in automatico in Authorization: Bearer $CRON_SECRET quando la
 // variabile d'ambiente CRON_SECRET è configurata sul progetto.
+//
+// Ogni lancio autorizzato è registrato in `cron_esecuzioni` (specs/63): il
+// registro non ritarda né fa fallire il lavoro qui sotto
+// (lib/cronEsecuzioniDati.ts, eseguiConRegistro).
 export async function GET(request: Request) {
   if (!autorizzaCron(request)) {
     return NextResponse.json({ errore: 'non autorizzato' }, { status: 401 });
   }
 
+  const supabase = createAdminClient();
+  return eseguiConRegistro(supabase, 'report-presenze', () => reportNotturno(supabase));
+}
+
+// Il lavoro vero del cron, con la service_role creata in GET.
+// grant-check: service_role
+async function reportNotturno(supabase: SupabaseClient): Promise<EsitoLavoroCron> {
   // Il cron gira poco dopo la mezzanotte Rome: oggi() è già il nuovo
   // giorno, quindi il giorno da riepilogare è quello appena concluso.
   const dataReport = sommaGiorni(oggi(), -1);
   // Istante di generazione, stampato in testa a ogni PDF (specs/52).
   const generatoIl = new Date();
-  const supabase = createAdminClient();
 
   const risultati: Record<TipoReportNotturno, 'inviato' | 'gia_inviato' | 'saltato' | 'errore'> = {
     giornaliero: 'saltato',
@@ -303,8 +315,11 @@ export async function GET(request: Request) {
       risultati[d.tipo] = 'inviato';
     }
 
-    return NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: anomalie.length });
+    return {
+      risposta: NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: anomalie.length }),
+      problema: problemaReportNotturno(risultati),
+    };
   }
 
-  return NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: 0 });
+  return { risposta: NextResponse.json({ ok: true, data: dataReport, risultati, allegati: allegatiNomi, anomalie: 0 }) };
 }
