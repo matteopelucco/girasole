@@ -58,7 +58,7 @@ poche parole) o un rilievo con `file:riga`.
    interpolati in HTML di email/report passano da `escapeHtml`
    (`lib/htmlEscape.ts`)? Input di form validato/normalizzato lato server?
 3. **A07 · Autenticazione e sessioni** — Nessun flusso di login, recupero
-   password, cookie o `middleware.ts` indebolito o aggirato? Le route
+   password, cookie o `proxy.ts` (ex `middleware.ts`) indebolito o aggirato? Le route
    pubbliche nuove sono davvero da esporre? Gli endpoint cron usano
    `autorizzaCron` (`lib/auth.ts`)? Le password rispettano `lib/password.ts`?
 4. **A02/A05 · Secret e `service_role`** — Nessuna chiave, token, password o

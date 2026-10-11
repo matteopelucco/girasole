@@ -46,7 +46,7 @@ non è quella corrente). Chiedigli i rilievi nel formato del punto 5.
   `.claude/agents/`.
 
 ## 4. Escalation a `rls-guardian` (solo con conferma)
-Se i file toccati includono `supabase/`, migration, policy RLS, auth/middleware,
+Se i file toccati includono `supabase/`, migration, policy RLS, auth/proxy (ex middleware),
 ruoli, o la issue ha label `area:rls-auth` / `area:db` / `type:security`:
 - **proponilo** all'utente, con il motivo e i file; costa (Opus);
 - lancialo **solo dopo un sì esplicito**; senza conferma scrivi nel report
