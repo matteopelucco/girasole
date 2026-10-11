@@ -41,6 +41,7 @@ describe('vociMenu', () => {
       '/admin/pagamenti-bambino',
       '/admin/impostazioni-avanzate',
       '/admin/parametri-funzionamento',
+      '/admin/cron-job',
       '/admin/maestre',
     ]);
   });
@@ -90,10 +91,15 @@ describe('vociMenu', () => {
     }
   });
 
-  it('mette "Impostazioni" in fondo con "Parametri di funzionamento" e "Utenti" rientrate sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
+  it('mette "Impostazioni" in fondo con "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
     const voci = vociMenu('admin');
-    expect(voci.slice(-3).map((v) => v.etichetta)).toEqual(['Impostazioni', 'Parametri di funzionamento', 'Utenti']);
-    for (const rientrata of voci.slice(-2)) {
+    expect(voci.slice(-4).map((v) => v.etichetta)).toEqual([
+      'Impostazioni',
+      'Parametri di funzionamento',
+      'Cron Job',
+      'Utenti',
+    ]);
+    for (const rientrata of voci.slice(-3)) {
       expect(!eGruppo(rientrata) && rientrata.rientrata).toBe(true);
     }
     expect(vociLink(voci).filter((v) => v.href === '/admin/maestre')).toHaveLength(1);
@@ -101,6 +107,7 @@ describe('vociMenu', () => {
     for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/impostazioni-avanzate')).toBe(false);
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/parametri-funzionamento')).toBe(false);
+      expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/cron-job')).toBe(false);
     }
   });
 });
@@ -151,6 +158,10 @@ describe('vociMenuConStato', () => {
     expect(voceAttive('admin', '/admin/parametri-funzionamento').map((v) => v.href)).toEqual([
       '/admin/parametri-funzionamento',
     ]);
+  });
+
+  it('evidenzia "Cron Job" sulla sua pagina e non "Impostazioni"', () => {
+    expect(voceAttive('admin', '/admin/cron-job').map((v) => v.href)).toEqual(['/admin/cron-job']);
   });
 
   it('evidenzia le voci del gruppo "Ore dipendenti" sulle loro pagine', () => {

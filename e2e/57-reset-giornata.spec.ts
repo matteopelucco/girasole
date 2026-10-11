@@ -25,7 +25,7 @@ test.describe('57 — Reset giornata', () => {
 
   // I tre test seguenti non dipendono dal calendario né scrivono dati:
   // controllano solo menu e pagina intermedia (nessun reset eseguito).
-  test('"Impostazioni" è in fondo al menu con "Parametri di funzionamento" e "Utenti" rientrate sotto, e "Reset giornata" non è di primo livello', async ({
+  test('"Impostazioni" è in fondo al menu con "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto, e "Reset giornata" non è di primo livello', async ({
     page,
   }) => {
     await page.goto('/admin');
@@ -34,10 +34,12 @@ test.describe('57 — Reset giornata', () => {
     const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
     const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
 
-    // Ultime tre voci: "Impostazioni", "Parametri di funzionamento" (specs/62) e "Utenti".
-    await expect(voci.nth(-3)).toHaveText(/Impostazioni/);
-    await expect(voci.nth(-3)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
-    await expect(voci.nth(-2)).toHaveAttribute('href', '/admin/parametri-funzionamento');
+    // Ultime quattro voci: "Impostazioni", "Parametri di funzionamento" (specs/62),
+    // "Cron Job" (specs/63) e "Utenti".
+    await expect(voci.nth(-4)).toHaveText(/Impostazioni/);
+    await expect(voci.nth(-4)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
+    await expect(voci.nth(-3)).toHaveAttribute('href', '/admin/parametri-funzionamento');
+    await expect(voci.nth(-2)).toHaveAttribute('href', '/admin/cron-job');
     await expect(voci.last()).toHaveText(/Utenti/);
     await expect(voci.last()).toHaveAttribute('href', '/admin/maestre');
     await expect(menu.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
