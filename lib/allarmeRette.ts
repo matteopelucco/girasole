@@ -1,14 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { chiusurePerPeriodo, type GiornoChiusura } from './calendarioScolastico';
 import { giorniAperturaMese } from './comunicazioneRetta';
-import { formattaMeseItaliano, meseDaData, primoGiornoMese, ultimoGiornoMese } from './date';
-import { escapeHtml } from './htmlEscape';
+import { meseDaData, primoGiornoMese, ultimoGiornoMese } from './date';
 
 // Allarme "rette non comunicate" (specs/07 - allarmi.md, specs/56): dal
 // giorno GIORNO_ALLARME_RETTE del mese in poi, se a un bambino a cui si può
 // comunicare la retta manca la comunicazione del mese corrente, l'admin
-// viene avvisato (pagina Allarmi, campanella, email una volta al mese dal
-// cron). Le funzioni pure ricevono sempre la data dall'esterno (niente
+// viene avvisato (pagina Allarmi, campanella, email di riepilogo del cron). Le funzioni pure ricevono sempre la data dall'esterno (niente
 // `new Date()` qui dentro), per restare testabili.
 
 // Giorno del mese (incluso) da cui scatta l'allarme: fisso, si cambia qui.
@@ -37,13 +35,6 @@ export function allarmeRetteDaControllare(oggi: string, chiusure: GiornoChiusura
   const giorno = Number(oggi.slice(8, 10));
   if (giorno < GIORNO_ALLARME_RETTE) return false;
   return !meseInteramenteChiuso(meseDaData(oggi), chiusure);
-}
-
-// Chiave di idempotenza dell'email in `allarmi_inviati`: il mese
-// "YYYY-MM", così c'è al più un'email per mese e il mese dopo riparte da
-// zero.
-export function chiaveAllarmeRette(oggi: string): string {
-  return meseDaData(oggi);
 }
 
 type BambinoAttivo = { id: string; nome: string; cognome: string; sezione_id: string | null };
@@ -81,18 +72,6 @@ export function bambiniRetteNonComunicate(parametri: {
 // semplice, da non usare in HTML senza escape.
 export function descrizioneBambinoRetta(bambino: BambinoRetta): string {
   return `${bambino.nome} ${bambino.cognome} (${bambino.sezione ?? 'Senza sezione'})`;
-}
-
-// Corpo HTML dell'email (specs/07). Nomi e sezioni sono dati liberi:
-// vanno escapati (issue #220). Pura, nessun I/O.
-export function htmlAllarmeRetteNonComunicate(mese: string, bambini: BambinoRetta[]): string {
-  const quanti = bambini.length === 1 ? '1 bambino' : `${bambini.length} bambini`;
-  const elenco = bambini.map((b) => `<li>${escapeHtml(descrizioneBambinoRetta(b))}</li>`).join('');
-  return (
-    `<p>Le comunicazioni delle rette di ${escapeHtml(formattaMeseItaliano(mese))} non sono ancora state inviate ` +
-    `a ${quanti}:</p><ul>${elenco}</ul>` +
-    `<p>Apri la tabella "Rette" dell'app per inviarle.</p>`
-  );
 }
 
 // Bambini a cui manca la comunicazione della retta del mese di `oggi`

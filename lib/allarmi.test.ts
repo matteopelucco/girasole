@@ -3,11 +3,7 @@ import {
   dopoOrarioAllarmePresenzePasti,
   dopoSogliaVenerdiSera,
   settimanaDiRiferimentoOre,
-  allarmeAsiloAttivo,
   allarmePersonalePresenzePastiAttivo,
-  descrizioneStatoOperativo,
-  htmlAllarmeSettimanaOreNonConfermata,
-  type StatoOperativoGiorno,
   type StatoPersonaleGiorno,
 } from './allarmi';
 
@@ -100,62 +96,8 @@ describe('settimanaDiRiferimentoOre', () => {
   });
 });
 
-function statoAsilo(sovrascrizioni: Partial<StatoOperativoGiorno> = {}): StatoOperativoGiorno {
-  return { nessunDatoAtteso: false, presenzeIncomplete: false, pastiNonConfermati: false, ...sovrascrizioni };
-}
-
 const DIECI_INVERNO = new Date('2026-01-15T09:00:00Z');
 const MATTINA_PRESTO_INVERNO = new Date('2026-01-15T07:00:00Z');
-
-describe('allarmeAsiloAttivo', () => {
-  it('falso prima delle 10:00, anche con presenze/pasti mancanti', () => {
-    expect(allarmeAsiloAttivo(MATTINA_PRESTO_INVERNO, true, statoAsilo({ presenzeIncomplete: true }))).toBe(false);
-  });
-
-  it('falso se il giorno non è attivo (chiuso), anche dopo le 10:00', () => {
-    expect(allarmeAsiloAttivo(DIECI_INVERNO, false, statoAsilo({ presenzeIncomplete: true }))).toBe(false);
-  });
-
-  it('falso se non ci sono classi/bambini attivi', () => {
-    expect(allarmeAsiloAttivo(DIECI_INVERNO, true, statoAsilo({ nessunDatoAtteso: true }))).toBe(false);
-  });
-
-  it('falso dopo le 10:00 se tutto è completo', () => {
-    expect(allarmeAsiloAttivo(DIECI_INVERNO, true, statoAsilo())).toBe(false);
-  });
-
-  it('vero dopo le 10:00 con presenze incomplete', () => {
-    expect(allarmeAsiloAttivo(DIECI_INVERNO, true, statoAsilo({ presenzeIncomplete: true }))).toBe(true);
-  });
-
-  it('vero dopo le 10:00 con pasti non confermati', () => {
-    expect(allarmeAsiloAttivo(DIECI_INVERNO, true, statoAsilo({ pastiNonConfermati: true }))).toBe(true);
-  });
-});
-
-describe('descrizioneStatoOperativo', () => {
-  it('stringa vuota se tutto è a posto', () => {
-    expect(descrizioneStatoOperativo(statoAsilo())).toBe('');
-  });
-
-  it('menziona solo le presenze se solo quelle mancano', () => {
-    const descrizione = descrizioneStatoOperativo(statoAsilo({ presenzeIncomplete: true }));
-    expect(descrizione).toContain('presenze');
-    expect(descrizione).not.toContain('pasti');
-  });
-
-  it('menziona solo i pasti se solo quelli mancano', () => {
-    const descrizione = descrizioneStatoOperativo(statoAsilo({ pastiNonConfermati: true }));
-    expect(descrizione).toContain('pasti');
-    expect(descrizione).not.toContain('presenze');
-  });
-
-  it('menziona entrambi se entrambi mancano', () => {
-    const descrizione = descrizioneStatoOperativo(statoAsilo({ presenzeIncomplete: true, pastiNonConfermati: true }));
-    expect(descrizione).toContain('presenze');
-    expect(descrizione).toContain('pasti');
-  });
-});
 
 function statoPersonale(sovrascrizioni: Partial<StatoPersonaleGiorno> = {}): StatoPersonaleGiorno {
   return { sezioniPresenzeIncomplete: [], pastiNonConfermati: false, ...sovrascrizioni };
@@ -198,30 +140,5 @@ describe('allarmePersonalePresenzePastiAttivo', () => {
     expect(allarmePersonalePresenzePastiAttivo(DIECI_INVERNO, true, statoPersonale({ pastiNonConfermati: true }))).toBe(
       true
     );
-  });
-});
-
-describe('htmlAllarmeSettimanaOreNonConfermata', () => {
-  const utente = { utenteId: 'u1', nome: 'Anna', cognome: 'Bianchi', email: 'anna@example.com' };
-
-  it('per un utente normale compone il paragrafo con nome, email e intervallo', () => {
-    expect(htmlAllarmeSettimanaOreNonConfermata(utente, '1-7 settembre 2026')).toBe(
-      '<p>Anna Bianchi (anna@example.com) non ha ancora confermato le ore della settimana 1-7 settembre 2026.</p>'
-    );
-  });
-
-  it('rende come testo nome, cognome ed email con markup, & e virgolette', () => {
-    const html = htmlAllarmeSettimanaOreNonConfermata(
-      { utenteId: 'u2', nome: '<script>alert(1)</script>', cognome: 'Rossi & "Figli"', email: 'a"b@x.it<b>' },
-      '1-7 settembre 2026'
-    );
-    expect(html).not.toContain('<script>');
-    expect(html).not.toContain('<b>');
-    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt; Rossi &amp; &quot;Figli&quot;');
-    expect(html).toContain('(a&quot;b@x.it&lt;b&gt;)');
-  });
-
-  it("un apostrofo (D'Angelo) è escapato come &#39;, che l'HTML mostra come apostrofo", () => {
-    expect(htmlAllarmeSettimanaOreNonConfermata({ ...utente, cognome: "D'Angelo" }, 'x')).toContain('Anna D&#39;Angelo');
   });
 });
