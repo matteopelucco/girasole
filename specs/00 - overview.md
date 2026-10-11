@@ -130,6 +130,9 @@ della maestra, `5x` amministrazione.
   l'admin invia a Rojac (con l'asilo in CC) la mail di riepilogo del mese: pasti
   bambini comunicati + pasti insegnanti (2 per ogni giorno di scuola), con
   modello della mail modificabile da interfaccia
+- [62 - parametri-di-funzionamento.md](62%20-%20parametri-di-funzionamento.md) —
+  voce di menu "Parametri di funzionamento" sotto "Impostazioni" (solo admin):
+  pagina con titolo e breve descrizione, pronta a ospitare le sezioni future
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la
