@@ -64,13 +64,15 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
         ],
       },
       // In fondo (specs/57): pagina intermedia con le azioni avanzate, tra cui il reset,
-      // e sotto di lei, rientrata, "Utenti".
+      // e sotto di lei, rientrate, "Parametri di funzionamento" e "Utenti".
       {
         href: '/admin/impostazioni-avanzate',
         etichetta: 'Impostazioni',
         icona: '⚙️',
         percorsiCorrelati: AZIONI_AVANZATE.map((a) => a.href),
       },
+      // Sotto "Impostazioni", rientrata (specs/62): parametri di funzionamento oggi in env.
+      { href: '/admin/parametri-funzionamento', etichetta: 'Parametri di funzionamento', icona: '🎛️', rientrata: true },
       { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥', rientrata: true }
     );
   }

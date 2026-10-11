@@ -40,6 +40,7 @@ describe('vociMenu', () => {
       '/admin/rette',
       '/admin/pagamenti-bambino',
       '/admin/impostazioni-avanzate',
+      '/admin/parametri-funzionamento',
       '/admin/maestre',
     ]);
   });
@@ -89,15 +90,17 @@ describe('vociMenu', () => {
     }
   });
 
-  it('mette "Impostazioni" in fondo con "Utenti" rientrata sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
+  it('mette "Impostazioni" in fondo con "Parametri di funzionamento" e "Utenti" rientrate sotto, solo per l\'admin, senza "Reset giornata" di primo livello', () => {
     const voci = vociMenu('admin');
-    expect(voci.slice(-2).map((v) => v.etichetta)).toEqual(['Impostazioni', 'Utenti']);
-    const utenti = voci[voci.length - 1];
-    expect(!eGruppo(utenti) && utenti.rientrata).toBe(true);
+    expect(voci.slice(-3).map((v) => v.etichetta)).toEqual(['Impostazioni', 'Parametri di funzionamento', 'Utenti']);
+    for (const rientrata of voci.slice(-2)) {
+      expect(!eGruppo(rientrata) && rientrata.rientrata).toBe(true);
+    }
     expect(vociLink(voci).filter((v) => v.href === '/admin/maestre')).toHaveLength(1);
     expect(vociLink(voci).some((v) => v.href === '/admin/reset-giornata')).toBe(false);
     for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
       expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/impostazioni-avanzate')).toBe(false);
+      expect(vociLink(vociMenu(ruolo)).some((v) => v.href === '/admin/parametri-funzionamento')).toBe(false);
     }
   });
 });
@@ -142,6 +145,12 @@ describe('vociMenuConStato', () => {
       const attive = voceAttive('admin', pathname);
       expect(attive.map((v) => v.href)).toEqual(['/admin/impostazioni-avanzate']);
     }
+  });
+
+  it('evidenzia "Parametri di funzionamento" sulla sua pagina e non "Impostazioni"', () => {
+    expect(voceAttive('admin', '/admin/parametri-funzionamento').map((v) => v.href)).toEqual([
+      '/admin/parametri-funzionamento',
+    ]);
   });
 
   it('evidenzia le voci del gruppo "Ore dipendenti" sulle loro pagine', () => {
