@@ -443,7 +443,11 @@ E per me il calcolo di questo allarme non parte
   0061) restano ammessi ma il cron non li scrive più: le righe
   esistenti sono storico innocuo.
 - Il job è protetto dallo stesso meccanismo già in uso per gli altri
-  cron (header `Authorization: Bearer $CRON_SECRET`).
+  cron (header `Authorization: Bearer $CRON_SECRET`, confrontato a tempo
+  costante). Su Vercel (produzione e anteprime) senza `CRON_SECRET`
+  configurato la route rifiuta **ogni** chiamata (401, messaggio
+  generico); solo in locale e nella CI, senza la variabile, la route
+  resta aperta (issue #300, `lib/autorizzazioneCron.ts`).
 
 - Composizione dell'elenco della campanella e della pagina "Allarmi":
   è una sola, calcolata sul server riusando le stesse funzioni dei
