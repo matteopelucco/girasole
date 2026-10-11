@@ -257,6 +257,11 @@ sostituito da "?" senza far fallire la generazione
   e lo stesso tracciamento (`report_periodici_inviati`, tipo
   `mensile`) — se il mensile risulta già inviato per quella data, non si
   rigenera nulla, PDF ore lavoro incluso.
+- Ogni lancio del job (nome `report-presenze`) è registrato in
+  `cron_esecuzioni` con inizio, fine ed esito, visibile all'admin in "Cron
+  Job" ([63 - cron-job.md](63%20-%20cron-job.md)): "KO" anche quando un
+  report non è stato prodotto. Il registro non tocca le tabelle
+  dell'idempotenza (`report_giornalieri_inviati`, `report_periodici_inviati`).
 
 ## Note di implementazione
 - Il job esiste già per il solo report giornaliero HTML (senza PDF):
