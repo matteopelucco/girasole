@@ -1,5 +1,6 @@
 import { NavHeader } from '@/components/NavHeader';
 import { VariabiliAmbiente } from '@/components/VariabiliAmbiente';
+import { ParametriFunzionalita } from '@/components/ParametriFunzionalita';
 import { requireAdmin } from '@/lib/auth';
 import { nomiParametriPresenti } from '@/lib/parametriAmbiente';
 import { PARAMETRI_VISIBILI } from '@/lib/parametriVisibili';
@@ -47,6 +48,7 @@ export default async function ParametriFunzionamentoPage() {
             <VariabiliAmbiente nomi={nomi} rivela={rivelaValoriParametri} />
           )}
         </section>
+        <ParametriFunzionalita />
       </main>
     </NavHeader>
   );
