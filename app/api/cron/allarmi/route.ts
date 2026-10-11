@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { autorizzaCron } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { eseguiConRegistro, type EsitoLavoroCron } from '@/lib/cronEsecuzioniDati';
+import { problemaRiepilogoAllarmi } from '@/lib/cronEsecuzioni';
 import { inviaEmail, destinatarioNotifiche } from '@/lib/email';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
 import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
@@ -36,12 +39,22 @@ const TIPO_RIEPILOGO_GIORNALIERO = 'presenze_pasti_mezzogiorno';
 // Valuta tutti i controlli (appello, pasti a Rojac, rette ai genitori,
 // ore di lavoro) e invia UN'email di riepilogo, che li riporta sempre
 // tutti con ora e stato, se almeno uno è da sistemare.
+//
+// Ogni lancio autorizzato è registrato in `cron_esecuzioni` (specs/63): il
+// registro non ritarda né fa fallire il lavoro qui sotto
+// (lib/cronEsecuzioniDati.ts, eseguiConRegistro).
 export async function GET(request: Request) {
   if (!autorizzaCron(request)) {
     return NextResponse.json({ errore: 'non autorizzato' }, { status: 401 });
   }
 
   const supabase = createAdminClient();
+  return eseguiConRegistro(supabase, 'allarmi', () => riepilogoAllarmi(supabase));
+}
+
+// Il lavoro vero del cron, con la service_role creata in GET.
+// grant-check: service_role
+async function riepilogoAllarmi(supabase: SupabaseClient): Promise<EsitoLavoroCron> {
   const adesso = new Date();
   const dataOggi = oggi();
 
@@ -84,7 +97,7 @@ export async function GET(request: Request) {
   const stati = Object.fromEntries(controlli.map((c) => [c.id, c.stato]));
 
   if (!riepilogoDaSistemare(controlli)) {
-    return NextResponse.json({ ok: true, data: dataOggi, riepilogo: 'tutto_ok', controlli: stati });
+    return { risposta: NextResponse.json({ ok: true, data: dataOggi, riepilogo: 'tutto_ok', controlli: stati }) };
   }
 
   // Si registra in `allarmi_inviati` PRIMA di inviare: l'unicità
@@ -102,7 +115,10 @@ export async function GET(request: Request) {
     if (riepilogo === 'errore_registro') {
       console.error(`Riepilogo allarmi: registro rifiutato, email non inviata (${erroreRegistro.code})`);
     }
-    return NextResponse.json({ ok: true, data: dataOggi, riepilogo, controlli: stati });
+    return {
+      risposta: NextResponse.json({ ok: true, data: dataOggi, riepilogo, controlli: stati }),
+      problema: problemaRiepilogoAllarmi(riepilogo),
+    };
   }
 
   try {
@@ -116,5 +132,5 @@ export async function GET(request: Request) {
     throw errore;
   }
 
-  return NextResponse.json({ ok: true, data: dataOggi, riepilogo: 'inviato', controlli: stati });
+  return { risposta: NextResponse.json({ ok: true, data: dataOggi, riepilogo: 'inviato', controlli: stati }) };
 }
