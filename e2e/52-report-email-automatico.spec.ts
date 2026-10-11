@@ -59,4 +59,79 @@ test.describe('52 — Report email automatico', () => {
       }
     }
   });
+
+  // Gli scenari sul CONTENUTO della mail (report giornaliero con stato e
+  // nota, corpo con descrizione/data di invio/anomalie, anomalie nei dati,
+  // anomalia nella produzione di un report) non sono ispezionabili da
+  // Playwright: il corpo esce via Resend. Il contenuto è coperto da unit
+  // test puri (lib/reportNotturno.test.ts, lib/report.test.ts,
+  // lib/reportPresenze.test.ts, lib/pdfReport.test.ts); qui si verifica
+  // ciò che la risposta del job espone: nomi degli allegati, numero di
+  // anomalie ed esito per report.
+
+  test('report giornaliero con stato di presenza e nota: il giornaliero inviato risulta tra gli allegati', async ({
+    request,
+  }) => {
+    test.skip(
+      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
+      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+    );
+    const risposta = await request.get('/api/cron/report-presenze', {
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+    });
+    expect(risposta.ok()).toBe(true);
+    const corpo = await risposta.json();
+    expect(Array.isArray(corpo.allegati)).toBe(true);
+    if (corpo.risultati.giornaliero === 'inviato') {
+      expect(corpo.allegati.some((nome: string) => /^report-giornaliero-\d{4}-\d{2}-\d{2}\.pdf$/.test(nome))).toBe(true);
+    } else {
+      expect(corpo.allegati).toEqual([]);
+    }
+  });
+
+  test('corpo della mail con descrizione, data di invio e anomalie: la risposta riporta il numero di anomalie', async ({
+    request,
+  }) => {
+    test.skip(
+      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
+      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+    );
+    const risposta = await request.get('/api/cron/report-presenze', {
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+    });
+    expect(risposta.ok()).toBe(true);
+    const corpo = await risposta.json();
+    expect(Number.isInteger(corpo.anomalie)).toBe(true);
+    expect(corpo.anomalie).toBeGreaterThanOrEqual(0);
+  });
+
+  test('anomalie nei dati: nessun nome di bambino nella risposta del job (solo il conteggio)', async ({ request }) => {
+    test.skip(
+      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
+      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+    );
+    const risposta = await request.get('/api/cron/report-presenze', {
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+    });
+    const corpo = await risposta.json();
+    // Le anomalie con i nomi vanno solo nella mail allo staff, non in una risposta HTTP.
+    expect(typeof corpo.anomalie).toBe('number');
+    expect(Object.keys(corpo).sort()).toEqual(['allegati', 'anomalie', 'data', 'ok', 'risultati']);
+  });
+
+  test('anomalia nella produzione di un report: in condizioni normali nessun report risulta in errore', async ({
+    request,
+  }) => {
+    test.skip(
+      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
+      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+    );
+    const risposta = await request.get('/api/cron/report-presenze', {
+      headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
+    });
+    const corpo = await risposta.json();
+    for (const tipo of ['giornaliero', 'settimanale', 'mensile'] as const) {
+      expect(corpo.risultati[tipo]).toMatch(/^(inviato|gia_inviato|saltato)$/);
+    }
+  });
 });
