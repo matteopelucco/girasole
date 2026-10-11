@@ -1,4 +1,4 @@
-import { AZIONI_AVANZATE } from './impostazioniAvanzate';
+import { SOTTOSEZIONI_IMPOSTAZIONI } from './impostazioniAvanzate';
 
 export type VoceMenu = {
   href: string;
@@ -63,19 +63,16 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
           { href: '/admin/pagamenti-bambino', etichetta: 'Pagamenti bambino', icona: '👶' },
         ],
       },
-      // In fondo (specs/57): pagina intermedia con le azioni avanzate, tra cui il reset,
-      // e sotto di lei, rientrate, "Parametri di funzionamento", "Cron Job" e "Utenti".
-      {
-        href: '/admin/impostazioni-avanzate',
-        etichetta: 'Impostazioni',
-        icona: '⚙️',
-        percorsiCorrelati: AZIONI_AVANZATE.map((a) => a.href),
-      },
-      // Sotto "Impostazioni", rientrata (specs/62): parametri di funzionamento oggi in env.
-      { href: '/admin/parametri-funzionamento', etichetta: 'Parametri di funzionamento', icona: '🎛️', rientrata: true },
-      // Sotto "Impostazioni", rientrata (specs/63): lanci dei job pianificati.
-      { href: '/admin/cron-job', etichetta: 'Cron Job', icona: '⏰', rientrata: true },
-      { href: '/admin/maestre', etichetta: 'Utenti', icona: '👥', rientrata: true }
+      // In fondo (specs/57): pagina indice "Impostazioni" e sotto, rientrate, le sue
+      // sottosezioni (Reset giornata, Parametri di funzionamento, Cron Job, Utenti),
+      // derivate dall'elenco che alimenta anche i riquadri della pagina.
+      { href: '/admin/impostazioni-avanzate', etichetta: 'Impostazioni', icona: '⚙️' },
+      ...SOTTOSEZIONI_IMPOSTAZIONI.map((s) => ({
+        href: s.href,
+        etichetta: s.titolo,
+        icona: s.icona,
+        rientrata: true,
+      }))
     );
   }
 
