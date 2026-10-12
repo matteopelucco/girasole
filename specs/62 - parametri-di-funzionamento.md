@@ -18,7 +18,7 @@ reinserisce la propria password.
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora vedo la voce "Parametri di funzionamento" (`/admin/parametri-funzionamento`)
-E sta subito sotto "Impostazioni", rientrata come "Utenti", prima di "Utenti"
+E sta sotto "Impostazioni", rientrata come "Utenti", dopo "Reset giornata" e prima di "Cron Job" e "Utenti"
 E se sono maestra, assistente o genitore non vedo questa voce
 
 ## Scenario: la pagina si apre e mostra titolo e breve descrizione
@@ -90,7 +90,8 @@ E il pulsante torna "Mostra valori"
   `/admin/*`. Nessun dato letto o scritto sul database: non servono
   migration né RLS.
 - La voce di menu è in `lib/navigazione.ts`, rientrata (`rientrata: true`)
-  tra "Impostazioni" e "Utenti".
+  tra "Impostazioni" e "Utenti" (elenco in `lib/impostazioniAvanzate.ts`,
+  che alimenta anche i riquadri della pagina Impostazioni, specs/57).
 - La pagina è pensata per ospitare più sezioni, una sotto l'altra, ciascuna
   con un proprio titolo: aggiungerne una è aggiungere un blocco sotto
   l'intestazione.

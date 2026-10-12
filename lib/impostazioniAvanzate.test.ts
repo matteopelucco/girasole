@@ -1,19 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { AZIONI_AVANZATE } from './impostazioniAvanzate';
+import { SOTTOSEZIONI_IMPOSTAZIONI } from './impostazioniAvanzate';
 
-describe('AZIONI_AVANZATE', () => {
-  it('include "Reset giornata" verso /admin/reset-giornata', () => {
-    const reset = AZIONI_AVANZATE.find((a) => a.href === '/admin/reset-giornata');
-    expect(reset?.titolo).toBe('Reset giornata');
-    expect(reset?.descrizione.length).toBeGreaterThan(0);
+describe('SOTTOSEZIONI_IMPOSTAZIONI', () => {
+  it('elenca, in questo ordine, Reset giornata, Parametri di funzionamento, Cron Job e Utenti', () => {
+    expect(SOTTOSEZIONI_IMPOSTAZIONI.map((s) => [s.titolo, s.href])).toEqual([
+      ['Reset giornata', '/admin/reset-giornata'],
+      ['Parametri di funzionamento', '/admin/parametri-funzionamento'],
+      ['Cron Job', '/admin/cron-job'],
+      ['Utenti', '/admin/maestre'],
+    ]);
   });
 
-  it('ha titolo, descrizione e href admin non vuoti e href univoci', () => {
-    for (const a of AZIONI_AVANZATE) {
-      expect(a.titolo).not.toBe('');
-      expect(a.descrizione).not.toBe('');
-      expect(a.href.startsWith('/admin/')).toBe(true);
+  it('ha titolo, descrizione, icona e href admin non vuoti e href univoci', () => {
+    for (const s of SOTTOSEZIONI_IMPOSTAZIONI) {
+      expect(s.titolo).not.toBe('');
+      expect(s.descrizione).not.toBe('');
+      expect(s.icona).not.toBe('');
+      expect(s.href.startsWith('/admin/')).toBe(true);
     }
-    expect(new Set(AZIONI_AVANZATE.map((a) => a.href)).size).toBe(AZIONI_AVANZATE.length);
+    expect(new Set(SOTTOSEZIONI_IMPOSTAZIONI.map((s) => s.href)).size).toBe(SOTTOSEZIONI_IMPOSTAZIONI.length);
   });
 });

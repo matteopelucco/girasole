@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { requireAdmin } from '@/lib/auth';
-import { AZIONI_AVANZATE } from '@/lib/impostazioniAvanzate';
+import { SOTTOSEZIONI_IMPOSTAZIONI } from '@/lib/impostazioniAvanzate';
 
 export const dynamic = 'force-dynamic';
 
-// specs/57 - reset-giornata.md: pagina intermedia, riservata all'admin, che
-// elenca le azioni di amministrazione avanzate (oggi solo il reset di una
-// giornata). Per aggiungerne altre basta una voce in AZIONI_AVANZATE.
+// specs/57 - reset-giornata.md: pagina indice, riservata all'admin, con un
+// riquadro per ogni sottosezione di "Impostazioni". Per aggiungerne altre
+// basta una voce in SOTTOSEZIONI_IMPOSTAZIONI (che alimenta anche il menu).
 export default async function ImpostazioniAvanzatePage() {
   const { user, profilo } = await requireAdmin();
 
@@ -17,24 +17,24 @@ export default async function ImpostazioniAvanzatePage() {
         <div>
           <h1 className="text-lg font-medium">Impostazioni</h1>
           <p className="mt-1 text-sm text-stone-600">
-            Azioni di amministrazione avanzate, riservate all&apos;admin. Alcune sono irreversibili: usale con
+            Strumenti di amministrazione avanzati, riservati all&apos;admin. Alcuni sono irreversibili: usali con
             attenzione.
           </p>
         </div>
 
         <ul className="space-y-3">
-          {AZIONI_AVANZATE.map((azione) => (
-            <li key={azione.href}>
+          {SOTTOSEZIONI_IMPOSTAZIONI.map((sezione) => (
+            <li key={sezione.href}>
               <Link
-                href={azione.href}
+                href={sezione.href}
                 className="flex min-h-11 items-start gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition-colors hover:bg-stone-50"
               >
                 <span aria-hidden className="text-lg">
-                  {azione.icona}
+                  {sezione.icona}
                 </span>
                 <span>
-                  <span className="block text-sm font-medium text-stone-900">{azione.titolo}</span>
-                  <span className="mt-0.5 block text-sm text-stone-600">{azione.descrizione}</span>
+                  <span className="block text-sm font-medium text-stone-900">{sezione.titolo}</span>
+                  <span className="mt-0.5 block text-sm text-stone-600">{sezione.descrizione}</span>
                 </span>
               </Link>
             </li>
