@@ -620,9 +620,20 @@ Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
   di test e che la CI e2e abbia girato dopo l'ultimo reset. Gli account
   esistono solo nel DB di test: contro un'anteprima che puntasse per errore
   al DB di produzione, il login fallirebbe.
-- **Dati di prova**: avvisi `Fumo anteprima ...`, cancellati a fine test
-  (anche se il test fallisce). Se un worker muore a metà, l'avviso orfano è
-  innocuo e lo azzera il reset del DB di test della prossima CI (ADR-0006).
+- **Dati di prova**: avvisi `Fumo anteprima <ruolo> ...`, cancellati a fine
+  test (anche se il test fallisce). A inizio test ogni ruolo cancella anche
+  i propri residui di un giro precedente (solo quelli con il proprio ruolo
+  nel nome: i test girano in parallelo). Se un worker muore a metà, l'avviso
+  orfano è innocuo e lo azzera il reset del DB di test della prossima CI
+  (ADR-0006).
+- **Cosa conta come errore**: dopo "Pubblica avviso" il test cerca solo
+  `role="alert"` dentro il form e popup bloccanti (`alertdialog`). La
+  dashboard mostra anche riquadri di prodotto con `role="alert"` (rette non
+  inviate, presenze, ore) che dipendono dai dati del DB di test condiviso: non
+  sono errori e il test non li conta (issue #310).
+- **Navigazione al dettaglio**: il test clicca il link dell'avviso e non usa
+  `goto`; se la pagina non arriva al dettaglio è un difetto dell'app da
+  riportare, non da aggirare nel test.
 - **Dove si vede l'esito**: tab Actions, workflow "Anteprima fumo", una run
   per ogni deploy di anteprima riuscito; il report HTML di Playwright è
   l'artifact `anteprima-fumo-report` (14 giorni). Non compare tra i check

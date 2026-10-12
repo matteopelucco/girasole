@@ -12,12 +12,12 @@
 //     fumo uno skip silenzioso sarebbe un falso verde);
 //   - ogni ruolo fa un login vero, senza sessioni salvate;
 //   - i dati di prova si chiamano "Fumo anteprima <ruolo> <tempo>" e si
-//     cancellano nello stesso test; se restasse qualcosa, lo ripulisce il
-//     reset del DB di test della prossima CI (ADR-0006).
+//     cancellano nello stesso test; se restasse qualcosa, ogni ruolo ripulisce
+//     i propri residui a inizio test e, in ogni caso, il reset del DB di test
+//     della prossima CI (ADR-0006).
 // Gli helper di `e2e/helpers.ts` sono importati senza modificarli.
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import {
-  alertApp,
   clickEAttendiAzione,
   credenziali,
   nessunaViolazioneA11yGrave,
@@ -125,11 +125,12 @@ async function apriEControlla(page: Page, attesa: PaginaAttesa): Promise<void> {
   await nessunaViolazioneA11yGrave(page);
 }
 
-// Cancella un avviso di prova dal suo dettaglio, passando dalla conferma.
-async function eliminaAvviso(page: Page, titolo: string): Promise<void> {
-  await page.goto('/dashboard');
-  const link = page.getByRole('link', { name: titolo });
-  if ((await link.count()) === 0) return;
+// Apre il dettaglio dell'avviso (link già trovato nella dashboard) e lo
+// cancella passando dalla conferma. Il clic sul link NON è sostituito da un
+// `goto`: se la navigazione non arriva al dettaglio è un difetto dell'app e
+// il test deve dirlo (è già successo: l'assistente veniva rimandata alla
+// dashboard, issue #310).
+async function eliminaDalLink(page: Page, link: Locator, titolo: string): Promise<void> {
   await link.click();
   await page.waitForURL(/\/dashboard\/promemoria\/.+/);
   await page.getByRole('button', { name: 'Elimina avviso' }).click();
@@ -139,10 +140,36 @@ async function eliminaAvviso(page: Page, titolo: string): Promise<void> {
   await expect(page.getByText(titolo)).toHaveCount(0);
 }
 
+// Cancella un avviso di prova dal suo dettaglio, passando dalla conferma.
+async function eliminaAvviso(page: Page, titolo: string): Promise<void> {
+  await page.goto('/dashboard');
+  const link = page.getByRole('link', { name: titolo });
+  if ((await link.count()) === 0) return;
+  await eliminaDalLink(page, link, titolo);
+}
+
+// Pulizia a inizio giro: toglie gli avvisi "Fumo anteprima <ruolo> ..." rimasti
+// da un giro precedente fallito, così non sporcano la dashboard di nessuno.
+// Ogni ruolo pulisce solo i propri (i test girano in parallelo: un prefisso
+// comune cancellerebbe l'avviso che un altro ruolo sta usando in quel
+// momento). Dalla dashboard si vedono gli ultimi 20 avvisi: basta per i
+// pochi residui di un giro rotto.
+async function pulisciAvvisiDiProva(page: Page, ruolo: Ruolo): Promise<void> {
+  const prefisso = `Fumo anteprima ${ruolo} `;
+  for (let tentativo = 0; tentativo < 10; tentativo++) {
+    await page.goto('/dashboard');
+    const link = page.getByRole('link', { name: prefisso }).first();
+    if ((await link.count()) === 0) return;
+    const titolo = (await link.innerText()).trim();
+    await eliminaDalLink(page, link, titolo);
+  }
+}
+
 // Il salvataggio di prova dello staff: pubblica un avviso per tutti, lo
 // vede in lista, lo cancella. Se qualcosa va storto prima della cancellazione
 // tenta comunque di ripulire (senza coprire l'errore originale).
 async function pubblicaEdEliminaAvviso(page: Page, ruolo: Ruolo): Promise<void> {
+  await pulisciAvvisiDiProva(page, ruolo);
   const titolo = `Fumo anteprima ${ruolo} ${Date.now()}`;
   await page.goto('/dashboard');
   try {
@@ -151,7 +178,13 @@ async function pubblicaEdEliminaAvviso(page: Page, ruolo: Ruolo): Promise<void> 
     await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
     await clickEAttendiAzione(page, page.getByRole('button', { name: 'Pubblica avviso' }));
     await expect(page.getByText(titolo)).toBeVisible({ timeout: 30_000 });
-    await expect(alertApp(page)).toHaveCount(0);
+    // Solo errori veri del salvataggio: l'errore del form (role="alert" dentro
+    // il <form>) o un popup bloccante. Non `alertApp(page)` su tutta la
+    // pagina: la dashboard mostra anche i riquadri di prodotto (rette non
+    // inviate, presenze, ore) che sono allarmi voluti e dipendono dai dati
+    // del DB di test, non da un guasto dell'anteprima (issue #310).
+    await expect(page.locator('form [role="alert"]')).toHaveCount(0);
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
   } catch (errore) {
     await eliminaAvviso(page, titolo).catch(() => undefined);
     throw errore;

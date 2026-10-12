@@ -15,7 +15,8 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
   const params = await props.params;
   const { supabase, user, profilo } = await requireProfilo();
   const ruolo = profilo?.ruolo ?? null;
-  if (ruolo !== 'admin' && ruolo !== 'maestra') redirect('/dashboard');
+  // Tutto lo staff (specs/15): anche l'assistente modifica e cancella.
+  if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') redirect('/dashboard');
 
   const [{ data: promemoria }, sezioni] = await Promise.all([
     supabase

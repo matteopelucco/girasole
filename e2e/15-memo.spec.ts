@@ -42,6 +42,36 @@ test.describe("15 — Avvisi, come assistente (stesso perimetro della maestra)",
 
     await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
   });
+
+  // specs/15, "Modificare o cancellare un avviso è permesso a qualunque
+  // membro dello staff (maestra, assistente o admin)". Prima del fix #310 il
+  // dettaglio rimandava l'assistente alla dashboard.
+  test("un'assistente può aprire il dettaglio di un avviso, modificarlo e cancellarlo", async ({ page }) => {
+    test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+    await page.goto('/dashboard');
+
+    const titolo = `Avviso E2E assistente dettaglio ${Date.now()}`;
+    await page.getByPlaceholder('Titolo').fill(titolo);
+    await page.getByPlaceholder("Testo dell'avviso").fill('Da modificare e cancellare.');
+    await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+    await page.getByRole('button', { name: 'Pubblica avviso' }).click();
+    await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+
+    await page.getByRole('link', { name: titolo }).click();
+    await page.waitForURL(/\/dashboard\/promemoria\/.+/);
+    await expect(page.getByRole('heading', { name: 'Modifica avviso' })).toBeVisible();
+
+    const titoloModificato = `${titolo} (modificato)`;
+    await page.getByPlaceholder('Titolo').fill(titoloModificato);
+    await page.getByRole('button', { name: 'Salva modifiche' }).click();
+    await expect(page.getByPlaceholder('Titolo')).toHaveValue(titoloModificato, { timeout: 20_000 });
+
+    await page.getByRole('button', { name: 'Elimina avviso' }).click();
+    await page.getByRole('button', { name: 'Sì' }).click();
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText('Avviso eliminato.')).toBeVisible();
+    await expect(page.getByText(titoloModificato)).toHaveCount(0);
+  });
 });
 
 test.describe('15 — Avvisi', () => {
