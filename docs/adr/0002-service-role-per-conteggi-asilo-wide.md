@@ -101,3 +101,17 @@ indicando file e riga. **Per ammettere un'eccezione**: aggiungere il file a
 questa ADR nella stessa PR; la modifica richiede review umana (e rls-guardian).
 La strada preferita resta una RPC `security definer` chiamata con la sessione
 dell'utente.
+
+## Aggiornamento (issue #302): lancio a mano dei cron
+Si aggiunge `app/admin/cron-job/actions.ts` a `FILE_AMMESSI`: l'admin può
+lanciare a mano un job pianificato dalla pagina Cron Job (specs/63, "Lancio a
+mano"). Il lavoro è lo stesso del cron (`lib/cron/`), quindi vale la stessa
+ragione: copre tutto l'asilo e scrive il registro `cron_esecuzioni`, che
+nessun utente scrive con la propria sessione. Un'RPC `security definer` non
+basta: il lavoro compone PDF e invia email dal server applicativo. Il confine
+di sicurezza è nel codice, nell'ordine: `requireAdmin()`, nome del job solo
+dall'elenco, nessun lancio già in corso (letto con la sessione dell'admin),
+poi la service_role. L'azione non passa da `/api/cron/*` e non usa
+`CRON_SECRET`, che resta solo nelle route pianificate. Il criterio "nessuna
+service_role in una server action avviata da un utente" ha quindi due
+eccezioni: la gestione utenti e questo lancio a mano, solo per l'admin.

@@ -3,7 +3,14 @@ import {
   CRON_JOB,
   LANCI_PER_PAGINA,
   LIMITE_MASSIMO,
+  MESSAGGIO_CONFERMA_LANCIO,
+  esitoLancioFallito,
+  esitoLancioManuale,
+  etichettaLancio,
   formattaInizioLancio,
+  inizioFinestraInCorso,
+  lancioInCorso,
+  nomeCronValido,
   gruppiCron,
   hrefCaricaAltri,
   limitiDaParametri,
@@ -18,7 +25,16 @@ import {
 // registro su Supabase sono in lib/cronEsecuzioniDati.ts, coperte da e2e.
 
 function riga(nome: string, iniziato_il: string, altro: Partial<RigaCronEsecuzione> = {}): RigaCronEsecuzione {
-  return { id: `${nome}-${iniziato_il}`, nome, iniziato_il, finito_il: null, esito: 'ok', messaggio_errore: null, ...altro };
+  return {
+    id: `${nome}-${iniziato_il}`,
+    nome,
+    iniziato_il,
+    finito_il: null,
+    esito: 'ok',
+    messaggio_errore: null,
+    estemporaneo: false,
+    ...altro,
+  };
 }
 
 describe('CRON_JOB', () => {
@@ -199,5 +215,88 @@ describe('problemaRiepilogoAllarmi', () => {
     expect(problemaRiepilogoAllarmi('errore_registro')).toBe(
       'Registro degli allarmi inviati non disponibile: email di riepilogo non inviata.'
     );
+  });
+});
+
+// Lancio a mano (specs/63, "Lancio a mano", issue #302).
+describe('etichettaLancio', () => {
+  it('etichetta "estemporaneo" solo i lanci a mano', () => {
+    expect(etichettaLancio(riga('allarmi', '2026-10-02T09:30:00Z', { estemporaneo: true }))).toBe('estemporaneo');
+    expect(etichettaLancio(riga('allarmi', '2026-10-02T09:30:00Z'))).toBeNull();
+  });
+});
+
+describe('nomeCronValido', () => {
+  it("accetta solo i nomi dei job dell'elenco", () => {
+    expect(nomeCronValido('allarmi')).toBe(true);
+    expect(nomeCronValido('report-presenze')).toBe(true);
+  });
+
+  it('rifiuta ogni altro valore arrivato dal browser', () => {
+    for (const valore of ['', 'Allarmi', 'allarmi ', 'sconosciuto', '../allarmi', null, undefined, 42, ['allarmi']]) {
+      expect(nomeCronValido(valore), String(valore)).toBe(false);
+    }
+  });
+});
+
+describe('lancioInCorso', () => {
+  const adesso = new Date('2026-10-02T10:00:00Z');
+
+  it('è vero se un lancio dello stesso job è senza esito da meno di 15 minuti', () => {
+    expect(lancioInCorso([riga('allarmi', '2026-10-02T09:50:00Z', { esito: null })], 'allarmi', adesso)).toBe(true);
+  });
+
+  it('conta anche un lancio a mano ancora in corso', () => {
+    const righe = [riga('allarmi', '2026-10-02T09:59:00Z', { esito: null, estemporaneo: true })];
+    expect(lancioInCorso(righe, 'allarmi', adesso)).toBe(true);
+  });
+
+  it('ignora i lanci finiti, quelli interrotti da più di 15 minuti e quelli degli altri job', () => {
+    const righe = [
+      riga('allarmi', '2026-10-02T09:55:00Z', { esito: 'ok' }),
+      riga('allarmi', '2026-10-02T09:56:00Z', { esito: 'ko', messaggio_errore: 'x' }),
+      riga('allarmi', '2026-10-02T09:44:00Z', { esito: null }),
+      riga('report-presenze', '2026-10-02T09:58:00Z', { esito: null }),
+    ];
+    expect(lancioInCorso(righe, 'allarmi', adesso)).toBe(false);
+    expect(lancioInCorso(righe, 'report-presenze', adesso)).toBe(true);
+  });
+
+  it("senza lanci non c'è niente in corso", () => {
+    expect(lancioInCorso([], 'allarmi', adesso)).toBe(false);
+  });
+});
+
+describe('inizioFinestraInCorso', () => {
+  it("è l'istante di 15 minuti prima, in ISO", () => {
+    expect(inizioFinestraInCorso(new Date('2026-10-02T10:00:00Z'))).toBe('2026-10-02T09:45:00.000Z');
+  });
+});
+
+describe('esitoLancioManuale / esitoLancioFallito', () => {
+  it('OK se il lavoro finisce senza problemi', () => {
+    expect(esitoLancioManuale(null)).toEqual({ stato: 'OK' });
+    expect(esitoLancioManuale(undefined)).toEqual({ stato: 'OK' });
+  });
+
+  it('KO con la frase fissa se una parte del lavoro non è riuscita', () => {
+    expect(esitoLancioManuale('Report non prodotti: mensile.')).toEqual({
+      stato: 'KO',
+      messaggio: 'Report non prodotti: mensile.',
+    });
+  });
+
+  it('KO con il messaggio ripulito se il lavoro solleva un errore', () => {
+    const errore = new Error('Invio fallito per segreteria@example.test con Bearer abc.def\n    at stack');
+    expect(esitoLancioFallito(errore)).toEqual({
+      stato: 'KO',
+      messaggio: 'Invio fallito per [nascosto] con Bearer [nascosto]',
+    });
+  });
+});
+
+describe('MESSAGGIO_CONFERMA_LANCIO', () => {
+  it('avvisa che il lancio invia davvero le email', () => {
+    expect(MESSAGGIO_CONFERMA_LANCIO).toBe('Questo lancio invia davvero le email. Procedere?');
   });
 });

@@ -2,17 +2,35 @@
 //
 // Dati: i lanci di prova vengono da `supabase/seed.sql` (25 lanci del report
 // notturno nel gennaio 2019, 3 del riepilogo allarmi nel febbraio 2019, tra
-// cui un KO con messaggio e uno senza esito), ricaricati dal reset del DB di
-// test a ogni CI. I test non scrivono nulla, tranne l'ultimo che chiama
-// davvero il cron degli allarmi (solo con CRON_SECRET e RESEND_API_KEY, come
-// e2e/07 ed e2e/52): un lancio reale, più recente, compare in cima al suo
-// blocco, quindi i controlli sotto non contano le righe "esatte" ma i limiti.
+// cui un KO con messaggio e uno senza esito, più un lancio a mano), ricaricati
+// dal reset del DB di test a ogni CI. Due test scrivono nel registro: il
+// lancio a mano del riepilogo allarmi (Server Action dell'admin, nessun
+// secret necessario: in CI manca RESEND_API_KEY, quindi nessuna email parte e
+// il lancio può finire KO, che va bene) e quello che chiama davvero la route
+// del cron degli allarmi (solo con CRON_SECRET e RESEND_API_KEY, come e2e/07
+// ed e2e/52). Un lancio reale, più recente, compare in cima al suo blocco,
+// quindi i controlli non contano le righe "esatte" ma i limiti. I test
+// dell'admin girano in ordine, uno alla volta (`mode: 'default'`): un lancio
+// in corso farebbe rifiutare il lancio a mano di un altro test.
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
-import { PERCORSO_CRON_JOB, bloccoCron, caricaAltri, iniziLanci, lanciCron } from './pagina-cron-job';
+import {
+  PERCORSO_CRON_JOB,
+  avvisoInCorso,
+  bloccoCron,
+  caricaAltri,
+  confermaLancio,
+  eRichiestaAzione,
+  esitoLancio,
+  iniziLanci,
+  lanciCron,
+  pulsanteLanciaOra,
+  tagEstemporaneo,
+} from './pagina-cron-job';
 
 test.describe('63 — Cron Job', () => {
   test.describe('admin', () => {
+    test.describe.configure({ mode: 'default' });
     test.use({ storageState: statoAutenticazione('admin') });
 
     test.beforeEach(async () => {
@@ -104,6 +122,87 @@ test.describe('63 — Cron Job', () => {
       await expect(interrotto.getByTestId('stato-lancio')).toHaveText('KO');
     });
 
+    test('ogni job ha il pulsante "Lancia ora", che chiede conferma prima di partire', async ({ page }) => {
+      let azioni = 0;
+      page.on('request', (richiesta) => {
+        if (eRichiestaAzione(richiesta)) azioni++;
+      });
+      await page.goto(PERCORSO_CRON_JOB);
+
+      for (const titolo of ['Report notturno', 'Riepilogo allarmi'] as const) {
+        await expect(pulsanteLanciaOra(bloccoCron(page, titolo))).toBeVisible();
+      }
+
+      const allarmi = bloccoCron(page, 'Riepilogo allarmi');
+      const lanciPrima = await iniziLanci(allarmi);
+      await pulsanteLanciaOra(allarmi).click();
+      const conferma = confermaLancio(allarmi);
+      await expect(conferma).toContainText('Questo lancio invia davvero le email. Procedere?');
+      await expect(conferma.getByRole('button', { name: 'Sì, lancia ora' })).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+
+      await conferma.getByRole('button', { name: 'Annulla' }).click();
+      await expect(conferma).toHaveCount(0);
+      await expect(pulsanteLanciaOra(allarmi)).toBeVisible();
+      // Nessuna Server Action partita, quindi nessun lancio nuovo (il registro
+      // non si rilegge dopo un reload: e2e/07 può lanciare il cron in parallelo).
+      expect(azioni).toBe(0);
+      expect(await iniziLanci(allarmi)).toEqual(lanciPrima);
+    });
+
+    test('lancio a mano: avviso di esecuzione in corso, esito e tag "estemporaneo"', async ({ page }) => {
+      // La Server Action viene trattenuta finché il test non ha visto l'avviso
+      // "in corso" (niente attese a tempo: il job può durare un attimo).
+      let rilascia: () => void = () => {};
+      const trattenuta = new Promise<void>((risolvi) => (rilascia = risolvi));
+      await page.route(
+        (url) => url.pathname === PERCORSO_CRON_JOB,
+        async (route) => {
+          if (eRichiestaAzione(route.request())) await trattenuta;
+          await route.fallback();
+        }
+      );
+
+      await page.goto(PERCORSO_CRON_JOB);
+      const allarmi = bloccoCron(page, 'Riepilogo allarmi');
+      const prima = new Date(Date.now() - 1000).toISOString();
+
+      await pulsanteLanciaOra(allarmi).click();
+      const conferma = confermaLancio(allarmi);
+      const risposta = page.waitForResponse((r) => eRichiestaAzione(r.request()));
+      await conferma.getByRole('button', { name: 'Sì, lancia ora' }).click();
+
+      await expect(avvisoInCorso(allarmi)).toBeVisible();
+      // Durante il lancio non se ne può avviare un altro.
+      await expect(pulsanteLanciaOra(allarmi)).toHaveCount(0);
+      await expect(conferma.getByRole('button')).toHaveCount(2);
+      for (const bottone of await conferma.getByRole('button').all()) {
+        await expect(bottone).toBeDisabled();
+      }
+
+      rilascia();
+      await risposta;
+
+      const esito = esitoLancio(allarmi);
+      await expect(esito).toContainText(/Lancio a mano completato: (OK|KO)/);
+      await expect(avvisoInCorso(allarmi)).toHaveCount(0);
+      const stato = (await esito.textContent())?.includes('completato: OK') ? 'OK' : 'KO';
+      if (stato === 'KO') await expect(esito).not.toContainText('@');
+
+      // In cima al blocco il nuovo lancio, con lo stesso stato e il tag.
+      await expect.poll(async () => (await iniziLanci(allarmi))[0] >= prima).toBe(true);
+      const nuovo = lanciCron(allarmi).first();
+      await expect(tagEstemporaneo(nuovo)).toHaveText('estemporaneo');
+      await expect(nuovo.getByTestId('stato-lancio')).toHaveText(stato);
+
+      // I lanci pianificati (dal seed) non hanno il tag.
+      const pianificato = lanciCron(allarmi).filter({ hasText: 'Invio email fallito (500)' });
+      await expect(pianificato).toHaveCount(1);
+      await expect(tagEstemporaneo(pianificato)).toHaveCount(0);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
     test('ogni lancio di un job viene registrato senza toccare il lavoro del job', async ({ page, request }) => {
       test.skip(
         !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
@@ -144,6 +243,8 @@ test.describe('63 — Cron Job', () => {
 
       await page.goto(PERCORSO_CRON_JOB);
       await page.waitForURL('/dashboard', { timeout: 20_000 });
+      // Nessun modo di lanciare un job a mano (l'azione rifà comunque requireAdmin).
+      await expect(page.getByRole('button', { name: 'Lancia ora' })).toHaveCount(0);
       await context.close();
     }
   });
