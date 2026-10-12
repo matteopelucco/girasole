@@ -74,6 +74,14 @@ export async function requireAdmin() {
   return { supabase, user, profilo };
 }
 
+// Vero per i ruoli di staff (admin, maestra, assistente). Logica pura,
+// condivisa da requireStaff() e dalle server action che devono rifiutare
+// con un esito d'errore (senza redirect) chi non è staff — es. le azioni
+// sugli avvisi (specs/15 - memo.md, issue #312).
+export function isRuoloStaff(ruolo: string | null | undefined): boolean {
+  return ruolo === 'admin' || ruolo === 'maestra' || ruolo === 'assistente';
+}
+
 // Come requireProfilo(), ma reindirizza a /dashboard se il ruolo non è
 // admin, maestra o assistente, e legge subito la data selezionata
 // (query string ?data=, di default oggi) — usato dalle pagine di
@@ -85,7 +93,7 @@ export async function requireAdmin() {
 export async function requireStaff(searchParams: { data?: string }) {
   const { supabase, user, profilo } = await requireProfilo();
   const ruolo = profilo?.ruolo ?? null;
-  if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') redirect('/dashboard');
+  if (!isRuoloStaff(ruolo)) redirect('/dashboard');
   const data = searchParams.data || oggi();
   return { supabase, user, profilo, ruolo, data };
 }

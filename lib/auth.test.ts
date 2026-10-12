@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { oggi } from './date';
-import { assicuraScrivibile, puoScrivereData } from './auth';
+import { assicuraScrivibile, isRuoloStaff, puoScrivereData } from './auth';
 
 describe('puoScrivereData', () => {
   it("l'admin può scrivere su qualunque data", () => {
@@ -46,5 +46,21 @@ describe('assicuraScrivibile', () => {
 
   it("lancia per l'assistente su una data diversa da oggi", () => {
     expect(() => assicuraScrivibile('assistente', '2020-01-01')).toThrow();
+  });
+});
+
+describe('isRuoloStaff', () => {
+  it('admin, maestra e assistente sono staff', () => {
+    expect(isRuoloStaff('admin')).toBe(true);
+    expect(isRuoloStaff('maestra')).toBe(true);
+    expect(isRuoloStaff('assistente')).toBe(true);
+  });
+
+  it('il genitore e un ruolo mancante o sconosciuto non sono staff', () => {
+    expect(isRuoloStaff('genitore')).toBe(false);
+    expect(isRuoloStaff(null)).toBe(false);
+    expect(isRuoloStaff(undefined)).toBe(false);
+    expect(isRuoloStaff('')).toBe(false);
+    expect(isRuoloStaff('superadmin')).toBe(false);
   });
 });

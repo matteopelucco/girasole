@@ -109,6 +109,22 @@ se premo "Sì", il sistema cancella l'avviso e torna alla lista, con un
 messaggio di feedback
 se premo "Annulla", il sistema nasconde il form di conferma
 
+## Scenario: un genitore non può modificare né cancellare un avviso
+Dato che sono autenticato come genitore
+Quando la modifica o la cancellazione di un avviso viene richiesta a
+nome mio (ad esempio con una richiesta costruita a mano, perché la
+pagina di dettaglio per me non è raggiungibile)
+Allora l'operazione risponde con un errore chiaro, senza mostrare "Avviso
+eliminato." né un salvataggio riuscito
+E l'avviso resta invariato
+
+## Scenario: modifica o cancellazione di un avviso che non esiste più
+Dato che sono staff e l'avviso è già stato cancellato (da me in un'altra
+scheda o da un'altra persona dello staff)
+Quando provo a modificarlo o a cancellarlo di nuovo
+Allora l'esito è un errore chiaro ("Avviso non trovato"), mai un
+messaggio di successo
+
 ## Regole
 - `destinatario_tipo` è uno tra `tutti`, `sezione`, `bambino`; solo il
   campo coerente (`sezione_id` o `bambino_id`) viene salvato — se il
@@ -127,5 +143,9 @@ se premo "Annulla", il sistema nasconde il form di conferma
   staff (maestra, assistente o admin), non solo a chi lo ha creato —
   coerente con "lo staff vede tutti gli avvisi" (RLS in
   `supabase/migrations/0012_pasto_senza_parziale.sql`).
+- Le azioni di modifica e cancellazione controllano il ruolo anche
+  lato server (staff: maestra, assistente, admin) e che almeno una riga
+  sia stata davvero toccata: il database (RLS) resta il confine vero, ma
+  l'app non deve mai mostrare un esito di successo falso.
 - La cancellazione richiede una conferma esplicita ("Sì"/"Annulla") per
   evitare cancellazioni accidentali con un tap.
