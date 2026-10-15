@@ -1,6 +1,6 @@
 'use server';
 
-import { requireUser } from '@/lib/auth';
+import { isRuoloStaff, requireProfilo, requireUser } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { EsitoAzione } from '@/components/FormConEsito';
@@ -34,6 +34,9 @@ function campiAvviso(formData: FormData):
   return { ok: true, titolo, testo, destinatarioTipo, sezioneId, bambinoId };
 }
 
+const MESSAGGIO_NON_STAFF = 'Non hai i permessi per gestire gli avvisi.';
+const MESSAGGIO_NON_TROVATO = 'Avviso non trovato: potrebbe essere già stato eliminato.';
+
 export async function creaPromemoria(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase, user } = await requireUser();
 
@@ -61,7 +64,10 @@ export async function aggiornaPromemoria(
   _stato: EsitoAzione,
   formData: FormData
 ): Promise<EsitoAzione> {
-  const { supabase } = await requireUser();
+  // Il database (RLS) blocca già chi non è staff, ma senza questo controllo
+  // l'app mostrerebbe un esito falso (issue #312).
+  const { supabase, profilo } = await requireProfilo();
+  if (!isRuoloStaff(profilo?.ruolo)) return { ok: false, messaggio: MESSAGGIO_NON_STAFF };
 
   const promemoriaId = formData.get('promemoria_id') as string;
   if (!promemoriaId) return { ok: false, messaggio: "Compila titolo e testo dell'avviso." };
@@ -69,7 +75,9 @@ export async function aggiornaPromemoria(
   const campi = campiAvviso(formData);
   if (!campi.ok) return { ok: false, messaggio: campi.messaggio };
 
-  const { error } = await supabase
+  // `.select('id')`: senza righe toccate (avviso inesistente o RLS che
+  // filtra tutto) l'esito è un errore, mai un falso successo.
+  const { data: aggiornati, error } = await supabase
     .from('promemoria')
     .update({
       titolo: campi.titolo,
@@ -83,10 +91,12 @@ export async function aggiornaPromemoria(
       // già presenti.
       updated_at: new Date().toISOString(),
     })
-    .eq('id', promemoriaId);
+    .eq('id', promemoriaId)
+    .select('id');
   if (error) {
     return { ok: false, messaggio: "Impossibile aggiornare l'avviso.", dettaglio: error.message };
   }
+  if (!aggiornati?.length) return { ok: false, messaggio: MESSAGGIO_NON_TROVATO };
 
   revalidatePath('/dashboard');
   revalidatePath(`/dashboard/promemoria/${promemoriaId}`);
@@ -95,14 +105,21 @@ export async function aggiornaPromemoria(
 
 // specs/15 - memo.md, scenario "cancellazione di un avviso".
 export async function eliminaPromemoria(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
-  const { supabase } = await requireUser();
+  const { supabase, profilo } = await requireProfilo();
+  if (!isRuoloStaff(profilo?.ruolo)) return { ok: false, messaggio: MESSAGGIO_NON_STAFF };
+
   const promemoriaId = formData.get('promemoria_id') as string;
   if (!promemoriaId) return { ok: false, messaggio: 'Avviso non valido.' };
 
-  const { error } = await supabase.from('promemoria').delete().eq('id', promemoriaId);
+  const { data: eliminati, error } = await supabase
+    .from('promemoria')
+    .delete()
+    .eq('id', promemoriaId)
+    .select('id');
   if (error) {
     return { ok: false, messaggio: "Impossibile eliminare l'avviso.", dettaglio: error.message };
   }
+  if (!eliminati?.length) return { ok: false, messaggio: MESSAGGIO_NON_TROVATO };
 
   revalidatePath('/dashboard');
   redirect('/dashboard?promemoria=eliminato');

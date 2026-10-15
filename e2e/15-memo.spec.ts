@@ -4,7 +4,7 @@
 // tabella, non rinominata — l'entità visibile all'utente si chiama
 // "Avviso") sul progetto Supabase di test — vedi la nota in
 // 13-segna-presenza.spec.ts.
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type APIResponse, type Page } from '@playwright/test';
 import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 
 // Sceglie destinatario "Un bambino" e prova le prime sezioni finché non
@@ -25,6 +25,60 @@ async function scegliBambinoDiUnaSezioneConBambini(page: Page): Promise<boolean>
     }
   }
   return false;
+}
+
+// Richiesta di una Server Action catturata dal browser, da rieseguire poi
+// "a nome di" un altro utente (o a avviso già cancellato): la pagina di
+// dettaglio di un avviso non è raggiungibile da un genitore, quindi l'unico
+// modo di provare l'azione con il suo ruolo è rieseguire la stessa
+// richiesta con la sua sessione (issue #312).
+type RichiestaAzione = { url: string; headers: Record<string, string>; body: Buffer | null };
+
+// Esegue `clicca` (che invia una Server Action) e ne cattura la richiesta
+// POST senza farla arrivare al server (abort): nessun effetto sul DB.
+async function catturaAzione(page: Page, clicca: () => Promise<void>): Promise<RichiestaAzione> {
+  let catturata: RichiestaAzione | null = null;
+  await page.route('**/*', async (route) => {
+    const richiesta = route.request();
+    if (richiesta.method() === 'POST' && richiesta.headers()['next-action'] !== undefined) {
+      const intestazioni = await richiesta.allHeaders();
+      for (const nome of ['cookie', 'host', 'content-length', 'connection']) delete intestazioni[nome];
+      catturata = { url: richiesta.url(), headers: intestazioni, body: richiesta.postDataBuffer() };
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await clicca();
+  await expect.poll(() => catturata, { timeout: 20_000 }).not.toBeNull();
+  await page.unroute('**/*');
+  return catturata as unknown as RichiestaAzione;
+}
+
+async function rieseguiAzione(
+  richiesta: RichiestaAzione,
+  esegui: (r: RichiestaAzione) => Promise<APIResponse>
+): Promise<{ testo: string; conRedirect: boolean }> {
+  const risposta = await esegui(richiesta);
+  return { testo: await risposta.text(), conRedirect: risposta.headers()['x-action-redirect'] !== undefined };
+}
+
+async function creaAvvisoPerTutti(page: Page, titolo: string): Promise<void> {
+  await page.getByPlaceholder('Titolo').fill(titolo);
+  await page.getByPlaceholder("Testo dell'avviso").fill('Testo generato dal test end-to-end.');
+  await page.locator('select[name="destinatario_tipo"]').selectOption('tutti');
+  await page.getByRole('button', { name: 'Pubblica avviso' }).click();
+  await expect(page.getByText(titolo)).toBeVisible({ timeout: 20_000 });
+}
+
+async function apriDettaglioAvviso(page: Page, titolo: string): Promise<void> {
+  await page.getByRole('link', { name: titolo }).click();
+  await page.waitForURL(/\/dashboard\/promemoria\/.+/);
+}
+
+async function eliminaAvvisoDalDettaglio(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Elimina avviso' }).click();
+  await page.getByRole('button', { name: 'Sì' }).click();
 }
 
 test.describe("15 — Avvisi, come assistente (stesso perimetro della maestra)", () => {
@@ -287,5 +341,75 @@ test.describe('15 — Avvisi', () => {
     await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
     await expect(page.getByText('Avviso eliminato.')).toBeVisible();
     await expect(page.getByText(titolo)).toHaveCount(0);
+  });
+
+  test('un genitore non può modificare né cancellare un avviso: errore chiaro, avviso invariato', async ({
+    page,
+    playwright,
+  }) => {
+    test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
+    const titolo = `Avviso Genitore E2E ${Date.now()}`;
+    await creaAvvisoPerTutti(page, titolo);
+    await apriDettaglioAvviso(page, titolo);
+    const urlDettaglio = page.url();
+
+    const richiestaElimina = await catturaAzione(page, () => eliminaAvvisoDalDettaglio(page));
+    await page.goto(urlDettaglio);
+    await page.getByPlaceholder('Titolo').fill(`${titolo} (manomesso)`);
+    const richiestaAggiorna = await catturaAzione(page, () =>
+      page.getByRole('button', { name: 'Salva modifiche' }).click()
+    );
+
+    const genitore = await playwright.request.newContext({ storageState: statoAutenticazione('genitore') });
+    try {
+      for (const richiesta of [richiestaElimina, richiestaAggiorna]) {
+        const esito = await rieseguiAzione(richiesta, (r) =>
+          genitore.post(r.url, { headers: r.headers, data: r.body ?? undefined })
+        );
+        expect(esito.testo).toContain('Non hai i permessi per gestire gli avvisi.');
+        expect(esito.testo).not.toContain('Avviso eliminato');
+        expect(esito.conRedirect).toBe(false);
+      }
+    } finally {
+      await genitore.dispose();
+    }
+
+    // L'avviso è rimasto com'era: stesso titolo, ancora in lista.
+    await page.goto(urlDettaglio);
+    await expect(page.getByPlaceholder('Titolo')).toHaveValue(titolo);
+
+    // Pulizia, che è anche il caso staff di successo: conferma e ritorno alla lista.
+    await eliminaAvvisoDalDettaglio(page);
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText('Avviso eliminato.')).toBeVisible();
+    await expect(page.getByText(titolo)).toHaveCount(0);
+  });
+
+  test('modifica o cancellazione di un avviso che non esiste più: errore, mai successo', async ({ page }) => {
+    const titolo = `Avviso Inesistente E2E ${Date.now()}`;
+    await creaAvvisoPerTutti(page, titolo);
+    await apriDettaglioAvviso(page, titolo);
+    const urlDettaglio = page.url();
+
+    const richiestaElimina = await catturaAzione(page, () => eliminaAvvisoDalDettaglio(page));
+    await page.goto(urlDettaglio);
+    const richiestaAggiorna = await catturaAzione(page, () =>
+      page.getByRole('button', { name: 'Salva modifiche' }).click()
+    );
+
+    // Cancellazione vera: da qui l'avviso non esiste più.
+    await page.goto(urlDettaglio);
+    await eliminaAvvisoDalDettaglio(page);
+    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await expect(page.getByText(titolo)).toHaveCount(0);
+
+    for (const richiesta of [richiestaElimina, richiestaAggiorna]) {
+      const esito = await rieseguiAzione(richiesta, (r) =>
+        page.request.post(r.url, { headers: r.headers, data: r.body ?? undefined })
+      );
+      expect(esito.testo).toContain('Avviso non trovato');
+      expect(esito.testo).not.toContain('Avviso eliminato');
+      expect(esito.conRedirect).toBe(false);
+    }
   });
 });
