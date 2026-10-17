@@ -16,7 +16,7 @@ loadEnvConfig(process.cwd());
 // calendario (solo se la variabile è impostata, mai in produzione). Se in
 // locale si riusa un server già avviato, riavviarlo per fargli leggere la
 // variabile.
-process.env.CALENDARIO_ICAL_PROVA_ORIGINE ??= 'http://127.0.0.1:4318';
+process.env.CALENDARIO_ICAL_PROVA_ORIGINE ||= 'http://127.0.0.1:4318';
 
 // File e2e di presenze e pasti di oggi che girano in un solo worker (vedi il
 // progetto 'chromium-stato-condiviso' sotto).
