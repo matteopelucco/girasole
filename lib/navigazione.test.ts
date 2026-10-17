@@ -23,17 +23,34 @@ describe('eStessaPagina', () => {
 });
 
 describe('vociMenu', () => {
-  it('include solo "Dashboard" per maestra, assistente, genitore e ruolo assente', () => {
-    for (const ruolo of ['maestra', 'assistente', 'genitore', null, undefined]) {
+  it('include solo "Dashboard" per genitore e ruolo assente', () => {
+    for (const ruolo of ['genitore', null, undefined]) {
       const voci = vociMenu(ruolo);
       expect(voci).toEqual([{ href: '/dashboard', etichetta: 'Dashboard', icona: '🏠' }]);
     }
+  });
+
+  it('include "Dashboard" e "Calendario" (specs/64) per maestra e assistente, in quest\'ordine', () => {
+    for (const ruolo of ['maestra', 'assistente']) {
+      const voci = vociMenu(ruolo);
+      expect(voci).toEqual([
+        { href: '/dashboard', etichetta: 'Dashboard', icona: '🏠' },
+        { href: '/dashboard/calendario', etichetta: 'Calendario', icona: '🗓️' },
+      ]);
+    }
+  });
+
+  it('mette "Calendario" subito dopo "Dashboard" anche per l\'admin, senza toccare "Calendario scolastico"', () => {
+    const voci = vociLink(vociMenu('admin'));
+    expect(voci.slice(0, 2).map((v) => v.href)).toEqual(['/dashboard', '/dashboard/calendario']);
+    expect(voci.find((v) => v.href === '/admin/calendario')?.etichetta).toBe('Calendario scolastico');
   });
 
   it('include le voci di amministrazione per admin, nell\'ordine storico della barra orizzontale', () => {
     const voci = vociMenu('admin');
     expect(vociLink(voci).map((v) => v.href)).toEqual([
       '/dashboard',
+      '/dashboard/calendario',
       '/admin',
       '/admin/calendario',
       '/admin/profili-orari',
@@ -133,6 +150,13 @@ describe('vociMenuConStato', () => {
       const attive = voceAttive('maestra', pathname);
       expect(attive.map((v) => v.href)).toEqual(['/dashboard']);
     }
+  });
+
+  it('evidenzia "Calendario" su /dashboard/calendario e non "Dashboard" né "Calendario scolastico"', () => {
+    for (const ruolo of ['admin', 'maestra', 'assistente']) {
+      expect(voceAttive(ruolo, '/dashboard/calendario').map((v) => v.href)).toEqual(['/dashboard/calendario']);
+    }
+    expect(voceAttive('admin', '/admin/calendario').map((v) => v.href)).toEqual(['/admin/calendario']);
   });
 
   it('evidenzia la voce admin più specifica invece del generico /admin', () => {
