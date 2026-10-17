@@ -121,6 +121,14 @@ E la risposta del cron dice che la sincronizzazione del calendario non è riusci
 E in "Cron Job" il lancio risulta "KO" con un messaggio leggibile ("Calendario non sincronizzato: …")
 E né il messaggio né le risposte contengono l'indirizzo iCal
 
+## Scenario: una regola di ripetizione ostile nel feed non blocca il report notturno
+Dato che è salvato l'indirizzo di un calendario
+E il feed contiene, oltre a eventi normali, una ripetizione che con ical.js non termina (es. un giorno del mese "numerato" ogni giorno, come `FREQ=DAILY;BYDAY=1MO`)
+Quando il cron notturno parte
+Allora il cron risponde con successo in pochi secondi
+E il report notturno viene prodotto come sempre
+E gli eventi normali del feed sono salvati; la serie ostile è saltata
+
 ## Regole
 - **Indirizzo = segreto.** Chi lo ha legge il calendario. Sta nel database, in
   una tabella a riga singola (`impostazioni_calendario`, migration 0065), mai nel
@@ -163,20 +171,43 @@ E né il messaggio né le risposte contengono l'indirizzo iCal
   (fine esclusa), con `tutto_il_giorno = true`. Titolo, descrizione e luogo sono
   testo semplice, accorciati a lunghezze massime: chi li mostra li tratta come
   testo (mai come HTML).
-  **Limiti di sicurezza dell'analisi** (il feed è letto nello stesso processo del
-  report notturno e non deve poterlo bloccare): si espandono solo le ripetizioni
-  giornaliere, settimanali, mensili e annuali (ogni secondo, minuto o ora sono
-  saltate); per le giornaliere e settimanali le regole con giorno del mese,
-  giorno dell'anno, numero di settimana o posizione nell'insieme (BYMONTHDAY,
-  BYYEARDAY, BYWEEKNO, BYSETPOS) sono saltate, perché ical.js non termina con
-  regole impossibili come "ogni giorno del 30 febbraio". Un evento o una serie
-  illeggibile o saltata non fa fallire il feed: gli altri eventi restano. Tetto
-  di 20.000 passi per serie, 50.000 per tutto il feed e 5.000 eventi salvati: oltre,
-  l'analisi si ferma (le serie non ancora esaminate restano fuori). Le occorrenze
-  si calcolano dall'inizio della serie (ical.js non permette di partire dalla
-  finestra senza falsare COUNT e INTERVAL): una serie iniziata da moltissimo
-  tempo (ordine di 50 anni se giornaliera) può superare il tetto prima di
-  arrivare alla finestra e non comparire.
+  **Limiti di sicurezza dell'analisi** (il feed lo può modificare chiunque abbia
+  accesso al Google Calendar, e non deve poter bloccare il report notturno):
+  si espandono solo le ripetizioni giornaliere, settimanali, mensili e annuali
+  (ogni secondo, minuto o ora sono saltate); INTERVAL oltre 1000 è saltato; per
+  le giornaliere e settimanali sono saltate le regole con BYMONTHDAY, BYYEARDAY,
+  BYWEEKNO, BYSETPOS e con BYDAY numerato ("1MO", "-1FR": solo giorni semplici),
+  e con INTERVAL maggiore di 1 anche quelle con BYMONTH (per le giornaliere anche
+  con BYDAY); le annuali con BYSETPOS sono saltate; una serie con più RRULE è
+  saltata se anche una sola è esclusa. Un evento o una serie illeggibile o
+  saltata non fa fallire il feed: gli altri eventi restano. Gli eventi si
+  estraggono dal testo in tempo lineare (nessuna espressione regolare).
+  Tetti: 20.000 passi per serie, 50.000 per tutto il feed, 5.000 eventi, 20.000
+  eventi nel feed e 4 secondi di analisi (controllati prima di ogni serie).
+  **Analisi interrotta dai limiti = errore, non elenco parziale**: gli eventi
+  salvati restano e nel registro "Cron Job" compare "Calendario non
+  sincronizzato: feed troppo complesso, analisi interrotta dai limiti" (così le
+  serie non esaminate non spariscono in silenzio). Le occorrenze si calcolano
+  dall'inizio della serie (ical.js non permette di partire dalla finestra senza
+  falsare COUNT e INTERVAL): una serie iniziata da decine di anni può superare il
+  tetto prima di arrivare alla finestra e fa risultare l'analisi interrotta.
+- **Analisi in un worker terminabile.** I tetti non bastano: con alcune regole
+  (valide o malformate) ical.js resta bloccato dentro una sola chiamata, che
+  nessun conteggio interrompe, e l'analisi gira nello stesso processo del report.
+  Per questo l'analisi (`lib/calendarioIcalMotore.mjs`, JavaScript puro) gira in
+  un `worker_threads` (`lib/calendarioIcalWorker.mjs`, avviato da
+  `lib/calendarioIcalIsolato.ts`) con tempo massimo di 8 secondi; allo scadere il
+  worker è terminato (`terminate()`), il feed è considerato non analizzabile
+  ("analisi del feed troppo lenta"), gli eventi salvati restano e il report esce
+  comunque. Scelta tra le due strade proposte (route interna separata o worker):
+  il worker, perché una route interna eseguirebbe comunque il ciclo infinito nello
+  stesso processo (su Vercel con più richieste in una stessa istanza, e in
+  `next start`, lo bloccherebbe per tutti) e richiederebbe una chiamata HTTP del
+  server a sé stesso; il worker è un modulo di Node, senza dipendenze. Il file del
+  worker è caricato da disco a runtime (non passa dal bundle): `next.config.mjs`
+  lo include, con il motore e ical.js, nel pacchetto delle due funzioni che lo
+  usano (`outputFileTracingIncludes`). Se il worker non parte è un errore
+  ("errore imprevisto"), mai un ripiego nello stesso processo.
 - **Dentro il cron notturno già esistente** (`report-presenze`): nessuna nuova
   voce in `vercel.json`. Il passo di sincronizzazione parte insieme al report e
   non ne ritarda né ne cambia l'esito: ogni suo errore è preso e trasformato in
@@ -191,7 +222,8 @@ E né il messaggio né le risposte contengono l'indirizzo iCal
   del report notturno risulta KO con il messaggio fisso "Calendario non
   sincronizzato: <motivo breve>" (motivo scelto da un elenco: "indirizzo non
   valido", "servizio non raggiungibile", "risposta non valida", "feed non
-  valido", "impostazione non leggibile", "salvataggio degli eventi non
+  valido", "analisi del feed troppo lenta", "feed troppo complesso, analisi
+  interrotta dai limiti", "impostazione non leggibile", "salvataggio degli eventi non
   riuscito", "errore imprevisto"). Se anche una parte del
   report non è riuscita, i due messaggi si uniscono. Sincronizzazione
   disattivata non è un errore.

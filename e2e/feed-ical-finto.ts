@@ -7,7 +7,7 @@
 // della sincronizzazione). L'indirizzo che il test salva è quello di questo
 // server: non è un indirizzo Google e non contiene nessun segreto.
 import http from 'node:http';
-import { VTIMEZONE_ROMA } from '../lib/calendarioFusoRoma';
+import { VTIMEZONE_ROMA } from '../lib/calendarioFusoRoma.mjs';
 import { dataFraGiorni } from './helpers';
 
 export type RispostaFeed = { stato: number; corpo: string };
@@ -102,6 +102,21 @@ export function feedAggiornato(): string {
       'STATUS:CANCELLED',
     ]),
   ]);
+}
+
+// Versione 2 più una ripetizione ostile: con ical.js "ogni giorno, ma solo il
+// primo lunedì" non termina mai. L'app la salta (o, se non ci riuscisse, ferma
+// l'analisi dopo il tempo massimo): gli 8 eventi di prova restano.
+export function feedConRegolaOstile(): string {
+  const ostile = evento([
+    'UID:prova-ostile@girasole.test',
+    `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(2))}T080000`,
+    `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(2))}T090000`,
+    'RRULE:FREQ=DAILY;BYDAY=1MO',
+    'SUMMARY:Evento di prova ostile',
+  ]);
+  return feedAggiornato().replace('END:VCALENDAR', `${ostile}
+END:VCALENDAR`);
 }
 
 export type FeedFinto = {

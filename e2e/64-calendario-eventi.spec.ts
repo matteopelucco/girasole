@@ -23,6 +23,7 @@ import {
   FEED_VUOTO,
   avviaFeedFinto,
   feedAggiornato,
+  feedConRegolaOstile,
   feedIniziale,
   indirizzoFeedFinto,
   origineFeedFinto,
@@ -230,6 +231,22 @@ test.describe('64 — Calendario eventi', () => {
 
         const ancora = await lanciaCronNotturno(request);
         expect(ancora.json.calendario).toEqual({ stato: 'ok', inseriti: 0, aggiornati: 0, rimossi: 0, totale: 8 });
+      });
+
+      test('una regola di ripetizione ostile nel feed non blocca il report notturno', async ({ page, request }) => {
+        await impostaIndirizzo(page, indirizzoFeedFinto());
+        feed.imposta({ stato: 200, corpo: feedAggiornato() });
+        await lanciaCronNotturno(request);
+
+        feed.imposta({ stato: 200, corpo: feedConRegolaOstile() });
+        const inizio = Date.now();
+        const { json } = await lanciaCronNotturno(request);
+
+        // La serie ostile è saltata, gli eventi normali restano e il report esce.
+        expect(Date.now() - inizio).toBeLessThan(30_000);
+        expect(json.calendario).toEqual({ stato: 'ok', inseriti: 0, aggiornati: 0, rimossi: 0, totale: 8 });
+        expect(json.ok).toBe(true);
+        expect(json.risultati).toBeDefined();
       });
 
       test('se Google non risponde o il feed non è valido, gli eventi restano e l\'errore è leggibile', async ({

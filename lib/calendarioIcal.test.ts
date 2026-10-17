@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { VTIMEZONE_ROMA } from './calendarioFusoRoma';
+import { VTIMEZONE_ROMA } from './calendarioFusoRoma.mjs';
+import { estraiBlocchiEvento } from './calendarioIcalMotore.mjs';
 import {
   ErroreCalendario,
   MAX_ITERAZIONI_TOTALI,
   MESSAGGIO_INDIRIZZO_NON_VALIDO,
+  analizzaFeedIcal,
   espandiEventiIcal,
   finestraSincronizzazione,
   problemaCalendario,
@@ -513,7 +515,7 @@ QUALCOSA
 `, DA, A)).toThrow(ErroreCalendario);
   });
 
-  it('il tetto sulle iterazioni complessive ferma l\'analisi di un feed enorme in tempi brevi', () => {
+  it('il tetto sulle iterazioni complessive ferma l analisi di un feed enorme e la segnala come incompleta', () => {
     // 40 serie giornaliere iniziate nel 2012: dalla finestra le separano migliaia di occorrenze ciascuna.
     const molte = Array.from({ length: 40 }, (_, i) =>
       evento(
@@ -524,18 +526,102 @@ QUALCOSA
         `SUMMARY:Antica ${i}`
       )
     );
+    const testo = feed(molte);
     const inizio = Date.now();
-    const eventi = espandi(molte, true, new Date('2026-06-01T00:00:00Z'), new Date('2026-06-11T00:00:00Z'));
+    const { eventi, incompleta } = analizzaFeedIcal(testo, new Date('2026-06-01T00:00:00Z'), new Date('2026-06-11T00:00:00Z'));
     expect(Date.now() - inizio).toBeLessThan(10_000);
-    // Le prime serie arrivano alla finestra, le ultime non vengono nemmeno cominciate.
-    expect(eventi.length).toBeGreaterThan(0);
+    expect(incompleta).toBe(true);
     expect(eventi.length).toBeLessThan(40 * 10);
     expect(MAX_ITERAZIONI_TOTALI).toBe(50_000);
+    // espandiEventiIcal, usata per sostituire gli eventi salvati, non accetta un elenco parziale.
+    expect(() => espandiEventiIcal(testo, new Date('2026-06-01T00:00:00Z'), new Date('2026-06-11T00:00:00Z'))).toThrow(
+      expect.objectContaining({ motivo: 'analisi_incompleta' })
+    );
   }, 30_000);
 
-  it('non salva più di 5000 eventi e si ferma appena li raggiunge', () => {
+  it('non salva più di 5000 eventi, si ferma appena li raggiunge e lo segnala', () => {
     const fitte = Array.from({ length: 10 }, (_, i) => serie(`fitta${i}`, 'FREQ=DAILY'));
-    const eventi = espandi(fitte, true, new Date('2026-01-01T00:00:00Z'), new Date('2027-12-31T00:00:00Z'));
+    const { eventi, incompleta } = analizzaFeedIcal(feed(fitte), new Date('2026-01-01T00:00:00Z'), new Date('2027-12-31T00:00:00Z'));
     expect(eventi).toHaveLength(5000);
+    expect(incompleta).toBe(true);
+  });
+
+  it('il budget di tempo ferma l analisi prima di una nuova serie e la segnala come incompleta', () => {
+    const molte = Array.from({ length: 30 }, (_, i) => serie(`serie${i}`, 'FREQ=DAILY;COUNT=400'));
+    const { incompleta } = analizzaFeedIcal(feed(molte), DA, A, { budgetMs: 0 });
+    expect(incompleta).toBe(true);
+  });
+
+  it('un feed normale non è mai incompleto', () => {
+    expect(analizzaFeedIcal(feed([sano, serie('s', 'FREQ=WEEKLY;COUNT=5')]), DA, A).incompleta).toBe(false);
+  });
+});
+
+// Casi della review di sicurezza: regole che con ical.js non terminano (o ci
+// mettono troppo). Ognuna deve finire in fretta; le regole escluse non danno
+// eventi, gli altri eventi del feed restano.
+describe('espandiEventiIcal: casi ostili della review', () => {
+  const sano = evento('UID:sano@test', 'DTSTART;TZID=Europe/Rome:20260707T100000', 'DTEND;TZID=Europe/Rome:20260707T110000', 'SUMMARY:Sano');
+  // Inizio di giovedì 1/10/2026.
+  const serie = (uid: string, regola: string, inizio = '20261001T090000Z') =>
+    evento(`UID:${uid}@test`, `DTSTART:${inizio}`, 'DTEND:20261001T100000Z', ...regola.split('|').map((r) => `RRULE:${r}`), `SUMMARY:${uid}`);
+  const ids = (eventi: { id_esterno: string }[]) => eventi.map((e) => e.id_esterno);
+
+  it.each([
+    ['DAILY con BYDAY numerato (1MO)', 'FREQ=DAILY;BYDAY=1MO'],
+    ['DAILY con BYDAY numerato negativo (-1FR)', 'FREQ=DAILY;BYDAY=-1FR'],
+    ['WEEKLY con BYDAY numerato', 'FREQ=WEEKLY;BYDAY=1MO'],
+    ['DAILY con INTERVAL=7 e BYDAY=MO partendo da un giovedì', 'FREQ=DAILY;INTERVAL=7;BYDAY=MO'],
+    ['DAILY con INTERVAL=146097 e BYMONTH=2', 'FREQ=DAILY;INTERVAL=146097;BYMONTH=2'],
+    ['WEEKLY con INTERVAL e BYMONTH', 'FREQ=WEEKLY;INTERVAL=20871;BYMONTH=2'],
+    ['INTERVAL=1000000000', 'FREQ=DAILY;INTERVAL=1000000000'],
+    ['WEEKLY con INTERVAL=99999999999', 'FREQ=WEEKLY;INTERVAL=99999999999'],
+    ['YEARLY con BYSETPOS impossibile', 'FREQ=YEARLY;BYMONTH=2;BYDAY=MO;BYSETPOS=9'],
+    ['due RRULE, una esclusa', 'FREQ=DAILY;BYDAY=1MO|FREQ=DAILY'],
+  ])('%s: la serie si salta in meno di 1 secondo, il resto resta', (_nome, regola) => {
+    const inizio = Date.now();
+    const { eventi, incompleta } = analizzaFeedIcal(feed([serie('ostile', regola), sano]), DA, A);
+    expect(Date.now() - inizio).toBeLessThan(1000);
+    expect(ids(eventi)).toEqual(['sano@test']);
+    expect(incompleta).toBe(false);
+  });
+
+  it('venti serie YEARLY con BYSETPOS impossibile finiscono in meno di 1 secondo', () => {
+    const molte = Array.from({ length: 20 }, (_, i) => serie(`y${i}`, 'FREQ=YEARLY;BYMONTH=2;BYDAY=MO;BYSETPOS=9'));
+    const inizio = Date.now();
+    const { eventi } = analizzaFeedIcal(feed([...molte, sano]), DA, A);
+    expect(Date.now() - inizio).toBeLessThan(1000);
+    expect(ids(eventi)).toEqual(['sano@test']);
+  });
+
+  it('un BYDAY semplice con INTERVAL ragionevole resta espanso', () => {
+    expect(analizzaFeedIcal(feed([serie('ok1', 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=4')]), DA, A).eventi.length).toBeGreaterThan(0);
+    expect(analizzaFeedIcal(feed([serie('ok2', 'FREQ=DAILY;INTERVAL=1000;COUNT=3')]), DA, A).eventi.length).toBeGreaterThan(0);
+    expect(analizzaFeedIcal(feed([serie('ok3', 'FREQ=DAILY;BYDAY=MO,TU;COUNT=4')]), DA, A).eventi.length).toBeGreaterThan(0);
+  });
+
+  it('un INTERVAL oltre 1000 si salta', () => {
+    expect(analizzaFeedIcal(feed([serie('lungo', 'FREQ=DAILY;INTERVAL=1001;COUNT=3')]), DA, A).eventi).toEqual([]);
+  });
+
+  it('un milione di BEGIN:VEVENT senza END non rallenta l analisi (estrazione lineare)', () => {
+    const aCapo = String.fromCharCode(10);
+    const testo = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT'.concat(aCapo).repeat(80_000) + 'END:VCALENDAR', ''].join(aCapo);
+    expect(testo.length).toBeGreaterThan(1_000_000);
+    const inizio = Date.now();
+    expect(() => espandiEventiIcal(testo, DA, A)).toThrow(ErroreCalendario);
+    expect(Date.now() - inizio).toBeLessThan(1000);
+  });
+
+  it('l estrazione dei blocchi trova gli eventi con fine riga mista e ignora un BEGIN senza END', () => {
+    const lf = String.fromCharCode(10);
+    const crlf = String.fromCharCode(13, 10);
+    const { blocchi, intestazione } = estraiBlocchiEvento(
+      ['BEGIN:VCALENDAR', 'BEGIN:VEVENT', 'UID:a', 'END:VEVENT'].join(lf) + lf +
+        ['BEGIN:VEVENT', 'UID:b', 'END:VEVENT'].join(crlf) + crlf +
+        ['BEGIN:VEVENT', 'UID:c', 'END:VCALENDAR', ''].join(lf)
+    );
+    expect(blocchi).toHaveLength(2);
+    expect(intestazione.startsWith('BEGIN:VCALENDAR')).toBe(true);
   });
 });

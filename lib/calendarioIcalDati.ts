@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { analizzaFeedIsolato } from './calendarioIcalIsolato';
 import {
   ErroreCalendario,
-  espandiEventiIcal,
   finestraSincronizzazione,
   validaIndirizzoIcal,
   type EventoCalendario,
@@ -111,13 +111,18 @@ export async function sincronizzaCalendario(
     const indirizzo = validaIndirizzoIcal(salvato, {
       CALENDARIO_ICAL_PROVA_ORIGINE: process.env.CALENDARIO_ICAL_PROVA_ORIGINE,
       VERCEL_ENV: process.env.VERCEL_ENV,
-    VERCEL: process.env.VERCEL,
+      VERCEL: process.env.VERCEL,
     });
     if (!indirizzo.ok || !indirizzo.indirizzo) throw new ErroreCalendario('indirizzo_non_valido');
 
     const testo = await scaricaFeed(indirizzo.indirizzo);
     const { da, a } = finestraSincronizzazione(adesso);
-    const eventi = espandiEventiIcal(testo, da, a);
+    // L'analisi gira in un worker che si può terminare (tempo massimo): una
+    // regola ostile non può bloccare il report notturno (specs/64).
+    const { eventi, incompleta } = await analizzaFeedIsolato(testo, da, a);
+    // Un'analisi fermata dai limiti non sostituisce gli eventi salvati: un elenco
+    // parziale cancellerebbe quelli delle serie non esaminate.
+    if (incompleta) throw new ErroreCalendario('analisi_incompleta');
     return { stato: 'ok', ...(await salvaEventi(supabase, eventi)) };
   } catch (errore) {
     const motivo: MotivoErroreCalendario = errore instanceof ErroreCalendario ? errore.motivo : 'imprevisto';
