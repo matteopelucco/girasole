@@ -13,22 +13,68 @@
 // effetti sul totale degli eventi, perché un altro lancio del cron in parallelo
 // (e2e/52) potrebbe già aver sincronizzato lo stesso feed.
 //
+// La parte "pagina Calendario" (issue #320) verifica `/dashboard/calendario`:
+// gli eventi arrivano dal feed finto via cron, le chiusure si creano con date
+// lontane e nota unica (come e2e/53). L'etichetta "In corso" di una chiusura
+// non si prova qui (servirebbe una chiusura che copre oggi e bloccherebbe i
+// test in parallelo): la copre il test unitario di chiusuraInCorso.
+//
 // Nessun indirizzo reale compare nei test; l'indirizzo finto (locale) non è
 // stampato nei messaggi di fallimento: i confronti usano booleani.
-import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { test, expect, type APIRequest, type Browser, type Page } from '@playwright/test';
+import {
+  dataFraGiorni,
+  dataOggiRoma,
+  dataProssimoGiornoFeriale,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+  type Ruolo,
+} from './helpers';
+import { percorsoGiornata } from '../lib/giornata';
+import { NOME_PAGINA_GIORNATA } from './pagina-giornata';
 import { SEGNAPOSTO_VALORE } from '../lib/parametriAmbiente';
 import { bloccoCron, lanciCron, PERCORSO_CRON_JOB } from './pagina-cron-job';
 import {
+  DESCRIZIONE_CON_LINK,
+  DESCRIZIONE_PRIMA_RIGA,
+  DESCRIZIONE_SECONDA_RIGA,
   FEED_VUOTO,
+  GIORNI_CON_ORARIO,
+  GIORNI_PIU_GIORNI,
+  LUOGO_CON_ORARIO,
+  TITOLO_CHIUSO,
+  TITOLO_CON_ORARIO,
+  TITOLO_HTML,
+  TITOLO_IN_CORSO,
+  TITOLO_PASSATO,
+  TITOLO_PIU_GIORNI,
+  TITOLO_TUTTO_IL_GIORNO,
   avviaFeedFinto,
   feedAggiornato,
   feedConRegolaOstile,
   feedIniziale,
+  feedPerPagina,
   indirizzoFeedFinto,
   origineFeedFinto,
   type FeedFinto,
 } from './feed-ical-finto';
+import {
+  CLASSE_EVENTO_PASSATO,
+  PERCORSO_CALENDARIO,
+  PERCORSO_CHIUSURE_ADMIN,
+  apriCalendario,
+  bloccoGiorno,
+  creaChiusura,
+  eliminaChiusura,
+  eventiPassati,
+  eventiProssimi,
+  giornoBreveItaliano,
+  schedaEvento,
+  sezioneChiusure,
+  sezioneEventi,
+  voceMenuCalendario,
+} from './pagina-calendario-eventi';
 import {
   PERCORSO_PARAMETRI,
   STATO_ATTIVA,
@@ -49,6 +95,40 @@ import {
 const RICHIEDE_CRON = !process.env.CRON_SECRET || !process.env.RESEND_API_KEY;
 const MOTIVO_CRON = 'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron';
 
+// Imposta il feed finto, salva il suo indirizzo (come admin) e lancia il cron:
+// gli eventi nel database diventano quelli del feed. Alla fine l'indirizzo è
+// quello richiesto ('' = sincronizzazione disattivata).
+async function sincronizzaFeed(
+  browser: Browser,
+  apiRequest: APIRequest,
+  feed: FeedFinto,
+  corpo: string,
+  indirizzoFinale: string
+): Promise<void> {
+  const contesto = await browser.newContext({ storageState: statoAutenticazione('admin') });
+  const pagina = await contesto.newPage();
+  const api = await apiRequest.newContext({ baseURL: 'http://localhost:3000' });
+  try {
+    feed.imposta({ stato: 200, corpo });
+    await impostaIndirizzo(pagina, indirizzoFeedFinto());
+    await lanciaCronNotturno(api);
+    if (indirizzoFinale !== indirizzoFeedFinto()) await impostaIndirizzo(pagina, indirizzoFinale);
+  } finally {
+    await api.dispose();
+    await contesto.close();
+  }
+}
+
+// Una pagina già autenticata come il ruolo richiesto (si salta il test se
+// mancano le credenziali o la sessione).
+async function paginaCome(browser: Browser, ruolo: Ruolo): Promise<{ page: Page; chiudi: () => Promise<void> }> {
+  test.skip(!hasCredenziali(ruolo), `richiede E2E_${ruolo.toUpperCase()}_EMAIL/PASSWORD`);
+  const stato = statoAutenticazione(ruolo);
+  test.skip(!stato, `sessione non disponibile per ${ruolo}`);
+  const context = await browser.newContext({ storageState: stato });
+  return { page: await context.newPage(), chiudi: () => context.close() };
+}
+
 test.describe.configure({ mode: 'serial' });
 
 test.describe('64 — Calendario eventi', () => {
@@ -64,18 +144,7 @@ test.describe('64 — Calendario eventi', () => {
   test.afterAll(async ({ browser, playwright }) => {
     if (!feed) return;
     if (!RICHIEDE_CRON && hasCredenziali('admin')) {
-      const contesto = await browser.newContext({ storageState: statoAutenticazione('admin') });
-      const pagina = await contesto.newPage();
-      const api = await playwright.request.newContext({ baseURL: 'http://localhost:3000' });
-      try {
-        feed.imposta({ stato: 200, corpo: FEED_VUOTO });
-        await impostaIndirizzo(pagina, indirizzoFeedFinto());
-        await lanciaCronNotturno(api);
-        await impostaIndirizzo(pagina, '');
-      } finally {
-        await api.dispose();
-        await contesto.close();
-      }
+      await sincronizzaFeed(browser, playwright.request, feed, FEED_VUOTO, '');
     }
     await feed.chiudi();
   });
@@ -282,6 +351,358 @@ test.describe('64 — Calendario eventi', () => {
         feed.imposta({ stato: 200, corpo: feedAggiornato() });
         const { json } = await lanciaCronNotturno(request);
         expect(json.calendario).toEqual({ stato: 'ok', inseriti: 0, aggiornati: 0, rimossi: 0, totale: 8 });
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Pagina "Calendario" (`/dashboard/calendario`, issue #320)
+  // ---------------------------------------------------------------------
+  test.describe('pagina Calendario', () => {
+    test.describe('menu e accesso', () => {
+      test('la voce "Calendario" è nel menu di admin, maestra e assistente, non del genitore', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await page.goto('/dashboard');
+            const voce = voceMenuCalendario(page);
+            await expect(voce).toBeVisible();
+            await voce.click();
+            await page.waitForURL(PERCORSO_CALENDARIO);
+            await expect(voceMenuCalendario(page)).toHaveAttribute('aria-current', 'page');
+            await expect(
+              page.getByRole('navigation').getByRole('link', { name: 'Dashboard', exact: true })
+            ).not.toHaveAttribute('aria-current', 'page');
+          } finally {
+            await chiudi();
+          }
+        }
+
+        const { page, chiudi } = await paginaCome(browser, 'genitore');
+        try {
+          await page.goto('/dashboard');
+          await expect(page.getByRole('navigation')).toBeVisible();
+          await expect(voceMenuCalendario(page)).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('il genitore non accede alla pagina', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'genitore');
+        try {
+          await page.goto(PERCORSO_CALENDARIO);
+          await page.waitForURL('/dashboard', { timeout: 20_000 });
+          await expect(sezioneChiusure(page)).toHaveCount(0);
+          await expect(sezioneEventi(page)).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+    });
+
+    test.describe('giorni di chiusura', () => {
+      test('senza giorni di chiusura in programma lo stato vuoto è gentile', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          // Le chiusure sono dati condivisi (e2e/53 ne crea per pochi istanti): se ce n'è una, lo stato vuoto non si vede.
+          const presenti = await sezioneChiusure(page).getByTestId('chiusura').count();
+          test.skip(presenti > 0, 'ci sono giorni di chiusura in programma');
+          await expect(sezioneChiusure(page)).toContainText('Nessun giorno di chiusura in programma.');
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('i giorni di chiusura in corso e futuri sono in alto, in sola lettura', async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        const maestra = await paginaCome(browser, 'maestra');
+        const futura = `Chiusura E2E calendario ${Date.now()}`;
+        const conclusa = `Chiusura E2E conclusa ${Date.now()}`;
+        try {
+          await creaChiusura(admin.page, dataFraGiorni(330), dataFraGiorni(332), futura);
+          await creaChiusura(admin.page, dataFraGiorni(-400), dataFraGiorni(-399), conclusa);
+
+          await apriCalendario(maestra.page);
+          const sezione = sezioneChiusure(maestra.page);
+          await expect(sezione.getByTestId('chiusura').filter({ hasText: futura })).toHaveCount(1);
+          await expect(sezione.getByText(conclusa)).toHaveCount(0);
+          await expect(sezione).toContainText('Sabato e domenica sono chiusi sempre');
+          // Sola lettura: nessun pulsante, campo o link verso la modifica.
+          await expect(sezione.getByRole('button')).toHaveCount(0);
+          await expect(sezione.getByRole('textbox')).toHaveCount(0);
+          await expect(sezione.getByRole('link')).toHaveCount(0);
+          // In alto: sopra gli eventi.
+          const yChiusure = (await sezione.boundingBox())?.y ?? Infinity;
+          const yEventi = (await sezioneEventi(maestra.page).boundingBox())?.y ?? -1;
+          expect(yChiusure).toBeLessThan(yEventi);
+        } finally {
+          await maestra.chiudi();
+          await eliminaChiusura(admin.page, futura);
+          await eliminaChiusura(admin.page, conclusa);
+          await admin.chiudi();
+        }
+      });
+
+      test("l'admin trova il rimando per gestire i giorni di chiusura", async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        const maestra = await paginaCome(browser, 'maestra');
+        const assistente = await paginaCome(browser, 'assistente');
+        try {
+          await apriCalendario(admin.page);
+          const link = sezioneChiusure(admin.page).getByRole('link', { name: 'Gestisci i giorni di chiusura' });
+          await expect(link).toHaveAttribute('href', PERCORSO_CHIUSURE_ADMIN);
+
+          for (const { page } of [maestra, assistente]) {
+            await apriCalendario(page);
+            await expect(page.getByRole('link', { name: 'Gestisci i giorni di chiusura' })).toHaveCount(0);
+          }
+        } finally {
+          await admin.chiudi();
+          await maestra.chiudi();
+          await assistente.chiudi();
+        }
+      });
+    });
+
+    test.describe('senza eventi', () => {
+      test.beforeAll(async ({ browser, playwright }) => {
+        test.skip(RICHIEDE_CRON || !hasCredenziali('admin'), MOTIVO_CRON);
+        // Eventi svuotati (feed vuoto + cron); l'indirizzo resta salvato.
+        await sincronizzaFeed(browser, playwright.request, feed, FEED_VUOTO, indirizzoFeedFinto());
+      });
+
+      test("l'admin senza indirizzo vede come collegare il calendario", async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        try {
+          await impostaIndirizzo(admin.page, '');
+          await apriCalendario(admin.page);
+          const sezione = sezioneEventi(admin.page);
+          await expect(sezione).toContainText('non è ancora collegato');
+          await expect(sezione.getByRole('link', { name: 'Parametri di funzionamento' })).toHaveAttribute(
+            'href',
+            PERCORSO_PARAMETRI
+          );
+        } finally {
+          await admin.chiudi();
+        }
+      });
+
+      test("l'admin con indirizzo ma senza eventi legge che non ce ne sono", async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        try {
+          await impostaIndirizzo(admin.page, indirizzoFeedFinto());
+          await apriCalendario(admin.page);
+          const sezione = sezioneEventi(admin.page);
+          await expect(sezione).toContainText('Non ci sono eventi a calendario');
+          await expect(sezione).toContainText('ogni notte');
+          await expect(sezione.getByRole('link')).toHaveCount(0);
+        } finally {
+          await admin.chiudi();
+        }
+      });
+
+      test('maestra e assistente senza eventi leggono un messaggio neutro', async ({ browser }) => {
+        for (const ruolo of ['maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await apriCalendario(page);
+            const sezione = sezioneEventi(page);
+            await expect(sezione.getByTestId('nessun-evento')).toHaveText('Non ci sono eventi a calendario.');
+            await expect(sezione.getByRole('link')).toHaveCount(0);
+            await expect(sezione).not.toContainText(/indirizzo|collegat|configur|Parametri/i);
+          } finally {
+            await chiudi();
+          }
+        }
+      });
+    });
+
+    test.describe('con eventi', () => {
+      test.beforeAll(async ({ browser, playwright }) => {
+        test.skip(RICHIEDE_CRON || !hasCredenziali('admin'), MOTIVO_CRON);
+        await sincronizzaFeed(browser, playwright.request, feed, feedPerPagina(), indirizzoFeedFinto());
+      });
+
+      test('gli eventi sono raggruppati per mese e per giorno, con la data in evidenza', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          await expect(eventiProssimi(page).getByRole('heading', { level: 4 }).first()).toBeVisible();
+
+          const data = dataFraGiorni(GIORNI_CON_ORARIO);
+          const giorno = bloccoGiorno(page, data);
+          await expect(giorno).toHaveCount(1);
+          await expect(giorno.locator('time')).toHaveAttribute('datetime', data);
+          await expect(giorno.getByTestId('numero-giorno')).toHaveText(String(Number(data.slice(8))));
+          await expect(schedaEvento(giorno, TITOLO_CON_ORARIO)).toHaveCount(1);
+
+          // In ordine di data.
+          const date = await eventiProssimi(page)
+            .locator('[data-testid^="giorno-"]')
+            .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.slice('giorno-'.length)));
+          expect(date).toEqual([...date].sort());
+          await nessunaViolazioneA11yGrave(page);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un evento con orario mostra ora di inizio e di fine in fuso Europe/Rome', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          const scheda = schedaEvento(eventiProssimi(page), TITOLO_CON_ORARIO);
+          await expect(scheda.getByTestId('orario-evento')).toHaveText('10:00 – 11:00');
+          await expect(scheda.getByTestId('luogo-evento')).toContainText(LUOGO_CON_ORARIO);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('luogo e descrizione compaiono solo se presenti', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          const con = schedaEvento(eventiProssimi(page), TITOLO_CON_ORARIO);
+          const descrizione = con.getByTestId('descrizione-evento');
+          await expect(descrizione).toContainText(DESCRIZIONE_PRIMA_RIGA);
+          await expect(descrizione).toContainText(DESCRIZIONE_SECONDA_RIGA);
+          // Gli a capo si conservano.
+          await expect(descrizione).toHaveCSS('white-space', 'pre-line');
+
+          const senza = schedaEvento(eventiProssimi(page), TITOLO_TUTTO_IL_GIORNO);
+          await expect(senza).toHaveCount(1);
+          await expect(senza.getByTestId('luogo-evento')).toHaveCount(0);
+          await expect(senza.getByTestId('descrizione-evento')).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un evento di tutto il giorno si distingue da uno con orario', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          const orario = schedaEvento(eventiProssimi(page), TITOLO_TUTTO_IL_GIORNO).getByTestId('orario-evento');
+          await expect(orario).toHaveText('Tutto il giorno');
+          await expect(orario).not.toHaveText(/\d{2}:\d{2}/);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un evento su più giorni è chiaro', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          // Una volta sola, nel giorno in cui comincia, con l'intervallo.
+          await expect(schedaEvento(sezioneEventi(page), TITOLO_PIU_GIORNI)).toHaveCount(1);
+          const primo = dataFraGiorni(GIORNI_PIU_GIORNI.primo);
+          const ultimo = dataFraGiorni(GIORNI_PIU_GIORNI.ultimo);
+          const scheda = schedaEvento(bloccoGiorno(page, primo), TITOLO_PIU_GIORNI);
+          await expect(scheda.getByTestId('intervallo-evento')).toHaveText(
+            `${giornoBreveItaliano(primo)} – ${giornoBreveItaliano(ultimo)}`
+          );
+
+          // Già cominciato: sotto oggi, "In corso".
+          const inCorso = schedaEvento(bloccoGiorno(page, dataOggiRoma()), TITOLO_IN_CORSO);
+          await expect(inCorso).toHaveCount(1);
+          await expect(inCorso.getByTestId('in-corso')).toHaveText('In corso');
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('gli eventi passati sono separati e attenuati', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          const passato = schedaEvento(eventiPassati(page), TITOLO_PASSATO);
+          await expect(passato).toHaveCount(1);
+          await expect(passato).toHaveClass(CLASSE_EVENTO_PASSATO);
+          await expect(schedaEvento(eventiProssimi(page), TITOLO_PASSATO)).toHaveCount(0);
+
+          const futuro = schedaEvento(eventiProssimi(page), TITOLO_CON_ORARIO);
+          await expect(futuro).toHaveCount(1);
+          await expect(futuro).not.toHaveClass(CLASSE_EVENTO_PASSATO);
+          await expect(schedaEvento(eventiPassati(page), TITOLO_CON_ORARIO)).toHaveCount(0);
+
+          // La parte "Passati" sta sotto "Prossimi".
+          const yProssimi = (await eventiProssimi(page).boundingBox())?.y ?? Infinity;
+          const yPassati = (await eventiPassati(page).boundingBox())?.y ?? -1;
+          expect(yPassati).toBeGreaterThan(yProssimi);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('titolo, descrizione e luogo sono sempre testo semplice', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        const dialoghi: string[] = [];
+        page.on('dialog', (dialogo) => {
+          dialoghi.push(dialogo.message());
+          void dialogo.dismiss();
+        });
+        try {
+          await apriCalendario(page);
+          const scheda = schedaEvento(eventiProssimi(page), 'titolo con HTML');
+          await expect(scheda.getByTestId('titolo-evento')).toHaveText(TITOLO_HTML);
+          await expect(scheda.getByTestId('descrizione-evento')).toHaveText(DESCRIZIONE_CON_LINK);
+          // Nessun elemento costruito dal feed: né immagini né link.
+          await expect(sezioneEventi(page).locator('img, a, [onerror]')).toHaveCount(0);
+          expect(dialoghi, 'il codice del feed non deve essere eseguito').toEqual([]);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un evento "chiuso" di Google resta un evento', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'admin');
+        try {
+          const data = dataProssimoGiornoFeriale();
+          await apriCalendario(page);
+          await expect(schedaEvento(sezioneEventi(page), TITOLO_CHIUSO)).toHaveCount(1);
+          await expect(sezioneChiusure(page).getByText('Prova calendario')).toHaveCount(0);
+
+          // "Presenze e pasti" di quel giorno non è bloccata né segnala una chiusura.
+          await page.goto(percorsoGiornata(data));
+          await expect(page.getByRole('heading', { name: NOME_PAGINA_GIORNATA })).toBeVisible();
+          await expect(page.getByText('Giorno di chiusura scolastica')).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test("la pagina non rivela l'indirizzo iCal", async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await apriCalendario(page);
+            expect((await page.content()).includes(indirizzoFeedFinto()), "l'indirizzo non deve essere nella pagina").toBe(false);
+          } finally {
+            await chiudi();
+          }
+        }
+      });
+
+      test('la pagina è usabile da telefono e accessibile', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await page.setViewportSize({ width: 375, height: 812 });
+            await apriCalendario(page);
+            await expect(schedaEvento(eventiProssimi(page), TITOLO_CON_ORARIO)).toBeVisible();
+            const eccesso = await page.evaluate(
+              () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+            );
+            expect(eccesso, 'nessuno scorrimento orizzontale a 375 px').toBeLessThanOrEqual(0);
+            await nessunaViolazioneA11yGrave(page);
+          } finally {
+            await chiudi();
+          }
+        }
       });
     });
   });
