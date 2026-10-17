@@ -9,7 +9,7 @@ import type { StatoCalendario } from '@/lib/calendarioImpostazioniDati';
 // Dal server arriva al browser solo `configurato` (sì/no) e la data
 // dell'ultimo salvataggio: l'indirizzo vero si vede solo dopo la verifica della
 // password (IndirizzoCalendarioNascosto). Il campo di inserimento si svuota
-// dopo ogni salvataggio riuscito (la `key` cambia con la data): l'indirizzo non
+// dopo ogni salvataggio riuscito: tutta la scheda ha come `key` la data di salvataggio, quindi a ogni salvataggio viene ricreata da capo: l'indirizzo non
 // resta mai nella pagina.
 export function SezioneCalendarioGoogle({
   stato,
@@ -39,14 +39,14 @@ export function SezioneCalendarioGoogle({
           Impossibile leggere l&apos;impostazione del calendario. Riprova più tardi.
         </p>
       ) : (
-        <div className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div key={stato.aggiornatoIl} className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <p data-testid="stato-calendario" className="text-sm font-medium">
             {stato.configurato ? 'Sincronizzazione attiva' : 'Sincronizzazione disattivata'}
           </p>
 
-          {stato.configurato && <IndirizzoCalendarioNascosto key={stato.aggiornatoIl} rivela={rivela} />}
+          {stato.configurato && <IndirizzoCalendarioNascosto rivela={rivela} />}
 
-          <FormConEsito key={stato.aggiornatoIl} action={salva} className="space-y-2">
+          <FormConEsito action={salva} className="space-y-2">
             <label htmlFor="indirizzo-ical" className="block text-sm font-medium text-stone-700">
               Indirizzo iCal del calendario
             </label>
