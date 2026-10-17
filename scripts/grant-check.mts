@@ -2,7 +2,7 @@
 // Girasole — grant-check (A26, issue #28): wrapper I/O per lib/grantCheck.ts.
 //
 // Legge i sorgenti (app/, lib/, components/), interroga
-// information_schema.role_table_grants del DB di TEST via Management API
+// information_schema.role_table_grants e column_privileges del DB di TEST via Management API
 // (sola lettura) e fallisce, con il nome della tabella, se manca un GRANT
 // richiesto da `authenticated` o `service_role`. Non è testato
 // unitariamente (I/O); la logica pura lo è, in lib/grantCheck.test.ts.
@@ -59,8 +59,18 @@ if (guardia) {
   process.exit(2);
 }
 
+// Privilegi di tabella (role_table_grants) più quelli concessi solo su alcune
+// colonne (column_privileges): `grant update (colonna) on tabella` — es. la
+// migration 0065 su impostazioni_calendario — non compare in role_table_grants,
+// ma permette all'app di fare UPDATE di quelle colonne. Un privilegio di
+// colonna conta come privilegio sulla tabella: il controllo resta
+// "anti permission-denied", non verifica quali colonne (vedi lib/grantCheck.ts).
 const query = `select grantee, table_name, privilege_type
 from information_schema.role_table_grants
+where table_schema = 'public' and grantee in ('authenticated', 'service_role')
+union
+select grantee, table_name, privilege_type
+from information_schema.column_privileges
 where table_schema = 'public' and grantee in ('authenticated', 'service_role')`;
 
 const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {

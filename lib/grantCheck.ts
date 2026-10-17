@@ -22,6 +22,9 @@
 //   (select/insert/update/delete/upsert); se non se ne trova nessuno, SELECT.
 // Non richiede SELECT implicito per update/delete (WHERE): meglio un falso
 // negativo che un rosso rumoroso; le query `anon` non sono coperte.
+// Un GRANT limitato ad alcune colonne (`grant update (col) on tabella`) conta
+// come privilegio sulla tabella (lo script legge anche column_privileges): il
+// check non verifica QUALI colonne.
 // Il check è "anti permission-denied", NON un controllo di sicurezza: non
 // vede grant in eccesso, RLS né la produzione.
 
