@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, type FormEvent } from 'react';
-import { CampoPassword } from './CampoPassword';
+import { FormVerificaPassword } from './FormVerificaPassword';
 import { SEGNAPOSTO_VALORE, type Parametro } from '@/lib/parametriAmbiente';
 
 type EsitoValori = { ok: true; parametri: Parametro[] } | { ok: false; messaggio: string };
@@ -69,31 +69,14 @@ export function VariabiliAmbiente({
       </button>
 
       {verificaAperta && !valori && (
-        <form
+        <FormVerificaPassword
           id="verifica-password-parametri"
+          idCampo="password-parametri"
+          descrizione="Per vedere i valori reinserisci la password con cui accedi."
+          inCorso={inVerifica}
+          errore={errore}
           onSubmit={verifica}
-          className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4"
-        >
-          <label htmlFor="password-parametri" className="text-sm font-medium text-stone-700">
-            La tua password
-          </label>
-          <p className="text-xs text-stone-600">
-            Per vedere i valori reinserisci la password con cui accedi.
-          </p>
-          <CampoPassword id="password-parametri" name="password" required autoComplete="current-password" />
-          <button
-            type="submit"
-            disabled={inVerifica}
-            className="min-h-11 self-start rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
-          >
-            {inVerifica ? 'Verifica in corso…' : 'Verifica e mostra'}
-          </button>
-          {errore && (
-            <p role="alert" className="text-sm text-red-700">
-              {errore}
-            </p>
-          )}
-        </form>
+        />
       )}
 
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
