@@ -5,6 +5,7 @@ import {
   descriviOrario,
   intervalloGiorniEvento,
   oraRoma,
+  prossimiEventiDashboard,
   type EventoRiga,
 } from './calendarioEventiVista';
 
@@ -201,5 +202,54 @@ describe('costruisciVistaEventi', () => {
       luogo: null,
       descrizione: '<b>ciao</b>\njavascript:alert(1)',
     });
+  });
+});
+
+describe('prossimiEventiDashboard', () => {
+  const OGGI = '2026-10-17';
+  const giorno = (id: string, d: number, durata = 1) =>
+    evento({ id, inizio: MEZZANOTTE_OTT(d), fine: MEZZANOTTE_OTT(d + durata), tutto_il_giorno: true });
+
+  it('restituisce al massimo 3 eventi, in ordine di data', () => {
+    const righe = [giorno('e', 25), giorno('b', 19), giorno('d', 23), giorno('a', 18), giorno('c', 21)];
+    expect(prossimiEventiDashboard(righe, OGGI).map((e) => e.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('con meno di 3 eventi restituisce quelli che ci sono, e con nessuno una lista vuota', () => {
+    expect(prossimiEventiDashboard([giorno('a', 20), giorno('b', 22)], OGGI)).toHaveLength(2);
+    expect(prossimiEventiDashboard([], OGGI)).toEqual([]);
+  });
+
+  it('un evento già cominciato e non finito conta, sotto oggi, con "In corso"', () => {
+    const [primo, secondo] = prossimiEventiDashboard([giorno('futuro', 20), giorno('corso', 15, 5)], OGGI);
+    expect(primo).toMatchObject({ id: 'corso', inCorso: true, data: OGGI, eOggi: true });
+    expect(secondo).toMatchObject({ id: 'futuro', inCorso: false, data: '2026-10-20', eOggi: false });
+  });
+
+  it('riporta giorno, mese breve e orario in Europe/Rome', () => {
+    const [e] = prossimiEventiDashboard(
+      [evento({ id: 'o', titolo: 'Festa', inizio: '2026-10-20T08:00:00Z', fine: '2026-10-20T09:30:00Z' })],
+      OGGI
+    );
+    expect(e).toMatchObject({ titolo: 'Festa', data: '2026-10-20', numero: '20', mese: 'ott' });
+    expect(e.orario).toEqual({ tutto: false, testo: '10:00 – 11:30', intervallo: null });
+  });
+
+  it('indica "Tutto il giorno" per gli eventi di tutto il giorno', () => {
+    const [e] = prossimiEventiDashboard([giorno('g', 20)], OGGI);
+    expect(e.orario.tutto).toBe(true);
+    expect(e.orario.testo).toBe('Tutto il giorno');
+  });
+
+  it('esclude gli eventi già conclusi', () => {
+    expect(prossimiEventiDashboard([giorno('passato', 10)], OGGI)).toEqual([]);
+  });
+
+  it('lascia titolo e luogo come testo, senza alterarli', () => {
+    const [e] = prossimiEventiDashboard(
+      [evento({ id: 'h', titolo: '<img src=x onerror=alert(1)>', luogo: 'javascript:alert(1)', inizio: MEZZANOTTE_OTT(20), fine: MEZZANOTTE_OTT(21), tutto_il_giorno: true })],
+      OGGI
+    );
+    expect(e.titolo).toBe('<img src=x onerror=alert(1)>');
   });
 });
