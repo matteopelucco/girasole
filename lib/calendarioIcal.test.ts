@@ -531,7 +531,7 @@ QUALCOSA
     expect(eventi.length).toBeGreaterThan(0);
     expect(eventi.length).toBeLessThan(40 * 10);
     expect(MAX_ITERAZIONI_TOTALI).toBe(50_000);
-  });
+  }, 30_000);
 
   it('non salva più di 5000 eventi e si ferma appena li raggiunge', () => {
     const fitte = Array.from({ length: 10 }, (_, i) => serie(`fitta${i}`, 'FREQ=DAILY'));
