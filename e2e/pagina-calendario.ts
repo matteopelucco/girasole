@@ -48,6 +48,10 @@ export async function salvaIndirizzo(page: Page, valore: string): Promise<void> 
 export async function impostaIndirizzo(page: Page, valore: string): Promise<void> {
   await page.goto(PERCORSO_PARAMETRI);
   await salvaIndirizzo(page, valore);
+  // Il salvataggio rinnova la sezione (nuova data di salvataggio) un attimo dopo
+  // la risposta: si ricarica la pagina per non scrivere nel campo mentre viene
+  // sostituito.
+  await page.reload();
   await expect(statoCalendario(page)).toHaveText(valore === '' ? STATO_DISATTIVATA : STATO_ATTIVA);
 }
 
