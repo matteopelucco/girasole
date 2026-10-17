@@ -83,6 +83,7 @@ import {
   impostaIndirizzo,
   indirizzoCalendario,
   lanciaCronNotturno,
+  lanciaCronPerSincronizzare,
   passwordAdmin,
   pulsanteMostraIndirizzo,
   pulsanteNascondiIndirizzo,
@@ -95,6 +96,10 @@ import {
 const RICHIEDE_CRON = !process.env.CRON_SECRET || !process.env.RESEND_API_KEY;
 const MOTIVO_CRON = 'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron';
 
+// Vero dopo che i test della pagina hanno messo eventi di prova nel database:
+// serve a ripulirli alla fine anche dove il cron completo non è eseguibile.
+let eventiDiProvaSalvati = false;
+
 // Imposta il feed finto, salva il suo indirizzo (come admin) e lancia il cron:
 // gli eventi nel database diventano quelli del feed. Alla fine l'indirizzo è
 // quello richiesto ('' = sincronizzazione disattivata).
@@ -105,13 +110,14 @@ async function sincronizzaFeed(
   corpo: string,
   indirizzoFinale: string
 ): Promise<void> {
+  eventiDiProvaSalvati = true;
   const contesto = await browser.newContext({ storageState: statoAutenticazione('admin') });
   const pagina = await contesto.newPage();
   const api = await apiRequest.newContext({ baseURL: 'http://localhost:3000' });
   try {
     feed.imposta({ stato: 200, corpo });
     await impostaIndirizzo(pagina, indirizzoFeedFinto());
-    await lanciaCronNotturno(api);
+    await lanciaCronPerSincronizzare(api);
     if (indirizzoFinale !== indirizzoFeedFinto()) await impostaIndirizzo(pagina, indirizzoFinale);
   } finally {
     await api.dispose();
@@ -143,7 +149,7 @@ test.describe('64 — Calendario eventi', () => {
   // lancio del cron svuotano gli eventi di prova; poi l'indirizzo è svuotato.
   test.afterAll(async ({ browser, playwright }) => {
     if (!feed) return;
-    if (!RICHIEDE_CRON && hasCredenziali('admin')) {
+    if ((!RICHIEDE_CRON || eventiDiProvaSalvati) && hasCredenziali('admin')) {
       await sincronizzaFeed(browser, playwright.request, feed, FEED_VUOTO, '');
     }
     await feed.chiudi();
@@ -468,7 +474,7 @@ test.describe('64 — Calendario eventi', () => {
 
     test.describe('senza eventi', () => {
       test.beforeAll(async ({ browser, playwright }) => {
-        test.skip(RICHIEDE_CRON || !hasCredenziali('admin'), MOTIVO_CRON);
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
         // Eventi svuotati (feed vuoto + cron); l'indirizzo resta salvato.
         await sincronizzaFeed(browser, playwright.request, feed, FEED_VUOTO, indirizzoFeedFinto());
       });
@@ -521,7 +527,7 @@ test.describe('64 — Calendario eventi', () => {
 
     test.describe('con eventi', () => {
       test.beforeAll(async ({ browser, playwright }) => {
-        test.skip(RICHIEDE_CRON || !hasCredenziali('admin'), MOTIVO_CRON);
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
         await sincronizzaFeed(browser, playwright.request, feed, feedPerPagina(), indirizzoFeedFinto());
       });
 

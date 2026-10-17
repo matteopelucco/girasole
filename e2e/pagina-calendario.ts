@@ -77,3 +77,16 @@ export async function lanciaCronNotturno(
   const testo = await risposta.text();
   return { testo, json: JSON.parse(testo) };
 }
+
+// Lancia il cron notturno solo per far sincronizzare gli eventi (pagina
+// "Calendario", specs/64): a differenza di lanciaCronNotturno non pretende che
+// anche il report vada a buon fine. Senza RESEND_API_KEY (come nella CI) il
+// report non parte e la route può rispondere con un errore, ma la
+// sincronizzazione è già stata fatta. Una chiamata rifiutata (401) invece è un
+// errore del test.
+export async function lanciaCronPerSincronizzare(request: APIRequestContext): Promise<void> {
+  const risposta = await request.get('/api/cron/report-presenze', {
+    headers: { Authorization: `Bearer ${process.env.CRON_SECRET ?? ''}` },
+  });
+  expect(risposta.status(), 'il cron non deve rifiutare la chiamata').not.toBe(401);
+}
