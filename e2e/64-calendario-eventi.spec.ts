@@ -43,8 +43,17 @@ import {
   GIORNI_CON_ORARIO,
   GIORNI_PIU_GIORNI,
   LUOGO_CON_ORARIO,
+  GIORNI_DASH,
   TITOLO_CHIUSO,
   TITOLO_CON_ORARIO,
+  TITOLO_DASH_HTML,
+  TITOLO_DASH_IN_CORSO,
+  TITOLO_DASH_PASSATO,
+  TITOLO_DASH_QUARTO,
+  TITOLO_DASH_QUINTO,
+  TITOLO_DASH_SECONDO,
+  TITOLO_DASH_TERZO,
+  TITOLO_DASH_UNICO,
   TITOLO_HTML,
   TITOLO_IN_CORSO,
   TITOLO_PASSATO,
@@ -54,6 +63,8 @@ import {
   feedAggiornato,
   feedConRegolaOstile,
   feedIniziale,
+  feedPerDashboardCompleto,
+  feedPerDashboardPochi,
   feedPerPagina,
   indirizzoFeedFinto,
   origineFeedFinto,
@@ -63,13 +74,18 @@ import {
   CLASSE_EVENTO_PASSATO,
   PERCORSO_CALENDARIO,
   PERCORSO_CHIUSURE_ADMIN,
+  TESTO_NESSUN_PROSSIMO_EVENTO,
   apriCalendario,
+  apriDashboardConEventi,
   bloccoGiorno,
   creaChiusura,
   eliminaChiusura,
   eventiPassati,
   eventiProssimi,
   giornoBreveItaliano,
+  linkVediTutto,
+  prossimiEventiDashboard,
+  riquadroProssimiEventi,
   schedaEvento,
   sezioneChiusure,
   sezioneEventi,
@@ -700,6 +716,204 @@ test.describe('64 — Calendario eventi', () => {
             await page.setViewportSize({ width: 375, height: 812 });
             await apriCalendario(page);
             await expect(schedaEvento(eventiProssimi(page), TITOLO_CON_ORARIO)).toBeVisible();
+            const eccesso = await page.evaluate(
+              () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+            );
+            expect(eccesso, 'nessuno scorrimento orizzontale a 375 px').toBeLessThanOrEqual(0);
+            await nessunaViolazioneA11yGrave(page);
+          } finally {
+            await chiudi();
+          }
+        }
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Riquadro "Prossimi eventi" nella dashboard (issue #321)
+  // ---------------------------------------------------------------------
+  test.describe('riquadro Prossimi eventi in dashboard', () => {
+    // Il riquadro sta in /dashboard, aperta anche dagli altri file e2e: qui si
+    // guarda solo dentro il riquadro, mai il resto della pagina.
+    test.describe('senza eventi', () => {
+      test.beforeAll(async ({ browser, playwright }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        await sincronizzaFeed(browser, playwright.request, feed, FEED_VUOTO, indirizzoFeedFinto());
+      });
+
+      test('senza eventi futuri il riquadro dà un messaggio gentile e neutro', async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        try {
+          // Admin senza indirizzo salvato e con indirizzo salvato: stesso messaggio.
+          for (const indirizzo of ['', indirizzoFeedFinto()]) {
+            await impostaIndirizzo(admin.page, indirizzo);
+            await apriDashboardConEventi(admin.page);
+            await expect(prossimiEventiDashboard(admin.page)).toHaveCount(0);
+            await expect(riquadroProssimiEventi(admin.page).getByTestId('nessun-prossimo-evento')).toHaveText(
+              TESTO_NESSUN_PROSSIMO_EVENTO
+            );
+            await expect(riquadroProssimiEventi(admin.page)).not.toContainText(
+              /indirizzo|collegat|configur|Parametri|errore|riprova/i
+            );
+            await expect(riquadroProssimiEventi(admin.page).getByRole('link')).toHaveCount(1);
+            // Il resto della dashboard compare come sempre.
+            await expect(admin.page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
+          }
+        } finally {
+          await admin.chiudi();
+        }
+        for (const ruolo of ['maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await apriDashboardConEventi(page);
+            await expect(riquadroProssimiEventi(page).getByTestId('nessun-prossimo-evento')).toHaveText(
+              TESTO_NESSUN_PROSSIMO_EVENTO
+            );
+            await expect(riquadroProssimiEventi(page)).not.toContainText(/indirizzo|collegat|configur|Parametri|errore/i);
+            await expect(page.getByRole('heading', { name: 'Avvisi' })).toBeVisible();
+          } finally {
+            await chiudi();
+          }
+        }
+      });
+
+      test('il riquadro rimanda alla pagina Calendario, anche senza eventi', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriDashboardConEventi(page);
+          await expect(linkVediTutto(page)).toHaveAttribute('href', PERCORSO_CALENDARIO);
+          await linkVediTutto(page).click();
+          await page.waitForURL(PERCORSO_CALENDARIO);
+          await expect(page.getByRole('heading', { name: 'Calendario', level: 1 })).toBeVisible();
+        } finally {
+          await chiudi();
+        }
+      });
+    });
+
+    test.describe('con pochi eventi', () => {
+      test.beforeAll(async ({ browser, playwright }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        await sincronizzaFeed(browser, playwright.request, feed, feedPerDashboardPochi(), indirizzoFeedFinto());
+      });
+
+      test('con meno di 3 eventi il riquadro mostra solo quelli che ci sono', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriDashboardConEventi(page);
+          const voci = prossimiEventiDashboard(page);
+          await expect(voci).toHaveCount(2);
+          await expect(voci.nth(1).getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_UNICO);
+          await expect(riquadroProssimiEventi(page).getByTestId('nessun-prossimo-evento')).toHaveCount(0);
+          await expect(riquadroProssimiEventi(page)).not.toContainText(/errore|riprova/i);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('il riquadro mostra sempre testo semplice', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        const dialoghi: string[] = [];
+        page.on('dialog', (dialogo) => {
+          dialoghi.push(dialogo.message());
+          void dialogo.dismiss();
+        });
+        try {
+          await apriDashboardConEventi(page);
+          await expect(prossimiEventiDashboard(page).first().getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_HTML);
+          // Nessun elemento costruito dal feed: né immagini né link negli eventi.
+          await expect(prossimiEventiDashboard(page).locator('img, a, [onerror]')).toHaveCount(0);
+          // Né la descrizione né il luogo sono nel riquadro.
+          await expect(riquadroProssimiEventi(page)).not.toContainText('javascript:');
+          expect(dialoghi, 'il codice del feed non deve essere eseguito').toEqual([]);
+        } finally {
+          await chiudi();
+        }
+      });
+    });
+
+    test.describe('con molti eventi', () => {
+      test.beforeAll(async ({ browser, playwright }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        await sincronizzaFeed(browser, playwright.request, feed, feedPerDashboardCompleto(), indirizzoFeedFinto());
+      });
+
+      test('il riquadro mostra i 3 prossimi eventi, con data, orario e titolo', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriDashboardConEventi(page);
+          const voci = prossimiEventiDashboard(page);
+          await expect(voci).toHaveCount(3);
+
+          await expect(voci.nth(0).getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_IN_CORSO);
+          await expect(voci.nth(1).getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_SECONDO);
+          await expect(voci.nth(2).getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_TERZO);
+
+          // Data (giorno, numero e mese) e orario in fuso Europe/Rome.
+          await expect(voci.nth(0).locator('time')).toHaveAttribute('datetime', dataOggiRoma());
+          await expect(voci.nth(1).locator('time')).toHaveAttribute('datetime', dataFraGiorni(GIORNI_DASH.secondo));
+          await expect(voci.nth(1).getByTestId('orario-evento')).toHaveText('10:00 – 11:00');
+          await expect(voci.nth(2).locator('time')).toHaveAttribute('datetime', dataFraGiorni(GIORNI_DASH.terzo));
+          await expect(voci.nth(2).getByTestId('orario-evento')).toHaveText('Tutto il giorno');
+          const data = dataFraGiorni(GIORNI_DASH.secondo);
+          await expect(voci.nth(1).locator('time')).toContainText(String(Number(data.slice(8))));
+          await expect(voci.nth(1).locator('time')).toContainText(giornoBreveItaliano(data).split(' ')[1]);
+
+          // Il quarto, il quinto e quello concluso non ci sono.
+          for (const titolo of [TITOLO_DASH_QUARTO, TITOLO_DASH_QUINTO, TITOLO_DASH_PASSATO]) {
+            await expect(riquadroProssimiEventi(page)).not.toContainText(titolo);
+          }
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un evento già cominciato e non ancora finito conta', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriDashboardConEventi(page);
+          const primo = prossimiEventiDashboard(page).first();
+          await expect(primo.getByTestId('titolo-evento')).toHaveText(TITOLO_DASH_IN_CORSO);
+          await expect(primo.getByTestId('in-corso')).toHaveText('In corso');
+          await expect(prossimiEventiDashboard(page).nth(1).getByTestId('in-corso')).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('il riquadro è visibile a ogni ruolo con accesso alla dashboard', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await apriDashboardConEventi(page);
+            await expect(prossimiEventiDashboard(page)).toHaveCount(3);
+            await expect(prossimiEventiDashboard(page).first().getByTestId('titolo-evento')).toHaveText(
+              TITOLO_DASH_IN_CORSO
+            );
+          } finally {
+            await chiudi();
+          }
+        }
+
+        const { page, chiudi } = await paginaCome(browser, 'genitore');
+        try {
+          await page.goto('/dashboard');
+          await expect(page.getByText('Il portale genitori è in arrivo')).toBeVisible();
+          await expect(riquadroProssimiEventi(page)).toHaveCount(0);
+          await expect(page.getByText(TITOLO_DASH_IN_CORSO)).toHaveCount(0);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('il riquadro è usabile da telefono e accessibile', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await page.setViewportSize({ width: 375, height: 812 });
+            await apriDashboardConEventi(page);
+            await expect(prossimiEventiDashboard(page)).toHaveCount(3);
+            await expect(prossimiEventiDashboard(page).first()).toBeVisible();
             const eccesso = await page.evaluate(
               () => document.documentElement.scrollWidth - document.documentElement.clientWidth
             );

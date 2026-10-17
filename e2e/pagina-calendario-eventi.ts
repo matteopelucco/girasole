@@ -81,3 +81,30 @@ export async function eliminaChiusura(page: Page, nota: string): Promise<void> {
   await page.getByRole('button', { name: 'Elimina giorno di chiusura' }).click();
   await clickEAttendiAzione(page, page.getByRole('button', { name: 'Sì' }));
 }
+
+// ---------------------------------------------------------------------------
+// Riquadro "Prossimi eventi" nella dashboard (issue #321). Ruolo "region" con
+// nome "Prossimi eventi"; ogni evento è `data-testid="prossimo-evento"` (con
+// `titolo-evento`, `orario-evento`, `in-corso`); il messaggio vuoto è
+// `nessun-prossimo-evento`; il link fisso è "Vedi tutto".
+// ---------------------------------------------------------------------------
+export const TESTO_NESSUN_PROSSIMO_EVENTO = 'Non ci sono eventi in programma.';
+
+export function riquadroProssimiEventi(page: Page): Locator {
+  return page.getByRole('region', { name: 'Prossimi eventi' });
+}
+
+export function prossimiEventiDashboard(page: Page): Locator {
+  return riquadroProssimiEventi(page).getByTestId('prossimo-evento');
+}
+
+export function linkVediTutto(page: Page): Locator {
+  return riquadroProssimiEventi(page).getByRole('link', { name: 'Vedi tutto' });
+}
+
+// Apre la dashboard e aspetta che il riquadro abbia finito di caricarsi.
+export async function apriDashboardConEventi(page: Page): Promise<void> {
+  await page.goto('/dashboard');
+  await expect(riquadroProssimiEventi(page)).toBeVisible();
+  await expect(riquadroProssimiEventi(page).getByRole('status')).toHaveCount(0);
+}

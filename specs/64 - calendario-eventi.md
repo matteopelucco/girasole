@@ -434,7 +434,7 @@ E cliccandolo apro la pagina "Calendario"
 ## Scenario: il riquadro è visibile a ogni ruolo con accesso alla dashboard
 Dato che sono autenticato come admin, maestra o assistente
 Quando apro la dashboard
-Allora vedo il riquadro "Prossimi eventi", anche se non ho sezioni assegnate
+Allora vedo il riquadro "Prossimi eventi" con gli stessi eventi, qualunque sia il mio ruolo
 E il genitore, che non ha ancora la dashboard staff, non vede il riquadro né gli eventi
 
 ## Scenario: il riquadro è usabile da telefono e accessibile
@@ -463,6 +463,9 @@ E la pagina non ha violazioni di accessibilità gravi
   stesso; l'errore va solo nel log del server, senza dettagli per l'utente.
   Il riquadro si carica a parte (Suspense, con sagome della stessa altezza):
   non rallenta il resto della dashboard.
+- **Indipendente dalle sezioni**: il riquadro non dipende dalle sezioni
+  assegnate (compare anche a chi non ne ha), perché gli eventi sono per tutto
+  l'asilo.
 - **Solo testo**: come nella pagina, titolo e orario sono testo reso da React;
   mai HTML, mai link costruiti dal feed. L'unico link del riquadro è "Vedi
   tutto", fisso.
