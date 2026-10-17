@@ -10,6 +10,14 @@ import { loadEnvConfig } from '@next/env';
 // interrogando. Vedi CLAUDE.md, sezione "Test end-to-end (Playwright)".
 loadEnvConfig(process.cwd());
 
+// Feed iCal finto di e2e/64-calendario-eventi.spec.ts (specs/64): il test avvia
+// un piccolo server HTTP locale su questa origine e l'app, avviata da
+// Playwright con le stesse variabili, la accetta come indirizzo del
+// calendario (solo se la variabile è impostata, mai in produzione). Se in
+// locale si riusa un server già avviato, riavviarlo per fargli leggere la
+// variabile.
+process.env.CALENDARIO_ICAL_PROVA_ORIGINE ??= 'http://127.0.0.1:4318';
+
 // File e2e di presenze e pasti di oggi che girano in un solo worker (vedi il
 // progetto 'chromium-stato-condiviso' sotto).
 const FILE_STATO_CONDIVISO =

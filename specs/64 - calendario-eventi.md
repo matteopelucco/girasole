@@ -129,8 +129,8 @@ E né il messaggio né le risposte contengono l'indirizzo iCal
   servito in locale dal test stesso, mai il calendario reale.
 - **Validazione dell'indirizzo** (`lib/calendarioIcal.ts`, `validaIndirizzoIcal`),
   all'inserimento e di nuovo prima di ogni lettura del feed: solo `https://`,
-  nessuna credenziale nell'indirizzo, host `calendar.google.com` (o
-  sottodominio di `google.com`), percorso che termina con `.ics`. Un campo
+  nessuna credenziale né porta nell'indirizzo, host `calendar.google.com`
+  (o `www.google.com`, il vecchio formato), percorso che termina con `.ics`. Un campo
   vuoto non è un errore: significa sincronizzazione disattivata. Il messaggio
   d'errore non riporta mai ciò che l'admin ha digitato.
 - **Solo per i test e2e**: se è impostata la variabile `CALENDARIO_ICAL_PROVA_ORIGINE`
@@ -168,14 +168,17 @@ E né il messaggio né le risposte contengono l'indirizzo iCal
   non ne ritarda né ne cambia l'esito: ogni suo errore è preso e trasformato in
   un esito, mai in un'eccezione. Valgono anche per il "Lancia ora" del report
   notturno (specs/63).
-- **Rete.** Un solo tentativo, tempo massimo 8 secondi, risposta al massimo 5 MB,
-  niente redirect (un redirect è un errore), niente cache. L'indirizzo non
+- **Rete.** Un solo tentativo, tempo massimo 8 secondi (rete e lettura), risposta al
+  massimo 5 MB, niente redirect (un redirect è un errore), niente cache. Un
+  guasto di rete o un tempo scaduto è "servizio non raggiungibile"; una risposta
+  diversa da 2xx o troppo grande è "risposta non valida". L'indirizzo non
   finisce mai nel messaggio di un errore.
 - **Esito nel registro** (specs/63): se la sincronizzazione non riesce, il lancio
   del report notturno risulta KO con il messaggio fisso "Calendario non
   sincronizzato: <motivo breve>" (motivo scelto da un elenco: "indirizzo non
   valido", "servizio non raggiungibile", "risposta non valida", "feed non
-  valido", "salvataggio degli eventi non riuscito"). Se anche una parte del
+  valido", "impostazione non leggibile", "salvataggio degli eventi non
+  riuscito", "errore imprevisto"). Se anche una parte del
   report non è riuscita, i due messaggi si uniscono. Sincronizzazione
   disattivata non è un errore.
 - **Fuori scope**: pagina Calendario e riquadro in dashboard
