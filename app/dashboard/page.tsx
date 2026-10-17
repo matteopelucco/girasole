@@ -18,6 +18,7 @@ import {
 } from '@/lib/allarmi';
 import { ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
 import { creaPromemoria } from './actions';
+import { ProssimiEventi } from './ProssimiEventi';
 import { caricaAllarmiCorrenti } from './allarmi/dati';
 
 export const dynamic = 'force-dynamic';
@@ -206,6 +207,8 @@ export default async function DashboardPage(
             ))}
           </div>
         </section>
+
+        <ProssimiEventi oggi={dataOggi} />
 
         <section>
           <h1 className="text-lg font-medium">Avvisi</h1>

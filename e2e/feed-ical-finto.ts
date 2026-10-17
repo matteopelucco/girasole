@@ -196,6 +196,65 @@ export function feedPerPagina(): string {
   ]);
 }
 
+// Eventi dei feed per il riquadro "Prossimi eventi" della dashboard (specs/64,
+// issue #321). Giorni rispetto a oggi: in corso (ieri-dopodomani, tutto il
+// giorno), +2 con orario, +4 tutto il giorno, +6 e +8 (oltre i primi tre), -5
+// concluso.
+export const TITOLO_DASH_IN_CORSO = 'Prova dashboard: evento in corso';
+export const TITOLO_DASH_SECONDO = 'Prova dashboard: secondo evento';
+export const TITOLO_DASH_TERZO = 'Prova dashboard: terzo evento';
+export const TITOLO_DASH_QUARTO = 'Prova dashboard: quarto evento';
+export const TITOLO_DASH_QUINTO = 'Prova dashboard: quinto evento';
+export const TITOLO_DASH_PASSATO = 'Prova dashboard: evento concluso';
+export const TITOLO_DASH_HTML = '<img src=x onerror=alert(1)> Prova dashboard: titolo con HTML';
+export const TITOLO_DASH_UNICO = 'Prova dashboard: evento tra cinque giorni';
+export const GIORNI_DASH = { secondo: 2, terzo: 4, quarto: 6, quinto: 8, passato: -5, html: 1, unico: 5 };
+
+function eventoGiornata(uid: string, titolo: string, primo: number, ultimo: number): string {
+  return evento([
+    `UID:${uid}@girasole.test`,
+    `DTSTART;VALUE=DATE:${compatta(dataFraGiorni(primo))}`,
+    `DTEND;VALUE=DATE:${compatta(dataFraGiorni(ultimo + 1))}`,
+    `SUMMARY:${titolo}`,
+  ]);
+}
+
+function eventoConOrario(uid: string, titolo: string, giorni: number): string {
+  return evento([
+    `UID:${uid}@girasole.test`,
+    `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(giorni))}T100000`,
+    `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(giorni))}T110000`,
+    `SUMMARY:${titolo}`,
+  ]);
+}
+
+// Cinque eventi futuri (il primo già in corso) e uno concluso: il riquadro ne
+// mostra solo i primi tre.
+export function feedPerDashboardCompleto(): string {
+  return calendario([
+    eventoGiornata('dash-in-corso', TITOLO_DASH_IN_CORSO, -1, 1),
+    eventoConOrario('dash-secondo', TITOLO_DASH_SECONDO, GIORNI_DASH.secondo),
+    eventoGiornata('dash-terzo', TITOLO_DASH_TERZO, GIORNI_DASH.terzo, GIORNI_DASH.terzo),
+    eventoConOrario('dash-quarto', TITOLO_DASH_QUARTO, GIORNI_DASH.quarto),
+    eventoGiornata('dash-quinto', TITOLO_DASH_QUINTO, GIORNI_DASH.quinto, GIORNI_DASH.quinto),
+    eventoConOrario('dash-passato', TITOLO_DASH_PASSATO, GIORNI_DASH.passato),
+  ]);
+}
+
+// Solo due eventi futuri, il primo con codice HTML nel titolo e nella descrizione.
+export function feedPerDashboardPochi(): string {
+  return calendario([
+    evento([
+      'UID:dash-html@girasole.test',
+      `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_DASH.html))}T090000`,
+      `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_DASH.html))}T100000`,
+      `SUMMARY:${TITOLO_DASH_HTML}`,
+      `DESCRIPTION:${DESCRIZIONE_CON_LINK}`,
+    ]),
+    eventoGiornata('dash-unico', TITOLO_DASH_UNICO, GIORNI_DASH.unico, GIORNI_DASH.unico),
+  ]);
+}
+
 function dataGiornoDopo(data: string): string {
   const [anno, mese, giorno] = data.split('-').map(Number);
   return new Date(Date.UTC(anno, mese - 1, giorno + 1, 12)).toISOString().slice(0, 10);
