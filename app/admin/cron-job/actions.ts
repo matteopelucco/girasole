@@ -23,11 +23,11 @@ import {
   type NomeCron,
 } from '@/lib/cronEsecuzioni';
 import { lavoroRiepilogoAllarmi } from '@/lib/cron/lavoroAllarmi';
-import { lavoroReportNotturno } from '@/lib/cron/lavoroReportNotturno';
+import { lavoroNotturno } from '@/lib/cron/lavoroNotturno';
 
 // Lavoro di ciascun job: lo stesso dei lanci pianificati in app/api/cron/.
 const LAVORI: Record<NomeCron, (supabase: SupabaseClient, opzioni: OpzioniLavoroCron) => Promise<EsitoLavoroCron<unknown>>> = {
-  'report-presenze': lavoroReportNotturno,
+  'report-presenze': lavoroNotturno,
   allarmi: lavoroRiepilogoAllarmi,
 };
 

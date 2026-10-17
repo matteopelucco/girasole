@@ -6,6 +6,7 @@ import {
   espandiEventiIcal,
   finestraSincronizzazione,
   problemaCalendario,
+  problemaSincronizzazione,
   unisciProblemi,
   validaIndirizzoIcal,
 } from './calendarioIcal';
@@ -108,6 +109,14 @@ describe('problemaCalendario e unisciProblemi', () => {
   it('compone una frase fissa per ogni motivo', () => {
     expect(problemaCalendario('non_raggiungibile')).toBe('Calendario non sincronizzato: servizio non raggiungibile.');
     expect(problemaCalendario('feed_non_valido')).toBe('Calendario non sincronizzato: feed non valido.');
+  });
+
+  it('solo una sincronizzazione fallita è un problema', () => {
+    expect(problemaSincronizzazione({ stato: 'disattivata' })).toBeNull();
+    expect(problemaSincronizzazione({ stato: 'ok', inseriti: 1, aggiornati: 0, rimossi: 0, totale: 1 })).toBeNull();
+    expect(problemaSincronizzazione({ stato: 'errore', motivo: 'risposta_non_valida' })).toBe(
+      'Calendario non sincronizzato: risposta non valida.'
+    );
   });
 
   it('unisce i problemi presenti e ignora gli altri', () => {

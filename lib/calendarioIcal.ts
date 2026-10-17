@@ -79,6 +79,19 @@ export function problemaCalendario(motivo: MotivoErroreCalendario): string {
   return `Calendario non sincronizzato: ${DESCRIZIONE_MOTIVO[motivo]}.`;
 }
 
+// Esito del passo di sincronizzazione del cron (la risposta del cron lo riporta
+// così com'è: niente titoli, niente indirizzo).
+export type RisultatoSincronizzazione =
+  | { stato: 'disattivata' }
+  | { stato: 'ok'; inseriti: number; aggiornati: number; rimossi: number; totale: number }
+  | { stato: 'errore'; motivo: MotivoErroreCalendario };
+
+// Frase per il registro "Cron Job" (specs/63): null se non c'è un problema
+// (sincronizzazione riuscita o disattivata).
+export function problemaSincronizzazione(risultato: RisultatoSincronizzazione): string | null {
+  return risultato.stato === 'errore' ? problemaCalendario(risultato.motivo) : null;
+}
+
 // Unisce i problemi di più parti dello stesso lancio (nessuno = null).
 export function unisciProblemi(...problemi: (string | null | undefined)[]): string | null {
   const presenti = problemi.filter((p): p is string => Boolean(p));
