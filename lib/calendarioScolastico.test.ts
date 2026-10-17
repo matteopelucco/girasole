@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isGiornoChiuso, messaggioChiusura, trovaChiusura, type GiornoChiusura } from './calendarioScolastico';
+import {
+  chiusuraInCorso,
+  formattaPeriodoChiusura,
+  isGiornoChiuso,
+  messaggioChiusura,
+  trovaChiusura,
+  type GiornoChiusura,
+} from './calendarioScolastico';
 
 const VACANZE_NATALE: GiornoChiusura = {
   id: '1',
@@ -84,5 +91,28 @@ describe('messaggioChiusura', () => {
 
   it('restituisce null per un giorno feriale scrivibile', () => {
     expect(messaggioChiusura('2026-08-28', [VACANZE_NATALE])).toBeNull();
+  });
+});
+
+describe('formattaPeriodoChiusura', () => {
+  it('un solo giorno: data completa con anno', () => {
+    expect(formattaPeriodoChiusura('2026-11-02', '2026-11-02')).toBe('2 nov 2026');
+  });
+
+  it('stesso anno: l\'anno compare una volta sola, in fondo', () => {
+    expect(formattaPeriodoChiusura('2026-12-23', '2026-12-31')).toBe('23 dic – 31 dic 2026');
+  });
+
+  it('anni diversi: l\'anno compare su entrambe le date', () => {
+    expect(formattaPeriodoChiusura('2026-12-23', '2027-01-06')).toBe('23 dic 2026 – 6 gen 2027');
+  });
+});
+
+describe('chiusuraInCorso', () => {
+  it('è vera da inizio a fine compresi, falsa prima e dopo', () => {
+    expect(chiusuraInCorso(VACANZE_NATALE, '2026-12-22')).toBe(false);
+    expect(chiusuraInCorso(VACANZE_NATALE, '2026-12-23')).toBe(true);
+    expect(chiusuraInCorso(VACANZE_NATALE, '2027-01-06')).toBe(true);
+    expect(chiusuraInCorso(VACANZE_NATALE, '2027-01-07')).toBe(false);
   });
 });

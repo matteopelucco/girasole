@@ -8,7 +8,7 @@
 // server: non è un indirizzo Google e non contiene nessun segreto.
 import http from 'node:http';
 import { VTIMEZONE_ROMA } from '../lib/calendarioFusoRoma.mjs';
-import { dataFraGiorni } from './helpers';
+import { dataFraGiorni, dataProssimoGiornoFeriale } from './helpers';
 
 export type RispostaFeed = { stato: number; corpo: string };
 
@@ -117,6 +117,88 @@ export function feedConRegolaOstile(): string {
   ]);
   return feedAggiornato().replace('END:VCALENDAR', `${ostile}
 END:VCALENDAR`);
+}
+
+// Titoli degli eventi di feedPerPagina(): la pagina "Calendario" (specs/64) li
+// mostra e i test li cercano per titolo. Il prefisso li distingue dagli altri
+// eventi di prova.
+export const TITOLO_CON_ORARIO = 'Prova calendario: evento con orario';
+export const TITOLO_TUTTO_IL_GIORNO = 'Prova calendario: evento di tutto il giorno';
+export const TITOLO_PIU_GIORNI = 'Prova calendario: evento su più giorni';
+export const TITOLO_IN_CORSO = 'Prova calendario: evento già cominciato';
+export const TITOLO_PASSATO = 'Prova calendario: evento passato';
+export const TITOLO_HTML = '<img src=x onerror=alert(1)> Prova calendario: titolo con HTML';
+export const TITOLO_CHIUSO = 'Prova calendario: Chiuso';
+export const LUOGO_CON_ORARIO = 'Salone di prova';
+export const DESCRIZIONE_PRIMA_RIGA = 'Portare il cambio di prova.';
+export const DESCRIZIONE_SECONDA_RIGA = 'Grazie e a presto.';
+export const DESCRIZIONE_CON_LINK = 'Dettagli su https://example.com/prova e javascript:alert(1)';
+
+// Giorni (rispetto a oggi) degli eventi di feedPerPagina().
+export const GIORNI_CON_ORARIO = 7;
+export const GIORNI_TUTTO_IL_GIORNO = 10;
+export const GIORNI_PIU_GIORNI = { primo: 20, ultimo: 22 };
+export const GIORNI_PASSATO = -5;
+export const GIORNI_HTML = 12;
+
+// Feed per i test della pagina "Calendario": un evento con orario (10:00-11:00,
+// con luogo e descrizione su due righe), uno di tutto il giorno, uno di tre
+// giorni, uno già cominciato (da ieri a dopodomani), uno concluso, uno con
+// codice HTML nel titolo e un indirizzo web nella descrizione, e uno
+// intitolato "Chiuso" in un giorno feriale (resta un evento, specs/64).
+export function feedPerPagina(): string {
+  return calendario([
+    evento([
+      'UID:pagina-orario@girasole.test',
+      `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_CON_ORARIO))}T100000`,
+      `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_CON_ORARIO))}T110000`,
+      `SUMMARY:${TITOLO_CON_ORARIO}`,
+      `LOCATION:${LUOGO_CON_ORARIO}`,
+      `DESCRIPTION:${DESCRIZIONE_PRIMA_RIGA}\\n${DESCRIZIONE_SECONDA_RIGA}`,
+    ]),
+    evento([
+      'UID:pagina-giornata@girasole.test',
+      `DTSTART;VALUE=DATE:${compatta(dataFraGiorni(GIORNI_TUTTO_IL_GIORNO))}`,
+      `DTEND;VALUE=DATE:${compatta(dataFraGiorni(GIORNI_TUTTO_IL_GIORNO + 1))}`,
+      `SUMMARY:${TITOLO_TUTTO_IL_GIORNO}`,
+    ]),
+    evento([
+      'UID:pagina-piu-giorni@girasole.test',
+      `DTSTART;VALUE=DATE:${compatta(dataFraGiorni(GIORNI_PIU_GIORNI.primo))}`,
+      `DTEND;VALUE=DATE:${compatta(dataFraGiorni(GIORNI_PIU_GIORNI.ultimo + 1))}`,
+      `SUMMARY:${TITOLO_PIU_GIORNI}`,
+    ]),
+    evento([
+      'UID:pagina-in-corso@girasole.test',
+      `DTSTART;VALUE=DATE:${compatta(dataFraGiorni(-1))}`,
+      `DTEND;VALUE=DATE:${compatta(dataFraGiorni(3))}`,
+      `SUMMARY:${TITOLO_IN_CORSO}`,
+    ]),
+    evento([
+      'UID:pagina-passato@girasole.test',
+      `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_PASSATO))}T100000`,
+      `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_PASSATO))}T110000`,
+      `SUMMARY:${TITOLO_PASSATO}`,
+    ]),
+    evento([
+      'UID:pagina-html@girasole.test',
+      `DTSTART;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_HTML))}T090000`,
+      `DTEND;TZID=Europe/Rome:${compatta(dataFraGiorni(GIORNI_HTML))}T100000`,
+      `SUMMARY:${TITOLO_HTML}`,
+      `DESCRIPTION:${DESCRIZIONE_CON_LINK}`,
+    ]),
+    evento([
+      'UID:pagina-chiuso@girasole.test',
+      `DTSTART;VALUE=DATE:${compatta(dataProssimoGiornoFeriale())}`,
+      `DTEND;VALUE=DATE:${compatta(dataGiornoDopo(dataProssimoGiornoFeriale()))}`,
+      `SUMMARY:${TITOLO_CHIUSO}`,
+    ]),
+  ]);
+}
+
+function dataGiornoDopo(data: string): string {
+  const [anno, mese, giorno] = data.split('-').map(Number);
+  return new Date(Date.UTC(anno, mese - 1, giorno + 1, 12)).toISOString().slice(0, 10);
 }
 
 export type FeedFinto = {

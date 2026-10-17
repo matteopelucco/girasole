@@ -36,10 +36,17 @@ export function vociLink(elementi: ElementoMenu[]): VoceMenu[] {
 // pura (nessuna query, nessun redirect): la navigazione per maestra/
 // assistente/genitore resta quella via le card della dashboard (vedi
 // lib/dashboardSezioni.ts), qui c'è solo il link "Dashboard" per tornare
-// alla home; l'admin ha in più le voci di amministrazione già presenti in
+// alla home (più "Calendario" per lo staff, specs/64); l'admin ha in più le voci di amministrazione già presenti in
 // passato nella barra orizzontale (vedi specs/01 - ux.md).
 export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
   const voci: ElementoMenu[] = [{ href: '/dashboard', etichetta: 'Dashboard', icona: '🏠' }];
+
+  // "Calendario" (specs/64): giorni di chiusura ed eventi di Google, in sola
+  // lettura, per lo staff (non per il genitore). Distinta da "Calendario
+  // scolastico" (admin), dove si modificano i giorni di chiusura.
+  if (ruolo === 'admin' || ruolo === 'maestra' || ruolo === 'assistente') {
+    voci.push({ href: '/dashboard/calendario', etichetta: 'Calendario', icona: '🗓️' });
+  }
 
   if (ruolo === 'admin') {
     voci.push(

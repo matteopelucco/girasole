@@ -13,6 +13,29 @@ export function trovaChiusura(data: string, chiusure: GiornoChiusura[]): GiornoC
   return chiusure.find((c) => data >= c.dataInizio && data <= c.dataFine) ?? null;
 }
 
+// Vero se `oggi` cade dentro la chiusura (estremi compresi): usata dalla
+// pagina "Calendario" (specs/64) per l'etichetta "In corso". Pura.
+export function chiusuraInCorso(chiusura: GiornoChiusura, oggi: string): boolean {
+  return oggi >= chiusura.dataInizio && oggi <= chiusura.dataFine;
+}
+
+// Periodo di una chiusura per la pagina "Calendario" (specs/64): "2 nov 2026",
+// "23 dic – 31 dic 2026" (stesso anno, anno una volta sola) oppure
+// "23 dic 2026 – 6 gen 2027". Pura.
+export function formattaPeriodoChiusura(inizio: string, fine: string): string {
+  const formatta = (data: string, conAnno: boolean) => {
+    const [anno, mese, giorno] = data.split('-').map(Number);
+    return new Intl.DateTimeFormat('it-IT', {
+      day: 'numeric',
+      month: 'short',
+      ...(conAnno ? { year: 'numeric' as const } : {}),
+    }).format(new Date(Date.UTC(anno, mese - 1, giorno, 12)));
+  };
+  if (inizio === fine) return formatta(inizio, true);
+  if (inizio.slice(0, 4) === fine.slice(0, 4)) return `${formatta(inizio, false)} – ${formatta(fine, true)}`;
+  return `${formatta(inizio, true)} – ${formatta(fine, true)}`;
+}
+
 // Vero se in `data` l'asilo è chiuso: weekend (specs/53) o dentro un
 // giorno di chiusura registrato dall'admin. Funzione pura, stessa
 // duplice regola implementata lato database in

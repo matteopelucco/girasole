@@ -28,6 +28,20 @@ export async function indirizzoCalendario(supabase: SupabaseClient): Promise<str
   return (data as { ical_url: string | null }).ical_url || null;
 }
 
+// Solo "c'è un indirizzo salvato?", per la pagina Calendario (specs/64): la query
+// non legge la colonna dell'indirizzo, lo usa soltanto come filtro, così non può
+// finire nella risposta, nei log o nella pagina. Falso anche se non si riesce a leggere.
+// grant-check: authenticated
+export async function calendarioCollegato(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('impostazioni_calendario')
+    .select('id')
+    .not('ical_url', 'is', null)
+    .neq('ical_url', '')
+    .maybeSingle();
+  return !error && Boolean(data);
+}
+
 // `indirizzo` null = sincronizzazione disattivata. Vero se la riga è stata
 // aggiornata (una riga mancante o un permesso negato non danno errore, ma
 // nessuna riga modificata).
