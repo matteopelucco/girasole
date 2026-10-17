@@ -11,6 +11,7 @@ import {
   titoloGiornata,
   titoloSezione,
 } from './pagina-giornata';
+import { PERCORSO_CALENDARIO, apriDashboardConEventi, linkVediTutto, riquadroProssimiEventi } from './pagina-calendario-eventi';
 
 test.describe('12 — Dashboard maestra/admin', () => {
   test.describe('come maestra', () => {
@@ -81,6 +82,28 @@ test.describe('12 — Dashboard maestra/admin', () => {
     });
   });
 
+  test.describe('riquadro "Prossimi eventi"', () => {
+    test.use({ storageState: statoAutenticazione('maestra') });
+
+    // Il contenuto (eventi o messaggio vuoto) dipende dal calendario: i casi sono
+    // in e2e/64-calendario-eventi.spec.ts. Qui solo che il riquadro c'è, al suo
+    // posto, con il link alla pagina Calendario.
+    test('la dashboard mostra il riquadro "Prossimi eventi" tra le card e gli avvisi', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await apriDashboardConEventi(page);
+      await expect(riquadroProssimiEventi(page).getByRole('heading', { name: 'Prossimi eventi' })).toBeVisible();
+      await expect(linkVediTutto(page)).toHaveAttribute('href', PERCORSO_CALENDARIO);
+
+      const yRiquadro = (await riquadroProssimiEventi(page).boundingBox())?.y ?? -1;
+      const yAvvisi = (await page.getByRole('heading', { name: 'Avvisi' }).boundingBox())?.y ?? -1;
+      expect(yRiquadro).toBeGreaterThanOrEqual(0);
+      expect(yRiquadro).toBeLessThan(yAvvisi);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
   test.describe('come assistente', () => {
     test.use({ storageState: statoAutenticazione('assistente') });
 
@@ -119,6 +142,8 @@ test.describe('12 — Dashboard maestra/admin', () => {
 
     await expect(page.getByText('Non hai ancora nessuna sezione assegnata')).toBeVisible();
     await expect(linkApriGiornata(page)).toHaveCount(0);
+    // Il riquadro degli eventi non dipende dalle sezioni assegnate.
+    await expect(riquadroProssimiEventi(page)).toBeVisible();
   });
 
   test.describe('come admin', () => {
