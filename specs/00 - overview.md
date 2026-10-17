@@ -134,11 +134,18 @@ della maestra, `5x` amministrazione.
   voce di menu "Parametri di funzionamento" sotto "Impostazioni" (solo admin):
   pagina con titolo e breve descrizione, pronta a ospitare le sezioni future;
   prima sezione "Variabili d'ambiente" (sola lettura, valori nascosti finché
-  l'admin non reinserisce la propria password)
+  l'admin non reinserisce la propria password); sezione "Calendario Google"
+  (indirizzo iCal segreto, vedi 64)
 - [63 - cron-job.md](63%20-%20cron-job.md) — voce di menu "Cron Job" sotto
   "Impostazioni" (solo admin): lanci dei job pianificati (report notturno,
   riepilogo allarmi) raggruppati per job, con data e ora, esito OK/KO ed
   eventuale messaggio di errore; ultimi 20 e "Carica altri"
+- [64 - calendario-eventi.md](64%20-%20calendario-eventi.md) — sincronizzazione
+  notturna (dentro il cron del report) degli eventi del Google Calendar
+  dell'asilo, letti dall'indirizzo iCal segreto che l'admin salva in "Parametri
+  di funzionamento"; eventi singoli, di tutto il giorno, ripetuti, spostati e
+  annullati salvati nel database (solo dati: pagina e dashboard sono altre
+  issue)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

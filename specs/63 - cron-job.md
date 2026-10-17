@@ -117,6 +117,11 @@ E non ho nessun modo di lanciare un job a mano
   chiavi sono sostituiti da "[nascosto]"; al massimo 300 caratteri.
   Quando il job finisce con una parte non riuscita il messaggio è una frase
   fissa (es. "Report non prodotti: mensile"), senza dettagli tecnici.
+  Anche la sincronizzazione del Google Calendar, che parte dentro il report
+  notturno ([64 - calendario-eventi.md](64%20-%20calendario-eventi.md)), è una
+  "parte": se non riesce il lancio risulta KO con "Calendario non
+  sincronizzato: <motivo breve>" (mai l'indirizzo), ma il report viene
+  prodotto lo stesso. Sincronizzazione disattivata non è un errore.
 - Un job senza lanci registrati ha comunque il suo blocco, con la scritta
   "Nessun lancio registrato." (coperto da unit test: il DB di test ha
   sempre lanci di prova per entrambi i job, vedi `supabase/seed.sql`).
