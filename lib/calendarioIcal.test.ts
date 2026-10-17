@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { VTIMEZONE_ROMA } from './calendarioFusoRoma';
 import {
   ErroreCalendario,
+  MAX_ITERAZIONI_TOTALI,
   MESSAGGIO_INDIRIZZO_NON_VALIDO,
   espandiEventiIcal,
   finestraSincronizzazione,
@@ -83,6 +84,11 @@ describe('validaIndirizzoIcal', () => {
     it('accetta l\'indirizzo di prova solo se l\'ambiente lo consente', () => {
       expect(validaIndirizzoIcal(prova, { CALENDARIO_ICAL_PROVA_ORIGINE: origine })).toEqual({ ok: true, indirizzo: prova });
       expect(validaIndirizzoIcal(prova, {}).ok).toBe(false);
+    });
+
+    it('la ignora su Vercel, in qualunque ambiente', () => {
+      expect(validaIndirizzoIcal(prova, { CALENDARIO_ICAL_PROVA_ORIGINE: origine, VERCEL: '1' }).ok).toBe(false);
+      expect(validaIndirizzoIcal(prova, { CALENDARIO_ICAL_PROVA_ORIGINE: origine, VERCEL: '1', VERCEL_ENV: 'preview' }).ok).toBe(false);
     });
 
     it('la ignora in produzione', () => {
@@ -450,5 +456,86 @@ describe('espandiEventiIcal: idempotenza e feed non validi', () => {
     }
     expect(errore).toBeInstanceOf(ErroreCalendario);
     expect((errore as ErroreCalendario).motivo).toBe('feed_non_valido');
+  });
+});
+
+describe('espandiEventiIcal: regole di ripetizione pericolose o malformate', () => {
+  const sano = evento('UID:sano@test', 'DTSTART;TZID=Europe/Rome:20260707T100000', 'DTEND;TZID=Europe/Rome:20260707T110000', 'SUMMARY:Sano');
+  const serie = (uid: string, regola: string) =>
+    evento(
+      `UID:${uid}@test`,
+      'DTSTART;TZID=Europe/Rome:20260105T100000',
+      'DTEND;TZID=Europe/Rome:20260105T110000',
+      `RRULE:${regola}`,
+      `SUMMARY:${uid}`
+    );
+  const soloSani = (eventi: { id_esterno: string }[]) => eventi.map((e) => e.id_esterno);
+
+  it('una regola impossibile (30 febbraio) non blocca l\'analisi: la serie si salta in meno di 1 secondo', () => {
+    const inizio = Date.now();
+    const eventi = espandi([serie('impossibile', 'FREQ=DAILY;BYMONTH=2;BYMONTHDAY=30'), sano]);
+    expect(Date.now() - inizio).toBeLessThan(1000);
+    expect(soloSani(eventi)).toEqual(['sano@test']);
+  });
+
+  it.each([
+    ['ogni secondo', 'FREQ=SECONDLY;COUNT=3'],
+    ['ogni minuto', 'FREQ=MINUTELY;COUNT=3'],
+    ['ogni ora', 'FREQ=HOURLY;COUNT=3'],
+  ])('una ripetizione %s è saltata', (_nome, regola) => {
+    expect(soloSani(espandi([serie('fitta', regola), sano]))).toEqual(['sano@test']);
+  });
+
+  it.each([
+    ['DAILY con BYMONTHDAY', 'FREQ=DAILY;BYMONTHDAY=15;COUNT=3'],
+    ['DAILY con BYYEARDAY', 'FREQ=DAILY;BYYEARDAY=100;COUNT=3'],
+    ['WEEKLY con BYWEEKNO', 'FREQ=WEEKLY;BYWEEKNO=10;COUNT=3'],
+    ['WEEKLY con BYSETPOS', 'FREQ=WEEKLY;BYDAY=MO,TU;BYSETPOS=1;COUNT=3'],
+  ])('%s è saltata', (_nome, regola) => {
+    expect(soloSani(espandi([serie('esclusa', regola), sano]))).toEqual(['sano@test']);
+  });
+
+  it('le frequenze ammesse (giornaliera, settimanale, mensile, annuale) restano espanse', () => {
+    for (const regola of ['FREQ=DAILY;COUNT=3', 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=3', 'FREQ=MONTHLY;BYMONTHDAY=5;COUNT=3', 'FREQ=YEARLY;COUNT=2']) {
+      expect(espandi([serie('ok', regola)]).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('una regola malformata salta solo quella serie, non tutto il feed', () => {
+    for (const regola of ['FREQ=DAILY;BYMONTH=13;COUNT=3', 'FREQ=MONTHLY;BYMONTHDAY=99;COUNT=3', 'FREQ=FOO', 'FREQ=WEEKLY;BYMONTH=2;BYDAY=MO;BYHOUR=25']) {
+      expect(soloSani(espandi([serie('rotta', regola), sano]))).toEqual(['sano@test']);
+    }
+  });
+
+  it('un feed con intestazione illeggibile resta un feed non valido', () => {
+    expect(() => espandiEventiIcal(`BEGIN:VCALENDAR
+QUALCOSA
+`, DA, A)).toThrow(ErroreCalendario);
+  });
+
+  it('il tetto sulle iterazioni complessive ferma l\'analisi di un feed enorme in tempi brevi', () => {
+    // 40 serie giornaliere iniziate nel 2012: dalla finestra le separano migliaia di occorrenze ciascuna.
+    const molte = Array.from({ length: 40 }, (_, i) =>
+      evento(
+        `UID:antica${i}@test`,
+        'DTSTART;TZID=Europe/Rome:20120105T100000',
+        'DTEND;TZID=Europe/Rome:20120105T110000',
+        'RRULE:FREQ=DAILY',
+        `SUMMARY:Antica ${i}`
+      )
+    );
+    const inizio = Date.now();
+    const eventi = espandi(molte, true, new Date('2026-06-01T00:00:00Z'), new Date('2026-06-11T00:00:00Z'));
+    expect(Date.now() - inizio).toBeLessThan(10_000);
+    // Le prime serie arrivano alla finestra, le ultime non vengono nemmeno cominciate.
+    expect(eventi.length).toBeGreaterThan(0);
+    expect(eventi.length).toBeLessThan(40 * 10);
+    expect(MAX_ITERAZIONI_TOTALI).toBe(50_000);
+  });
+
+  it('non salva più di 5000 eventi e si ferma appena li raggiunge', () => {
+    const fitte = Array.from({ length: 10 }, (_, i) => serie(`fitta${i}`, 'FREQ=DAILY'));
+    const eventi = espandi(fitte, true, new Date('2026-01-01T00:00:00Z'), new Date('2027-12-31T00:00:00Z'));
+    expect(eventi).toHaveLength(5000);
   });
 });

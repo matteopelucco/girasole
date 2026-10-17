@@ -18,6 +18,14 @@ export const MESI_FUTURO = 12;
 // tabella `calendario_eventi` (migration 0065).
 const MAX_EVENTI = 5000;
 const MAX_ITERAZIONI_SERIE = 20000;
+// Tetto sulle iterazioni di tutte le serie del feed insieme.
+export const MAX_ITERAZIONI_TOTALI = 50_000;
+// Frequenze espanse: le ripetizioni più fitte (ogni secondo, minuto, ora) non
+// servono a un calendario scolastico e sono costose da calcolare.
+const FREQUENZE_ESPANSE = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
+// Per DAILY e WEEKLY queste parti rendono possibili regole impossibili (es.
+// "ogni giorno del 30 febbraio") in cui ical.js non termina mai: la serie si salta.
+const PARTI_NON_AMMESSE_GIORNALIERE = ['BYMONTHDAY', 'BYYEARDAY', 'BYWEEKNO', 'BYSETPOS'];
 const MAX_TITOLO = 300;
 const MAX_DESCRIZIONE = 5000;
 const MAX_LUOGO = 500;
@@ -26,6 +34,7 @@ const TITOLO_VUOTO = '(senza titolo)';
 // l'originale è poco oltre la finestra: si guarda questi giorni in più.
 const MARGINE_GIORNI = 14;
 const MS_GIORNO = 86_400_000;
+const BLOCCO_EVENTO = /BEGIN:VEVENT\r?\n[\s\S]*?\r?\nEND:VEVENT[ \t]*(?:\r?\n|$)/g;
 
 export type EventoCalendario = {
   // UID dell'evento nel feed; per le occorrenze di un evento ripetuto anche
@@ -107,7 +116,7 @@ const HOST_GOOGLE = ['calendar.google.com', 'www.google.com'];
 const LUNGHEZZA_MASSIMA_INDIRIZZO = 2000;
 const ORIGINE_PROVA = /^http:\/\/127\.0\.0\.1:\d{2,5}$/;
 
-export type AmbienteIndirizzo = { CALENDARIO_ICAL_PROVA_ORIGINE?: string; VERCEL_ENV?: string };
+export type AmbienteIndirizzo = { CALENDARIO_ICAL_PROVA_ORIGINE?: string; VERCEL_ENV?: string; VERCEL?: string };
 
 export type EsitoIndirizzo = { ok: true; indirizzo: string | null } | { ok: false; messaggio: string };
 
@@ -133,6 +142,7 @@ export function validaIndirizzoIcal(valore: string, ambiente: AmbienteIndirizzo 
 
   const provaAmmessa =
     ambiente.VERCEL_ENV !== 'production' &&
+    !ambiente.VERCEL &&
     typeof ambiente.CALENDARIO_ICAL_PROVA_ORIGINE === 'string' &&
     ORIGINE_PROVA.test(ambiente.CALENDARIO_ICAL_PROVA_ORIGINE) &&
     url.origin === ambiente.CALENDARIO_ICAL_PROVA_ORIGINE;
@@ -238,6 +248,27 @@ function costruisci(c: Candidato, da: Date, a: Date): EventoCalendario | null {
   };
 }
 
+// Vero se la regola di ripetizione si può espandere senza rischi (vedi
+// FREQUENZE_ESPANSE e PARTI_NON_AMMESSE_GIORNALIERE). Nessuna RRULE (solo RDATE)
+// è sempre espandibile: l'elenco è finito.
+function serieEspandibile(evento: Evento): boolean {
+  try {
+    for (const proprieta of evento.component.getAllProperties('rrule')) {
+      const regola = proprieta.getFirstValue();
+      if (!regola || typeof regola !== 'object' || !('freq' in regola)) return false;
+      const freq = String((regola as { freq: unknown }).freq).toUpperCase();
+      if (!FREQUENZE_ESPANSE.includes(freq)) return false;
+      if (freq === 'DAILY' || freq === 'WEEKLY') {
+        const parti = (regola as { parts?: Record<string, unknown> }).parts ?? {};
+        if (PARTI_NON_AMMESSE_GIORNALIERE.some((nome) => parti[nome] !== undefined)) return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function fineEvento(evento: Evento): Tempo | null {
   try {
     return evento.endDate ?? null;
@@ -252,27 +283,40 @@ function fineEvento(evento: Evento): Tempo | null {
 // occorrenze spostate o modificate (RECURRENCE-ID) sostituiscono l'originale;
 // gli annullati (STATUS:CANCELLED) non compaiono. Risultato ordinato per inizio.
 export function espandiEventiIcal(testo: string, da: Date, a: Date): EventoCalendario[] {
+  // Ogni VEVENT è letto da solo: una regola malformata (che ical.js rifiuta già
+  // in lettura) fa saltare solo quell'evento, non tutto il feed. Il resto del
+  // calendario (intestazione e fusi orari) deve invece essere valido.
+  const blocchi = testo.match(BLOCCO_EVENTO) ?? [];
   let calendario: InstanceType<typeof ICAL.Component>;
   try {
-    calendario = new ICAL.Component(ICAL.parse(testo));
+    calendario = new ICAL.Component(ICAL.parse(testo.replace(BLOCCO_EVENTO, '')));
     if (calendario.name !== 'vcalendar') throw new Error('non è un calendario');
     registraFusi(calendario);
   } catch {
     throw new ErroreCalendario('feed_non_valido');
   }
 
+  const componenti: InstanceType<typeof ICAL.Component>[] = [];
+  for (const blocco of blocchi) {
+    try {
+      componenti.push(new ICAL.Component(ICAL.parse(blocco)));
+    } catch {
+      // evento illeggibile: saltato
+    }
+  }
+
   try {
-    return espandi(calendario, da, a);
+    return espandi(componenti, da, a);
   } catch (errore) {
     if (errore instanceof ErroreCalendario) throw errore;
     throw new ErroreCalendario('feed_non_valido');
   }
 }
 
-function espandi(calendario: InstanceType<typeof ICAL.Component>, da: Date, a: Date): EventoCalendario[] {
+function espandi(componenti: InstanceType<typeof ICAL.Component>[], da: Date, a: Date): EventoCalendario[] {
   const principali = new Map<string, Evento>();
   const eccezioni: Evento[] = [];
-  for (const componente of calendario.getAllSubcomponents('vevent')) {
+  for (const componente of componenti) {
     let evento: Evento;
     try {
       evento = new ICAL.Event(componente);
@@ -284,7 +328,6 @@ function espandi(calendario: InstanceType<typeof ICAL.Component>, da: Date, a: D
     else principali.set(evento.uid, evento);
   }
 
-  const candidati: Candidato[] = [];
   const limiteIterazione = new Date(a.getTime() + MARGINE_GIORNI * MS_GIORNO);
 
   // Eccezioni con la serie nel feed: relazionate alla serie.
@@ -295,41 +338,59 @@ function espandi(calendario: InstanceType<typeof ICAL.Component>, da: Date, a: D
     else orfane.push(eccezione);
   }
 
+  const risultato = new Map<string, EventoCalendario>();
+  // Un evento malformato si salta, gli altri restano.
+  const aggiungi = (candidato: Candidato) => {
+    try {
+      const evento = costruisci(candidato, da, a);
+      if (evento) risultato.set(evento.id_esterno, evento);
+    } catch {
+      // saltato
+    }
+  };
+  let iterazioniTotali = 0;
+
   for (const [uid, evento] of principali) {
+    if (risultato.size >= MAX_EVENTI || iterazioniTotali >= MAX_ITERAZIONI_TOTALI) break;
     if (!evento.isRecurring()) {
-      candidati.push({ evento, id: uid, inizio: evento.startDate, fine: fineEvento(evento) });
+      aggiungi({ evento, id: uid, inizio: evento.startDate, fine: fineEvento(evento) });
       continue;
     }
-    if (annullato(evento)) continue;
-    const iteratore = evento.iterator();
-    let passi = 0;
-    for (let t = iteratore.next(); t; t = iteratore.next()) {
-      if (++passi > MAX_ITERAZIONI_SERIE) break;
-      if (aIstante(t).getTime() > limiteIterazione.getTime()) break;
-      const dettagli = evento.getOccurrenceDetails(t);
-      candidati.push({
-        evento: dettagli.item,
-        id: `${uid}#${identificativoOccorrenza(dettagli.recurrenceId)}`,
-        inizio: dettagli.startDate,
-        fine: dettagli.endDate,
-      });
+    if (annullato(evento) || !serieEspandibile(evento)) continue;
+    // Una serie malformata salta solo se stessa, non tutto il feed.
+    try {
+      const iteratore = evento.iterator();
+      let passi = 0;
+      for (let t = iteratore.next(); t; t = iteratore.next()) {
+        if (++passi > MAX_ITERAZIONI_SERIE || ++iterazioniTotali > MAX_ITERAZIONI_TOTALI) break;
+        if (aIstante(t).getTime() > limiteIterazione.getTime()) break;
+        const dettagli = evento.getOccurrenceDetails(t);
+        aggiungi({
+          evento: dettagli.item,
+          id: `${uid}#${identificativoOccorrenza(dettagli.recurrenceId)}`,
+          inizio: dettagli.startDate,
+          fine: dettagli.endDate,
+        });
+        if (risultato.size >= MAX_EVENTI) break;
+      }
+    } catch {
+      continue;
     }
   }
 
   // Occorrenze modificate senza la serie nel feed: eventi a sé.
   for (const evento of orfane) {
-    candidati.push({
-      evento,
-      id: `${evento.uid}#${identificativoOccorrenza(evento.recurrenceId)}`,
-      inizio: evento.startDate,
-      fine: fineEvento(evento),
-    });
-  }
-
-  const risultato = new Map<string, EventoCalendario>();
-  for (const candidato of candidati) {
-    const evento = costruisci(candidato, da, a);
-    if (evento) risultato.set(evento.id_esterno, evento);
+    if (risultato.size >= MAX_EVENTI) break;
+    try {
+      aggiungi({
+        evento,
+        id: `${evento.uid}#${identificativoOccorrenza(evento.recurrenceId)}`,
+        inizio: evento.startDate,
+        fine: fineEvento(evento),
+      });
+    } catch {
+      continue; // identificativo non calcolabile: evento saltato
+    }
   }
 
   return Array.from(risultato.values())

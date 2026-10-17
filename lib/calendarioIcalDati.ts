@@ -111,6 +111,7 @@ export async function sincronizzaCalendario(
     const indirizzo = validaIndirizzoIcal(salvato, {
       CALENDARIO_ICAL_PROVA_ORIGINE: process.env.CALENDARIO_ICAL_PROVA_ORIGINE,
       VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL: process.env.VERCEL,
     });
     if (!indirizzo.ok || !indirizzo.indirizzo) throw new ErroreCalendario('indirizzo_non_valido');
 

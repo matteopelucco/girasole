@@ -163,6 +163,20 @@ E né il messaggio né le risposte contengono l'indirizzo iCal
   (fine esclusa), con `tutto_il_giorno = true`. Titolo, descrizione e luogo sono
   testo semplice, accorciati a lunghezze massime: chi li mostra li tratta come
   testo (mai come HTML).
+  **Limiti di sicurezza dell'analisi** (il feed è letto nello stesso processo del
+  report notturno e non deve poterlo bloccare): si espandono solo le ripetizioni
+  giornaliere, settimanali, mensili e annuali (ogni secondo, minuto o ora sono
+  saltate); per le giornaliere e settimanali le regole con giorno del mese,
+  giorno dell'anno, numero di settimana o posizione nell'insieme (BYMONTHDAY,
+  BYYEARDAY, BYWEEKNO, BYSETPOS) sono saltate, perché ical.js non termina con
+  regole impossibili come "ogni giorno del 30 febbraio". Un evento o una serie
+  illeggibile o saltata non fa fallire il feed: gli altri eventi restano. Tetto
+  di 20.000 passi per serie, 50.000 per tutto il feed e 5.000 eventi salvati: oltre,
+  l'analisi si ferma (le serie non ancora esaminate restano fuori). Le occorrenze
+  si calcolano dall'inizio della serie (ical.js non permette di partire dalla
+  finestra senza falsare COUNT e INTERVAL): una serie iniziata da moltissimo
+  tempo (ordine di 50 anni se giornaliera) può superare il tetto prima di
+  arrivare alla finestra e non comparire.
 - **Dentro il cron notturno già esistente** (`report-presenze`): nessuna nuova
   voce in `vercel.json`. Il passo di sincronizzazione parte insieme al report e
   non ne ritarda né ne cambia l'esito: ogni suo errore è preso e trasformato in

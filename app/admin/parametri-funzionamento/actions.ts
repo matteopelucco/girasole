@@ -82,6 +82,7 @@ export async function aggiornaIndirizzoCalendario(_stato: EsitoAzione, formData:
   const esito = validaIndirizzoIcal(typeof grezzo === 'string' ? grezzo : '', {
     CALENDARIO_ICAL_PROVA_ORIGINE: process.env.CALENDARIO_ICAL_PROVA_ORIGINE,
     VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL: process.env.VERCEL,
   });
   if (!esito.ok) return { ok: false, messaggio: esito.messaggio };
 
