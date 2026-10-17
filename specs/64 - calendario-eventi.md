@@ -1,9 +1,11 @@
 # 64 — Calendario eventi (sincronizzazione del Google Calendar)
 
-Sotto-issue **a** di [#318](https://github.com/matteopelucco/girasole/issues/318)
-(issue [#319](https://github.com/matteopelucco/girasole/issues/319)). La pagina
-"Calendario" e il riquadro in dashboard (sotto-issue b e c) sono fuori scope: qui
-si portano gli eventi nel database, nessuna interfaccia per leggerli.
+Sotto-issue **a** e **b** di [#318](https://github.com/matteopelucco/girasole/issues/318):
+la sincronizzazione degli eventi nel database
+([#319](https://github.com/matteopelucco/girasole/issues/319)) e la pagina
+"Calendario" che li mostra
+([#320](https://github.com/matteopelucco/girasole/issues/320), scenari in fondo).
+Il riquadro in dashboard (sotto-issue c, #321) è fuori scope.
 
 Collegata a [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)
 (giorni di chiusura: restano un'altra cosa, non si duplicano con gli eventi),
@@ -18,9 +20,9 @@ Collegata a [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)
 - **Cron notturno** (Vercel Cron, lo stesso del report notturno,
   [52 - report-email-automatico.md](52%20-%20report-email-automatico.md)): legge il
   calendario e salva gli eventi. Nessun utente umano scrive gli eventi.
-- **Admin, maestra, assistente**: in futuro leggeranno gli eventi (sotto-issue b e
-  c); la tabella è già leggibile da loro. **Genitore**: nessun accesso (decisione
-  di Matteo, #318: quando lo avranno si deciderà la privacy degli eventi).
+- **Admin, maestra, assistente**: leggono gli eventi nella pagina "Calendario"
+  (`/dashboard/calendario`). **Genitore**: nessun accesso (decisione di Matteo,
+  #318: quando lo avranno si deciderà la privacy degli eventi).
 
 ## Obiettivo
 Chi aggiunge un evento nel Google Calendar dell'asilo lo ritrova in Girasole senza
@@ -129,6 +131,128 @@ Allora il cron risponde con successo in pochi secondi
 E il report notturno viene prodotto come sempre
 E gli eventi normali del feed sono salvati; la serie ostile è saltata
 
+## Pagina "Calendario" (`/dashboard/calendario`, issue #320)
+
+Pagina in sola lettura per admin, maestra e assistente, con voce di menu
+"Calendario" subito sotto "Dashboard". `/admin/calendario` ("Calendario
+scolastico", spec 53) resta la pagina dove l'admin modifica i giorni di
+chiusura e non cambia. In alto i **giorni di chiusura** (tabella
+`giorni_chiusura`), in basso la sezione **"A calendario"** con gli eventi di
+Google (tabella `calendario_eventi`): due sezioni distinte, con due query
+distinte, mai fuse in un'unica lista (vedi "Regole della pagina").
+
+## Scenario: la voce "Calendario" è nel menu di admin, maestra e assistente
+Dato che sono autenticato come admin, maestra o assistente
+Quando guardo il menu laterale
+Allora vedo la voce "Calendario" subito dopo "Dashboard"
+E cliccandola apro `/dashboard/calendario`, dove la voce risulta evidenziata
+E la voce non è nel menu del genitore
+
+## Scenario: il genitore non accede alla pagina
+Dato che sono autenticato come genitore
+Quando provo ad aprire `/dashboard/calendario`
+Allora vengo reindirizzato alla dashboard
+E non vedo né giorni di chiusura né eventi
+
+## Scenario: i giorni di chiusura in corso e futuri sono in alto, in sola lettura
+Dato che l'admin ha inserito un giorno di chiusura che comincia nel futuro
+Quando apro la pagina "Calendario" come maestra
+Allora in cima vedo la sezione "Giorni di chiusura" con il giorno futuro, con le date e la nota
+E un giorno di chiusura in corso oggi porta l'etichetta "In corso"
+E i giorni di chiusura già conclusi non compaiono
+E non c'è nessun pulsante o modulo per modificarli
+E nella sezione leggo che sabato e domenica sono chiusi sempre
+
+## Scenario: l'admin trova il rimando per gestire i giorni di chiusura
+Dato che sono autenticato come admin
+Quando apro la pagina "Calendario"
+Allora nella sezione "Giorni di chiusura" vedo il link "Gestisci i giorni di chiusura" verso `/admin/calendario`
+E maestra e assistente non vedono quel link
+
+## Scenario: senza giorni di chiusura in programma lo stato vuoto è gentile
+Dato che non ci sono giorni di chiusura in corso o futuri
+Quando apro la pagina "Calendario"
+Allora la sezione "Giorni di chiusura" dice "Nessun giorno di chiusura in programma."
+
+## Scenario: gli eventi sono raggruppati per mese e per giorno, con la data in evidenza
+Dato che il calendario ha eventi futuri in giorni diversi
+Quando apro la pagina "Calendario"
+Allora sotto "A calendario" vedo gli eventi in ordine di data, con un'intestazione per ogni mese
+E ogni giorno ha il suo blocco con il giorno della settimana abbreviato e il numero del giorno ben visibili
+E gli eventi dello stesso giorno stanno nello stesso blocco
+
+## Scenario: un evento con orario mostra ora di inizio e di fine in fuso Europe/Rome
+Dato che il calendario ha un evento dalle 10:00 alle 11:00 (ora di Roma) con luogo
+Quando apro la pagina "Calendario"
+Allora l'evento mostra "10:00 – 11:00" (ora di Roma, anche con l'ora legale) e il luogo
+
+## Scenario: luogo e descrizione compaiono solo se presenti
+Dato che il calendario ha un evento con luogo e descrizione e uno senza
+Quando apro la pagina "Calendario"
+Allora il primo evento mostra luogo e descrizione, con gli a capo della descrizione conservati
+E il secondo non mostra né luogo né descrizione, nemmeno come riga vuota
+
+## Scenario: un evento di tutto il giorno si distingue da uno con orario
+Dato che il calendario ha un evento di tutto il giorno
+Quando apro la pagina "Calendario"
+Allora l'evento mostra l'etichetta "Tutto il giorno" al posto dell'orario
+
+## Scenario: un evento su più giorni è chiaro
+Dato che il calendario ha un evento di tutto il giorno che dura più giorni
+Quando apro la pagina "Calendario"
+Allora l'evento compare una sola volta, nel giorno in cui comincia
+E mostra l'intervallo dei giorni (es. "10 ott – 12 ott")
+E se è già cominciato compare sotto il giorno di oggi con l'etichetta "In corso"
+
+## Scenario: gli eventi passati sono separati e attenuati
+Dato che il calendario ha un evento già concluso (fino a 30 giorni fa) e uno futuro
+Quando apro la pagina "Calendario"
+Allora l'evento futuro è sotto "A calendario" nella parte "Prossimi"
+E quello concluso è in una parte "Passati" sotto la prima, in ordine dal più recente, con aspetto attenuato
+
+## Scenario: titolo, descrizione e luogo sono sempre testo semplice
+Dato che il feed contiene un titolo con del codice HTML e una descrizione con un indirizzo web (anche `javascript:`)
+Quando apro la pagina "Calendario"
+Allora vedo il codice HTML come testo, senza che venga eseguito o interpretato
+E l'indirizzo web è testo: non diventa un link cliccabile
+E nella sezione degli eventi non c'è nessun link
+
+## Scenario: un evento "chiuso" di Google resta un evento
+Dato che il Google Calendar ha un evento intitolato "Chiuso" in un giorno feriale
+Quando apro la pagina "Calendario"
+Allora l'evento compare sotto "A calendario"
+E non compare nella sezione "Giorni di chiusura"
+E aprendo "Presenze e pasti" per quel giorno non c'è alcun avviso di chiusura
+
+## Scenario: l'admin senza indirizzo vede come collegare il calendario
+Dato che sono autenticato come admin e nessun indirizzo iCal è salvato
+Quando apro la pagina "Calendario"
+Allora sotto "A calendario" leggo che il Google Calendar non è ancora collegato
+E vedo il link "Parametri di funzionamento" verso `/admin/parametri-funzionamento`
+
+## Scenario: l'admin con indirizzo ma senza eventi legge che non ce ne sono
+Dato che sono autenticato come admin e l'indirizzo è salvato, ma il calendario non ha eventi
+Quando apro la pagina "Calendario"
+Allora sotto "A calendario" leggo che non ci sono eventi e che l'aggiornamento avviene ogni notte
+E non vedo il link ai Parametri di funzionamento
+
+## Scenario: maestra e assistente senza eventi leggono un messaggio neutro
+Dato che sono autenticata come maestra o assistente e il calendario non ha eventi
+Quando apro la pagina "Calendario"
+Allora sotto "A calendario" leggo "Non ci sono eventi a calendario."
+E non vedo né link all'amministrazione né accenni all'indirizzo o alla configurazione
+
+## Scenario: la pagina non rivela l'indirizzo iCal
+Dato che l'indirizzo iCal è salvato
+Quando apro la pagina "Calendario" come admin, maestra o assistente
+Allora l'indirizzo non compare da nessuna parte nella pagina
+
+## Scenario: la pagina è usabile da telefono e accessibile
+Dato che apro la pagina "Calendario" su uno schermo largo 375 px
+Quando la pagina è caricata
+Allora non c'è scorrimento orizzontale
+E la pagina non ha violazioni di accessibilità gravi
+
 ## Regole
 - **Indirizzo = segreto.** Chi lo ha legge il calendario. Sta nel database, in
   una tabella a riga singola (`impostazioni_calendario`, migration 0065), mai nel
@@ -227,7 +351,34 @@ E gli eventi normali del feed sono salvati; la serie ostile è saltata
   riuscito", "errore imprevisto"). Se anche una parte del
   report non è riuscita, i due messaggi si uniscono. Sincronizzazione
   disattivata non è un errore.
-- **Fuori scope**: pagina Calendario e riquadro in dashboard
-  ([#320](https://github.com/matteopelucco/girasole/issues/320),
-  [#321](https://github.com/matteopelucco/girasole/issues/321)), accesso dei
+- **Fuori scope**: riquadro in dashboard
+  ([#321](https://github.com/matteopelucco/girasole/issues/321)), accesso dei
   genitori, pulsante "Aggiorna ora", pulizia dell'archivio storico.
+
+## Regole della pagina "Calendario"
+- **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta,
+  invariata, la pagina dove l'admin modifica le chiusure). Accesso a chi è staff
+  (`requireStaff`): il genitore è reindirizzato alla dashboard.
+- **Regola di separazione** ([#320](https://github.com/matteopelucco/girasole/issues/320)):
+  giorni di chiusura (spec 53) e eventi di Google sono cose distinte, anche nel
+  codice: due sezioni, due query, mai una lista unica. Gli eventi di Google non
+  creano né modificano giorni di chiusura e non bloccano presenze, pasti o ore di
+  lavoro; la chiusura vera la dichiara solo l'admin in `/admin/calendario`.
+- **Letture**: solo dal database, con la sessione di chi guarda (RLS); la pagina
+  non chiama mai Google. Non legge né mostra `impostazioni_calendario.ical_url`:
+  per sapere se il calendario è collegato (solo per l'admin) chiede soltanto se
+  la riga ha un indirizzo, senza leggerlo.
+- **Chiusure mostrate**: quelle con data di fine da oggi in poi, dalla più vicina.
+- **Eventi mostrati**: quelli salvati dal cron (da circa 30 giorni fa a 12 mesi
+  avanti). Giorni, mesi e orari sono quelli di Europe/Rome. Un evento è "passato"
+  se il suo ultimo giorno è prima di oggi. Un evento su più giorni compare una
+  sola volta, nel giorno d'inizio (o sotto oggi, con "In corso", se è già
+  cominciato). Per gli eventi di tutto il giorno la fine è esclusa (mezzanotte del
+  giorno dopo l'ultimo): l'ultimo giorno mostrato è quello prima.
+- **Solo testo**: titolo, descrizione e luogo arrivano da un feed non fidato e
+  sono resi da React come testo (mai HTML, mai link costruiti dal feed).
+- **Grafica**: prima per il telefono; mesi come intestazioni, data in evidenza,
+  passato attenuato (con contrasto sufficiente), caricamento con sagome della
+  stessa altezza dei contenuti (nessun salto di pagina).
+- Logica pura (raggruppamento e orari) in `lib/calendarioEventiVista.ts`, con
+  test unitari co-locati.
