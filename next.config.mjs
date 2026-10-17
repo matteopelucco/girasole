@@ -35,8 +35,25 @@ function ottieniShaCommit() {
   }
 }
 
+const FILE_ANALISI_CALENDARIO = [
+  './lib/calendarioIcalWorker.mjs',
+  './lib/calendarioIcalMotore.mjs',
+  './lib/calendarioFusoRoma.mjs',
+  './node_modules/ical.js/package.json',
+  './node_modules/ical.js/dist/**/*',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // File che l'analisi del calendario carica da disco a runtime (specs/64): il
+  // worker thread, il motore e ical.js non sono importati dal codice dell'app (il
+  // worker è avviato con un percorso), quindi Next non li metterebbe da sé nel
+  // pacchetto delle funzioni su Vercel. Le due voci sono le sole che avviano
+  // l'analisi: il cron notturno del report e il suo "Lancia ora" in Cron Job.
+  outputFileTracingIncludes: {
+    '/api/cron/report-presenze': FILE_ANALISI_CALENDARIO,
+    '/admin/cron-job': FILE_ANALISI_CALENDARIO,
+  },
   env: {
     GIRASOLE_VERSIONE_APP: packageJson.version,
     GIRASOLE_BUILD_SHA: ottieniShaCommit(),

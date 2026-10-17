@@ -12,7 +12,10 @@ visibili all'amministratore. La pagina ha un titolo, una breve descrizione
 e, sotto, le sezioni una dopo l'altra. La prima è "Variabili d'ambiente"
 (issue #287): l'elenco, in sola lettura, delle variabili d'ambiente scelte
 in una lista nel codice, con i valori nascosti finché l'admin non
-reinserisce la propria password.
+reinserisce la propria password. La seconda è "Calendario Google" (issue
+#319): l'indirizzo iCal segreto del calendario dell'asilo, l'unico parametro
+oggi salvato nel database, descritto in
+[64 - calendario-eventi.md](64%20-%20calendario-eventi.md).
 
 ## Scenario: "Parametri di funzionamento" compare nel menu sotto "Impostazioni", solo per l'admin
 Dato che sono autenticato come admin
@@ -80,6 +83,16 @@ Quando clicco "Nascondi valori"
 Allora i valori tornano nascosti e spariscono dalla pagina
 E il pulsante torna "Mostra valori"
 
+## Sezione "Calendario Google"
+Gli scenari (campo per l'indirizzo iCal, salvataggio con validazione, valore
+nascosto finché l'admin non reinserisce la password, svuotare = sincronizzazione
+disattivata) sono in [64 - calendario-eventi.md](64%20-%20calendario-eventi.md),
+con un test per scenario in `e2e/64-calendario-eventi.spec.ts`. Sta sotto
+"Variabili d'ambiente" e sopra "Parametri delle funzionalità". Il pulsante
+"Mostra indirizzo" usa lo stesso meccanismo della verifica della password
+delle variabili d'ambiente (password dell'admin ricontrollata sul server, limite
+dei tentativi, sblocco solo nello stato della pagina).
+
 ## Regole
 - La sezione "Parametri delle funzionalità" (componente
   `components/ParametriFunzionalita.tsx`) in futuro elencherà i parametri in
@@ -87,8 +100,9 @@ E il pulsante torna "Mostra valori"
   di nuovi, perché servono alle funzionalità dell'app. Per ora non ne esiste
   nessuno: nessuna tabella DB, solo il messaggio "in costruzione".
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
-  `/admin/*`. Nessun dato letto o scritto sul database: non servono
-  migration né RLS.
+  `/admin/*`. La sezione "Variabili d'ambiente" non legge né scrive il
+  database; la sezione "Calendario Google" sì (tabella
+  `impostazioni_calendario`, migration 0065, RLS: solo l'admin).
 - La voce di menu è in `lib/navigazione.ts`, rientrata (`rientrata: true`)
   tra "Impostazioni" e "Utenti" (elenco in `lib/impostazioniAvanzate.ts`,
   che alimenta anche i riquadri della pagina Impostazioni, specs/57).

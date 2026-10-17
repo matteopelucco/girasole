@@ -4,7 +4,9 @@ import { ParametriFunzionalita } from '@/components/ParametriFunzionalita';
 import { requireAdmin } from '@/lib/auth';
 import { nomiParametriPresenti } from '@/lib/parametriAmbiente';
 import { PARAMETRI_VISIBILI } from '@/lib/parametriVisibili';
-import { rivelaValoriParametri } from './actions';
+import { SezioneCalendarioGoogle } from '@/components/SezioneCalendarioGoogle';
+import { statoCalendario } from '@/lib/calendarioImpostazioniDati';
+import { aggiornaIndirizzoCalendario, rivelaIndirizzoCalendario, rivelaValoriParametri } from './actions';
 
 // force-dynamic: la pagina è resa a ogni richiesta (legge l'ambiente del
 // server) e la risposta ha `Cache-Control: no-store`.
@@ -14,10 +16,12 @@ export const dynamic = 'force-dynamic';
 // "Impostazioni". Le sezioni stanno sotto l'intestazione, una dopo l'altra,
 // ciascuna con il proprio titolo.
 export default async function ParametriFunzionamentoPage() {
-  const { user, profilo } = await requireAdmin();
+  const { supabase, user, profilo } = await requireAdmin();
   // Solo i NOMI arrivano al browser: i valori restano sul server finché
   // l'admin non reinserisce la password (actions.ts).
   const nomi = nomiParametriPresenti(PARAMETRI_VISIBILI, process.env);
+  // Del calendario arriva al browser solo se l'indirizzo c'è, mai il valore.
+  const calendario = await statoCalendario(supabase);
 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
@@ -48,6 +52,7 @@ export default async function ParametriFunzionamentoPage() {
             <VariabiliAmbiente nomi={nomi} rivela={rivelaValoriParametri} />
           )}
         </section>
+        <SezioneCalendarioGoogle stato={calendario} salva={aggiornaIndirizzoCalendario} rivela={rivelaIndirizzoCalendario} />
         <ParametriFunzionalita />
       </main>
     </NavHeader>
