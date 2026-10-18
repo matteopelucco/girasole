@@ -24,6 +24,13 @@ import {
 } from '@/lib/cronEsecuzioni';
 import { lavoroRiepilogoAllarmi } from '@/lib/cron/lavoroAllarmi';
 import { lavoroNotturno } from '@/lib/cron/lavoroNotturno';
+import { sincronizzaCalendario } from '@/lib/calendarioIcalDati';
+import {
+  MESSAGGIO_GIA_IN_CORSO as MESSAGGIO_SINCRONIZZAZIONE_GIA_IN_CORSO,
+  esitoSincronizzazioneManuale,
+  sincronizzazioneInCorso,
+  type EsitoSincronizzazioneManuale,
+} from '@/lib/sincronizzazioneManuale';
 
 // Lavoro di ciascun job: lo stesso dei lanci pianificati in app/api/cron/.
 const LAVORI: Record<NomeCron, (supabase: SupabaseClient, opzioni: OpzioniLavoroCron) => Promise<EsitoLavoroCron<unknown>>> = {
@@ -77,4 +84,44 @@ export async function lanciaCronAMano(
 
   revalidatePath(PERCORSO_CRON_JOB);
   return esito;
+}
+
+// Istante (ms) di inizio della sincronizzazione a mano in corso su questa
+// istanza del server, null se non ce n'è: serve a non lanciarne due insieme.
+let sincronizzazioneAMano: number | null = null;
+
+// Sincronizzazione a mano del Google Calendar dalla scheda "Azioni" (specs/64,
+// "Sincronizzazione a mano"; issue #326). Il browser non manda nulla (lo stato
+// precedente di useActionState è ignorato). Ordine, tutto sul server:
+//   1. requireAdmin() prima di qualunque altra cosa: chi non è admin viene
+//      rimandato alla dashboard, senza leggere né scrivere nulla;
+//   2. un solo lancio alla volta (guardia in memoria, decade dopo 60 secondi);
+//   3. solo allora la service_role (ADR-0002, FILE_AMMESSI): serve per leggere
+//      l'indirizzo segreto del feed e per la funzione che sostituisce gli
+//      eventi, eseguibile solo dalla service_role. Stessa funzione del cron
+//      (sincronizzaCalendario): non lancia mai e non mette l'indirizzo in
+//      nessun errore.
+// L'esito restituito è ricostruito da esitoSincronizzazioneManuale: stato, una
+// frase fissa e tre numeri. Non invia email, non tocca il report notturno e non
+// scrive nel registro "Cron Job".
+export async function sincronizzaCalendarioAMano(
+  _statoPrecedente: EsitoSincronizzazioneManuale | null
+): Promise<EsitoSincronizzazioneManuale> {
+  await requireAdmin();
+
+  const adesso = Date.now();
+  if (sincronizzazioneInCorso(sincronizzazioneAMano, adesso)) {
+    return { stato: 'ERRORE', messaggio: MESSAGGIO_SINCRONIZZAZIONE_GIA_IN_CORSO };
+  }
+  sincronizzazioneAMano = adesso;
+  try {
+    const admin = createAdminClient();
+    return esitoSincronizzazioneManuale(await sincronizzaCalendario(admin));
+  } catch {
+    // sincronizzaCalendario non lancia; qui può fallire solo la creazione del
+    // client (variabili d'ambiente): niente dettagli nell'esito né nei log.
+    return esitoSincronizzazioneManuale({ stato: 'errore', motivo: 'imprevisto' });
+  } finally {
+    sincronizzazioneAMano = null;
+  }
 }

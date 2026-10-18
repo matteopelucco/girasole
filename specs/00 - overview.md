@@ -140,7 +140,7 @@ della maestra, `5x` amministrazione.
   "Impostazioni" (solo admin), con due schede: "Cron Job" (lanci dei job pianificati, report notturno e
   riepilogo allarmi, raggruppati per job, con data e ora, esito OK/KO ed
   eventuale messaggio di errore; ultimi 20 e "Carica altri") e "Azioni"
-  (per ora vuota, per le azioni lanciabili a mano)
+  (azioni lanciabili a mano: oggi "Sincronizza calendario", esito OK/ERRORE, vedi 64)
 - [64 - calendario-eventi.md](64%20-%20calendario-eventi.md) — sincronizzazione
   notturna (dentro il cron del report) degli eventi del Google Calendar
   dell'asilo, letti dall'indirizzo iCal segreto che l'admin salva in "Parametri
@@ -149,7 +149,8 @@ della maestra, `5x` amministrazione.
   nel gruppo di menu "Calendario", per admin, maestra e assistente) con giorni di chiusura in alto
   (sola lettura) ed eventi "A calendario" in basso, due elenchi separati
   riquadro "Prossimi eventi" in dashboard (i 3 eventi più vicini, compreso quello
-  in corso, con link alla pagina)
+  in corso, con link alla pagina); sincronizzazione a mano dalla scheda "Azioni"
+  di 63 (pulsante "Sincronizza calendario ora", solo admin, esito OK/ERRORE)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

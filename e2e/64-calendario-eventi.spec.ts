@@ -21,7 +21,7 @@
 //
 // Nessun indirizzo reale compare nei test; l'indirizzo finto (locale) non è
 // stampato nei messaggi di fallimento: i confronti usano booleani.
-import { test, expect, type APIRequest, type Browser, type Page } from '@playwright/test';
+import { test, expect, type APIRequest, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import {
   dataFraGiorni,
   dataOggiRoma,
@@ -34,7 +34,18 @@ import {
 import { percorsoGiornata } from '../lib/giornata';
 import { NOME_PAGINA_GIORNATA } from './pagina-giornata';
 import { SEGNAPOSTO_VALORE } from '../lib/parametriAmbiente';
-import { bloccoCron, lanciCron, PERCORSO_CRON_JOB } from './pagina-cron-job';
+import {
+  PERCORSO_CRON_JOB,
+  PERCORSO_SCHEDA_AZIONI,
+  azioneSincronizza,
+  bloccoCron,
+  eRichiestaAzione,
+  esitoSincronizzazione,
+  lanciCron,
+  pulsanteSincronizza,
+  sincronizzaAMano,
+  tagEstemporaneo,
+} from './pagina-cron-job';
 import {
   DESCRIZIONE_CON_LINK,
   DESCRIZIONE_PRIMA_RIGA,
@@ -376,6 +387,96 @@ test.describe('64 — Calendario eventi', () => {
         const { json } = await lanciaCronNotturno(request);
         expect(json.calendario).toEqual({ stato: 'ok', inseriti: 0, aggiornati: 0, rimossi: 0, totale: 8 });
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Sincronizzazione a mano dalla scheda "Azioni" (issue #326). Non richiede
+  // CRON_SECRET né RESEND_API_KEY: è una Server Action dell'admin, non la route
+  // del cron. Il feed è quello finto; l'indirizzo finto non è mai stampato.
+  // ---------------------------------------------------------------------
+  test.describe('sincronizzazione a mano', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
+
+    test.beforeEach(async () => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      feed.imposta({ stato: 200, corpo: feedIniziale() });
+      eventiDiProvaSalvati = true;
+    });
+
+    const FRASE_NUMERI = /Eventi aggiunti: \d+, aggiornati: \d+, tolti: \d+\./;
+
+    test('sincronizzazione a mano riuscita: "Esecuzione in corso", poi "OK"', async ({ page }) => {
+      await impostaIndirizzo(page, indirizzoFeedFinto());
+
+      // Lanci "estemporanei" del report notturno prima: la sincronizzazione a mano non ne aggiunge.
+      await page.goto(PERCORSO_CRON_JOB);
+      const estemporaneiPrima = await tagEstemporaneo(bloccoCron(page, 'Report notturno')).count();
+
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      await expect(esitoSincronizzazione(page)).toHaveCount(0);
+      await sincronizzaAMano(page);
+
+      const esito = esitoSincronizzazione(page);
+      await expect(esito).toContainText('OK');
+      await expect(esito).toContainText(FRASE_NUMERI);
+      await expect(esito).not.toContainText('ERRORE');
+      const testo = await azioneSincronizza(page).innerText();
+      expect(testo.includes(indirizzoFeedFinto()), "l'indirizzo non deve essere nell'esito").toBe(false);
+      await nessunaViolazioneA11yGrave(page);
+
+      // Gli eventi del feed sono nel database: si vedono nella pagina "Calendario".
+      await apriCalendario(page);
+      await expect(schedaEvento(eventiProssimi(page), 'Evento di prova con orario')).toBeVisible();
+
+      // Nessun lancio a mano nel registro "Cron Job".
+      await page.goto(PERCORSO_CRON_JOB);
+      await expect(tagEstemporaneo(bloccoCron(page, 'Report notturno'))).toHaveCount(estemporaneiPrima);
+    });
+
+    test('sincronizzazione a mano non riuscita: "ERRORE" con il motivo, e si può rilanciare', async ({ page }) => {
+      await impostaIndirizzo(page, indirizzoFeedFinto());
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      // Prima una sincronizzazione buona: gli eventi di prova sono nel database.
+      await sincronizzaAMano(page);
+      await expect(esitoSincronizzazione(page)).toContainText('OK');
+
+      const guasti = [
+        { risposta: { stato: 500, corpo: 'errore' }, motivo: 'risposta non valida' },
+        { risposta: { stato: 200, corpo: 'questo non è un calendario' }, motivo: 'feed non valido' },
+      ];
+      for (const { risposta, motivo } of guasti) {
+        feed.imposta(risposta);
+        await sincronizzaAMano(page);
+
+        const esito = esitoSincronizzazione(page);
+        await expect(esito).toContainText('ERRORE');
+        await expect(esito).toContainText(`Calendario non sincronizzato: ${motivo}.`);
+        await expect(esito).toHaveAttribute('role', 'alert');
+        await expect(esito).not.toContainText('OK');
+        expect((await page.content()).includes(indirizzoFeedFinto()), "l'indirizzo non deve essere nella pagina").toBe(false);
+        await nessunaViolazioneA11yGrave(page);
+      }
+
+      // Rilancio con il servizio tornato a funzionare: di nuovo "in corso", poi "OK".
+      // Gli eventi di prima erano rimasti: non c'è nulla da aggiungere né da togliere.
+      feed.imposta({ stato: 200, corpo: feedIniziale() });
+      await sincronizzaAMano(page);
+      const esito = esitoSincronizzazione(page);
+      await expect(esito).toContainText('OK');
+      await expect(esito).toContainText('Eventi aggiunti: 0, aggiornati: 0, tolti: 0.');
+    });
+
+    test('senza indirizzo impostato la sincronizzazione a mano finisce "OK" come disattivata', async ({ page }) => {
+      await impostaIndirizzo(page, '');
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      await sincronizzaAMano(page);
+
+      const esito = esitoSincronizzazione(page);
+      await expect(esito).toContainText('OK');
+      await expect(esito).toContainText('Sincronizzazione disattivata: nessun indirizzo impostato.');
+      await expect(esito).not.toContainText('ERRORE');
+      await nessunaViolazioneA11yGrave(page);
     });
   });
 
@@ -976,6 +1077,72 @@ test.describe('64 — Calendario eventi', () => {
         }
       });
     });
+  });
+
+  test('il pulsante "Sincronizza calendario ora" c\'è solo per l\'admin', async ({ browser }) => {
+    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+    const admin = await browser.newContext({ storageState: statoAutenticazione('admin') });
+    const paginaAdmin = await admin.newPage();
+    await paginaAdmin.goto(PERCORSO_SCHEDA_AZIONI);
+    await expect(pulsanteSincronizza(paginaAdmin)).toBeVisible();
+    await admin.close();
+
+    for (const ruolo of ['maestra', 'assistente', 'genitore'] as const) {
+      test.skip(!hasCredenziali(ruolo), `richiede E2E_${ruolo.toUpperCase()}_EMAIL/PASSWORD`);
+      const stato = statoAutenticazione(ruolo);
+      test.skip(!stato, `sessione non disponibile per ${ruolo}`);
+      const context = await browser.newContext({ storageState: stato });
+      const page = await context.newPage();
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
+      await expect(pulsanteSincronizza(page)).toHaveCount(0);
+      await context.close();
+    }
+  });
+
+  test('chi non è admin non può lanciare la sincronizzazione a mano', async ({ browser }) => {
+    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+    // Si cattura la richiesta vera che il browser dell'admin manda alla Server
+    // Action e la si rifà con la sessione degli altri ruoli (un utente malevolo
+    // può farlo: l'identificativo dell'azione non è un segreto).
+    const admin = await browser.newContext({ storageState: statoAutenticazione('admin') });
+    const paginaAdmin = await admin.newPage();
+    await paginaAdmin.goto(PERCORSO_SCHEDA_AZIONI);
+    const richiestaAzione = paginaAdmin.waitForRequest(eRichiestaAzione);
+    await pulsanteSincronizza(paginaAdmin).click();
+    const richiesta = await richiestaAzione;
+    const intestazioni = {
+      'next-action': richiesta.headers()['next-action'],
+      'content-type': richiesta.headers()['content-type'] ?? 'text/plain;charset=UTF-8',
+      accept: 'text/x-component',
+      origin: new URL(richiesta.url()).origin,
+    };
+    const corpo = richiesta.postData() ?? '[null]';
+    const indirizzoAzione = `${new URL(richiesta.url()).origin}${PERCORSO_SCHEDA_AZIONI}`;
+    const rifai = (contesto: BrowserContext) =>
+      contesto.request.post(indirizzoAzione, { headers: intestazioni, data: corpo, maxRedirects: 0 });
+
+    // Controllo positivo: per l'admin la risposta porta l'esito della sincronizzazione.
+    const rispostaAdmin = await rifai(admin);
+    expect(rispostaAdmin.status()).toBe(200);
+    expect(await rispostaAdmin.text()).toMatch(/"stato":"(OK|ERRORE)"/);
+    await admin.close();
+
+    for (const ruolo of ['maestra', 'assistente', 'genitore'] as const) {
+      test.skip(!hasCredenziali(ruolo), `richiede E2E_${ruolo.toUpperCase()}_EMAIL/PASSWORD`);
+      const stato = statoAutenticazione(ruolo);
+      test.skip(!stato, `sessione non disponibile per ${ruolo}`);
+      const context = await browser.newContext({ storageState: stato });
+      const risposta = await rifai(context);
+      const testo = await risposta.text();
+      // Rimandato alla dashboard, nessun esito di sincronizzazione.
+      expect(testo, `${ruolo}: nessun esito nella risposta`).not.toMatch(/"stato":"(OK|ERRORE)"/);
+      expect(testo.includes('Eventi aggiunti'), `${ruolo}: nessun conteggio`).toBe(false);
+      expect(testo.includes('Sincronizzazione disattivata'), `${ruolo}: nessun esito`).toBe(false);
+      const destinazione = risposta.headers()['x-action-redirect'] ?? risposta.headers()['location'] ?? '';
+      expect(destinazione, `${ruolo}: rimandato alla dashboard`).toContain('/dashboard');
+      await context.close();
+    }
   });
 
   test('maestra, assistente e genitore non vedono la sezione e vengono reindirizzati', async ({ browser }) => {

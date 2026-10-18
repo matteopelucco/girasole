@@ -115,3 +115,21 @@ poi la service_role. L'azione non passa da `/api/cron/*` e non usa
 `CRON_SECRET`, che resta solo nelle route pianificate. Il criterio "nessuna
 service_role in una server action avviata da un utente" ha quindi due
 eccezioni: la gestione utenti e questo lancio a mano, solo per l'admin.
+
+## Aggiornamento (issue #326): sincronizzazione a mano del Google Calendar
+Nello stesso file `app/admin/cron-job/actions.ts` (già in `FILE_AMMESSI`, la
+voce ne aggiorna solo la motivazione) c'è una seconda azione dell'admin,
+`sincronizzaCalendarioAMano`, lanciata dalla scheda "Azioni" della stessa
+pagina (specs/64, "Sincronizzazione a mano"). Usa la service_role per la stessa
+ragione del cron notturno: legge l'indirizzo segreto del feed
+(`impostazioni_calendario`) e chiama `sostituisci_eventi_calendario`,
+eseguibile solo dalla service_role; la sessione dell'admin non basta per la
+seconda. Il confine di sicurezza è nel codice, nell'ordine: `requireAdmin()` come
+prima istruzione, nessuna sincronizzazione già in corso (guardia in memoria,
+60 secondi al massimo), poi la service_role. L'azione non riceve nulla dal
+browser e restituisce un esito ricostruito dal server (stato, frase fissa,
+tre numeri): mai testi di eccezioni né l'indirizzo del feed. Non scrive nel
+registro `cron_esecuzioni`, non invia email e non tocca il report notturno.
+Le eccezioni al criterio "nessuna service_role in una server action avviata da
+un utente" sono ora tre (gestione utenti, lancio a mano dei cron,
+sincronizzazione a mano), tutte solo per l'admin.

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { LancioManualeCron } from '@/components/LancioManualeCron';
+import { SincronizzaCalendarioAMano } from '@/components/SincronizzaCalendarioAMano';
 import { SchedeAzioni } from '@/components/SchedeAzioni';
 import { requireAdmin } from '@/lib/auth';
 import {
@@ -15,7 +16,7 @@ import {
 } from '@/lib/cronEsecuzioni';
 import { leggiLanciCron } from '@/lib/cronEsecuzioniDati';
 import { ID_PANNELLO_SCHEDE, idTabScheda, schedaDaParametri } from '@/lib/schedeAzioni';
-import { lanciaCronAMano } from './actions';
+import { lanciaCronAMano, sincronizzaCalendarioAMano } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,8 @@ const CLASSI_STATO: Record<StatoLancio['stato'], string> = {
 };
 
 // specs/63 - cron-job.md: pagina "Azioni" (indirizzo `/admin/cron-job`) con due
-// schede, scelte da `?scheda=`: "Cron Job" (iniziale) e "Azioni" (per ora vuota).
+// schede, scelte da `?scheda=`: "Cron Job" (iniziale) e "Azioni" (azioni lanciabili a mano:
+// "Sincronizza calendario", issue #326).
 // Scheda "Cron Job": lanci dei job pianificati, letti dal registro
 // `cron_esecuzioni` con la sessione dell'admin (la RLS lascia leggere solo a
 // lui). Un blocco per job; "Carica altri" allarga di 20 il solo blocco scelto
@@ -64,9 +66,7 @@ export default async function CronJobPage(props: {
           {scheda === 'cron-job' ? (
             <SchedaCronJob supabase={supabase} parametri={parametri} />
           ) : (
-            <p className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
-              Qui compariranno le azioni lanciabili a mano. Per ora non ce ne sono.
-            </p>
+            <SincronizzaCalendarioAMano azione={sincronizzaCalendarioAMano} />
           )}
         </div>
       </main>
