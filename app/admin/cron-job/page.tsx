@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { LancioManualeCron } from '@/components/LancioManualeCron';
 import { SincronizzaCalendarioAMano } from '@/components/SincronizzaCalendarioAMano';
-import { SchedeAzioni } from '@/components/SchedeAzioni';
+import { Schede } from '@/components/Schede';
 import { requireAdmin } from '@/lib/auth';
 import {
   LIMITE_MASSIMO,
@@ -15,7 +15,8 @@ import {
   type StatoLancio,
 } from '@/lib/cronEsecuzioni';
 import { leggiLanciCron } from '@/lib/cronEsecuzioniDati';
-import { ID_PANNELLO_SCHEDE, idTabScheda, schedaDaParametri } from '@/lib/schedeAzioni';
+import { ID_PANNELLO_SCHEDE, idTabScheda, schedaDaParametri } from '@/lib/schede';
+import { SCHEDE } from '@/lib/schedeAzioni';
 import { lanciaCronAMano, sincronizzaCalendarioAMano } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -47,14 +48,14 @@ export default async function CronJobPage(props: {
 }) {
   const { supabase, user, profilo } = await requireAdmin();
   const parametri = await props.searchParams;
-  const scheda = schedaDaParametri(parametri);
+  const scheda = schedaDaParametri(parametri, SCHEDE);
 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <h1 className="text-lg font-medium">Azioni</h1>
 
-        <SchedeAzioni attiva={scheda} />
+        <Schede schede={SCHEDE} attiva={scheda} />
 
         <div
           role="tabpanel"

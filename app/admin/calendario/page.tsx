@@ -1,9 +1,10 @@
-import Link from 'next/link';
+import { ElencoChiusure } from '@/components/ElencoChiusure';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
-import { formattaIntervalloItaliano } from '@/lib/date';
+import type { GiornoChiusura } from '@/lib/calendarioScolastico';
+import { oggi } from '@/lib/date';
 import { creaGiornoChiusura } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,13 @@ export default async function CalendarioScolasticoPage() {
     .from('giorni_chiusura')
     .select('id, data_inizio, data_fine, nota')
     .order('data_inizio', { ascending: false });
+
+  const chiusure: GiornoChiusura[] = (giorniChiusura ?? []).map((g) => ({
+    id: g.id,
+    dataInizio: g.data_inizio,
+    dataFine: g.data_fine,
+    nota: g.nota,
+  }));
 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
@@ -58,25 +66,8 @@ export default async function CalendarioScolasticoPage() {
           </PulsanteInvio>
         </FormConEsito>
 
-        <ul className="space-y-2">
-          {giorniChiusura?.map((giorno) => (
-            <li key={giorno.id}>
-              <Link
-                href={`/admin/calendario/${giorno.id}`}
-                className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-stone-50"
-              >
-                <span>
-                  {formattaIntervalloItaliano(giorno.data_inizio, giorno.data_fine)}
-                  {giorno.nota && <span className="ml-2 text-stone-600">— {giorno.nota}</span>}
-                </span>
-                <span className="text-xs text-stone-500">Modifica</span>
-              </Link>
-            </li>
-          ))}
-          {!giorniChiusura?.length && (
-            <li className="text-sm text-stone-600">Nessun giorno di chiusura ancora inserito.</li>
-          )}
-        </ul>
+        {/* Stessa lista della scheda "Giorni di chiusura" di "Calendario attività" (specs/64), in modo gestione. */}
+        <ElencoChiusure chiusure={chiusure} oggi={oggi()} modo="gestione" />
       </main>
     </NavHeader>
   );

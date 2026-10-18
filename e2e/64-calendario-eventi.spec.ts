@@ -21,7 +21,15 @@
 //
 // Nessun indirizzo reale compare nei test; l'indirizzo finto (locale) non è
 // stampato nei messaggi di fallimento: i confronti usano booleani.
-import { test, expect, type APIRequest, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import {
+  test,
+  expect,
+  type APIRequest,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 import {
   dataFraGiorni,
   dataOggiRoma,
@@ -85,8 +93,10 @@ import {
   CLASSE_EVENTO_PASSATO,
   PERCORSO_CALENDARIO,
   PERCORSO_CHIUSURE_ADMIN,
+  PERCORSO_CHIUSURE_SCHEDA,
   TESTO_NESSUN_PROSSIMO_EVENTO,
   apriCalendario,
+  apriChiusure,
   apriDashboardConEventi,
   bloccoGiorno,
   creaChiusura,
@@ -97,7 +107,9 @@ import {
   linkVediTutto,
   prossimiEventiDashboard,
   riquadroProssimiEventi,
+  schedaCalendario,
   schedaEvento,
+  schedeCalendario,
   sezioneChiusure,
   sezioneEventi,
   gruppoMenuCalendario,
@@ -548,17 +560,111 @@ test.describe('64 — Calendario eventi', () => {
         }
       });
 
-      test('la pagina si chiama "Calendario attività"', async ({ browser }) => {
+      test('la pagina si chiama "Calendario attività" e ha due schede, con gli eventi in primo piano', async ({
+        browser,
+      }) => {
         for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
           const { page, chiudi } = await paginaCome(browser, ruolo);
           try {
             await page.goto(PERCORSO_CALENDARIO);
             await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
-            await expect(sezioneChiusure(page)).toBeVisible();
+            await expect(schedeCalendario(page).getByRole('tab')).toHaveText(['Calendario attività', 'Giorni di chiusura']);
+            await expect(schedaCalendario(page, 'Calendario attività')).toHaveAttribute('aria-selected', 'true');
+            await expect(schedaCalendario(page, 'Giorni di chiusura')).toHaveAttribute('aria-selected', 'false');
             await expect(sezioneEventi(page)).toBeVisible();
+            await expect(sezioneChiusure(page)).toHaveCount(0);
           } finally {
             await chiudi();
           }
+        }
+      });
+
+      test('la scheda "Giorni di chiusura" resta nell\'indirizzo', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'maestra');
+        try {
+          await apriCalendario(page);
+          await schedaCalendario(page, 'Giorni di chiusura').click();
+          await page.waitForURL(/scheda=chiusure/);
+          await expect(schedaCalendario(page, 'Giorni di chiusura')).toHaveAttribute('aria-selected', 'true');
+          await expect(sezioneChiusure(page)).toBeVisible();
+          await expect(sezioneEventi(page)).toHaveCount(0);
+
+          // Vale anche dopo "ricarica" e con il link diretto.
+          await page.reload();
+          await expect(schedaCalendario(page, 'Giorni di chiusura')).toHaveAttribute('aria-selected', 'true');
+          await expect(sezioneChiusure(page)).toBeVisible();
+          await apriChiusure(page);
+          await expect(schedaCalendario(page, 'Giorni di chiusura')).toHaveAttribute('aria-selected', 'true');
+          expect(page.url().endsWith(PERCORSO_CHIUSURE_SCHEDA)).toBe(true);
+
+          // Si torna agli eventi, all'indirizzo senza parametri.
+          await schedaCalendario(page, 'Calendario attività').click();
+          await expect(schedaCalendario(page, 'Calendario attività')).toHaveAttribute('aria-selected', 'true');
+          await expect(sezioneEventi(page)).toBeVisible();
+          expect(new URL(page.url()).search).toBe('');
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('un valore sconosciuto della scheda apre "Calendario attività"', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await page.goto(`${PERCORSO_CALENDARIO}?scheda=boh`);
+            await expect(schedaCalendario(page, 'Calendario attività')).toHaveAttribute('aria-selected', 'true');
+            await expect(sezioneEventi(page)).toBeVisible();
+            await expect(sezioneChiusure(page)).toHaveCount(0);
+          } finally {
+            await chiudi();
+          }
+        }
+      });
+
+      test("le schede si usano con la tastiera, il focus si vede e a 375 px non c'è scorrimento orizzontale", async ({
+        browser,
+      }) => {
+        const { page, chiudi } = await paginaCome(browser, 'admin');
+        try {
+          await page.setViewportSize({ width: 375, height: 800 });
+          await apriCalendario(page);
+          const attivita = schedaCalendario(page, 'Calendario attività');
+          const chiusure = schedaCalendario(page, 'Giorni di chiusura');
+          await attivita.focus();
+          await expect(attivita).toBeFocused();
+          // Focus visibile: l'indicatore del focus non è "nessuno".
+          const contorno = await attivita.evaluate((e) => getComputedStyle(e).outlineStyle);
+          expect(contorno).not.toBe('none');
+
+          await page.keyboard.press('ArrowRight');
+          await page.waitForURL(/scheda=chiusure/);
+          await expect(chiusure).toHaveAttribute('aria-selected', 'true');
+          await expect(chiusure).toBeFocused();
+          await expect(sezioneChiusure(page)).toBeVisible();
+
+          await page.keyboard.press('Home');
+          await expect(attivita).toHaveAttribute('aria-selected', 'true');
+          await expect(attivita).toBeFocused();
+
+          await page.keyboard.press('End');
+          await expect(chiusure).toHaveAttribute('aria-selected', 'true');
+          await expect(chiusure).toBeFocused();
+
+          await page.keyboard.press('ArrowLeft');
+          await expect(attivita).toHaveAttribute('aria-selected', 'true');
+          await expect(attivita).toBeFocused();
+
+          for (const t of [attivita, chiusure]) {
+            const box = await t.boundingBox();
+            expect(box!.x).toBeGreaterThanOrEqual(0);
+            expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+            expect(box!.height).toBeGreaterThanOrEqual(44);
+          }
+          const eccesso = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+          expect(eccesso).toBeLessThanOrEqual(0);
+          await nessunaViolazioneA11yGrave(page);
+        } finally {
+          await chiudi();
         }
       });
 
@@ -579,7 +685,7 @@ test.describe('64 — Calendario eventi', () => {
       test('senza giorni di chiusura in programma lo stato vuoto è gentile', async ({ browser }) => {
         const { page, chiudi } = await paginaCome(browser, 'maestra');
         try {
-          await apriCalendario(page);
+          await apriChiusure(page);
           // Le chiusure sono dati condivisi (e2e/53 ne crea per pochi istanti): se ce n'è una, lo stato vuoto non si vede.
           const presenti = await sezioneChiusure(page).getByTestId('chiusura').count();
           test.skip(presenti > 0, 'ci sono giorni di chiusura in programma');
@@ -589,7 +695,9 @@ test.describe('64 — Calendario eventi', () => {
         }
       });
 
-      test('i giorni di chiusura in corso e futuri sono in alto, in sola lettura', async ({ browser }) => {
+      test('i giorni di chiusura in corso e futuri stanno nella scheda "Giorni di chiusura", in sola lettura', async ({
+        browser,
+      }) => {
         const admin = await paginaCome(browser, 'admin');
         const maestra = await paginaCome(browser, 'maestra');
         const futura = `Chiusura E2E calendario ${Date.now()}`;
@@ -598,7 +706,7 @@ test.describe('64 — Calendario eventi', () => {
           await creaChiusura(admin.page, dataFraGiorni(330), dataFraGiorni(332), futura);
           await creaChiusura(admin.page, dataFraGiorni(-400), dataFraGiorni(-399), conclusa);
 
-          await apriCalendario(maestra.page);
+          await apriChiusure(maestra.page);
           const sezione = sezioneChiusure(maestra.page);
           await expect(sezione.getByTestId('chiusura').filter({ hasText: futura })).toHaveCount(1);
           await expect(sezione.getByText(conclusa)).toHaveCount(0);
@@ -607,10 +715,9 @@ test.describe('64 — Calendario eventi', () => {
           await expect(sezione.getByRole('button')).toHaveCount(0);
           await expect(sezione.getByRole('textbox')).toHaveCount(0);
           await expect(sezione.getByRole('link')).toHaveCount(0);
-          // In alto: sopra gli eventi.
-          const yChiusure = (await sezione.boundingBox())?.y ?? Infinity;
-          const yEventi = (await sezioneEventi(maestra.page).boundingBox())?.y ?? -1;
-          expect(yChiusure).toBeLessThan(yEventi);
+          await expect(sezione.getByText('Modifica')).toHaveCount(0);
+          // Gli eventi stanno nell'altra scheda.
+          await expect(sezioneEventi(maestra.page)).toHaveCount(0);
         } finally {
           await maestra.chiudi();
           await eliminaChiusura(admin.page, futura);
@@ -624,18 +731,64 @@ test.describe('64 — Calendario eventi', () => {
         const maestra = await paginaCome(browser, 'maestra');
         const assistente = await paginaCome(browser, 'assistente');
         try {
-          await apriCalendario(admin.page);
+          await apriChiusure(admin.page);
           const link = sezioneChiusure(admin.page).getByRole('link', { name: 'Gestisci i giorni di chiusura' });
           await expect(link).toHaveAttribute('href', PERCORSO_CHIUSURE_ADMIN);
 
           for (const { page } of [maestra, assistente]) {
-            await apriCalendario(page);
+            await apriChiusure(page);
             await expect(page.getByRole('link', { name: 'Gestisci i giorni di chiusura' })).toHaveCount(0);
           }
         } finally {
           await admin.chiudi();
           await maestra.chiudi();
           await assistente.chiudi();
+        }
+      });
+    });
+
+    test.describe('lista dei giorni di chiusura condivisa', () => {
+      // Come si presenta una voce della lista: periodo, nota e classi della scheda
+      // (senza il solo effetto "al passaggio del mouse" del modo gestione).
+      async function descriviVoce(voce: Locator) {
+        const scheda = voce.locator('.border-l-rose-400');
+        return {
+          periodo: (await scheda.locator('p').nth(0).textContent())?.trim(),
+          nota: (await scheda.locator('p').nth(1).textContent())?.trim(),
+          classi: ((await scheda.getAttribute('class')) ?? '').replace('hover:bg-stone-50', '').split(/\s+/).filter(Boolean).sort(),
+        };
+      }
+
+      test('la pagina "Giorni di chiusura" dell\'admin usa la stessa lista, con "Modifica"', async ({ browser }) => {
+        const admin = await paginaCome(browser, 'admin');
+        const futura = `Chiusura E2E lista ${Date.now()}`;
+        const conclusa = `Chiusura E2E lista conclusa ${Date.now()}`;
+        try {
+          await creaChiusura(admin.page, dataFraGiorni(360), dataFraGiorni(362), futura);
+          await creaChiusura(admin.page, dataFraGiorni(-410), dataFraGiorni(-409), conclusa);
+
+          // Pagina admin (modo gestione): ogni giorno ha "Modifica" ed è un link alla sua pagina.
+          await admin.page.goto(PERCORSO_CHIUSURE_ADMIN);
+          const inGestione = admin.page.getByTestId('chiusura').filter({ hasText: futura });
+          await expect(inGestione).toHaveCount(1);
+          await expect(inGestione.getByText('Modifica', { exact: true })).toBeVisible();
+          await expect(inGestione.getByRole('link')).toHaveAttribute('href', /^\/admin\/calendario\/.+/);
+          // Tutte le chiusure, anche quelle già concluse.
+          await expect(admin.page.getByTestId('chiusura').filter({ hasText: conclusa })).toHaveCount(1);
+          const gestione = await descriviVoce(inGestione);
+
+          // Scheda di sola lettura: stessa scheda (bordo colorato, date, nota), senza "Modifica".
+          await apriChiusure(admin.page);
+          const inLettura = sezioneChiusure(admin.page).getByTestId('chiusura').filter({ hasText: futura });
+          await expect(inLettura).toHaveCount(1);
+          await expect(inLettura.getByText('Modifica')).toHaveCount(0);
+          await expect(inLettura.getByRole('link')).toHaveCount(0);
+          expect(await descriviVoce(inLettura)).toEqual(gestione);
+          expect(gestione.nota).toBe(futura);
+        } finally {
+          await eliminaChiusura(admin.page, futura);
+          await eliminaChiusura(admin.page, conclusa);
+          await admin.chiudi();
         }
       });
     });
@@ -838,6 +991,8 @@ test.describe('64 — Calendario eventi', () => {
           const data = dataProssimoGiornoFeriale();
           await apriCalendario(page);
           await expect(schedaEvento(sezioneEventi(page), TITOLO_CHIUSO)).toHaveCount(1);
+          // Nella scheda dei giorni di chiusura non c'è.
+          await apriChiusure(page);
           await expect(sezioneChiusure(page).getByText('Prova calendario')).toHaveCount(0);
 
           // "Presenze e pasti" di quel giorno non è bloccata né segnala una chiusura.
@@ -872,6 +1027,14 @@ test.describe('64 — Calendario eventi', () => {
               () => document.documentElement.scrollWidth - document.documentElement.clientWidth
             );
             expect(eccesso, 'nessuno scorrimento orizzontale a 375 px').toBeLessThanOrEqual(0);
+            await nessunaViolazioneA11yGrave(page);
+
+            // Lo stesso vale per la scheda dei giorni di chiusura.
+            await apriChiusure(page);
+            const eccessoChiusure = await page.evaluate(
+              () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+            );
+            expect(eccessoChiusure, 'nessuno scorrimento orizzontale a 375 px (giorni di chiusura)').toBeLessThanOrEqual(0);
             await nessunaViolazioneA11yGrave(page);
           } finally {
             await chiudi();

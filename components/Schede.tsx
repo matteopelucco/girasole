@@ -3,29 +3,30 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
-import { ID_PANNELLO_SCHEDE, SCHEDE, idTabScheda, indiceDaTasto, type IdScheda } from '@/lib/schedeAzioni';
+import { ID_PANNELLO_SCHEDE, idTabScheda, indiceDaTasto, type Scheda } from '@/lib/schede';
 
-// Barra delle schede della pagina "Azioni" (specs/63, issue #325). Le schede
-// sono link (la scheda attiva sta nell'indirizzo, la pagina si disegna sul
-// server): il JavaScript serve solo per le frecce sinistra/destra, Home e Fine
-// della tastiera, che spostano il focus e aprono la scheda (schema WAI-ARIA
-// "tabs" con attivazione automatica). Il pannello (`role="tabpanel"`,
-// id `ID_PANNELLO_SCHEDE`) lo disegna la pagina.
-export function SchedeAzioni({ attiva }: { attiva: IdScheda }) {
+// Barra delle schede di una pagina (pagina "Azioni", specs/63, issue #325;
+// pagina "Calendario attività", specs/64, issue #328). Le schede sono link (la
+// scheda attiva sta nell'indirizzo, la pagina si disegna sul server): il
+// JavaScript serve solo per le frecce sinistra/destra, Home e Fine della
+// tastiera, che spostano il focus e aprono la scheda (schema WAI-ARIA "tabs"
+// con attivazione automatica). Il pannello (`role="tabpanel"`, id
+// `ID_PANNELLO_SCHEDE`) lo disegna la pagina.
+export function Schede({ schede, attiva }: { schede: readonly Scheda[]; attiva: string }) {
   const router = useRouter();
   const riferimenti = useRef<Array<HTMLAnchorElement | null>>([]);
 
   function suTasto(evento: React.KeyboardEvent<HTMLAnchorElement>, indice: number) {
-    const prossimo = indiceDaTasto(evento.key, indice, SCHEDE.length);
+    const prossimo = indiceDaTasto(evento.key, indice, schede.length);
     if (prossimo === null) return;
     evento.preventDefault();
     riferimenti.current[prossimo]?.focus();
-    router.push(SCHEDE[prossimo].href, { scroll: false });
+    router.push(schede[prossimo].href, { scroll: false });
   }
 
   return (
     <div role="tablist" aria-label="Schede della pagina" className="flex border-b border-stone-200">
-      {SCHEDE.map((scheda, indice) => {
+      {schede.map((scheda, indice) => {
         const selezionata = scheda.id === attiva;
         return (
           <Link
