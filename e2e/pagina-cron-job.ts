@@ -1,6 +1,10 @@
-// Helper e2e per la pagina "Cron Job" (specs/63 - cron-job.md).
+// Helper e2e per la pagina "Azioni" (specs/63 - cron-job.md), che ha due schede:
+// "Cron Job" (iniziale) e "Azioni" (per ora vuota).
 //
-// STRUTTURA. Un blocco (`<section>`, ruolo "region") per ogni job, con titolo
+// SCHEDE. `tablist` con due `tab` (link) e un solo `tabpanel`; la scheda attiva
+// sta nell'indirizzo (`?scheda=azioni`).
+//
+// STRUTTURA della scheda "Cron Job". Un blocco (`<section>`, ruolo "region") per ogni job, con titolo
 // "Report notturno" o "Riepilogo allarmi"; dentro, un elenco di lanci (uno
 // per `<li>`, con `<time dateTime>` dell'inizio e lo stato OK/KO/In corso) e,
 // se ci sono lanci più vecchi, il link "Carica altri". I lanci a mano hanno il
@@ -13,6 +17,20 @@
 import type { Locator, Page, Request } from '@playwright/test';
 
 export const PERCORSO_CRON_JOB = '/admin/cron-job';
+export const PERCORSO_SCHEDA_AZIONI = `${PERCORSO_CRON_JOB}?scheda=azioni`;
+export const MESSAGGIO_AZIONI_VUOTE = 'Qui compariranno le azioni lanciabili a mano. Per ora non ce ne sono.';
+
+export function schede(page: Page): Locator {
+  return page.getByRole('tablist');
+}
+
+export function scheda(page: Page, nome: 'Cron Job' | 'Azioni'): Locator {
+  return schede(page).getByRole('tab', { name: nome, exact: true });
+}
+
+export function pannelloScheda(page: Page): Locator {
+  return page.getByRole('tabpanel');
+}
 
 export function bloccoCron(page: Page, titolo: 'Report notturno' | 'Riepilogo allarmi'): Locator {
   return page.getByRole('region', { name: titolo });

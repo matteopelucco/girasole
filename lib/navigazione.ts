@@ -71,7 +71,7 @@ export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
         ],
       },
       // In fondo (specs/57): pagina indice "Impostazioni" e sotto, rientrate, le sue
-      // sottosezioni (Reset giornata, Parametri di funzionamento, Cron Job, Utenti),
+      // sottosezioni (Reset giornata, Parametri di funzionamento, Azioni, Utenti),
       // derivate dall'elenco che alimenta anche i riquadri della pagina.
       { href: '/admin/impostazioni-avanzate', etichetta: 'Impostazioni', icona: '⚙️' },
       ...SOTTOSEZIONI_IMPOSTAZIONI.map((s) => ({

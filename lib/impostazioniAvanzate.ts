@@ -25,7 +25,7 @@ export const SOTTOSEZIONI_IMPOSTAZIONI: SottosezioneImpostazioni[] = [
   },
   {
     href: '/admin/cron-job',
-    titolo: 'Cron Job',
+    titolo: 'Azioni',
     descrizione: 'Controlla quando sono partiti i job pianificati, come il report notturno, e con quale esito.',
     icona: '⏰',
   },

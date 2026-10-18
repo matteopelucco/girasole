@@ -116,7 +116,7 @@ describe('vociMenu', () => {
       'Impostazioni',
       'Reset giornata',
       'Parametri di funzionamento',
-      'Cron Job',
+      'Azioni',
       'Utenti',
     ]);
     // Le voci rientrate vengono dallo stesso elenco dei riquadri della pagina.
@@ -192,7 +192,7 @@ describe('vociMenuConStato', () => {
     ]);
   });
 
-  it('evidenzia "Cron Job" sulla sua pagina e non "Impostazioni"', () => {
+  it('evidenzia "Azioni" sulla sua pagina e non "Impostazioni"', () => {
     expect(voceAttive('admin', '/admin/cron-job').map((v) => v.href)).toEqual(['/admin/cron-job']);
   });
 

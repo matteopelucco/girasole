@@ -21,7 +21,7 @@ oggi salvato nel database, descritto in
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora vedo la voce "Parametri di funzionamento" (`/admin/parametri-funzionamento`)
-E sta sotto "Impostazioni", rientrata come "Utenti", dopo "Reset giornata" e prima di "Cron Job" e "Utenti"
+E sta sotto "Impostazioni", rientrata come "Utenti", dopo "Reset giornata" e prima di "Azioni" e "Utenti"
 E se sono maestra, assistente o genitore non vedo questa voce
 
 ## Scenario: la pagina si apre e mostra titolo e breve descrizione

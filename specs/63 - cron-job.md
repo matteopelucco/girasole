@@ -1,4 +1,4 @@
-# 63 — Cron Job
+# 63 — Azioni (e Cron Job)
 
 ## Attori
 Solo Admin. Maestra, assistente e genitore non vedono la voce di menu, non
@@ -12,23 +12,48 @@ sia quando li lancia Vercel Cron sia quando li lancia l'admin a mano dalla
 pagina (issue #302).
 
 ## Obiettivo
+La voce di menu e la pagina si chiamano "Azioni" (issue #325) e hanno due
+schede: "Cron Job", con la visibilità sui lanci dei job pianificati descritta
+qui sotto, e "Azioni", per ora vuota, che in futuro ospiterà le azioni che
+l'admin lancia a mano.
+
 Dare all'admin un po' di visibilità sui lanci dei job pianificati: quando
 sono partiti e se sono andati bene, senza dover entrare nel pannello di
 Vercel. Nessun accesso all'API di Vercel: ogni job registra da sé, nel
 database, l'inizio e la fine di ogni proprio lancio, con l'esito.
 
-## Scenario: "Cron Job" compare nel menu sotto "Impostazioni", solo per l'admin
+## Scenario: "Azioni" compare nel menu sotto "Impostazioni", solo per l'admin
 Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
-Allora vedo la voce "Cron Job" (`/admin/cron-job`)
+Allora vedo la voce "Azioni" (`/admin/cron-job`) e non più "Cron Job"
 E sta sotto "Impostazioni", rientrata, dopo "Reset giornata" e "Parametri di funzionamento" e prima di "Utenti"
 E se sono maestra, assistente o genitore non vedo questa voce
+
+## Scenario: la pagina "Azioni" ha due schede, "Cron Job" è quella iniziale
+Dato che sono autenticato come admin
+Quando apro "Azioni" dal menu
+Allora arrivo a `/admin/cron-job`, la voce di menu "Azioni" risulta evidenziata e il titolo della pagina è "Azioni"
+E vedo due schede, "Cron Job" e "Azioni", e la scheda "Cron Job" è quella selezionata
+E il contenuto sotto le schede è quello della scheda "Cron Job"
+E premendo la scheda "Azioni" l'indirizzo diventa `/admin/cron-job?scheda=azioni` e la scheda "Azioni" risulta selezionata
+E ricaricando la pagina o aprendo direttamente quell'indirizzo la scheda "Azioni" è ancora quella selezionata
+E premendo la scheda "Cron Job" torno alla scheda iniziale
+E con la tastiera, su una scheda, le frecce sinistra e destra passano all'altra scheda e il focus si vede
+E a 375 px di larghezza le schede restano leggibili e non c'è scorrimento orizzontale
+E la pagina non ha violazioni di accessibilità gravi
+
+## Scenario: la scheda "Azioni" è per ora vuota e lo dice con un messaggio
+Dato che sono autenticato come admin
+Quando apro la scheda "Azioni" (`/admin/cron-job?scheda=azioni`)
+Allora vedo il messaggio "Qui compariranno le azioni lanciabili a mano. Per ora non ce ne sono."
+E non vedo né blocchi dei job né pulsanti "Lancia ora"
+E la pagina non ha violazioni di accessibilità gravi
 
 ## Scenario: i lanci sono raggruppati per job, con nome, data e ora, stato
 Dato che sono autenticato come admin
 E il registro contiene lanci del report notturno e dell'email di riepilogo degli allarmi
-Quando apro "Cron Job" dal menu
-Allora arrivo a `/admin/cron-job` e la voce "Cron Job" risulta evidenziata
+Quando apro la scheda "Cron Job" (quella iniziale di `/admin/cron-job`)
+Allora vedo un messaggio introduttivo e la scheda "Cron Job" è selezionata
 E vedo un blocco per ogni job, ciascuno con il proprio titolo: "Report notturno" e "Riepilogo allarmi"
 E in ogni blocco ci sono solo i lanci di quel job, dal più recente al più vecchio
 E per ogni lancio vedo il nome del job, la data e l'ora di inizio (fuso Europe/Rome) e lo stato "OK" o "KO"
@@ -37,7 +62,7 @@ E la pagina non ha violazioni di accessibilità gravi
 ## Scenario: ultimi 20 lanci e "Carica altri"
 Dato che sono autenticato come admin
 E un job ha più di 20 lanci registrati
-Quando apro "Cron Job"
+Quando apro la scheda "Cron Job"
 Allora nel blocco di quel job vedo solo gli ultimi 20 lanci e il pulsante "Carica altri"
 Quando premo "Carica altri"
 Allora sotto ai 20 già visibili compaiono i 20 lanci precedenti (o quelli che restano)
@@ -47,7 +72,7 @@ E gli altri blocchi restano come erano
 ## Scenario: un lancio KO mostra il messaggio di errore, se ricavabile
 Dato che sono autenticato come admin
 E un lancio è finito con un errore
-Quando apro "Cron Job"
+Quando apro la scheda "Cron Job"
 Allora quel lancio ha lo stato "KO" e, sotto, un breve messaggio di errore
 E il messaggio non contiene stack trace, chiavi, token o indirizzi email (vedi Regole)
 E un lancio di cui non è mai stata registrata la fine, partito da più di 15 minuti, risulta "KO" con il messaggio "Esecuzione interrotta: nessun esito registrato."
@@ -60,7 +85,7 @@ E una chiamata senza il secret corretto non viene registrata
 
 ## Scenario: ogni job ha il pulsante "Lancia ora", che chiede conferma prima di partire
 Dato che sono autenticato come admin
-Quando apro "Cron Job"
+Quando apro la scheda "Cron Job"
 Allora in ogni blocco vedo il pulsante "Lancia ora"
 Quando lo premo
 Allora compare la richiesta di conferma "Questo lancio invia davvero le email. Procedere?" con i pulsanti "Sì, lancia ora" e "Annulla"
@@ -82,11 +107,28 @@ E la pagina non ha violazioni di accessibilità gravi
 
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
-Quando provo ad aprire `/admin/cron-job`
+Quando provo ad aprire `/admin/cron-job` (anche con `?scheda=azioni`)
 Allora vengo reindirizzato alla dashboard
+E non vedo la voce "Azioni" nel menu
 E non ho nessun modo di lanciare un job a mano
 
 ## Regole
+- Nome e indirizzo (issue #325, decisione di Matteo del 18/10/2026): la voce
+  di menu, il titolo della pagina (`<h1>`) e il riquadro in "Impostazioni"
+  sono "Azioni"; "Cron Job" è il nome della prima scheda. **L'indirizzo resta
+  `/admin/cron-job`**: nessun redirect, nessun link da aggiornare, nessun
+  rischio per i riferimenti esistenti (sezioni delle altre spec, e2e, regole
+  del bundle in `next.config.mjs`). Il file della spec resta `63 - cron-job.md`.
+- Schede: la scheda attiva sta nell'indirizzo (`?scheda=azioni`; senza
+  parametro, o con un valore sconosciuto, è "Cron Job"), così la pagina si
+  disegna interamente sul server e funziona con "ricarica" e con il link
+  diretto. Le schede hanno i ruoli ARIA `tablist`/`tab`/`tabpanel` e sono
+  link (`aria-selected`, un solo `tabpanel` con `aria-labelledby`);
+  l'unico JavaScript sul client serve per le frecce sinistra/destra (e
+  Home/Fine) della tastiera. "Carica altri" resta nella scheda "Cron Job" e
+  non porta `scheda` (è quella iniziale).
+- La scheda "Azioni" è vuota: nessuna azione, nessuna Server Action nuova. Il
+  lancio a mano dei cron resta nella scheda "Cron Job", invariato.
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
   `/admin/*`. Voce di menu in `lib/navigazione.ts`, rientrata
   (`rientrata: true`) tra "Parametri di funzionamento" e "Utenti".

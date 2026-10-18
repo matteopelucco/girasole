@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { SOTTOSEZIONI_IMPOSTAZIONI } from './impostazioniAvanzate';
 
 describe('SOTTOSEZIONI_IMPOSTAZIONI', () => {
-  it('elenca, in questo ordine, Reset giornata, Parametri di funzionamento, Cron Job e Utenti', () => {
+  it('elenca, in questo ordine, Reset giornata, Parametri di funzionamento, Azioni e Utenti', () => {
     expect(SOTTOSEZIONI_IMPOSTAZIONI.map((s) => [s.titolo, s.href])).toEqual([
       ['Reset giornata', '/admin/reset-giornata'],
       ['Parametri di funzionamento', '/admin/parametri-funzionamento'],
-      ['Cron Job', '/admin/cron-job'],
+      ['Azioni', '/admin/cron-job'],
       ['Utenti', '/admin/maestre'],
     ]);
   });
