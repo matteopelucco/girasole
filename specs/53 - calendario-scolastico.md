@@ -84,6 +84,10 @@ E non vedo i pulsanti sì/no per nessun bambino, indipendentemente dal
 mio ruolo (admin incluso)
 
 ## Regole
+- La lista dei giorni di chiusura di `/admin/calendario` è lo stesso componente
+  della scheda "Giorni di chiusura" di "Calendario attività" (specs/64,
+  issue #328), in modo gestione: tutte le chiusure, ognuna con il link
+  "Modifica". Gli scenari qui sopra non cambiano.
 - Un giorno di chiusura ha una data di inizio, una data di fine (>=
   data di inizio, vincolo anche a livello di database) e una nota
   libera opzionale (`public.giorni_chiusura`).

@@ -146,8 +146,9 @@ della maestra, `5x` amministrazione.
   dell'asilo, letti dall'indirizzo iCal segreto che l'admin salva in "Parametri
   di funzionamento"; eventi singoli, di tutto il giorno, ripetuti, spostati e
   annullati salvati nel database; pagina "Calendario attività" (`/dashboard/calendario`,
-  nel gruppo di menu "Calendario", per admin, maestra e assistente) con giorni di chiusura in alto
-  (sola lettura) ed eventi "A calendario" in basso, due elenchi separati
+  nel gruppo di menu "Calendario", per admin, maestra e assistente) a due schede:
+  eventi "A calendario" (iniziale) e giorni di chiusura (sola lettura, lista
+  condivisa con `/admin/calendario`), due elenchi separati
   riquadro "Prossimi eventi" in dashboard (i 3 eventi più vicini, compreso quello
   in corso, con link alla pagina); sincronizzazione a mano dalla scheda "Azioni"
   di 63 (pulsante "Sincronizza calendario ora", solo admin, esito OK/ERRORE)
