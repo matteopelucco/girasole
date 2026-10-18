@@ -19,3 +19,6 @@ next-env.d.ts
 .review/
 /test-results-anteprima/
 /playwright-report-anteprima/
+# Confronto visivo (issue #333): foto di riferimento, differenze e report
+# generati in locale. Mai nel repo.
+/confronto-visivo/

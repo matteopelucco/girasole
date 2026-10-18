@@ -1,0 +1,5 @@
+/* Indicatore e overlay di `next dev`: non fanno parte dell'app. */
+nextjs-portal,
+next-route-announcer {
+  display: none !important;
+}
