@@ -663,6 +663,44 @@ Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
   dell'ambiente nella tab Deployments del repo; (d) le variabili d'ambiente
   "Preview" di Vercel devono puntare al progetto Supabase di **test**.
 
+## Confronto visivo delle pagine (issue #333)
+Rete di sicurezza **locale** per la revisione grafica ("UX REVIEW"): foto
+delle pagine principali prima di una modifica, confronto dopo. Non è l'e2e,
+non risponde a nessuno `specs/NN` (la regola `specs/NN` <-> `e2e/NN` riguarda
+solo `e2e/`) e **non fa parte della CI** né di `npx playwright test`: sta in
+`e2e-confronto-visivo/` con la config `playwright.confronto-visivo.config.ts`
+(che si rifiuta di partire se `CI` è impostata).
+
+- **Prima della modifica**: `npm run test:visivo:riferimento` salva 15 pagine
+  x 2 misure (telefono 390 px, desktop 1280 px) = 30 foto, a pagina intera.
+- **Dopo la modifica**: `npm run test:visivo` rifà le foto e le confronta;
+  qualunque pixel diverso è un rosso. Le differenze si vedono nel report:
+  `npx playwright show-report confronto-visivo/report` (atteso / attuale /
+  differenza, con cursore); i file stanno anche in `confronto-visivo/differenze/`.
+  Se la differenza è voluta, rilanciare il comando di riferimento per
+  aggiornare le foto.
+- **Condizioni**: `E2E_ADMIN_EMAIL/PASSWORD` in `.env.local` (login come admin,
+  mai credenziali nel repo; senza, il giro fallisce); server `next dev` (parte
+  da solo, o si riusa quello acceso: usare lo **stesso tipo di server** per
+  riferimento e confronto); DB di test. Il primo giro a freddo può cadere nel
+  login mentre Next compila: rilanciare.
+- **Mai durante una e2e sul DB di test condiviso**: prima controllare
+  `gh run list --status in_progress` (e che nessuna e2e locale sia in corso).
+  Il giro non scrive nulla, ma il login crea sessioni e un reset del DB a metà
+  darebbe foto false.
+- **Immagini**: la cartella `confronto-visivo/` è in `.gitignore`, non si
+  committa. Contengono solo i dati del DB di test (mai dati reali).
+- **Rumore da tenere presente**: il piè di pagina (versione e data di build) è
+  coperto; le pagine che mostrano "oggi", orari o lanci recenti cambiano da
+  un giorno all'altro. Riferimento e confronto vanno fatti a poca distanza,
+  sullo stesso DB. Le pagine sono: accesso, dashboard, giornata, report
+  (giornaliero, mensile), ore di lavoro, calendario (attività, chiusure),
+  amministrazione, cron job, azioni, rette, maestre, parametri di
+  funzionamento, impostazioni avanzate. Anche i caratteri contano: se
+  `next dev` non riesce a scaricare Poppins/Open Sans da Google Fonts usa
+  un carattere di ripiego, e foto e confronto vanno fatti nelle stesse
+  condizioni di rete.
+
 ## Review automatica di Claude in CI: interruttore (issue #160)
 - Il job `review` di `claude-board.yml` (review di ogni PR con Sonnet) è
   **spento di default** per costo: parte solo se la variabile di repository

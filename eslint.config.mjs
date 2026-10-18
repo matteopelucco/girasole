@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
     'test-results/**',
     'test-results-anteprima/**',
     'blob-report/**',
+    'confronto-visivo/**',
     'playwright/**',
   ]),
   {
@@ -36,7 +37,7 @@ const eslintConfig = defineConfig([
   {
     // Nei test Playwright `use` è la funzione delle fixture, non l'hook
     // React `use`: la regola degli hook qui dà solo falsi allarmi.
-    files: ['e2e/**', 'e2e-anteprima/**'],
+    files: ['e2e/**', 'e2e-anteprima/**', 'e2e-confronto-visivo/**'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
     },

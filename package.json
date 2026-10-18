@@ -1,6 +1,6 @@
 {
   "name": "girasole",
-  "version": "0.75.1",
+  "version": "0.75.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,7 +16,9 @@
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:anteprima": "playwright test -c playwright.anteprima.config.ts"
+    "test:anteprima": "playwright test -c playwright.anteprima.config.ts",
+    "test:visivo:riferimento": "playwright test -c playwright.confronto-visivo.config.ts --update-snapshots",
+    "test:visivo": "playwright test -c playwright.confronto-visivo.config.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
