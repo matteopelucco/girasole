@@ -18,7 +18,7 @@ Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanza
 E sotto, rientrate, nell'ordine: "Reset giornata" (`/admin/reset-giornata`),
 "Parametri di funzionamento" (specs/62), "Azioni" (specs/63) e poi
 "Utenti" (`/admin/maestre`), che è l'ultima
-E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
+E "Utenti" non compare più tra le voci di primo livello, dopo il gruppo "Calendario"
 E sulla pagina del reset la voce "Reset giornata" risulta evidenziata
 
 ## Scenario: la pagina Impostazioni è l'indice di tutte le sottosezioni

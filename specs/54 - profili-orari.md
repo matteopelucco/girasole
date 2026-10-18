@@ -26,7 +26,7 @@ Allora vedo la voce "Ore dipendenti" (un'intestazione di gruppo, non una pagina)
 con sotto, nell'ordine, "Profili orari" (`/admin/profili-orari`) e "Ore di
 lavoro del personale" (`/admin/ore-lavoro`), rientrate
 E le due voci non compaiono più come voci di primo livello
-E il gruppo sta dopo "Calendario scolastico" e prima di "Pagamenti"
+E il gruppo sta dopo il gruppo "Calendario" e prima di "Pagamenti"
 E maestra, assistente e genitore non vedono il gruppo (il menu non cambia
 per loro)
 

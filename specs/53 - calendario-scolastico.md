@@ -1,4 +1,4 @@
-# 53 — Calendario scolastico (giorni di chiusura)
+# 53 — Giorni di chiusura (calendario scolastico)
 
 ## Attori
 Admin (gestisce i giorni di chiusura). Tutto lo staff (admin, maestra,
@@ -14,6 +14,14 @@ un'eccezione deliberata: il personale può lavorare (es. pulizie,
 attività amministrative, formazione) anche quando l'asilo non è
 operativo, quindi quel registro mostra l'informazione di chiusura ma
 non blocca la scrittura.
+
+## Scenario: la pagina si chiama "Giorni di chiusura" ed è nel menu sotto "Calendario"
+Dato che sono autenticato come admin
+Quando guardo il menu laterale e apro la voce "Giorni di chiusura" del gruppo "Calendario"
+Allora la pagina ha come titolo "Giorni di chiusura" (non più "Calendario scolastico")
+E la voce "Giorni di chiusura" risulta evidenziata
+E la pagina resta `/admin/calendario`, con le stesse funzioni di prima
+E maestra e assistente non vedono la voce "Giorni di chiusura" (specs/64)
 
 ## Scenario: creare un giorno di chiusura
 Dato che sono autenticato come admin

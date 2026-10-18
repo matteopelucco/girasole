@@ -145,8 +145,8 @@ della maestra, `5x` amministrazione.
   notturna (dentro il cron del report) degli eventi del Google Calendar
   dell'asilo, letti dall'indirizzo iCal segreto che l'admin salva in "Parametri
   di funzionamento"; eventi singoli, di tutto il giorno, ripetuti, spostati e
-  annullati salvati nel database; pagina "Calendario" (`/dashboard/calendario`,
-  voce di menu per admin, maestra e assistente) con giorni di chiusura in alto
+  annullati salvati nel database; pagina "Calendario attività" (`/dashboard/calendario`,
+  nel gruppo di menu "Calendario", per admin, maestra e assistente) con giorni di chiusura in alto
   (sola lettura) ed eventi "A calendario" in basso, due elenchi separati
   riquadro "Prossimi eventi" in dashboard (i 3 eventi più vicini, compreso quello
   in corso, con link alla pagina)
