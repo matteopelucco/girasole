@@ -5,7 +5,9 @@ la sincronizzazione degli eventi nel database
 ([#319](https://github.com/matteopelucco/girasole/issues/319)) e la pagina
 "Calendario" che li mostra
 ([#320](https://github.com/matteopelucco/girasole/issues/320), scenari in fondo).
-Il riquadro in dashboard (sotto-issue c, #321) è fuori scope.
+Il riquadro "Prossimi eventi" in dashboard (sotto-issue **c**,
+[#321](https://github.com/matteopelucco/girasole/issues/321), scenari in fondo)
+riusa la stessa vista degli eventi della pagina.
 
 Collegata a [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)
 (giorni di chiusura: restano un'altra cosa, non si duplicano con gli eventi),
@@ -351,9 +353,7 @@ E la pagina non ha violazioni di accessibilità gravi
   riuscito", "errore imprevisto"). Se anche una parte del
   report non è riuscita, i due messaggi si uniscono. Sincronizzazione
   disattivata non è un errore.
-- **Fuori scope**: riquadro in dashboard
-  ([#321](https://github.com/matteopelucco/girasole/issues/321)), accesso dei
-  genitori, pulsante "Aggiorna ora", pulizia dell'archivio storico.
+- **Fuori scope**: accesso dei genitori, pulsante "Aggiorna ora", pulizia dell'archivio storico.
 
 ## Regole della pagina "Calendario"
 - **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta,
@@ -382,3 +382,90 @@ E la pagina non ha violazioni di accessibilità gravi
   stessa altezza dei contenuti (nessun salto di pagina).
 - Logica pura (raggruppamento e orari) in `lib/calendarioEventiVista.ts`, con
   test unitari co-locati.
+
+## Riquadro "Prossimi eventi" nella dashboard (issue #321)
+
+Nella dashboard ([12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md)),
+sotto le card delle attività e sopra gli avvisi, un riquadro "Prossimi eventi"
+mostra i 3 eventi di Google più vicini, con un link alla pagina "Calendario".
+Lo vedono admin, maestra e assistente (il genitore non ha ancora la dashboard
+staff). I **giorni di chiusura non compaiono** nel riquadro: sono un'altra
+cosa, con un'altra query (vedi "Regole del riquadro").
+
+## Scenario: il riquadro mostra i 3 prossimi eventi, con data, orario e titolo
+Dato che il calendario ha almeno 4 eventi futuri o in corso
+Quando apro la dashboard
+Allora vedo il riquadro "Prossimi eventi" con esattamente 3 eventi, i più vicini, in ordine di data
+E ogni evento mostra il giorno (giorno della settimana, numero e mese), l'orario in fuso Europe/Rome oppure "Tutto il giorno", e il titolo
+E gli eventi successivi al terzo non compaiono
+E gli eventi già conclusi non compaiono
+
+## Scenario: con meno di 3 eventi il riquadro mostra solo quelli che ci sono
+Dato che il calendario ha solo 2 eventi futuri
+Quando apro la dashboard
+Allora il riquadro "Prossimi eventi" mostra quei 2 eventi
+E non mostra segnaposto vuoti né messaggi d'errore
+
+## Scenario: senza eventi futuri il riquadro dà un messaggio gentile e neutro
+Dato che il calendario non ha eventi futuri o in corso (anche perché l'indirizzo iCal non è salvato)
+Quando apro la dashboard come admin, maestra o assistente
+Allora il riquadro "Prossimi eventi" dice "Non ci sono eventi in programma." (lo stesso testo per tutti)
+E non vedo errori né accenni all'indirizzo, alla configurazione o ai Parametri di funzionamento
+E il resto della dashboard compare come sempre
+
+## Scenario: un evento già cominciato e non ancora finito conta
+Dato che il calendario ha un evento di tutto il giorno cominciato ieri e che finisce dopodomani
+Quando apro la dashboard
+Allora il riquadro "Prossimi eventi" mostra quell'evento per primo, con l'etichetta "In corso"
+E conta tra i 3 mostrati
+
+## Scenario: il riquadro mostra sempre testo semplice
+Dato che il feed contiene un evento con codice HTML nel titolo
+Quando apro la dashboard
+Allora il riquadro mostra il codice HTML come testo, senza che venga eseguito o interpretato
+E negli eventi del riquadro non c'è nessun link, immagine o elemento costruito dal feed
+
+## Scenario: il riquadro rimanda alla pagina Calendario
+Dato che sono sulla dashboard
+Quando guardo il riquadro "Prossimi eventi"
+Allora vedo il link "Vedi tutto" verso `/dashboard/calendario`, anche quando non ci sono eventi
+E cliccandolo apro la pagina "Calendario"
+
+## Scenario: il riquadro è visibile a ogni ruolo con accesso alla dashboard
+Dato che sono autenticato come admin, maestra o assistente
+Quando apro la dashboard
+Allora vedo il riquadro "Prossimi eventi" con gli stessi eventi, qualunque sia il mio ruolo
+E il genitore, che non ha ancora la dashboard staff, non vede il riquadro né gli eventi
+
+## Scenario: il riquadro è usabile da telefono e accessibile
+Dato che apro la dashboard su uno schermo largo 375 px
+Quando la pagina è caricata
+Allora il riquadro "Prossimi eventi" è visibile e non c'è scorrimento orizzontale
+E la pagina non ha violazioni di accessibilità gravi
+
+## Regole del riquadro
+- **Una sola query leggera**, a sé, sulla sola tabella `calendario_eventi`: gli
+  eventi con `fine` da adesso in poi, in ordine di inizio, al massimo 3. Non
+  tocca `giorni_chiusura` (regola di separazione di #318/#320/#321: due
+  tabelle, due query, mai fuse; gli eventi non creano né bloccano chiusure).
+  Niente Google, niente `impostazioni_calendario`: il riquadro non sa se il
+  calendario è collegato né legge l'indirizzo, e per questo il messaggio vuoto è
+  uguale per tutti.
+- **Stessa definizione della pagina "Calendario"**: orari, "Tutto il giorno",
+  etichetta "In corso" e giorno mostrato vengono da `costruisciVistaEventi`
+  (`lib/calendarioEventiVista.ts`, funzione `prossimiEventiDashboard`). Un
+  evento su più giorni già cominciato è mostrato sotto oggi, "In corso".
+  Differenza voluta: il riquadro filtra sull'istante (un evento con orario già
+  finito stamattina non c'è più), la pagina sul giorno (resta tra i "Prossimi"
+  fino a fine giornata).
+- **Guasti isolati**: se la lettura fallisce (o la tabella non è raggiungibile)
+  il riquadro mostra il messaggio neutro e il resto della dashboard compare lo
+  stesso; l'errore va solo nel log del server, senza dettagli per l'utente.
+  Il riquadro si carica a parte (Suspense, con sagome della stessa altezza):
+  non rallenta il resto della dashboard.
+- **Indipendente dalle sezioni**: il riquadro non dipende dalle sezioni
+  assegnate (compare anche a chi non ne ha), perché gli eventi sono per tutto
+  l'asilo.
+- **Solo testo**: come nella pagina, titolo e orario sono testo reso da React;
+  mai HTML, mai link costruiti dal feed. L'unico link del riquadro è "Vedi
+  tutto", fisso.

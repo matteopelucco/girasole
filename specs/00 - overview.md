@@ -147,7 +147,8 @@ della maestra, `5x` amministrazione.
   annullati salvati nel database; pagina "Calendario" (`/dashboard/calendario`,
   voce di menu per admin, maestra e assistente) con giorni di chiusura in alto
   (sola lettura) ed eventi "A calendario" in basso, due elenchi separati
-  (il riquadro in dashboard è un'altra issue)
+  riquadro "Prossimi eventi" in dashboard (i 3 eventi più vicini, compreso quello
+  in corso, con link alla pagina)
 
 Quando si aggiunge un requisito nuovo che non rientra in nessuno scenario
 esistente, creare un nuovo file numerato in questa cartella (seguendo la

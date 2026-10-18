@@ -88,6 +88,17 @@ per qualsiasi sezione o bambino
 E per le pagine di amministrazione (`/admin`, `/admin/maestre`, ecc.) uso
 il menu laterale, che le elenca già: la dashboard non le ripete
 
+## Scenario: la dashboard mostra il riquadro "Prossimi eventi"
+Dato che sono autenticata come maestra, assistente o admin
+Quando apro la dashboard
+Allora vedo, tra le card delle attività e gli avvisi, il riquadro "Prossimi eventi"
+con i 3 prossimi eventi del Google Calendar dell'asilo (oppure un messaggio
+gentile se non ce ne sono) e il link "Vedi tutto" verso
+[la pagina Calendario](64%20-%20calendario-eventi.md)
+E il riquadro compare anche se non ho sezioni assegnate
+E gli scenari del riquadro (eventi, in corso, testo semplice, stato vuoto) sono in
+[64 - calendario-eventi.md](64%20-%20calendario-eventi.md)
+
 ## Scenario: un genitore apre la dashboard
 Dato che il mio profilo ha ruolo `genitore` (o nessun ruolo riconosciuto)
 Quando apro la dashboard
@@ -97,6 +108,9 @@ successiva, e nessun dato di altri bambini
 ## Regole
 - L'accesso a `/dashboard` richiede autenticazione (vedi
   [11 - login.md](11%20-%20login.md)).
+- Il riquadro "Prossimi eventi" legge solo `calendario_eventi` (issue #321,
+  [64](64%20-%20calendario-eventi.md)): è separato dai giorni di chiusura
+  ([53](53%20-%20calendario-scolastico.md)) e un suo guasto non rompe la dashboard.
 - Il contenuto mostrato dipende dal ruolo del profilo (`admin`, `maestra`,
   `assistente`, altro), non dal solo fatto di essere autenticati.
 - Il selettore di data, dentro "Presenze e pasti" (non in dashboard),

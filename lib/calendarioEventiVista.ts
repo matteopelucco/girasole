@@ -180,3 +180,48 @@ export function costruisciVistaEventi(righe: EventoRiga[], oggi: string): VistaE
 
   return { prossimi: raggruppa(prossimi, oggi, false), passati: raggruppa(passati, oggi, true) };
 }
+
+// Riquadro "Prossimi eventi" della dashboard (specs/64, issue #321): quanti
+// eventi si mostrano.
+export const PROSSIMI_EVENTI_DASHBOARD = 3;
+
+export type ProssimoEvento = EventoVista & {
+  // Giorno mostrato ("YYYY-MM-DD"): quello d'inizio, oppure oggi se l'evento è
+  // già cominciato (`inCorso`).
+  data: string;
+  nomeGiorno: string;
+  numero: string;
+  // Mese breve ("ott").
+  mese: string;
+  eOggi: boolean;
+};
+
+function meseBreve(data: string): string {
+  const [anno, mese, giorno] = data.split('-').map(Number);
+  return new Intl.DateTimeFormat('it-IT', { month: 'short' }).format(new Date(Date.UTC(anno, mese - 1, giorno, 12)));
+}
+
+// I prossimi eventi per il riquadro della dashboard, in ordine di data: stessa
+// vista (orari, "Tutto il giorno", "In corso") della pagina "Calendario", ma
+// piatta e limitata a `massimo`. `righe` sono già gli eventi con fine da ora in
+// poi (la query del riquadro); i conclusi sono comunque scartati.
+export function prossimiEventiDashboard(
+  righe: EventoRiga[],
+  oggi: string,
+  massimo: number = PROSSIMI_EVENTI_DASHBOARD
+): ProssimoEvento[] {
+  const { prossimi } = costruisciVistaEventi(righe, oggi);
+  return prossimi
+    .flatMap((mese) => mese.giorni)
+    .flatMap((giorno) =>
+      giorno.eventi.map((evento) => ({
+        ...evento,
+        data: giorno.data,
+        nomeGiorno: giorno.nomeGiorno,
+        numero: giorno.numero,
+        mese: meseBreve(giorno.data),
+        eOggi: giorno.eOggi,
+      }))
+    )
+    .slice(0, massimo);
+}
