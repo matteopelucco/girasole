@@ -20,7 +20,7 @@ export default async function CalendarioScolasticoPage() {
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
       <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
         <div>
-          <h1 className="text-lg font-medium">Calendario scolastico</h1>
+          <h1 className="text-lg font-medium">Giorni di chiusura</h1>
           <p className="mt-1 text-sm text-stone-600">
             Giorni di chiusura dell&apos;asilo (vacanze, ponti, chiusure straordinarie). Sabato e
             domenica sono chiusi sempre, non serve inserirli qui.

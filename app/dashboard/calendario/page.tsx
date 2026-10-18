@@ -27,7 +27,7 @@ export default async function CalendarioPage() {
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={ruolo}>
       <main className="mx-auto max-w-2xl space-y-8 px-4 py-6 sm:py-8">
         <header>
-          <h1 className="font-heading text-2xl font-semibold text-stone-900">Calendario</h1>
+          <h1 className="font-heading text-2xl font-semibold text-stone-900">Calendario attività</h1>
           <p className="mt-1 text-sm text-stone-600">Chiusure dell&apos;asilo ed eventi in programma.</p>
         </header>
 
