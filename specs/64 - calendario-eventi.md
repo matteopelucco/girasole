@@ -22,7 +22,7 @@ Collegata a [53 - calendario-scolastico.md](53%20-%20calendario-scolastico.md)
 - **Cron notturno** (Vercel Cron, lo stesso del report notturno,
   [52 - report-email-automatico.md](52%20-%20report-email-automatico.md)): legge il
   calendario e salva gli eventi. Nessun utente umano scrive gli eventi.
-- **Admin, maestra, assistente**: leggono gli eventi nella pagina "Calendario"
+- **Admin, maestra, assistente**: leggono gli eventi nella pagina "Calendario attività"
   (`/dashboard/calendario`). **Genitore**: nessun accesso (decisione di Matteo,
   #318: quando lo avranno si deciderà la privacy degli eventi).
 
@@ -133,22 +133,42 @@ Allora il cron risponde con successo in pochi secondi
 E il report notturno viene prodotto come sempre
 E gli eventi normali del feed sono salvati; la serie ostile è saltata
 
-## Pagina "Calendario" (`/dashboard/calendario`, issue #320)
+## Pagina "Calendario attività" (`/dashboard/calendario`, issue #320, nome e menu da #327)
 
 Pagina in sola lettura per admin, maestra e assistente, con voce di menu
-"Calendario" subito sotto "Dashboard". `/admin/calendario` ("Calendario
-scolastico", spec 53) resta la pagina dove l'admin modifica i giorni di
-chiusura e non cambia. In alto i **giorni di chiusura** (tabella
+"Calendario attività" nel gruppo "Calendario", subito sotto "Dashboard".
+`/admin/calendario` ("Giorni di chiusura", spec 53) resta la pagina dove
+l'admin modifica i giorni di chiusura e non cambia (solo il nome e la voce di
+menu). In alto i **giorni di chiusura** (tabella
 `giorni_chiusura`), in basso la sezione **"A calendario"** con gli eventi di
 Google (tabella `calendario_eventi`): due sezioni distinte, con due query
 distinte, mai fuse in un'unica lista (vedi "Regole della pagina").
 
-## Scenario: la voce "Calendario" è nel menu di admin, maestra e assistente
-Dato che sono autenticato come admin, maestra o assistente
+## Scenario: l'admin vede il gruppo "Calendario" con "Giorni di chiusura" e "Calendario attività"
+Dato che sono autenticato come admin
 Quando guardo il menu laterale
-Allora vedo la voce "Calendario" subito dopo "Dashboard"
-E cliccandola apro `/dashboard/calendario`, dove la voce risulta evidenziata
-E la voce non è nel menu del genitore
+Allora vedo il gruppo "Calendario" subito dopo "Dashboard", senza una pagina propria
+E nel gruppo, rientrate, vedo "Giorni di chiusura" e poi "Calendario attività"
+E cliccando "Calendario attività" apro `/dashboard/calendario`, dove la voce risulta evidenziata
+E cliccando "Giorni di chiusura" apro `/admin/calendario`, dove la voce risulta evidenziata
+
+## Scenario: maestra e assistente vedono nel gruppo "Calendario" solo "Calendario attività"
+Dato che sono autenticata come maestra o assistente
+Quando guardo il menu laterale
+Allora vedo il gruppo "Calendario" subito dopo "Dashboard", con la sola voce "Calendario attività"
+E non vedo "Giorni di chiusura"
+E cliccando "Calendario attività" apro `/dashboard/calendario`, dove la voce risulta evidenziata
+
+## Scenario: il genitore non vede il gruppo "Calendario"
+Dato che sono autenticato come genitore
+Quando guardo il menu laterale
+Allora non vedo il gruppo "Calendario", né "Calendario attività" né "Giorni di chiusura"
+
+## Scenario: la pagina si chiama "Calendario attività"
+Dato che sono autenticato come admin, maestra o assistente
+Quando apro `/dashboard/calendario`
+Allora il titolo della pagina è "Calendario attività"
+E la sezione in alto resta "Giorni di chiusura" e quella in basso "A calendario"
 
 ## Scenario: il genitore non accede alla pagina
 Dato che sono autenticato come genitore
@@ -158,7 +178,7 @@ E non vedo né giorni di chiusura né eventi
 
 ## Scenario: i giorni di chiusura in corso e futuri sono in alto, in sola lettura
 Dato che l'admin ha inserito un giorno di chiusura che comincia nel futuro
-Quando apro la pagina "Calendario" come maestra
+Quando apro la pagina "Calendario attività" come maestra
 Allora in cima vedo la sezione "Giorni di chiusura" con il giorno futuro, con le date e la nota
 E un giorno di chiusura in corso oggi porta l'etichetta "In corso"
 E i giorni di chiusura già conclusi non compaiono
@@ -167,90 +187,90 @@ E nella sezione leggo che sabato e domenica sono chiusi sempre
 
 ## Scenario: l'admin trova il rimando per gestire i giorni di chiusura
 Dato che sono autenticato come admin
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora nella sezione "Giorni di chiusura" vedo il link "Gestisci i giorni di chiusura" verso `/admin/calendario`
 E maestra e assistente non vedono quel link
 
 ## Scenario: senza giorni di chiusura in programma lo stato vuoto è gentile
 Dato che non ci sono giorni di chiusura in corso o futuri
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora la sezione "Giorni di chiusura" dice "Nessun giorno di chiusura in programma."
 
 ## Scenario: gli eventi sono raggruppati per mese e per giorno, con la data in evidenza
 Dato che il calendario ha eventi futuri in giorni diversi
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora sotto "A calendario" vedo gli eventi in ordine di data, con un'intestazione per ogni mese
 E ogni giorno ha il suo blocco con il giorno della settimana abbreviato e il numero del giorno ben visibili
 E gli eventi dello stesso giorno stanno nello stesso blocco
 
 ## Scenario: un evento con orario mostra ora di inizio e di fine in fuso Europe/Rome
 Dato che il calendario ha un evento dalle 10:00 alle 11:00 (ora di Roma) con luogo
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora l'evento mostra "10:00 – 11:00" (ora di Roma, anche con l'ora legale) e il luogo
 
 ## Scenario: luogo e descrizione compaiono solo se presenti
 Dato che il calendario ha un evento con luogo e descrizione e uno senza
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora il primo evento mostra luogo e descrizione, con gli a capo della descrizione conservati
 E il secondo non mostra né luogo né descrizione, nemmeno come riga vuota
 
 ## Scenario: un evento di tutto il giorno si distingue da uno con orario
 Dato che il calendario ha un evento di tutto il giorno
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora l'evento mostra l'etichetta "Tutto il giorno" al posto dell'orario
 
 ## Scenario: un evento su più giorni è chiaro
 Dato che il calendario ha un evento di tutto il giorno che dura più giorni
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora l'evento compare una sola volta, nel giorno in cui comincia
 E mostra l'intervallo dei giorni (es. "10 ott – 12 ott")
 E se è già cominciato compare sotto il giorno di oggi con l'etichetta "In corso"
 
 ## Scenario: gli eventi passati sono separati e attenuati
 Dato che il calendario ha un evento già concluso (fino a 30 giorni fa) e uno futuro
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora l'evento futuro è sotto "A calendario" nella parte "Prossimi"
 E quello concluso è in una parte "Passati" sotto la prima, in ordine dal più recente, con aspetto attenuato
 
 ## Scenario: titolo, descrizione e luogo sono sempre testo semplice
 Dato che il feed contiene un titolo con del codice HTML e una descrizione con un indirizzo web (anche `javascript:`)
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora vedo il codice HTML come testo, senza che venga eseguito o interpretato
 E l'indirizzo web è testo: non diventa un link cliccabile
 E nella sezione degli eventi non c'è nessun link
 
 ## Scenario: un evento "chiuso" di Google resta un evento
 Dato che il Google Calendar ha un evento intitolato "Chiuso" in un giorno feriale
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora l'evento compare sotto "A calendario"
 E non compare nella sezione "Giorni di chiusura"
 E aprendo "Presenze e pasti" per quel giorno non c'è alcun avviso di chiusura
 
 ## Scenario: l'admin senza indirizzo vede come collegare il calendario
 Dato che sono autenticato come admin e nessun indirizzo iCal è salvato
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora sotto "A calendario" leggo che il Google Calendar non è ancora collegato
 E vedo il link "Parametri di funzionamento" verso `/admin/parametri-funzionamento`
 
 ## Scenario: l'admin con indirizzo ma senza eventi legge che non ce ne sono
 Dato che sono autenticato come admin e l'indirizzo è salvato, ma il calendario non ha eventi
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora sotto "A calendario" leggo che non ci sono eventi e che l'aggiornamento avviene ogni notte
 E non vedo il link ai Parametri di funzionamento
 
 ## Scenario: maestra e assistente senza eventi leggono un messaggio neutro
 Dato che sono autenticata come maestra o assistente e il calendario non ha eventi
-Quando apro la pagina "Calendario"
+Quando apro la pagina "Calendario attività"
 Allora sotto "A calendario" leggo "Non ci sono eventi a calendario."
 E non vedo né link all'amministrazione né accenni all'indirizzo o alla configurazione
 
 ## Scenario: la pagina non rivela l'indirizzo iCal
 Dato che l'indirizzo iCal è salvato
-Quando apro la pagina "Calendario" come admin, maestra o assistente
+Quando apro la pagina "Calendario attività" come admin, maestra o assistente
 Allora l'indirizzo non compare da nessuna parte nella pagina
 
 ## Scenario: la pagina è usabile da telefono e accessibile
-Dato che apro la pagina "Calendario" su uno schermo largo 375 px
+Dato che apro la pagina "Calendario attività" su uno schermo largo 375 px
 Quando la pagina è caricata
 Allora non c'è scorrimento orizzontale
 E la pagina non ha violazioni di accessibilità gravi
@@ -355,7 +375,7 @@ E la pagina non ha violazioni di accessibilità gravi
   disattivata non è un errore.
 - **Fuori scope**: accesso dei genitori, pulsante "Aggiorna ora", pulizia dell'archivio storico.
 
-## Regole della pagina "Calendario"
+## Regole della pagina "Calendario attività"
 - **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta,
   invariata, la pagina dove l'admin modifica le chiusure). Accesso a chi è staff
   (`requireStaff`): il genitore è reindirizzato alla dashboard.
@@ -387,7 +407,7 @@ E la pagina non ha violazioni di accessibilità gravi
 
 Nella dashboard ([12 - dashboard-maestre.md](12%20-%20dashboard-maestre.md)),
 sotto le card delle attività e sopra gli avvisi, un riquadro "Prossimi eventi"
-mostra i 3 eventi di Google più vicini, con un link alla pagina "Calendario".
+mostra i 3 eventi di Google più vicini, con un link alla pagina "Calendario attività".
 Lo vedono admin, maestra e assistente (il genitore non ha ancora la dashboard
 staff). I **giorni di chiusura non compaiono** nel riquadro: sono un'altra
 cosa, con un'altra query (vedi "Regole del riquadro").
@@ -425,11 +445,11 @@ Quando apro la dashboard
 Allora il riquadro mostra il codice HTML come testo, senza che venga eseguito o interpretato
 E negli eventi del riquadro non c'è nessun link, immagine o elemento costruito dal feed
 
-## Scenario: il riquadro rimanda alla pagina Calendario
+## Scenario: il riquadro rimanda alla pagina "Calendario attività"
 Dato che sono sulla dashboard
 Quando guardo il riquadro "Prossimi eventi"
 Allora vedo il link "Vedi tutto" verso `/dashboard/calendario`, anche quando non ci sono eventi
-E cliccandolo apro la pagina "Calendario"
+E cliccandolo apro la pagina "Calendario attività"
 
 ## Scenario: il riquadro è visibile a ogni ruolo con accesso alla dashboard
 Dato che sono autenticato come admin, maestra o assistente
@@ -451,7 +471,7 @@ E la pagina non ha violazioni di accessibilità gravi
   Niente Google, niente `impostazioni_calendario`: il riquadro non sa se il
   calendario è collegato né legge l'indirizzo, e per questo il messaggio vuoto è
   uguale per tutti.
-- **Stessa definizione della pagina "Calendario"**: orari, "Tutto il giorno",
+- **Stessa definizione della pagina "Calendario attività"**: orari, "Tutto il giorno",
   etichetta "In corso" e giorno mostrato vengono da `costruisciVistaEventi`
   (`lib/calendarioEventiVista.ts`, funzione `prossimiEventiDashboard`). Un
   evento su più giorni già cominciato è mostrato sotto oggi, "In corso".

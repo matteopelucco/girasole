@@ -190,12 +190,16 @@ test.describe('01 — UX/UI', () => {
         'Dashboard',
         'Sezioni e bambini',
         'Utenti',
-        'Calendario scolastico',
+        'Giorni di chiusura',
+        'Calendario attività',
         'Profili orari',
         'Ore di lavoro del personale',
       ]) {
         await expect(page.getByRole('link', { name: voce })).toBeVisible();
       }
+      // "Calendario" è solo l'intestazione del gruppo che contiene le due voci calendario, non un link.
+      await expect(page.getByRole('group', { name: 'Calendario', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Calendario', exact: true })).toHaveCount(0);
 
       await expect(page.getByRole('link', { name: 'Sezioni e bambini' })).toHaveAttribute(
         'aria-current',

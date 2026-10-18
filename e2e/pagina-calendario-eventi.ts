@@ -2,7 +2,7 @@
 // calendario-eventi.md, issue #320). Il file `pagina-calendario.ts` riguarda
 // invece la sezione "Calendario Google" di "Parametri di funzionamento".
 //
-// STRUTTURA. Titolo "Calendario"; sezione "Giorni di chiusura" (ruolo
+// STRUTTURA. Titolo "Calendario attività"; sezione "Giorni di chiusura" (ruolo
 // "region"; ogni chiusura è `data-testid="chiusura"`); sezione "A calendario"
 // (ruolo "region") con i blocchi `eventi-prossimi` e `eventi-passati`. In
 // ciascun blocco un titolo per mese (h4), un blocco per giorno
@@ -53,14 +53,25 @@ export function giornoBreveItaliano(data: string): string {
 
 export async function apriCalendario(page: Page): Promise<void> {
   await page.goto(PERCORSO_CALENDARIO);
-  await expect(page.getByRole('heading', { name: 'Calendario', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
   // Le due sezioni si completano a parte: si aspetta che non siano più sagome.
   await expect(sezioneChiusure(page).getByRole('status')).toHaveCount(0);
   await expect(sezioneEventi(page).getByRole('status')).toHaveCount(0);
 }
 
+// Voce "Calendario attività" del menu (specs/64), dentro il gruppo "Calendario".
 export function voceMenuCalendario(page: Page): Locator {
-  return page.getByRole('navigation').getByRole('link', { name: 'Calendario', exact: true });
+  return page.getByRole('navigation').getByRole('link', { name: 'Calendario attività', exact: true });
+}
+
+// Voce "Giorni di chiusura" del menu (specs/53), dentro il gruppo "Calendario".
+export function voceMenuGiorniChiusura(page: Page): Locator {
+  return page.getByRole('navigation').getByRole('link', { name: 'Giorni di chiusura', exact: true });
+}
+
+// Gruppo "Calendario" del menu: solo intestazione con le sue voci dentro.
+export function gruppoMenuCalendario(page: Page): Locator {
+  return page.getByRole('navigation').getByRole('group', { name: 'Calendario', exact: true });
 }
 
 // Crea un giorno di chiusura dalla pagina admin (specs/53). Date lontane e nota

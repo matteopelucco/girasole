@@ -89,7 +89,9 @@ import {
   schedaEvento,
   sezioneChiusure,
   sezioneEventi,
+  gruppoMenuCalendario,
   voceMenuCalendario,
+  voceMenuGiorniChiusura,
 } from './pagina-calendario-eventi';
 import {
   PERCORSO_PARAMETRI,
@@ -382,14 +384,45 @@ test.describe('64 — Calendario eventi', () => {
   // ---------------------------------------------------------------------
   test.describe('pagina Calendario', () => {
     test.describe('menu e accesso', () => {
-      test('la voce "Calendario" è nel menu di admin, maestra e assistente, non del genitore', async ({ browser }) => {
-        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+      test('l\'admin vede il gruppo "Calendario" con "Giorni di chiusura" e "Calendario attività"', async ({ browser }) => {
+        const { page, chiudi } = await paginaCome(browser, 'admin');
+        try {
+          await page.goto('/dashboard');
+          const gruppo = gruppoMenuCalendario(page);
+          await expect(gruppo).toBeVisible();
+          await expect(gruppo.getByRole('link')).toHaveText([/Giorni di chiusura/, /Calendario attività/]);
+          await expect(voceMenuGiorniChiusura(page)).toHaveAttribute('href', PERCORSO_CHIUSURE_ADMIN);
+          await expect(voceMenuCalendario(page)).toHaveAttribute('href', PERCORSO_CALENDARIO);
+
+          // Il gruppo sta subito dopo "Dashboard".
+          const dashboard = page.getByRole('navigation').getByRole('link', { name: 'Dashboard', exact: true });
+          const y = async (l: typeof dashboard) => (await l.boundingBox())!.y;
+          expect(await y(dashboard)).toBeLessThan(await y(gruppo));
+
+          await voceMenuCalendario(page).click();
+          await page.waitForURL(PERCORSO_CALENDARIO);
+          await expect(voceMenuCalendario(page)).toHaveAttribute('aria-current', 'page');
+          await expect(dashboard).not.toHaveAttribute('aria-current', 'page');
+
+          await voceMenuGiorniChiusura(page).click();
+          await page.waitForURL(PERCORSO_CHIUSURE_ADMIN);
+          await expect(voceMenuGiorniChiusura(page)).toHaveAttribute('aria-current', 'page');
+          await expect(page.getByRole('heading', { name: 'Giorni di chiusura', level: 1 })).toBeVisible();
+          await nessunaViolazioneA11yGrave(page);
+        } finally {
+          await chiudi();
+        }
+      });
+
+      test('maestra e assistente vedono nel gruppo "Calendario" solo "Calendario attività"', async ({ browser }) => {
+        for (const ruolo of ['maestra', 'assistente'] as const) {
           const { page, chiudi } = await paginaCome(browser, ruolo);
           try {
             await page.goto('/dashboard');
-            const voce = voceMenuCalendario(page);
-            await expect(voce).toBeVisible();
-            await voce.click();
+            await expect(gruppoMenuCalendario(page).getByRole('link')).toHaveText([/Calendario attività/]);
+            await expect(voceMenuGiorniChiusura(page)).toHaveCount(0);
+
+            await voceMenuCalendario(page).click();
             await page.waitForURL(PERCORSO_CALENDARIO);
             await expect(voceMenuCalendario(page)).toHaveAttribute('aria-current', 'page');
             await expect(
@@ -399,14 +432,32 @@ test.describe('64 — Calendario eventi', () => {
             await chiudi();
           }
         }
+      });
 
+      test('il genitore non vede il gruppo "Calendario"', async ({ browser }) => {
         const { page, chiudi } = await paginaCome(browser, 'genitore');
         try {
           await page.goto('/dashboard');
           await expect(page.getByRole('navigation')).toBeVisible();
+          await expect(gruppoMenuCalendario(page)).toHaveCount(0);
           await expect(voceMenuCalendario(page)).toHaveCount(0);
+          await expect(voceMenuGiorniChiusura(page)).toHaveCount(0);
         } finally {
           await chiudi();
+        }
+      });
+
+      test('la pagina si chiama "Calendario attività"', async ({ browser }) => {
+        for (const ruolo of ['admin', 'maestra', 'assistente'] as const) {
+          const { page, chiudi } = await paginaCome(browser, ruolo);
+          try {
+            await page.goto(PERCORSO_CALENDARIO);
+            await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
+            await expect(sezioneChiusure(page)).toBeVisible();
+            await expect(sezioneEventi(page)).toBeVisible();
+          } finally {
+            await chiudi();
+          }
         }
       });
 
@@ -784,7 +835,7 @@ test.describe('64 — Calendario eventi', () => {
           await expect(linkVediTutto(page)).toHaveAttribute('href', PERCORSO_CALENDARIO);
           await linkVediTutto(page).click();
           await page.waitForURL(PERCORSO_CALENDARIO);
-          await expect(page.getByRole('heading', { name: 'Calendario', level: 1 })).toBeVisible();
+          await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
         } finally {
           await chiudi();
         }

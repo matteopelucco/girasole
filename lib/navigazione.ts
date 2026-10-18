@@ -36,22 +36,30 @@ export function vociLink(elementi: ElementoMenu[]): VoceMenu[] {
 // pura (nessuna query, nessun redirect): la navigazione per maestra/
 // assistente/genitore resta quella via le card della dashboard (vedi
 // lib/dashboardSezioni.ts), qui c'è solo il link "Dashboard" per tornare
-// alla home (più "Calendario" per lo staff, specs/64); l'admin ha in più le voci di amministrazione già presenti in
+// alla home (più il gruppo "Calendario" per lo staff, specs/64); l'admin ha in più le voci di amministrazione già presenti in
 // passato nella barra orizzontale (vedi specs/01 - ux.md).
 export function vociMenu(ruolo: string | null | undefined): ElementoMenu[] {
   const voci: ElementoMenu[] = [{ href: '/dashboard', etichetta: 'Dashboard', icona: '🏠' }];
 
-  // "Calendario" (specs/64): giorni di chiusura ed eventi di Google, in sola
-  // lettura, per lo staff (non per il genitore). Distinta da "Calendario
-  // scolastico" (admin), dove si modificano i giorni di chiusura.
+  // Gruppo "Calendario" (specs/53, specs/64): solo intestazione, senza pagina
+  // propria, con sotto le voci che chi guarda può aprire. "Giorni di chiusura"
+  // (`/admin/calendario`) solo per l'admin, che li modifica; "Calendario attività"
+  // (`/dashboard/calendario`, sola lettura, eventi di Google) per lo staff. Il
+  // genitore non vede il gruppo.
+  const figliCalendario: VoceMenu[] = [];
+  if (ruolo === 'admin') {
+    figliCalendario.push({ href: '/admin/calendario', etichetta: 'Giorni di chiusura', icona: '📅' });
+  }
   if (ruolo === 'admin' || ruolo === 'maestra' || ruolo === 'assistente') {
-    voci.push({ href: '/dashboard/calendario', etichetta: 'Calendario', icona: '🗓️' });
+    figliCalendario.push({ href: '/dashboard/calendario', etichetta: 'Calendario attività', icona: '🗓️' });
+  }
+  if (figliCalendario.length > 0) {
+    voci.push({ etichetta: 'Calendario', icona: '🗓️', figli: figliCalendario });
   }
 
   if (ruolo === 'admin') {
     voci.push(
       { href: '/admin', etichetta: 'Sezioni e bambini', icona: '🏫' },
-      { href: '/admin/calendario', etichetta: 'Calendario scolastico', icona: '📅' },
       // Gruppo "Ore dipendenti": "Profili orari" (specs/54) e "Ore di lavoro del personale" (specs/17).
       {
         etichetta: 'Ore dipendenti',

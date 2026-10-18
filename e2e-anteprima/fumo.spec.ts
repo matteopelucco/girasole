@@ -222,7 +222,7 @@ test.describe('Giro di fumo sull\'anteprima', () => {
       { percorso: '/dashboard/report', titolo: 'Report' },
       { percorso: '/admin', titolo: 'Sezioni' },
       { percorso: '/admin/maestre', titolo: 'Utenti e ruoli' },
-      { percorso: '/admin/calendario', titolo: 'Calendario scolastico' },
+      { percorso: '/admin/calendario', titolo: 'Giorni di chiusura' },
       { percorso: '/admin/profili-orari', titolo: 'Profili orari' },
       { percorso: '/admin/rette' },
       { percorso: '/admin/pagamenti-bambino' },

@@ -30,29 +30,54 @@ describe('vociMenu', () => {
     }
   });
 
-  it('include "Dashboard" e "Calendario" (specs/64) per maestra e assistente, in quest\'ordine', () => {
+  it('per maestra e assistente mette il gruppo "Calendario" dopo "Dashboard", con la sola "Calendario attività" (specs/64)', () => {
     for (const ruolo of ['maestra', 'assistente']) {
       const voci = vociMenu(ruolo);
       expect(voci).toEqual([
         { href: '/dashboard', etichetta: 'Dashboard', icona: '🏠' },
-        { href: '/dashboard/calendario', etichetta: 'Calendario', icona: '🗓️' },
+        {
+          etichetta: 'Calendario',
+          icona: '🗓️',
+          figli: [{ href: '/dashboard/calendario', etichetta: 'Calendario attività', icona: '🗓️' }],
+        },
       ]);
     }
   });
 
-  it('mette "Calendario" subito dopo "Dashboard" anche per l\'admin, senza toccare "Calendario scolastico"', () => {
-    const voci = vociLink(vociMenu('admin'));
-    expect(voci.slice(0, 2).map((v) => v.href)).toEqual(['/dashboard', '/dashboard/calendario']);
-    expect(voci.find((v) => v.href === '/admin/calendario')?.etichetta).toBe('Calendario scolastico');
+  it('per l\'admin mette il gruppo "Calendario" subito dopo "Dashboard", con "Giorni di chiusura" e "Calendario attività" (specs/53, specs/64)', () => {
+    const voci = vociMenu('admin');
+    expect(voci.slice(0, 2).map((v) => v.etichetta)).toEqual(['Dashboard', 'Calendario']);
+    const gruppo = voci[1];
+    expect(gruppo && eGruppo(gruppo)).toBe(true);
+    expect(gruppo && eGruppo(gruppo) && gruppo.figli.map((f) => [f.etichetta, f.href])).toEqual([
+      ['Giorni di chiusura', '/admin/calendario'],
+      ['Calendario attività', '/dashboard/calendario'],
+    ]);
+    expect(vociLink(voci).slice(0, 3).map((v) => v.href)).toEqual([
+      '/dashboard',
+      '/admin/calendario',
+      '/dashboard/calendario',
+    ]);
+    // Né "Giorni di chiusura" né il gruppo compaiono più come voci di primo livello.
+    expect(voci.filter((v) => !eGruppo(v)).some((v) => v.etichetta === 'Giorni di chiusura')).toBe(false);
+    expect(voci.filter((v) => !eGruppo(v)).some((v) => v.etichetta === 'Calendario scolastico')).toBe(false);
+  });
+
+  it('non mostra il gruppo "Calendario" né le sue voci al genitore né a ruolo assente', () => {
+    for (const ruolo of ['genitore', null, undefined]) {
+      const voci = vociMenu(ruolo);
+      expect(voci.some((v) => v.etichetta === 'Calendario')).toBe(false);
+      expect(vociLink(voci).some((v) => v.href.includes('calendario'))).toBe(false);
+    }
   });
 
   it('include le voci di amministrazione per admin, nell\'ordine storico della barra orizzontale', () => {
     const voci = vociMenu('admin');
     expect(vociLink(voci).map((v) => v.href)).toEqual([
       '/dashboard',
+      '/admin/calendario',
       '/dashboard/calendario',
       '/admin',
-      '/admin/calendario',
       '/admin/profili-orari',
       '/admin/ore-lavoro',
       '/admin/rette',
@@ -78,7 +103,7 @@ describe('vociMenu', () => {
     expect(primoLivello).not.toContain('Profili orari');
     expect(primoLivello).not.toContain('Ore di lavoro del personale');
     const ordine = voci.map((v) => v.etichetta);
-    expect(ordine.indexOf('Calendario scolastico')).toBeLessThan(ordine.indexOf('Ore dipendenti'));
+    expect(ordine.indexOf('Calendario')).toBeLessThan(ordine.indexOf('Ore dipendenti'));
     expect(ordine.indexOf('Ore dipendenti')).toBeLessThan(ordine.indexOf('Pagamenti'));
   });
 
@@ -152,11 +177,16 @@ describe('vociMenuConStato', () => {
     }
   });
 
-  it('evidenzia "Calendario" su /dashboard/calendario e non "Dashboard" né "Calendario scolastico"', () => {
+  it('evidenzia "Calendario attività" su /dashboard/calendario, senza evidenziare "Dashboard" né il gruppo', () => {
     for (const ruolo of ['admin', 'maestra', 'assistente']) {
-      expect(voceAttive(ruolo, '/dashboard/calendario').map((v) => v.href)).toEqual(['/dashboard/calendario']);
+      expect(voceAttive(ruolo, '/dashboard/calendario').map((v) => v.etichetta)).toEqual(['Calendario attività']);
     }
-    expect(voceAttive('admin', '/admin/calendario').map((v) => v.href)).toEqual(['/admin/calendario']);
+    const gruppo = vociMenuConStato('admin', '/dashboard/calendario').find((e) => e.etichetta === 'Calendario');
+    expect(gruppo && eGruppoConStato(gruppo)).toBe(true);
+  });
+
+  it('evidenzia "Giorni di chiusura" su /admin/calendario, non "Sezioni e bambini" né il gruppo', () => {
+    expect(voceAttive('admin', '/admin/calendario').map((v) => v.etichetta)).toEqual(['Giorni di chiusura']);
   });
 
   it('evidenzia la voce admin più specifica invece del generico /admin', () => {

@@ -26,7 +26,7 @@ import { apriGiornata } from './pagina-giornata';
 // "Presenze e pasti" (specs/10) mostra presenza e pasto di tutti i
 // bambini visibili nella stessa pagina: apriGiornata (e2e/pagina-giornata.ts)
 // ritorna se l'account vede almeno un bambino.
-test.describe('53 — Calendario scolastico', () => {
+test.describe('53 — Giorni di chiusura (calendario scolastico)', () => {
   test.describe('come admin', () => {
     test.use({ storageState: statoAutenticazione('admin') });
 
@@ -36,8 +36,26 @@ test.describe('53 — Calendario scolastico', () => {
 
     test('/admin/calendario: elementi presenti + accessibilità', async ({ page }) => {
       await page.goto('/admin/calendario');
-      await expect(page.getByRole('heading', { name: 'Calendario scolastico' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Giorni di chiusura', level: 1 })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Aggiungi giorno di chiusura' })).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('la pagina si chiama "Giorni di chiusura" ed è nel menu sotto "Calendario"', async ({ page }) => {
+      await page.goto('/dashboard');
+      const menu = page.getByRole('navigation');
+      const voce = menu.getByRole('group', { name: 'Calendario', exact: true }).getByRole('link', {
+        name: 'Giorni di chiusura',
+        exact: true,
+      });
+      await expect(voce).toBeVisible();
+      await voce.click();
+      await page.waitForURL('/admin/calendario');
+      await expect(page.getByRole('heading', { name: 'Giorni di chiusura', level: 1 })).toBeVisible();
+      await expect(menu.getByRole('link', { name: 'Giorni di chiusura', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
       await nessunaViolazioneA11yGrave(page);
     });
 

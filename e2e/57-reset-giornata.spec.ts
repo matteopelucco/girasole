@@ -46,14 +46,14 @@ test.describe('57 — Reset giornata', () => {
     await expect(voci.last()).toHaveAttribute('href', '/admin/maestre');
     await expect(menu.getByRole('link', { name: 'Impostazioni avanzate' })).toHaveCount(0);
 
-    // Le sottosezioni stanno sotto "Impostazioni" e rientrate; "Utenti" non è prima di "Calendario scolastico".
+    // Le sottosezioni stanno sotto "Impostazioni" e rientrate; il gruppo "Calendario" sta prima di "Impostazioni".
     const y = async (l: typeof utenti) => (await l.boundingBox())!.y;
     const x = async (l: typeof utenti) => (await l.locator('span').first().boundingBox())!.x;
     expect(await y(impostazioni)).toBeLessThan(await y(reset));
     expect(await y(reset)).toBeLessThan(await y(utenti));
     expect(await x(reset)).toBeGreaterThan(await x(impostazioni));
     expect(await x(utenti)).toBeGreaterThan(await x(impostazioni));
-    expect(await y(menu.getByRole('link', { name: 'Calendario scolastico', exact: true }))).toBeLessThan(
+    expect(await y(menu.getByRole('group', { name: 'Calendario', exact: true }))).toBeLessThan(
       await y(impostazioni)
     );
 

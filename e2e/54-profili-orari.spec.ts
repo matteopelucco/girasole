@@ -57,17 +57,18 @@ test.describe('54 — Profili orari', () => {
       await expect(profili).toHaveAttribute('href', PERCORSO_PROFILI_ORARI);
       await expect(oreLavoro).toHaveAttribute('href', '/admin/ore-lavoro');
 
-      // Il gruppo sta dopo "Calendario scolastico" e prima di "Pagamenti".
+      // Il gruppo sta dopo il gruppo "Calendario" e prima di "Pagamenti".
       const y = async (l: typeof gruppo) => (await l.boundingBox())!.y;
-      const calendario = menu.getByRole('link', { name: 'Calendario scolastico', exact: true });
+      const calendario = menu.getByRole('group', { name: 'Calendario', exact: true });
       const pagamenti = menu.getByRole('group', { name: 'Pagamenti', exact: true });
       expect(await y(calendario)).toBeLessThan(await y(gruppo));
       expect(await y(gruppo)).toBeLessThan(await y(pagamenti));
 
-      // Le voci sono rientrate rispetto a quelle di primo livello.
+      // Le voci sono rientrate rispetto a quelle di primo livello (es. "Sezioni e bambini").
+      const sezioni = menu.getByRole('link', { name: 'Sezioni e bambini', exact: true });
       const x = async (l: typeof profili) => (await l.locator('span').first().boundingBox())!.x;
-      expect(await x(profili)).toBeGreaterThan(await x(calendario));
-      expect(await x(oreLavoro)).toBeGreaterThan(await x(calendario));
+      expect(await x(profili)).toBeGreaterThan(await x(sezioni));
+      expect(await x(oreLavoro)).toBeGreaterThan(await x(sezioni));
 
       await profili.click();
       await page.waitForURL(PERCORSO_PROFILI_ORARI);
