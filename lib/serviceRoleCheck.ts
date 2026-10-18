@@ -63,7 +63,7 @@ export const FILE_AMMESSI: readonly VoceAmmessa[] = [
   {
     percorso: 'app/admin/cron-job/actions.ts',
     motivo:
-      "Lancio a mano dei cron da parte dell'admin (specs/63, issue #302): stesso lavoro del cron, dopo requireAdmin().",
+      "Lancio a mano dell'admin, sempre dopo requireAdmin(): dei cron (specs/63, issue #302, stesso lavoro del cron) e della sola sincronizzazione del Google Calendar (specs/64, issue #326, stessa funzione del cron).",
   },
   {
     percorso: 'lib/grantCheck.ts',
