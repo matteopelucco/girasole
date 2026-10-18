@@ -87,7 +87,8 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(gruppo).toBeVisible();
       await expect(menu.getByRole('link', { name: 'Pagamenti', exact: true })).toHaveCount(0);
 
-      const calendario = menu.getByRole('link', { name: 'Calendario scolastico', exact: true });
+      // Voce di primo livello, per confrontare l'indentazione (il gruppo "Calendario" ha voci rientrate).
+      const calendario = menu.getByRole('link', { name: 'Sezioni e bambini', exact: true });
       const rette = menu.getByRole('link', { name: 'Rette', exact: true });
       const pagamentiBambino = menu.getByRole('link', { name: 'Pagamenti bambino', exact: true });
       const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
