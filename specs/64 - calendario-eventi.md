@@ -133,16 +133,17 @@ Allora il cron risponde con successo in pochi secondi
 E il report notturno viene prodotto come sempre
 E gli eventi normali del feed sono salvati; la serie ostile è saltata
 
-## Pagina "Calendario attività" (`/dashboard/calendario`, issue #320, nome e menu da #327)
+## Pagina "Calendario attività" (`/dashboard/calendario`, issue #320, nome e menu da #327, schede da #328)
 
 Pagina in sola lettura per admin, maestra e assistente, con voce di menu
 "Calendario attività" nel gruppo "Calendario", subito sotto "Dashboard".
 `/admin/calendario` ("Giorni di chiusura", spec 53) resta la pagina dove
-l'admin modifica i giorni di chiusura e non cambia (solo il nome e la voce di
-menu). In alto i **giorni di chiusura** (tabella
-`giorni_chiusura`), in basso la sezione **"A calendario"** con gli eventi di
-Google (tabella `calendario_eventi`): due sezioni distinte, con due query
-distinte, mai fuse in un'unica lista (vedi "Regole della pagina").
+l'admin modifica i giorni di chiusura (cambia solo l'aspetto della lista, vedi
+sotto). La pagina ha due **schede**: "Calendario attività" (iniziale, con la
+sezione **"A calendario"** e gli eventi di Google, tabella `calendario_eventi`)
+e "Giorni di chiusura" (con i **giorni di chiusura**, tabella
+`giorni_chiusura`): due sezioni distinte, con due query distinte, mai fuse in
+un'unica lista (vedi "Regole della pagina").
 
 ## Scenario: l'admin vede il gruppo "Calendario" con "Giorni di chiusura" e "Calendario attività"
 Dato che sono autenticato come admin
@@ -164,11 +165,31 @@ Dato che sono autenticato come genitore
 Quando guardo il menu laterale
 Allora non vedo il gruppo "Calendario", né "Calendario attività" né "Giorni di chiusura"
 
-## Scenario: la pagina si chiama "Calendario attività"
+## Scenario: la pagina si chiama "Calendario attività" e ha due schede, con gli eventi in primo piano
 Dato che sono autenticato come admin, maestra o assistente
-Quando apro `/dashboard/calendario`
+Quando apro `/dashboard/calendario` senza parametri
 Allora il titolo della pagina è "Calendario attività"
-E la sezione in alto resta "Giorni di chiusura" e quella in basso "A calendario"
+E vedo due schede, "Calendario attività" e "Giorni di chiusura", e "Calendario attività" è quella selezionata
+E sotto le schede vedo la sezione "A calendario" con gli eventi di Google
+E non vedo la lista dei giorni di chiusura
+
+## Scenario: la scheda "Giorni di chiusura" resta nell'indirizzo
+Dato che sono sulla pagina "Calendario attività"
+Quando premo la scheda "Giorni di chiusura"
+Allora l'indirizzo diventa `/dashboard/calendario?scheda=chiusure` e la scheda "Giorni di chiusura" risulta selezionata
+E vedo la sezione "Giorni di chiusura" e non gli eventi
+E ricaricando la pagina o aprendo direttamente quell'indirizzo la scheda "Giorni di chiusura" è ancora quella selezionata
+E premendo la scheda "Calendario attività" torno agli eventi, all'indirizzo senza parametri
+
+## Scenario: un valore sconosciuto della scheda apre "Calendario attività"
+Dato che sono autenticato come admin, maestra o assistente
+Quando apro `/dashboard/calendario?scheda=boh`
+Allora la scheda "Calendario attività" è quella selezionata e vedo gli eventi
+
+## Scenario: le schede si usano con la tastiera
+Dato che sono sulla pagina "Calendario attività"
+Quando, con il focus su una scheda, premo freccia destra o sinistra, Home o Fine
+Allora il focus passa all'altra scheda, che si apre, e il focus si vede
 
 ## Scenario: il genitore non accede alla pagina
 Dato che sono autenticato come genitore
@@ -176,25 +197,33 @@ Quando provo ad aprire `/dashboard/calendario`
 Allora vengo reindirizzato alla dashboard
 E non vedo né giorni di chiusura né eventi
 
-## Scenario: i giorni di chiusura in corso e futuri sono in alto, in sola lettura
+## Scenario: i giorni di chiusura in corso e futuri stanno nella scheda "Giorni di chiusura", in sola lettura
 Dato che l'admin ha inserito un giorno di chiusura che comincia nel futuro
-Quando apro la pagina "Calendario attività" come maestra
-Allora in cima vedo la sezione "Giorni di chiusura" con il giorno futuro, con le date e la nota
+Quando apro la scheda "Giorni di chiusura" della pagina "Calendario attività" come maestra
+Allora vedo la sezione "Giorni di chiusura" con il giorno futuro, con le date e la nota
 E un giorno di chiusura in corso oggi porta l'etichetta "In corso"
 E i giorni di chiusura già conclusi non compaiono
-E non c'è nessun pulsante o modulo per modificarli
+E non c'è nessun pulsante, modulo o link "Modifica" per modificarli
 E nella sezione leggo che sabato e domenica sono chiusi sempre
 
 ## Scenario: l'admin trova il rimando per gestire i giorni di chiusura
 Dato che sono autenticato come admin
-Quando apro la pagina "Calendario attività"
+Quando apro la scheda "Giorni di chiusura" della pagina "Calendario attività"
 Allora nella sezione "Giorni di chiusura" vedo il link "Gestisci i giorni di chiusura" verso `/admin/calendario`
 E maestra e assistente non vedono quel link
 
 ## Scenario: senza giorni di chiusura in programma lo stato vuoto è gentile
 Dato che non ci sono giorni di chiusura in corso o futuri
-Quando apro la pagina "Calendario attività"
+Quando apro la scheda "Giorni di chiusura" della pagina "Calendario attività"
 Allora la sezione "Giorni di chiusura" dice "Nessun giorno di chiusura in programma."
+
+## Scenario: la pagina "Giorni di chiusura" dell'admin usa la stessa lista, con "Modifica"
+Dato che l'admin ha inserito un giorno di chiusura futuro con una nota
+Quando apro `/admin/calendario` come admin
+Allora la lista dei giorni di chiusura ha lo stesso aspetto della scheda "Giorni di chiusura" di "Calendario attività" (stessa scheda con bordo colorato, stesse date, stessa nota)
+E ogni giorno ha il link "Modifica" verso la sua pagina, che nella scheda di sola lettura non c'è
+E la lista contiene tutte le chiusure, anche quelle già concluse
+E form di creazione, modifica ed eliminazione funzionano come prima (specs/53)
 
 ## Scenario: gli eventi sono raggruppati per mese e per giorno, con la data in evidenza
 Dato che il calendario ha eventi futuri in giorni diversi
@@ -377,19 +406,34 @@ E la pagina non ha violazioni di accessibilità gravi
   pulsante "Aggiorna ora" è la sincronizzazione a mano, vedi la sezione in fondo.)
 
 ## Regole della pagina "Calendario attività"
-- **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta,
-  invariata, la pagina dove l'admin modifica le chiusure). Accesso a chi è staff
+- **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta
+  la pagina dove l'admin modifica le chiusure). Accesso a chi è staff
   (`requireStaff`): il genitore è reindirizzato alla dashboard.
+- **Schede** ([#328](https://github.com/matteopelucco/girasole/issues/328)): la scheda
+  attiva sta nell'indirizzo (`?scheda=chiusure`; senza parametro, o con un valore
+  sconosciuto, è "Calendario attività"), come nella pagina "Azioni" (specs/63):
+  la pagina si disegna sul server e vale anche con "ricarica" e con il link
+  diretto. Il componente delle schede (`components/Schede.tsx`, logica in
+  `lib/schede.ts`) è lo stesso della pagina "Azioni", non una copia. Si carica
+  solo la scheda scelta (una sola delle due query alla volta).
+- **Lista dei giorni di chiusura**: un solo componente (`components/ElencoChiusure.tsx`)
+  per la scheda "Giorni di chiusura" e per `/admin/calendario`, con due modi:
+  sola lettura (solo chiusure con fine da oggi in poi, dalla più vicina, come
+  prima) e gestione (tutte le chiusure, dalla più recente, ognuna è un link
+  alla sua pagina con "Modifica"). Stile e formato delle date sono quelli della
+  scheda ("In corso" incluso). Il componente non legge il database: ogni pagina
+  passa le sue righe. Form di creazione, azioni, pagina di dettaglio e blocco di
+  presenze, pasti e ore di lavoro (specs/53) non cambiano.
 - **Regola di separazione** ([#320](https://github.com/matteopelucco/girasole/issues/320)):
   giorni di chiusura (spec 53) e eventi di Google sono cose distinte, anche nel
-  codice: due sezioni, due query, mai una lista unica. Gli eventi di Google non
+  codice: due sezioni (ora due schede), due query, mai una lista unica. Gli eventi di Google non
   creano né modificano giorni di chiusura e non bloccano presenze, pasti o ore di
   lavoro; la chiusura vera la dichiara solo l'admin in `/admin/calendario`.
 - **Letture**: solo dal database, con la sessione di chi guarda (RLS); la pagina
   non chiama mai Google. Non legge né mostra `impostazioni_calendario.ical_url`:
   per sapere se il calendario è collegato (solo per l'admin) chiede soltanto se
   la riga ha un indirizzo, senza leggerlo.
-- **Chiusure mostrate**: quelle con data di fine da oggi in poi, dalla più vicina.
+- **Chiusure mostrate** nella scheda: quelle con data di fine da oggi in poi, dalla più vicina.
 - **Eventi mostrati**: quelli salvati dal cron (da circa 30 giorni fa a 12 mesi
   avanti). Giorni, mesi e orari sono quelli di Europe/Rome. Un evento è "passato"
   se il suo ultimo giorno è prima di oggi. Un evento su più giorni compare una

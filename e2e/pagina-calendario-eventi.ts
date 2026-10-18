@@ -2,17 +2,21 @@
 // calendario-eventi.md, issue #320). Il file `pagina-calendario.ts` riguarda
 // invece la sezione "Calendario Google" di "Parametri di funzionamento".
 //
-// STRUTTURA. Titolo "Calendario attività"; sezione "Giorni di chiusura" (ruolo
-// "region"; ogni chiusura è `data-testid="chiusura"`); sezione "A calendario"
-// (ruolo "region") con i blocchi `eventi-prossimi` e `eventi-passati`. In
-// ciascun blocco un titolo per mese (h4), un blocco per giorno
-// (`giorno-YYYY-MM-DD`) e una scheda per evento (`evento`, con `orario-evento`,
-// `luogo-evento`, `descrizione-evento`, `in-corso`). Le chiusure si creano ed
-// eliminano dalla pagina admin (specs/53), come fa e2e/53.
+// STRUTTURA (schede da #328). Titolo "Calendario attività"; due schede (ruolo
+// "tab" nel "tablist"): "Calendario attività" (iniziale) con la sezione "A
+// calendario" (ruolo "region") e "Giorni di chiusura" (`?scheda=chiusure`) con
+// la sezione "Giorni di chiusura" (ruolo "region"; ogni chiusura è
+// `data-testid="chiusura"`). La sezione degli eventi ha i blocchi
+// `eventi-prossimi` e `eventi-passati`. In ciascun blocco un titolo per mese
+// (h4), un blocco per giorno (`giorno-YYYY-MM-DD`) e una scheda per evento
+// (`evento`, con `orario-evento`, `luogo-evento`, `descrizione-evento`,
+// `in-corso`). Le chiusure si creano ed eliminano dalla pagina admin
+// (specs/53), come fa e2e/53.
 import { expect, type Locator, type Page } from '@playwright/test';
 import { clickEAttendiAzione } from './helpers';
 
 export const PERCORSO_CALENDARIO = '/dashboard/calendario';
+export const PERCORSO_CHIUSURE_SCHEDA = `${PERCORSO_CALENDARIO}?scheda=chiusure`;
 export const PERCORSO_CHIUSURE_ADMIN = '/admin/calendario';
 
 // Classe della scheda di un evento passato (attenuato con colori, non con
@@ -51,12 +55,29 @@ export function giornoBreveItaliano(data: string): string {
   );
 }
 
+// Barra delle schede della pagina e singola scheda per nome.
+export function schedeCalendario(page: Page): Locator {
+  return page.getByRole('tablist');
+}
+
+export function schedaCalendario(page: Page, nome: 'Calendario attività' | 'Giorni di chiusura'): Locator {
+  return schedeCalendario(page).getByRole('tab', { name: nome, exact: true });
+}
+
+// Apre la scheda iniziale (gli eventi) e aspetta che la sezione non sia più sagome.
 export async function apriCalendario(page: Page): Promise<void> {
   await page.goto(PERCORSO_CALENDARIO);
   await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
-  // Le due sezioni si completano a parte: si aspetta che non siano più sagome.
-  await expect(sezioneChiusure(page).getByRole('status')).toHaveCount(0);
+  await expect(sezioneEventi(page)).toBeVisible();
   await expect(sezioneEventi(page).getByRole('status')).toHaveCount(0);
+}
+
+// Apre la scheda "Giorni di chiusura" e aspetta che la sezione non sia più sagome.
+export async function apriChiusure(page: Page): Promise<void> {
+  await page.goto(PERCORSO_CHIUSURE_SCHEDA);
+  await expect(page.getByRole('heading', { name: 'Calendario attività', level: 1 })).toBeVisible();
+  await expect(sezioneChiusure(page)).toBeVisible();
+  await expect(sezioneChiusure(page).getByRole('status')).toHaveCount(0);
 }
 
 // Voce "Calendario attività" del menu (specs/64), dentro il gruppo "Calendario".
