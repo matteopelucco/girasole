@@ -55,6 +55,12 @@ const DESCRIZIONE_MOTIVO: Record<MotivoErroreCalendario, string> = {
   imprevisto: 'errore imprevisto',
 };
 
+// Vero solo per un motivo dell'elenco fisso (chi costruisce messaggi per l'admin
+// non si fida di un valore che potrebbe contenere altro).
+export function motivoErroreValido(valore: unknown): valore is MotivoErroreCalendario {
+  return typeof valore === 'string' && Object.hasOwn(DESCRIZIONE_MOTIVO, valore);
+}
+
 // Errore con un motivo scelto da un elenco fisso: il messaggio non contiene
 // nulla del feed né dell'indirizzo.
 export class ErroreCalendario extends Error {
