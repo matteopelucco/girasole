@@ -9,13 +9,14 @@ riepilogo degli allarmi ([07 - allarmi.md](07%20-%20allarmi.md)) e il
 report notturno
 ([52 - report-email-automatico.md](52%20-%20report-email-automatico.md)),
 sia quando li lancia Vercel Cron sia quando li lancia l'admin a mano dalla
-pagina (issue #302).
+pagina (issue #302). La sincronizzazione del Google Calendar lanciata a mano
+dalla scheda "Azioni" (issue #326) non scrive nel registro.
 
 ## Obiettivo
 La voce di menu e la pagina si chiamano "Azioni" (issue #325) e hanno due
 schede: "Cron Job", con la visibilità sui lanci dei job pianificati descritta
-qui sotto, e "Azioni", per ora vuota, che in futuro ospiterà le azioni che
-l'admin lancia a mano.
+qui sotto, e "Azioni", che ospita le azioni che l'admin lancia a mano (oggi una
+sola: "Sincronizza calendario", issue #326).
 
 Dare all'admin un po' di visibilità sui lanci dei job pianificati: quando
 sono partiti e se sono andati bene, senza dover entrare nel pannello di
@@ -42,12 +43,15 @@ E con la tastiera, su una scheda, le frecce sinistra e destra passano all'altra 
 E a 375 px di larghezza le schede restano leggibili e non c'è scorrimento orizzontale
 E la pagina non ha violazioni di accessibilità gravi
 
-## Scenario: la scheda "Azioni" è per ora vuota e lo dice con un messaggio
+## Scenario: la scheda "Azioni" ha l'azione "Sincronizza calendario" con il suo pulsante
 Dato che sono autenticato come admin
 Quando apro la scheda "Azioni" (`/admin/cron-job?scheda=azioni`)
-Allora vedo il messaggio "Qui compariranno le azioni lanciabili a mano. Per ora non ce ne sono."
-E non vedo né blocchi dei job né pulsanti "Lancia ora"
+Allora vedo l'azione "Sincronizza calendario" con una breve spiegazione e il pulsante "Sincronizza calendario ora", attivo
+E non vedo altre azioni, né blocchi dei job, né pulsanti "Lancia ora", né il vecchio messaggio "Per ora non ce ne sono"
+E non c'è nessun esito finché non premo il pulsante
+E a 375 px di larghezza il pulsante resta leggibile e non c'è scorrimento orizzontale
 E la pagina non ha violazioni di accessibilità gravi
+(Cosa succede premendo il pulsante: scenari nella sezione "Sincronizzazione a mano" di [64 - calendario-eventi.md](64%20-%20calendario-eventi.md).)
 
 ## Scenario: i lanci sono raggruppati per job, con nome, data e ora, stato
 Dato che sono autenticato come admin
@@ -110,7 +114,7 @@ Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/cron-job` (anche con `?scheda=azioni`)
 Allora vengo reindirizzato alla dashboard
 E non vedo la voce "Azioni" nel menu
-E non ho nessun modo di lanciare un job a mano
+E non ho nessun modo di lanciare un job a mano né di sincronizzare il calendario a mano (la Server Action rifà `requireAdmin()` da sé, vedi 64)
 
 ## Regole
 - Nome e indirizzo (issue #325, decisione di Matteo del 18/10/2026): la voce
@@ -127,8 +131,17 @@ E non ho nessun modo di lanciare un job a mano
   l'unico JavaScript sul client serve per le frecce sinistra/destra (e
   Home/Fine) della tastiera. "Carica altri" resta nella scheda "Cron Job" e
   non porta `scheda` (è quella iniziale).
-- La scheda "Azioni" è vuota: nessuna azione, nessuna Server Action nuova. Il
-  lancio a mano dei cron resta nella scheda "Cron Job", invariato.
+- La scheda "Azioni" contiene una sola azione, "Sincronizza calendario"
+  (issue #326, cambia la regola di #325 secondo cui era vuota e senza Server
+  Action): lancia solo la sincronizzazione del Google Calendar di
+  [64 - calendario-eventi.md](64%20-%20calendario-eventi.md), senza report
+  notturno e senza email, e **non scrive nel registro** (nessuna migration: lo
+  stato vive nella pagina, ricaricandola l'ultimo esito si perde). Il lancio a
+  mano dei cron resta nella scheda "Cron Job", invariato.
+- Lessico: l'esito di un lancio nel registro e dei lanci a mano dei cron è
+  "OK"/"KO"; l'esito della sincronizzazione a mano della scheda "Azioni" è
+  "OK"/"ERRORE" (parole della issue #326). Sono due cose diverse: "KO" resta
+  per il registro dei cron.
 - Pagina riservata all'admin con `requireAdmin`, come le altre pagine
   `/admin/*`. Voce di menu in `lib/navigazione.ts`, rientrata
   (`rientrata: true`) tra "Parametri di funzionamento" e "Utenti".

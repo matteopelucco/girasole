@@ -353,7 +353,8 @@ E la pagina non ha violazioni di accessibilità gravi
   riuscito", "errore imprevisto"). Se anche una parte del
   report non è riuscita, i due messaggi si uniscono. Sincronizzazione
   disattivata non è un errore.
-- **Fuori scope**: accesso dei genitori, pulsante "Aggiorna ora", pulizia dell'archivio storico.
+- **Fuori scope**: accesso dei genitori, pulizia dell'archivio storico. (Il
+  pulsante "Aggiorna ora" è la sincronizzazione a mano, vedi la sezione in fondo.)
 
 ## Regole della pagina "Calendario"
 - **Percorso**: `/dashboard/calendario`, distinto da `/admin/calendario` (che resta,
@@ -469,3 +470,80 @@ E la pagina non ha violazioni di accessibilità gravi
 - **Solo testo**: come nella pagina, titolo e orario sono testo reso da React;
   mai HTML, mai link costruiti dal feed. L'unico link del riquadro è "Vedi
   tutto", fisso.
+
+## Sincronizzazione a mano dalla scheda "Azioni" (issue #326)
+L'admin lancia la sincronizzazione senza aspettare la notte, dalla scheda "Azioni"
+di `/admin/cron-job` ([63 - cron-job.md](63%20-%20cron-job.md)): azione "Sincronizza
+calendario", pulsante "Sincronizza calendario ora". Lancia **solo** la
+sincronizzazione (`sincronizzaCalendario`, la stessa del cron): nessun report
+notturno, nessuna email, nessuna riga nel registro "Cron Job".
+
+## Scenario: il pulsante "Sincronizza calendario ora" c'è solo per l'admin
+Dato che sono autenticato come admin
+Quando apro la scheda "Azioni"
+Allora vedo il pulsante "Sincronizza calendario ora"
+E se sono maestra, assistente o genitore non raggiungo la pagina (vengo reindirizzato alla dashboard) e non vedo il pulsante
+
+## Scenario: sincronizzazione a mano riuscita: "Esecuzione in corso", poi "OK"
+Dato che sono autenticato come admin
+E l'indirizzo di un calendario è salvato e il feed è valido
+Quando premo "Sincronizza calendario ora"
+Allora compare "Esecuzione in corso…" (annunciato ai lettori di schermo) e il pulsante non si può premere finché il lavoro non finisce
+Quando la sincronizzazione finisce
+Allora vedo l'esito "OK" e quanti eventi sono stati aggiunti, aggiornati e tolti (solo numeri)
+E gli eventi del feed sono nel database (si vedono nella pagina "Calendario")
+E non è partita nessuna email e nel registro "Cron Job" non c'è nessun lancio nuovo
+E la pagina non ha violazioni di accessibilità gravi
+
+## Scenario: sincronizzazione a mano non riuscita: "ERRORE" con il motivo, e si può rilanciare
+Dato che sono autenticato come admin
+E il servizio non risponde, risponde con un errore o restituisce un feed non valido
+Quando premo "Sincronizza calendario ora"
+Allora compare "Esecuzione in corso…" e poi l'esito "ERRORE" con il motivo leggibile, nella forma "Calendario non sincronizzato: <motivo>." (motivo dall'elenco fisso delle Regole)
+E nell'esito non compaiono l'indirizzo del feed, né stack, né chiavi
+E gli eventi già salvati sono rimasti
+Quando il servizio torna a funzionare e premo di nuovo il pulsante
+Allora compare di nuovo "Esecuzione in corso…" e poi l'esito "OK"
+
+## Scenario: senza indirizzo impostato la sincronizzazione a mano finisce "OK" come disattivata
+Dato che sono autenticato come admin
+E nessun indirizzo iCal è salvato
+Quando premo "Sincronizza calendario ora"
+Allora l'esito è "OK" con il messaggio "Sincronizzazione disattivata: nessun indirizzo impostato."
+E non è un errore e non viene letto nessun feed
+
+## Scenario: chi non è admin non può lanciare la sincronizzazione a mano
+Dato che sono autenticato come maestra, assistente o genitore
+Quando provo a invocare la Server Action della sincronizzazione a mano (anche rifacendo la richiesta del browser dell'admin)
+Allora vengo reindirizzato alla dashboard e la sincronizzazione non parte (nessun esito di sincronizzazione nella risposta)
+
+### Regole della sincronizzazione a mano
+- **Sicurezza** (issue human-in-the-loop, review di `rls-guardian`): Server Action
+  `sincronizzaCalendarioAMano` in `app/admin/cron-job/actions.ts`. Ordine: 1)
+  `requireAdmin()` come prima istruzione (chi non è admin va alla dashboard,
+  prima di qualunque lettura o scrittura); 2) guardia contro il lancio
+  concorrente; 3) solo allora `createAdminClient()` (service_role, che serve per
+  leggere l'indirizzo e per la funzione `sostituisci_eventi_calendario`, eseguibile
+  solo dalla service_role) e `sincronizzaCalendario`. L'azione **non riceve nulla
+  dal browser** (lo stato precedente di `useActionState` è ignorato): nessun
+  parametro da validare. Già dichiarata in ADR-0002 e in `FILE_AMMESSI`
+  (`lib/serviceRoleCheck.ts`) insieme al lancio a mano dei cron: stesso file.
+- **Un solo lancio alla volta** per istanza del server: finché una sincronizzazione
+  a mano è in corso (al massimo 60 secondi, poi la guardia decade) un nuovo lancio
+  è rifiutato con l'esito "ERRORE" e il messaggio "Una sincronizzazione è già in
+  corso: attendi che finisca." La guardia è in memoria (nessuna tabella, nessuna
+  migration): con più istanze serverless non è globale, ma il danno è nullo (la
+  sostituzione degli eventi è atomica e idempotente, e l'analisi del feed gira in
+  un worker con tempo massimo) e il pulsante è disabilitato anche nel browser.
+- **Risposta senza dati sensibili.** L'esito è ricostruito dal server da una
+  funzione pura (`lib/sincronizzazioneManuale.ts`) a partire dal risultato di
+  `sincronizzaCalendario`: solo stato, una frase scelta da un elenco fisso e tre
+  numeri (aggiunti, aggiornati, tolti). Mai testi di eccezioni, titoli di eventi,
+  indirizzo o chiavi.
+- **Etichette**: "Esecuzione in corso…", "OK", "ERRORE" (non "KO", che resta per il
+  registro dei cron). Sincronizzazione disattivata = "OK" con il messaggio fisso
+  sopra. È un'eccezione voluta alla regola "l'effetto è la conferma" (ADR-0003):
+  l'esito è richiesto dalla issue #326.
+- Non scrive nel registro "Cron Job" e non tocca il report notturno: se fallisce
+  restano gli eventi già salvati; se coincide con il cron notturno non ci sono
+  danni (sostituzione atomica).
