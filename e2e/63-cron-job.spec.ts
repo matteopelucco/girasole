@@ -19,15 +19,18 @@ import {
   PERCORSO_CRON_JOB,
   PERCORSO_SCHEDA_AZIONI,
   avvisoInCorso,
+  azioneSincronizza,
   bloccoCron,
   caricaAltri,
   confermaLancio,
   eRichiestaAzione,
   esitoLancio,
+  esitoSincronizzazione,
   iniziLanci,
   lanciCron,
   pannelloScheda,
   pulsanteLanciaOra,
+  pulsanteSincronizza,
   scheda,
   schede,
   tagEstemporaneo,
@@ -131,12 +134,30 @@ test.describe('63 — Azioni (e Cron Job)', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('la scheda "Azioni" è per ora vuota e lo dice con un messaggio', async ({ page }) => {
+    test("la scheda \"Azioni\" ha l'azione \"Sincronizza calendario\" con il suo pulsante", async ({ page }) => {
       await page.goto(PERCORSO_SCHEDA_AZIONI);
-      await expect(pannelloScheda(page)).toContainText(MESSAGGIO_AZIONI_VUOTE);
+      const azione = azioneSincronizza(page);
+      await expect(azione.getByRole('heading', { name: 'Sincronizza calendario', level: 2 })).toBeVisible();
+      await expect(pulsanteSincronizza(page)).toBeEnabled();
+      // Una sola azione: nessun altro pulsante, nessun blocco dei job, niente vecchio messaggio.
+      await expect(pannelloScheda(page).getByRole('button')).toHaveCount(1);
+      await expect(pannelloScheda(page)).not.toContainText(MESSAGGIO_AZIONI_VUOTE);
       await expect(page.getByRole('button', { name: 'Lancia ora' })).toHaveCount(0);
       await expect(page.getByRole('region', { name: 'Report notturno' })).toHaveCount(0);
       await expect(page.getByRole('region', { name: 'Riepilogo allarmi' })).toHaveCount(0);
+      // Nessun esito finché non si preme il pulsante.
+      await expect(esitoSincronizzazione(page)).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+
+      // A 375 px il pulsante resta leggibile e la pagina non scorre in orizzontale.
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      const box = await pulsanteSincronizza(page).boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      const eccesso = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(eccesso).toBeLessThanOrEqual(0);
       await nessunaViolazioneA11yGrave(page);
     });
 
@@ -325,8 +346,10 @@ test.describe('63 — Azioni (e Cron Job)', () => {
       await page.waitForURL('/dashboard', { timeout: 20_000 });
       await page.goto(PERCORSO_SCHEDA_AZIONI);
       await page.waitForURL('/dashboard', { timeout: 20_000 });
-      // Nessun modo di lanciare un job a mano (l'azione rifà comunque requireAdmin).
+      // Nessun modo di lanciare un job a mano né di sincronizzare il calendario
+      // (le azioni rifanno comunque requireAdmin: prova in e2e/64).
       await expect(page.getByRole('button', { name: 'Lancia ora' })).toHaveCount(0);
+      await expect(pulsanteSincronizza(page)).toHaveCount(0);
       await context.close();
     }
   });
