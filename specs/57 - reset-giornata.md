@@ -16,7 +16,7 @@ Dato che sono autenticato come admin
 Quando guardo la sidebar di navigazione
 Allora in fondo al menu vedo la voce "Impostazioni" (`/admin/impostazioni-avanzate`)
 E sotto, rientrate, nell'ordine: "Reset giornata" (`/admin/reset-giornata`),
-"Parametri di funzionamento" (specs/62), "Cron Job" (specs/63) e poi
+"Parametri di funzionamento" (specs/62), "Azioni" (specs/63) e poi
 "Utenti" (`/admin/maestre`), che è l'ultima
 E "Utenti" non compare più tra le voci di primo livello, prima di "Calendario scolastico"
 E sulla pagina del reset la voce "Reset giornata" risulta evidenziata
@@ -25,7 +25,7 @@ E sulla pagina del reset la voce "Reset giornata" risulta evidenziata
 Dato che sono autenticato come admin
 Quando apro "Impostazioni" dal menu (`/admin/impostazioni-avanzate`)
 Allora vedo quattro riquadri, nello stesso ordine delle voci rientrate del
-menu: "Reset giornata", "Parametri di funzionamento", "Cron Job" e "Utenti",
+menu: "Reset giornata", "Parametri di funzionamento", "Azioni" e "Utenti",
 ciascuno con titolo e breve descrizione
 E la pagina non ha violazioni di accessibilità gravi
 E premendo "Reset giornata" arrivo alla pagina `/admin/reset-giornata`

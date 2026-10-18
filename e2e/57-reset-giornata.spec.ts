@@ -25,7 +25,7 @@ test.describe('57 — Reset giornata', () => {
 
   // I tre test seguenti non dipendono dal calendario né scrivono dati:
   // controllano solo menu e pagina indice (nessun reset eseguito).
-  test('"Impostazioni" è in fondo al menu con "Reset giornata", "Parametri di funzionamento", "Cron Job" e "Utenti" rientrate sotto', async ({
+  test('"Impostazioni" è in fondo al menu con "Reset giornata", "Parametri di funzionamento", "Azioni" e "Utenti" rientrate sotto', async ({
     page,
   }) => {
     await page.goto('/admin');
@@ -36,7 +36,7 @@ test.describe('57 — Reset giornata', () => {
     const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
 
     // Ultime cinque voci: "Impostazioni", "Reset giornata", "Parametri di funzionamento"
-    // (specs/62), "Cron Job" (specs/63) e "Utenti".
+    // (specs/62), "Azioni" (specs/63) e "Utenti".
     await expect(voci.nth(-5)).toHaveText(/Impostazioni/);
     await expect(voci.nth(-5)).toHaveAttribute('href', '/admin/impostazioni-avanzate');
     await expect(voci.nth(-4)).toHaveAttribute('href', '/admin/reset-giornata');
@@ -79,7 +79,7 @@ test.describe('57 — Reset giornata', () => {
     const attesi = [
       ['Reset giornata', '/admin/reset-giornata', 'presenze e i pasti'],
       ['Parametri di funzionamento', '/admin/parametri-funzionamento', 'ambiente'],
-      ['Cron Job', '/admin/cron-job', 'job pianificati'],
+      ['Azioni', '/admin/cron-job', 'job pianificati'],
       ['Utenti', '/admin/maestre', 'ruoli'],
     ] as const;
     for (const [i, [titolo, href, testo]] of attesi.entries()) {

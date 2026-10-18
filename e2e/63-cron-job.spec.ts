@@ -15,7 +15,9 @@
 import { test, expect } from '@playwright/test';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 import {
+  MESSAGGIO_AZIONI_VUOTE,
   PERCORSO_CRON_JOB,
+  PERCORSO_SCHEDA_AZIONI,
   avvisoInCorso,
   bloccoCron,
   caricaAltri,
@@ -24,11 +26,14 @@ import {
   esitoLancio,
   iniziLanci,
   lanciCron,
+  pannelloScheda,
   pulsanteLanciaOra,
+  scheda,
+  schede,
   tagEstemporaneo,
 } from './pagina-cron-job';
 
-test.describe('63 — Cron Job', () => {
+test.describe('63 — Azioni (e Cron Job)', () => {
   test.describe('admin', () => {
     test.describe.configure({ mode: 'default' });
     test.use({ storageState: statoAutenticazione('admin') });
@@ -37,14 +42,14 @@ test.describe('63 — Cron Job', () => {
       test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
     });
 
-    test('"Cron Job" è nel menu sotto "Impostazioni", rientrata, dopo "Parametri di funzionamento" e prima di "Utenti"', async ({
+    test('"Azioni" è nel menu sotto "Impostazioni", rientrata, dopo "Parametri di funzionamento" e prima di "Utenti"', async ({
       page,
     }) => {
       await page.goto('/admin');
       const menu = page.getByRole('navigation');
       const impostazioni = menu.getByRole('link', { name: 'Impostazioni', exact: true });
       const parametri = menu.getByRole('link', { name: 'Parametri di funzionamento', exact: true });
-      const cron = menu.getByRole('link', { name: 'Cron Job', exact: true });
+      const cron = menu.getByRole('link', { name: 'Azioni', exact: true });
       const utenti = menu.getByRole('link', { name: 'Utenti', exact: true });
 
       await expect(cron).toHaveAttribute('href', PERCORSO_CRON_JOB);
@@ -54,18 +59,93 @@ test.describe('63 — Cron Job', () => {
       expect(await y(parametri)).toBeLessThan(await y(cron));
       expect(await y(cron)).toBeLessThan(await y(utenti));
       expect(await x(cron)).toBeGreaterThan(await x(impostazioni));
+      // "Cron Job" non è più una voce di menu: è il nome di una scheda.
+      await expect(menu.getByRole('link', { name: 'Cron Job' })).toHaveCount(0);
+    });
+
+    test('la pagina "Azioni" ha due schede, "Cron Job" è quella iniziale', async ({ page }) => {
+      await page.goto('/admin');
+      await page.getByRole('navigation').getByRole('link', { name: 'Azioni', exact: true }).click();
+      await page.waitForURL(PERCORSO_CRON_JOB);
+
+      await expect(page.getByRole('heading', { name: 'Azioni', level: 1 })).toBeVisible();
+      await expect(page.getByRole('navigation').getByRole('link', { name: 'Azioni', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page'
+      );
+      await expect(schede(page).getByRole('tab')).toHaveText(['Cron Job', 'Azioni']);
+      await expect(scheda(page, 'Cron Job')).toHaveAttribute('aria-selected', 'true');
+      await expect(scheda(page, 'Azioni')).toHaveAttribute('aria-selected', 'false');
+      await expect(pannelloScheda(page)).toContainText('I lanci dei job pianificati');
+      await expect(bloccoCron(page, 'Report notturno')).toBeVisible();
+
+      // Scheda "Azioni": l'indirizzo cambia e vale anche dopo un ricarica pagina.
+      await scheda(page, 'Azioni').click();
+      await page.waitForURL(/scheda=azioni/);
+      await expect(scheda(page, 'Azioni')).toHaveAttribute('aria-selected', 'true');
+      await page.reload();
+      await expect(scheda(page, 'Azioni')).toHaveAttribute('aria-selected', 'true');
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      await expect(scheda(page, 'Azioni')).toHaveAttribute('aria-selected', 'true');
+
+      // Si torna alla scheda iniziale.
+      await scheda(page, 'Cron Job').click();
+      await expect(scheda(page, 'Cron Job')).toHaveAttribute('aria-selected', 'true');
+      await expect(bloccoCron(page, 'Report notturno')).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test("le schede si usano con le frecce della tastiera, il focus si vede e a 375 px non c'è scorrimento orizzontale", async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto(PERCORSO_CRON_JOB);
+
+      const cron = scheda(page, 'Cron Job');
+      const azioni = scheda(page, 'Azioni');
+      await cron.focus();
+      await expect(cron).toBeFocused();
+      // Focus visibile: l'indicatore del focus non è "nessuno".
+      const contorno = await cron.evaluate((e) => getComputedStyle(e).outlineStyle);
+      expect(contorno).not.toBe('none');
+
+      await page.keyboard.press('ArrowRight');
+      await page.waitForURL(/scheda=azioni/);
+      await expect(azioni).toHaveAttribute('aria-selected', 'true');
+      await expect(azioni).toBeFocused();
+
+      await page.keyboard.press('ArrowLeft');
+      await expect(cron).toHaveAttribute('aria-selected', 'true');
+      await expect(cron).toBeFocused();
+
+      // Le due schede stanno nella larghezza dello schermo, senza scorrimento orizzontale.
+      for (const t of [cron, azioni]) {
+        const box = await t.boundingBox();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(375);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+      }
+      const eccesso = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(eccesso).toBeLessThanOrEqual(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('la scheda "Azioni" è per ora vuota e lo dice con un messaggio', async ({ page }) => {
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
+      await expect(pannelloScheda(page)).toContainText(MESSAGGIO_AZIONI_VUOTE);
+      await expect(page.getByRole('button', { name: 'Lancia ora' })).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Report notturno' })).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Riepilogo allarmi' })).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
     });
 
     test('i lanci sono raggruppati per job, con nome, data e ora, stato', async ({ page }) => {
       await page.goto('/admin');
-      await page.getByRole('navigation').getByRole('link', { name: 'Cron Job', exact: true }).click();
+      await page.getByRole('navigation').getByRole('link', { name: 'Azioni', exact: true }).click();
       await page.waitForURL(PERCORSO_CRON_JOB);
 
-      await expect(page.getByRole('heading', { name: 'Cron Job', level: 1 })).toBeVisible();
-      await expect(page.getByRole('navigation').getByRole('link', { name: 'Cron Job', exact: true })).toHaveAttribute(
-        'aria-current',
-        'page'
-      );
+      await expect(scheda(page, 'Cron Job')).toHaveAttribute('aria-selected', 'true');
 
       for (const titolo of ['Report notturno', 'Riepilogo allarmi'] as const) {
         const blocco = bloccoCron(page, titolo);
@@ -239,9 +319,11 @@ test.describe('63 — Cron Job', () => {
       const page = await context.newPage();
       await page.goto('/dashboard');
       await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'Cron Job' })).toHaveCount(0);
+      await expect(page.getByRole('link', { name: 'Azioni', exact: true })).toHaveCount(0);
 
       await page.goto(PERCORSO_CRON_JOB);
+      await page.waitForURL('/dashboard', { timeout: 20_000 });
+      await page.goto(PERCORSO_SCHEDA_AZIONI);
       await page.waitForURL('/dashboard', { timeout: 20_000 });
       // Nessun modo di lanciare un job a mano (l'azione rifà comunque requireAdmin).
       await expect(page.getByRole('button', { name: 'Lancia ora' })).toHaveCount(0);
