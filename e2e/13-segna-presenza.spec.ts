@@ -85,7 +85,7 @@ test.describe('13 — Segna presenza', () => {
       // Bug reale trovato durante un test con un'insegnante: il
       // pulsante selezionato appariva come uno spazio bianco perché
       // lib/classiStato.ts non era incluso nel content di Tailwind
-      // (tailwind.config.ts). Verifico il colore di sfondo REALE, non
+      // (vedi il commento in app/globals.css). Verifico il colore di sfondo REALE, non
       // solo il nome classe.
       await expect(bottoneAssente).toHaveCSS('background-color', 'rgb(87, 83, 78)');
       await expect(campoNota(card)).toHaveValue('influenza, rientra lunedì');

@@ -92,7 +92,7 @@ export function titoloRiepilogoSezione(titoloGruppo: string): string {
 // su grigio se il sesso non è compilato (o ha un valore inatteso).
 // Classi Tailwind letterali: Tailwind genera solo le classi che trova
 // come testo nei file scansionati (lib/** è incluso, vedi
-// tailwind.config.ts). `nomeAvatar` è il nome accessibile dell'avatar,
+// il commento in app/globals.css). `nomeAvatar` è il nome accessibile dell'avatar,
 // null per quello neutro (decorativo).
 export type StileSesso = {
   sesso: 'F' | 'M' | null;
