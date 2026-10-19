@@ -16,7 +16,7 @@ export default async function LoginPage(
   const searchParams = await props.searchParams;
   return (
     <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-xs">
         {/* SVG: next/image non lo ottimizza senza abilitare dangerouslyAllowSVG
             in next.config.mjs — per un logo vettoriale di poche decine di KB
             un <img> semplice va benissimo, nessun bisogno di quel toggle.
@@ -45,7 +45,7 @@ export default async function LoginPage(
               type="email"
               required
               defaultValue={searchParams?.email ?? ''}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
           </div>
           <div>

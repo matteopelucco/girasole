@@ -62,7 +62,7 @@ export default async function MaestrePage() {
             genitore).
           </p>
 
-          <div className="mt-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="mt-4 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
             <p className="mt-1 text-xs text-stone-600">{REGOLA_PASSWORD}</p>
             <FormConEsito action={creaUtente} resetSuOk className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -70,27 +70,27 @@ export default async function MaestrePage() {
                 name="nome"
                 required
                 placeholder="Nome"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <input
                 name="cognome"
                 required
                 placeholder="Cognome"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <input
                 name="email"
                 type="email"
                 required
                 placeholder="Email"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <input
                 name="telefono"
                 type="tel"
                 required
                 placeholder="Telefono"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <CampiPasswordConferma />
               <select
@@ -98,7 +98,7 @@ export default async function MaestrePage() {
                 required
                 defaultValue="genitore"
                 aria-label="Ruolo"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               >
                 {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
                   <option key={valore} value={valore}>
@@ -109,12 +109,12 @@ export default async function MaestrePage() {
               <input
                 name="indirizzo_residenza"
                 placeholder="Indirizzo di residenza (opzionale)"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500 sm:col-span-2"
               />
               <input
                 name="note"
                 placeholder="Note (opzionale)"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500 sm:col-span-2"
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500 sm:col-span-2"
               />
               <label className="flex items-center gap-2 text-sm text-stone-700 sm:col-span-2">
                 <input type="checkbox" name="abilitato_ore_lavoro" className="h-4 w-4" />
@@ -126,7 +126,7 @@ export default async function MaestrePage() {
                   name="profilo_orario_id"
                   defaultValue=""
                   aria-label="Profilo orario"
-                  className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 >
                   <option value="">Nessun profilo orario</option>
                   {profiliOrari?.map((po) => (
@@ -146,7 +146,7 @@ export default async function MaestrePage() {
             {profili?.map((p) => (
               <li
                 key={p.id}
-                className="relative rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
+                className="relative rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs"
               >
                 <div className="mb-2 pr-9 text-xs text-stone-600">{p.email}</div>
                 <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
@@ -155,37 +155,37 @@ export default async function MaestrePage() {
                     name="nome"
                     defaultValue={p.nome}
                     placeholder="Nome"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   />
                   <input
                     name="cognome"
                     defaultValue={p.cognome}
                     placeholder="Cognome"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   />
                   <input
                     name="telefono"
                     defaultValue={p.telefono ?? ''}
                     placeholder="Telefono"
-                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   />
                   <input
                     name="indirizzo_residenza"
                     defaultValue={p.indirizzo_residenza ?? ''}
                     placeholder="Indirizzo"
-                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   />
                   <input
                     name="note"
                     defaultValue={p.note ?? ''}
                     placeholder="Note"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   />
                   <select
                     name="ruolo"
                     defaultValue={p.ruolo}
                     aria-label="Ruolo"
-                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   >
                     {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
                       <option key={valore} value={valore}>
@@ -206,7 +206,7 @@ export default async function MaestrePage() {
                     name="profilo_orario_id"
                     defaultValue={p.profilo_orario_id ?? ''}
                     aria-label="Profilo orario"
-                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                   >
                     <option value="">Nessun profilo orario</option>
                     {profiliOrari?.map((po) => (
@@ -258,7 +258,7 @@ export default async function MaestrePage() {
               required
               defaultValue=""
               aria-label="Maestra o assistente"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="" disabled>
                 Maestra o assistente
@@ -274,7 +274,7 @@ export default async function MaestrePage() {
               required
               defaultValue=""
               aria-label="Sezione"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="" disabled>
                 Sezione
@@ -298,7 +298,7 @@ export default async function MaestrePage() {
 
           <ul className="mt-4 space-y-1">
             {staffAssegnabile.map((m) => (
-              <li key={m.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
+              <li key={m.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs">
                 <div className="font-medium">
                   {m.nome} {m.cognome}{' '}
                   <span className="font-normal text-stone-600">({ETICHETTE_RUOLO[m.ruolo]})</span>

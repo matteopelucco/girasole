@@ -45,7 +45,7 @@ export function SincronizzaCalendarioAMano({
         {!inCorso && esito?.stato === 'OK' && (
           <div data-testid="esito-sincronizzazione" className="text-emerald-800">
             <p className="font-medium">OK</p>
-            <p className="break-words">{esito.messaggio}</p>
+            <p className="wrap-break-word">{esito.messaggio}</p>
           </div>
         )}
       </div>
@@ -57,7 +57,7 @@ export function SincronizzaCalendarioAMano({
           className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
         >
           <p className="font-medium">ERRORE</p>
-          <p className="mt-1 break-words">{esito.messaggio}</p>
+          <p className="mt-1 wrap-break-word">{esito.messaggio}</p>
         </div>
       )}
     </section>

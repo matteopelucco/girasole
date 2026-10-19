@@ -6,8 +6,8 @@ import type { ReactNode } from 'react';
 // sezioni del Report, app/dashboard/report/page.tsx).
 export function CardRiepilogo({ titolo, children }: { titolo: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
-      <h2 className="mb-2 text-sm font-semibold text-stone-800 [overflow-wrap:anywhere]">{titolo}</h2>
+    <div className="rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
+      <h2 className="mb-2 text-sm font-semibold text-stone-800 wrap-anywhere">{titolo}</h2>
       {children}
     </div>
   );

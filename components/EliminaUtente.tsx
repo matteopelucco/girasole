@@ -64,7 +64,7 @@ export function EliminaUtente({
         onClick={() => setAperta(true)}
         aria-label="Elimina utente"
         title="Elimina utente"
-        className="absolute right-2 top-2 rounded-lg p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+        className="absolute right-2 top-2 rounded-lg p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400"
       >
         <IconaCestino />
       </button>

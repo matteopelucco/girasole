@@ -39,7 +39,7 @@ export default async function ProfiloOrarioPage() {
         </div>
 
         {profiloOrario ? (
-          <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+          <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
             <h2 className="text-base font-medium">{profiloOrario.nome}</h2>
             <table className="mt-3 w-full text-sm">
               <caption className="sr-only">Ore previste per giorno</caption>

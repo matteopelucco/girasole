@@ -114,7 +114,7 @@ async function SchedaCronJob({
           {gruppo.lanci.length === 0 ? (
             <p className="text-sm text-stone-600">Nessun lancio registrato.</p>
           ) : (
-            <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white shadow-sm">
+            <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white shadow-xs">
               {gruppo.lanci.map((lancio) => {
                 const { stato, messaggio } = statoLancio(lancio, adesso);
                 const etichetta = etichettaLancio(lancio);
@@ -143,7 +143,7 @@ async function SchedaCronJob({
                         {stato}
                       </span>
                     </div>
-                    {messaggio && <p className="mt-1 break-words text-stone-700">{messaggio}</p>}
+                    {messaggio && <p className="mt-1 wrap-break-word text-stone-700">{messaggio}</p>}
                   </li>
                 );
               })}

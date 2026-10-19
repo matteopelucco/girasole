@@ -47,7 +47,7 @@ export default async function AdminPage() {
               name="nome"
               required
               placeholder="Nome anno scolastico (es. 2026/2027)"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Crea
@@ -56,7 +56,7 @@ export default async function AdminPage() {
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
-              <li key={anno.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm">
+              <li key={anno.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs">
                 {anno.nome}
               </li>
             ))}
@@ -73,13 +73,13 @@ export default async function AdminPage() {
               name="nome"
               required
               placeholder="Nome sezione (es. Girasoli)"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <select
               name="anno_scolastico_id"
               defaultValue=""
               aria-label="Anno scolastico"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">Anno scolastico (opzionale)</option>
               {anniScolastici?.map((anno) => (
@@ -97,7 +97,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => (
               <li
                 key={sezione.id}
-                className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm"
+                className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs"
               >
                 <span>
                   {sezione.nome}
@@ -126,20 +126,20 @@ export default async function AdminPage() {
           <h1 className="text-lg font-medium">Bambini</h1>
           <FormConEsito
             action={creaBambino}
-            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
           >
             <div className="flex gap-2">
               <input
                 name="nome"
                 required
                 placeholder="Nome"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <input
                 name="cognome"
                 required
                 placeholder="Cognome"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </div>
             <div className="flex gap-2">
@@ -148,14 +148,14 @@ export default async function AdminPage() {
                 type="date"
                 required
                 aria-label="Data di nascita"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <select
                 name="sesso"
                 required
                 defaultValue=""
                 aria-label="Sesso"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               >
                 <option value="" disabled>
                   Sesso
@@ -168,7 +168,7 @@ export default async function AdminPage() {
               name="sezione_id"
               defaultValue=""
               aria-label="Sezione"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">Nessuna sezione (assegna dopo)</option>
               {sezioni?.map((sezione) => (
@@ -180,12 +180,12 @@ export default async function AdminPage() {
             <input
               name="note_allergie"
               placeholder="Allergie o intolleranze (opzionale)"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <input
               name="altre_note"
               placeholder="Altre note (opzionale)"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Aggiungi bambino
@@ -197,7 +197,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => {
               const lista = bambiniPerSezione.get(sezione.id) ?? [];
               return (
-                <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+                <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
                   <h3 className="text-sm font-semibold">{sezione.nome}</h3>
                   <ul className="mt-2 space-y-1">
                     {lista.map((bambino) => (
@@ -227,7 +227,7 @@ export default async function AdminPage() {
             )}
           </div>
 
-          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
             <h2 className="text-sm font-medium text-stone-700">Bambini senza classe o disattivati</h2>
             <ul className="mt-2 space-y-2">
               {bambiniSenzaClasseODisattivati.map((bambino) => (
@@ -249,7 +249,7 @@ export default async function AdminPage() {
                       required
                       defaultValue=""
                       aria-label={`Sezione per ${bambino.nome} ${bambino.cognome}`}
-                      className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-none focus:border-stone-500"
+                      className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
                     >
                       <option value="" disabled>
                         Assegna a...

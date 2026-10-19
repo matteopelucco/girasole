@@ -79,7 +79,7 @@ export function VariabiliAmbiente({
         />
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
         <table className="w-full table-fixed divide-y divide-stone-200 text-sm">
           <caption className="sr-only">Variabili d&apos;ambiente e relativi valori</caption>
           <thead>

@@ -43,7 +43,7 @@ export default async function ResetGiornataPage(props: { searchParams: Promise<{
 
         <SelettoreData basePath="/admin/reset-giornata" data={data} />
 
-        <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
           <h2 className="text-sm font-medium text-stone-700">
             Dati registrati per {formattaDataItaliana(data)}
           </h2>

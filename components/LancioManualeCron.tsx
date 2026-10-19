@@ -83,7 +83,7 @@ export function LancioManualeCron({
           className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
         >
           <p className="font-medium">Lancio a mano completato: KO</p>
-          <p className="mt-1 break-words">{esito.messaggio}</p>
+          <p className="mt-1 wrap-break-word">{esito.messaggio}</p>
         </div>
       )}
 

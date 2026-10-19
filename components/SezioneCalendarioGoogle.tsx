@@ -39,7 +39,7 @@ export function SezioneCalendarioGoogle({
           Impossibile leggere l&apos;impostazione del calendario. Riprova più tardi.
         </p>
       ) : (
-        <div key={stato.aggiornatoIl} className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div key={stato.aggiornatoIl} className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
           <p data-testid="stato-calendario" className="text-sm font-medium">
             {stato.configurato ? 'Sincronizzazione attiva' : 'Sincronizzazione disattivata'}
           </p>
@@ -64,7 +64,7 @@ export function SezioneCalendarioGoogle({
               spellCheck={false}
               aria-describedby="aiuto-indirizzo-ical"
               placeholder={stato.configurato ? 'Nuovo indirizzo (vuoto = disattiva)' : 'https://calendar.google.com/…/basic.ics'}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <PulsanteInvio className="min-h-11 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
               Salva indirizzo

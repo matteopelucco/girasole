@@ -41,7 +41,7 @@ function BloccoComunicazione({
   return (
     <div className="rounded-lg border border-stone-300 bg-stone-50 p-3 text-sm text-stone-700">
       <p>{messaggio}</p>
-      <ul aria-label={etichettaElenco} className="mt-2 list-disc space-y-1 pl-5 [overflow-wrap:anywhere]">
+      <ul aria-label={etichettaElenco} className="mt-2 list-disc space-y-1 pl-5 wrap-anywhere">
         {bambini.map((b) => (
           <li key={b.id}>
             {idBambiniInPagina.has(b.id) ? (

@@ -24,10 +24,10 @@ export type ValoriGiornoOreLavoro = {
 };
 
 const CLASSE_INPUT =
-  'mt-1 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-none focus:border-stone-500';
+  'mt-1 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-hidden focus:border-stone-500';
 const CLASSE_LABEL = 'flex flex-col text-xs text-stone-600';
 // Bersagli tattili di almeno 44px (specs/01 - ux.md, uso da telefono).
-const CLASSE_INPUT_TATTILE = 'mt-1 h-11 rounded-lg border border-stone-300 px-2 text-base outline-none focus:border-stone-500';
+const CLASSE_INPUT_TATTILE = 'mt-1 h-11 rounded-lg border border-stone-300 px-2 text-base outline-hidden focus:border-stone-500';
 const CLASSE_PULSANTE_PASSO =
   'mt-1 h-11 w-11 shrink-0 rounded-lg border border-stone-300 bg-white text-xl font-medium text-stone-700 hover:bg-stone-100';
 
@@ -106,7 +106,7 @@ export function RigaOreLavoro({
   const classeCard = stato !== 'lavorativo' ? classeCardOreLavoro(null) : classeCardOreLavoro(differenzaValida ? differenza : null);
 
   return (
-    <div className={`rounded-xl border p-3 shadow-sm ${classeCard}`}>
+    <div className={`rounded-xl border p-3 shadow-xs ${classeCard}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium">
           {etichettaGiorno} <span className="font-normal text-stone-600">{dataBreve}</span>
@@ -116,7 +116,7 @@ export function RigaOreLavoro({
           value={stato}
           onChange={(e) => setStato(e.target.value as StatoGiornoOreLavoro)}
           aria-label={`Stato ${etichettaGiorno}`}
-          className="rounded-lg border border-stone-300 px-2 py-1 text-sm outline-none focus:border-stone-500"
+          className="rounded-lg border border-stone-300 px-2 py-1 text-sm outline-hidden focus:border-stone-500"
         >
           {Object.entries(ETICHETTE_STATO_ORE_LAVORO).map(([valore, etichetta]) => (
             <option key={valore} value={valore}>

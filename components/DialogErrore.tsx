@@ -66,7 +66,7 @@ export function DialogErrore({
         <button
           type="button"
           onClick={() => dialogRef.current?.close()}
-          className="mt-4 min-h-11 w-full rounded-lg bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+          className="mt-4 min-h-11 w-full rounded-lg bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-800 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
         >
           Chiudi e correggi
         </button>

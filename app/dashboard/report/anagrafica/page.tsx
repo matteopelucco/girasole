@@ -96,7 +96,7 @@ export default async function AnagraficaClassiPage() {
           const maestre = maestrePerSezione.get(sezione.id) ?? [];
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
           return (
-            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-4 shadow-xs">
               <h2 className="text-base font-semibold">{sezione.nome}</h2>
               <p className="mt-1 text-sm text-stone-600">
                 Staff assegnato:{' '}
