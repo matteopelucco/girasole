@@ -1,0 +1,26 @@
+-- Girasole — SELECT di service_role sul registro degli invii a Rojac (specs/07,
+-- specs/61). Applicazione: in test con `supabase db push --project-ref
+-- <ref-test>`; in produzione solo Matteo, a mano, con `--project-ref`
+-- esplicito (mai SQL Editor, mai automazioni). Non incollare questo file nel
+-- SQL Editor.
+--
+-- Ordine di rilascio: applicare questa migration in produzione PRIMA del
+-- deploy del codice. Senza il privilegio il cron `/api/cron/allarmi` non
+-- riesce a leggere `invii_rojac` e il lancio fallisce (esito KO in "Cron
+-- Job"), perché un elenco vuoto darebbe un falso allarme.
+--
+-- La 0062 ha tolto ogni privilegio a service_role su `invii_rojac`
+-- (registro in sola aggiunta, riservato all'admin). L'allarme "mail mensile a
+-- Rojac non inviata" (specs/07) è calcolato anche dal cron, che usa
+-- service_role e deve sapere per quali mesi esiste almeno un invio.
+-- Si concede quindi il solo SELECT:
+--   * nessun INSERT, UPDATE o DELETE per service_role: il registro resta in
+--     sola aggiunta, scritto solo dall'admin con la propria sessione (RLS);
+--   * nessuna policy nuova (la RLS non si applica a service_role) e nessun
+--     privilegio nuovo per anon o authenticated.
+-- Il valore `rojac_non_inviata` nel vincolo CHECK di `allarmi_inviati.tipo` è
+-- già stato aggiunto dalla 0062 e non si rifà. Gli altri privilegi che il cron
+-- usa per questo allarme (`allarmi_inviati`: select, insert, delete;
+-- `pasti_comunicati` e `giorni_chiusura`: select) ci sono già.
+
+grant select on public.invii_rojac to service_role;

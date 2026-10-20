@@ -16,6 +16,7 @@ const base: InputElencoAllarmi = {
   settimanaOreNonConfermata: null,
   personale: [],
   retteNonComunicate: [],
+  mailRojacNonInviata: [],
 };
 
 const SETTIMANA = { inizio: '2026-01-05', fine: '2026-01-11' };
@@ -173,6 +174,49 @@ describe('componiAllarmi', () => {
       ],
     });
     expect(elenco.map((a) => a.id)).toEqual(['settimana-ore', 'rette-non-comunicate', 'personale-u1']);
+  });
+});
+
+describe('componiAllarmi — mail mensile a Rojac non inviata', () => {
+  it('un solo allarme con una voce per mese, ciascuna con il link al Report del mese', () => {
+    const elenco = componiAllarmi({ ...base, mailRojacNonInviata: ['2026-10', '2026-11'] });
+    expect(elenco).toHaveLength(1);
+    expect(elenco[0].id).toBe('rojac-non-inviata');
+    expect(elenco[0].tipo).toBe('proprio');
+    expect(elenco[0].titolo).toBe('Mail mensile a Rojac non inviata');
+    expect(elenco[0].voci).toEqual([
+      {
+        testo: 'Pasti di ottobre 2026: vai al Report mensile per inviare la mail',
+        href: '/dashboard/report?tipo=mensile&periodo=2026-10',
+      },
+      {
+        testo: 'Pasti di novembre 2026: vai al Report mensile per inviare la mail',
+        href: '/dashboard/report?tipo=mensile&periodo=2026-11',
+      },
+    ]);
+  });
+
+  it('nessun allarme se non manca nessun mese', () => {
+    expect(componiAllarmi({ ...base, mailRojacNonInviata: [] })).toEqual([]);
+  });
+
+  it('conta una sola volta anche con più mesi mancanti, dopo le rette e prima del personale', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      retteNonComunicate: [{ id: 'b1', nome: 'Anna', cognome: 'Verdi', sezione: null }],
+      mailRojacNonInviata: ['2026-10', '2026-11', '2026-12'],
+      personale: [
+        {
+          utenteId: 'u1',
+          nome: 'Anna',
+          cognome: 'Rossi',
+          sezioniPresenzeIncomplete: [],
+          pastiNonConfermati: false,
+          settimanaOreNonConfermata: SETTIMANA,
+        },
+      ],
+    });
+    expect(elenco.map((a) => a.id)).toEqual(['rette-non-comunicate', 'rojac-non-inviata', 'personale-u1']);
   });
 });
 

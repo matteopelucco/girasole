@@ -4,6 +4,7 @@ import { problemaRiepilogoAllarmi } from '@/lib/cronEsecuzioni';
 import { inviaEmail, destinatarioNotifiche } from '@/lib/email';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
 import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
+import { calcolaMesiRojacMancanti, mesiRojacDaAvvisare, TIPO_ALLARME_ROJAC } from '@/lib/allarmeRojac';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import {
   dopoOrarioAllarmePresenzePasti,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/allarmi';
 import {
   costruisciControlliRiepilogo,
+  giornalieroDaInviare,
   htmlRiepilogoAllarmi,
   oggettoRiepilogoAllarmi,
   riepilogoDaSistemare,
@@ -25,9 +27,11 @@ import {
 // specs/63 "Lancio a mano"). Il client arriva da chi chiama: la service_role,
 // perché i controlli guardano tutte le sezioni.
 //
-// Valuta tutti i controlli (appello, pasti a Rojac, rette ai genitori, ore di
-// lavoro) e invia UN'email di riepilogo, che li riporta sempre tutti con ora
-// e stato, se almeno uno è da sistemare.
+// Valuta tutti i controlli (appello, pasti a Rojac, rette ai genitori, mail
+// mensile a Rojac, ore di lavoro) e invia UN'email di riepilogo, che li
+// riporta sempre tutti con ora e stato, se almeno uno è da sistemare. La mail
+// mensile a Rojac fa partire l'email una sola volta per ogni mese mancante
+// (riga in `allarmi_inviati`, tipo `rojac_non_inviata`, chiave = mese).
 
 // Valore di `allarmi_inviati.tipo` che oggi significa "email di riepilogo
 // giornaliera inviata" (chiave = data). È il valore storico
@@ -40,7 +44,30 @@ export type RispostaRiepilogoAllarmi = {
   data: string;
   riepilogo: 'tutto_ok' | 'inviato' | 'gia_inviato' | 'errore_registro';
   controlli: Record<string, string>;
+  // Mesi ("YYYY-MM") della mail a Rojac segnati come avvisati in questo giro
+  // (vuoto nel lancio a mano, che non scrive il registro).
+  mesiRojacAvvisati: string[];
 };
+
+type Prenotazione = { tipo: string; chiave: string };
+
+// Mesi mancanti per cui il registro dice che l'email è già partita. Se la
+// lettura fallisce si considerano tutti da avvisare: la prenotazione che
+// segue (unicità tipo+chiave) scarta comunque quelli già avvisati.
+// grant-check: service_role
+async function mesiRojacGiaAvvisati(supabase: SupabaseClient, mesi: string[]): Promise<string[]> {
+  if (!mesi.length) return [];
+  const { data, error } = await supabase
+    .from('allarmi_inviati')
+    .select('chiave')
+    .eq('tipo', TIPO_ALLARME_ROJAC)
+    .in('chiave', mesi);
+  if (error) {
+    console.error(`Riepilogo allarmi: lettura mesi Rojac già avvisati non riuscita (${error.code})`);
+    return [];
+  }
+  return (data ?? []).map((r) => r.chiave as string);
+}
 
 // grant-check: service_role
 export async function lavoroRiepilogoAllarmi(
@@ -77,6 +104,17 @@ export async function lavoroRiepilogoAllarmi(
     utenti,
   };
 
+  // Mail mensile a Rojac (specs/07): mesi conclusi senza invio registrato e,
+  // tra questi, quelli per cui l'email non è ancora partita. Il lancio a mano
+  // non legge il registro: li considera tutti da avvisare.
+  const mesiRojac = await calcolaMesiRojacMancanti(supabase, dataOggi);
+  const mesiGiaAvvisati = estemporaneo ? [] : await mesiRojacGiaAvvisati(supabase, mesiRojac);
+  const rojac = {
+    ora: new Date(),
+    mancanti: mesiRojac,
+    daAvvisare: mesiRojacDaAvvisare(mesiRojac, mesiGiaAvvisati),
+  };
+
   const controlli = costruisciControlliRiepilogo({
     oggi: dataOggi,
     giornoAttivo,
@@ -85,17 +123,26 @@ export async function lavoroRiepilogoAllarmi(
     giornata,
     rette,
     ore,
+    rojac,
   });
   const stati = Object.fromEntries(controlli.map((c) => [c.id, c.stato]));
-  const risposta = (riepilogo: RispostaRiepilogoAllarmi['riepilogo']): RispostaRiepilogoAllarmi => ({
+  const risposta = (
+    riepilogo: RispostaRiepilogoAllarmi['riepilogo'],
+    mesiRojacAvvisati: string[] = []
+  ): RispostaRiepilogoAllarmi => ({
     ok: true,
     data: dataOggi,
     riepilogo,
     controlli: stati,
+    mesiRojacAvvisati,
   });
 
-  if (!riepilogoDaSistemare(controlli)) {
+  if (!controlli.some((c) => c.stato === 'da_sistemare')) {
     return { dati: risposta('tutto_ok') };
+  }
+  // Da sistemare c'è solo la mail a Rojac di mesi già avvisati: niente email.
+  if (!riepilogoDaSistemare(controlli)) {
+    return { dati: risposta('gia_inviato') };
   }
 
   const email = {
@@ -112,29 +159,46 @@ export async function lavoroRiepilogoAllarmi(
   }
 
   // Si registra in `allarmi_inviati` PRIMA di inviare: l'unicità
-  // (tipo, chiave) prenota l'invio, e se il registro rifiuta la riga
-  // l'email non parte, così non può ripartire a ogni giro del cron. Se
-  // l'invio fallisce la riga viene cancellata e un tentativo successivo
-  // può ritentare (stesso principio di specs/52).
-  const { error: erroreRegistro } = await supabase
-    .from('allarmi_inviati')
-    .insert({ tipo: TIPO_RIEPILOGO_GIORNALIERO, chiave: dataOggi });
-
-  if (erroreRegistro) {
-    // 23505 = unique_violation: già inviata oggi.
-    const riepilogo = erroreRegistro.code === '23505' ? 'gia_inviato' : 'errore_registro';
-    if (riepilogo === 'errore_registro') {
-      console.error(`Riepilogo allarmi: registro rifiutato, email non inviata (${erroreRegistro.code})`);
+  // (tipo, chiave) prenota l'invio (una riga per la data di oggi, se è da
+  // sistemare un controllo diverso dalla mail a Rojac; una riga per ogni mese
+  // di Rojac non ancora avvisato). L'email parte se almeno una prenotazione
+  // riesce: quelle già presenti (23505) sono invii già fatti. Se il registro
+  // rifiuta una riga per un altro motivo quella prenotazione non c'è e, se
+  // nessuna è riuscita, l'email non parte: così non può ripartire a ogni giro
+  // del cron. Se l'invio fallisce le righe vengono cancellate e un tentativo
+  // successivo può ritentare (stesso principio di specs/52).
+  const richieste: Prenotazione[] = [
+    ...(giornalieroDaInviare(controlli) ? [{ tipo: TIPO_RIEPILOGO_GIORNALIERO, chiave: dataOggi }] : []),
+    ...rojac.daAvvisare.map((mese) => ({ tipo: TIPO_ALLARME_ROJAC, chiave: mese })),
+  ];
+  const prenotate: Prenotazione[] = [];
+  let rifiutate = 0;
+  for (const richiesta of richieste) {
+    const { error } = await supabase.from('allarmi_inviati').insert(richiesta);
+    if (!error) {
+      prenotate.push(richiesta);
+    } else if (error.code !== '23505') {
+      // 23505 = unique_violation: già inviata.
+      rifiutate += 1;
+      console.error(`Riepilogo allarmi: registro rifiutato (${error.code})`);
     }
-    return { dati: risposta(riepilogo), problema: problemaRiepilogoAllarmi(riepilogo) };
+  }
+  const problema = rifiutate > 0 ? problemaRiepilogoAllarmi('errore_registro') : null;
+
+  if (prenotate.length === 0) {
+    const riepilogo = rifiutate > 0 ? 'errore_registro' : 'gia_inviato';
+    return { dati: risposta(riepilogo), problema };
   }
 
   try {
     await inviaEmail(email);
   } catch (errore) {
-    await supabase.from('allarmi_inviati').delete().eq('tipo', TIPO_RIEPILOGO_GIORNALIERO).eq('chiave', dataOggi);
+    for (const { tipo, chiave } of prenotate) {
+      await supabase.from('allarmi_inviati').delete().eq('tipo', tipo).eq('chiave', chiave);
+    }
     throw errore;
   }
 
-  return { dati: risposta('inviato') };
+  const mesiAvvisati = prenotate.filter((p) => p.tipo === TIPO_ALLARME_ROJAC).map((p) => p.chiave);
+  return { dati: risposta('inviato', mesiAvvisati), problema };
 }

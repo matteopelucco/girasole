@@ -119,13 +119,25 @@ quale utente e quale settimana, chiedendo di confermarla in "Ore di
 lavoro"
 E se tutti l'hanno confermata il controllo è "ok"
 
-## Scenario: email di riepilogo — la mail mensile dei pasti a Rojac non è ancora controllata
+## Scenario: email di riepilogo — la mail mensile dei pasti a Rojac
 Quando il job gira
-Allora l'email contiene anche la voce "mail mensile dei pasti a Rojac"
-con stato "non ancora controllato" e non fa mai scattare l'email da sola
-(il controllo vero e proprio è tracciato nell'issue
-[#282](https://github.com/matteopelucco/girasole/issues/282), in attesa
-del registro degli invii, issue #281)
+Allora l'email contiene sempre anche la voce "mail mensile dei pasti a
+Rojac", con stato "ok" se per ogni mese concluso da controllare risulta
+un invio nel registro (specs/61), oppure "da sistemare" con l'elenco dei
+mesi senza invio e l'azione da fare (inviarla dal Report mensile)
+
+## Scenario: email di riepilogo — una sola email per ogni mese di mail a Rojac mancante
+Dato che la mail mensile a Rojac di un mese concluso non risulta inviata
+Quando il job gira per la prima volta dopo l'inizio del mese successivo
+Allora parte l'email di riepilogo, anche se tutti gli altri controlli
+sono a posto, e il mese mancante vi compare come "da sistemare"
+E il mese viene segnato come già avvisato, così nei giorni seguenti quel
+mese non fa più partire l'email da solo (il controllo resta "da sistemare"
+finché non c'è l'invio, ma senza posta ripetuta)
+E se nello stesso giro manca un altro mese, o un altro controllo è da
+sistemare, l'email parte comunque una sola volta
+E se l'invio dell'email fallisce il mese non resta segnato come avvisato
+e un tentativo successivo può ritentare
 
 ## Scenario: settimana di ore di lavoro non confermata entro venerdì sera — banner personale
 Dato che sono abilitata al report ore (vedi
@@ -314,6 +326,57 @@ Quando apro la dashboard come maestra o assistente
 Allora non vedo il banner né i nomi dei bambini a cui manca la comunicazione
 E per me il calcolo di questo allarme non parte
 
+## Scenario: mail mensile a Rojac non inviata di un mese concluso — allarme per l'admin
+Dato che sono autenticato come admin
+E un mese già concluso, dal mese di partenza in poi, ha pasti comunicati o
+almeno un giorno di scuola aperto (vedi Regole)
+E per quel mese non c'è nessuna riga nel registro degli invii a Rojac
+([61 - email-pasti-rojac.md](61%20-%20email-pasti-rojac.md))
+Quando apro la pagina "Allarmi"
+Allora vedo l'allarme "Mail mensile a Rojac non inviata", che elenca il
+mese mancante (per esempio "ottobre 2026") con un link al Report mensile
+di quel mese (`/dashboard/report?tipo=mensile&periodo=<mese>`)
+E se i mesi mancanti sono più di uno li vedo tutti, dal più vecchio
+E l'allarme conta 1 nel numero della campanella, qualunque sia il numero
+di mesi mancanti
+
+## Scenario: l'allarme "mail mensile a Rojac non inviata" sparisce quando il mese ha un invio registrato
+Dato che l'allarme è attivo per un mese
+Quando l'admin invia la mail di quel mese dal Report mensile e l'invio è
+registrato (basta una riga, anche se ce ne sono più di una)
+Allora quel mese non compare più nell'allarme e, se era l'unico, l'allarme
+sparisce dalla pagina "Allarmi" e la campanella non lo conta
+
+## Scenario: il mese corrente e i mesi prima del mese di partenza non fanno scattare l'allarme
+Dato che sono autenticato come admin
+Quando apro la pagina "Allarmi"
+Allora il mese corrente non compare mai nell'allarme: un mese diventa
+mancante dal primo giorno del mese dopo (il mese di partenza, finché è in
+corso, non scatta)
+E i mesi precedenti al mese di partenza non vengono mai considerati
+
+## Scenario: un mese senza pasti comunicati e senza giorni di scuola non fa scattare l'allarme
+Dato che un mese concluso non ha nessun pasto comunicato e nessun giorno di
+scuola aperto (per esempio un mese interamente chiuso, specs/53)
+Quando apro la pagina "Allarmi" come admin, o gira il cron
+Allora quel mese non compare nell'allarme e non fa partire nessuna email
+
+## Scenario: solo l'admin vede l'allarme "mail mensile a Rojac non inviata"
+Dato che l'allarme sarebbe attivo
+Quando apro la pagina "Allarmi" come maestra o assistente
+Allora non lo vedo, la campanella non lo conta e per me il calcolo non parte
+E il genitore non ha la campanella (vedi sopra)
+
+## Scenario: mail mensile a Rojac non inviata — banner in dashboard per l'admin
+Dato che sono autenticato come admin
+E l'allarme "mail mensile a Rojac non inviata" è attivo
+Quando apro la dashboard
+Allora vedo un banner di allarme "Mail mensile a Rojac non inviata" con i
+mesi mancanti, ciascuno con il link al Report mensile di quel mese
+E i dati sono gli stessi della pagina "Allarmi" (una sola funzione)
+E se l'allarme non è attivo il banner non compare, e maestra e assistente
+non lo vedono mai
+
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
@@ -390,9 +453,9 @@ E per me il calcolo di questo allarme non parte
      specs/16).
   3. **Rette ai genitori** (mensile, dal giorno 3): vedi la regola
      "Rette non comunicate".
-  4. **Mail mensile dei pasti a Rojac** (mensile): sempre "non ancora
-     controllato" finché non c'è il registro degli invii (issue #281,
-     controllo in #282). Nessun effetto sull'invio dell'email.
+  4. **Mail mensile dei pasti a Rojac** (mensile): vedi la regola "Mail
+     mensile a Rojac non inviata". Fa scattare l'email solo per i mesi
+     non ancora avvisati.
   5. **Ore di lavoro**: la settimana di riferimento è confermata da ogni
      utente abilitato (una riga per utente da sistemare).
   Gli stati sono: "ok", "da sistemare", "non applicabile oggi" (con il
@@ -423,6 +486,34 @@ E per me il calcolo di questo allarme non parte
   nell'email di riepilogo (controllo 3); per decisione di prodotto
   l'allarme sulle rette ai genitori e quelli sulle mail ai genitori
   scattano insieme dallo stesso giorno 3, non dal 5.
+- **Mail mensile a Rojac non inviata**: logica pura in
+  `lib/allarmeRojac.ts` (con unit test). Un mese "YYYY-MM" è mancante se:
+  (a) è compreso tra il mese di partenza, la costante
+  `MESE_PARTENZA_ROJAC` (2026-10, il mese del rilascio, fisso: si cambia
+  nel codice), incluso, e il mese corrente (fuso Europe/Rome), escluso,
+  cioè scatta dal primo giorno del mese successivo; (b) "conta", cioè ha
+  almeno un pasto comunicato (`pasti_comunicati`) oppure almeno un giorno
+  di scuola aperto (weekend e chiusure registrate esclusi,
+  `lib/comunicazioneRetta.ts:giorniAperturaMese`); (c) non ha nessuna
+  riga in `invii_rojac` (specs/61). Più invii dello stesso mese non fanno
+  danni e il blocco del doppio invio resta fuori scope. Solo l'admin: il
+  calcolo non parte per gli altri ruoli. L'allarme è una sola voce
+  (`rojac-non-inviata`) con una riga per mese mancante e il link al Report
+  mensile di quel mese. Se non c'è nessun mese concluso da controllare non
+  si legge nulla dal database.
+- Email per la mail a Rojac mancante: una riga in `allarmi_inviati` con
+  `tipo` = `rojac_non_inviata` e `chiave` = il mese (`YYYY-MM`); con
+  l'unicità `(tipo, chiave)` c'è al più una riga, quindi una sola email,
+  per mese mancante. Il cron la registra **prima** di inviare e la
+  cancella se l'invio fallisce (come per l'email giornaliera). I mesi già
+  avvisati restano "da sistemare" nel riepilogo ma non fanno partire
+  l'email da soli. Il lancio a mano (specs/63) non legge né scrive questo
+  registro. Il cron legge `invii_rojac` con la service_role key (migration
+  0066: solo SELECT, nessuna policy nuova, nessun privilegio per anon o
+  authenticated).
+- Il banner "mail mensile a Rojac non inviata" in dashboard (solo admin)
+  prende la voce `rojac-non-inviata` dall'elenco di `caricaAllarmiCorrenti`,
+  come il banner delle rette.
 - Il banner "rette non comunicate" in dashboard (solo admin) non fa un
   calcolo suo: prende la voce `rette-non-comunicate` dall'elenco di
   `caricaAllarmiCorrenti` (`lib/allarmiDati.ts`), lo stesso della pagina
@@ -441,7 +532,8 @@ E per me il calcolo di questo allarme non parte
   all'utente): oggi significa "riepilogo giornaliero inviato". I valori
   `settimana_ore_non_confermata` e `rette_non_comunicate` (migration
   0061) restano ammessi ma il cron non li scrive più: le righe
-  esistenti sono storico innocuo.
+  esistenti sono storico innocuo. Il valore `rojac_non_inviata`
+  (migration 0062) è invece scritto dal cron, una riga per mese.
 - Il job è protetto dallo stesso meccanismo già in uso per gli altri
   cron (header `Authorization: Bearer $CRON_SECRET`, confrontato a tempo
   costante). Su Vercel (produzione e anteprime) senza `CRON_SECRET`
@@ -455,7 +547,9 @@ E per me il calcolo di questo allarme non parte
   costruzione. Conta un allarme per ciascuna di queste voci: "presenze e
   pasti di oggi" (una sola voce, con dentro le sezioni da segnare e/o i
   pasti da comunicare), "settimana ore non confermata" e, solo per
-  l'admin, una voce per ogni membro del personale in allarme. Il calcolo
+  l'admin, le voci "rette non comunicate" e "mail mensile a Rojac non
+  inviata" (se attive) e una voce per ogni membro del personale in
+  allarme. Il calcolo
   usa la sessione normale dell'utente (RLS): nessun permesso nuovo,
   nessuna service_role key. Non entrano per ora le incoerenze
   presenze/pasti ([06 - controllo-consistenza.md](06%20-%20controllo-consistenza.md)),

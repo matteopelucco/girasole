@@ -20,6 +20,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { test as testUtente, expect } from './fixture-utente';
 import { test as testBambino, type BambinoFixture } from './fixture-bambino';
 import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  descrizioneMeseRojac,
+  hrefReportRojac,
+  MESE_PARTENZA_ROJAC,
+  mesiRojacDaControllare,
+} from '../lib/allarmeRojac';
+import { meseDaData, mesePrecedente } from '../lib/date';
 
 // Fixture utente (creaUtente, apriComeUtente) e bambino (bambino, adminDb)
 // insieme: servono entrambe, gli scenari "rette non comunicate" usano un
@@ -748,6 +755,228 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
+  // Mail mensile a Rojac non inviata (specs/07, issue #282). L'allarme dipende
+  // dalla data (mese di partenza fisso nel codice: MESE_PARTENZA_ROJAC) e dal
+  // registro `invii_rojac`, che è in sola aggiunta: una riga inserita da un
+  // test resta fino al reset del DB di test. Per questo i test sono in serie
+  // (prima si guarda l'allarme attivo, solo alla fine si registra l'invio che
+  // lo spegne) e si saltano, con il motivo, quando il mese più vecchio da
+  // controllare ha già un invio o quando non c'è ancora nessun mese concluso
+  // da controllare (fino alla fine del mese di partenza).
+  test.describe('mail mensile a Rojac non inviata', () => {
+    test.describe.configure({ mode: 'serial' });
+
+    const TITOLO_ALLARME_ROJAC = 'Mail mensile a Rojac non inviata';
+    const mesiDaControllare = mesiRojacDaControllare(dataOggiRoma());
+    const meseCorrente = meseDaData(dataOggiRoma());
+    // Il mese più vecchio da controllare: è il primo a essere elencato.
+    const primoMese = mesiDaControllare[0];
+
+    function bannerRojac(page: Page) {
+      return page.getByRole('alert').filter({ hasText: TITOLO_ALLARME_ROJAC });
+    }
+
+    function allarmeRojacPagina(page: Page) {
+      return page.locator(ELENCO_ALLARMI).filter({ hasText: TITOLO_ALLARME_ROJAC });
+    }
+
+    // Link ai Report mensili delle voci dell'allarme (banner o pagina).
+    async function hrefVociRojac(allarme: Locator): Promise<string[]> {
+      return allarme.getByRole('link').evaluateAll((link) => link.map((a) => a.getAttribute('href') ?? ''));
+    }
+
+    async function invioRegistrato(db: SupabaseClient, mese: string): Promise<boolean> {
+      const { data, error } = await db.from('invii_rojac').select('id').eq('mese', mese).limit(1);
+      if (error) throw new Error(`Lettura del registro invii non riuscita: ${error.message}`);
+      return (data ?? []).length > 0;
+    }
+
+    // Salta il test se l'allarme per il mese più vecchio non può essere attivo.
+    async function saltaSeAllarmeNonAttivo(db: SupabaseClient | null) {
+      test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+      test.skip(
+        mesiDaControllare.length === 0,
+        `nessun mese concluso da controllare: l'allarme scatta dal primo giorno del mese dopo ${MESE_PARTENZA_ROJAC}`
+      );
+      test.skip(
+        await invioRegistrato(db!, primoMese),
+        `il registro ha già un invio per ${primoMese}: l'allarme per quel mese non è più verificabile`
+      );
+    }
+
+    test.describe('come admin', () => {
+      test.use({ storageState: statoAutenticazione('admin') });
+
+      test.beforeEach(async () => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      });
+
+      test('il mese corrente e i mesi prima del mese di partenza non fanno scattare l\'allarme', async ({ page }) => {
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        const allarme = allarmeRojacPagina(page);
+        if (mesiDaControllare.length === 0) {
+          await expect(allarme).toHaveCount(0);
+        } else {
+          // Il mese corrente non compare mai tra i mesi mancanti.
+          await expect(allarme.getByText(descrizioneMeseRojac(meseCorrente))).toHaveCount(0);
+          await expect(allarme.locator(`a[href$="periodo=${meseCorrente}"]`)).toHaveCount(0);
+        }
+        // I mesi prima del mese di partenza non vengono mai considerati.
+        await expect(page.locator(`a[href$="periodo=${mesePrecedente(MESE_PARTENZA_ROJAC)}"]`)).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test('mail mensile a Rojac non inviata di un mese concluso — allarme per l\'admin, con il link al Report', async ({
+        page,
+        adminDb,
+      }) => {
+        await saltaSeAllarmeNonAttivo(adminDb);
+
+        await page.goto('/dashboard/allarmi');
+        const allarme = allarmeRojacPagina(page);
+        await expect(allarme).toHaveCount(1);
+        // Il mese più vecchio è elencato per primo, con il link al suo Report mensile.
+        const voci = allarme.getByRole('listitem');
+        await expect(voci.first()).toContainText(descrizioneMeseRojac(primoMese));
+        await expect(voci.first().getByRole('link')).toHaveAttribute('href', hrefReportRojac(primoMese));
+        // Il mese corrente non è tra i mesi elencati e l'allarme conta 1 nella campanella.
+        await expect(allarme.getByText(descrizioneMeseRojac(meseCorrente))).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+
+        // Il link porta al Report mensile di quel mese.
+        await voci.first().getByRole('link').click();
+        await expect(page).toHaveURL(new RegExp(`/dashboard/report\\?tipo=mensile&periodo=${primoMese}$`));
+      });
+
+      test('mail mensile a Rojac non inviata — banner in dashboard per l\'admin, con gli stessi dati della pagina Allarmi', async ({
+        page,
+        adminDb,
+      }) => {
+        await saltaSeAllarmeNonAttivo(adminDb);
+
+        await page.goto('/dashboard');
+        const banner = bannerRojac(page);
+        await expect(banner).toHaveCount(1);
+        await expect(banner.getByRole('link').first()).toHaveAttribute('href', hrefReportRojac(primoMese));
+        await nessunaViolazioneA11yGrave(page);
+
+        // Stessi mesi della pagina Allarmi (stessa funzione): le due pagine
+        // sono richieste distinte, quindi si rileggono finché coincidono.
+        await expect
+          .poll(
+            async () => {
+              await page.goto('/dashboard');
+              const nelBanner = await hrefVociRojac(bannerRojac(page));
+              await page.goto('/dashboard/allarmi');
+              const nellaPagina = await hrefVociRojac(allarmeRojacPagina(page));
+              return JSON.stringify(nelBanner) === JSON.stringify(nellaPagina) && nelBanner.length > 0
+                ? 'coincide'
+                : `banner ${nelBanner.join(',')}, pagina ${nellaPagina.join(',')}`;
+            },
+            { message: 'il banner in dashboard e la pagina Allarmi devono elencare gli stessi mesi', timeout: 30_000 }
+          )
+          .toBe('coincide');
+      });
+    });
+
+    test.describe('come maestra', () => {
+      test.use({ storageState: statoAutenticazione('maestra') });
+
+      test('solo l\'admin vede l\'allarme: la maestra non lo vede né in pagina né in dashboard', async ({
+        page,
+        adminDb,
+      }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+        await saltaSeAllarmeNonAttivo(adminDb);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_ROJAC })).toHaveCount(0);
+        await expect(page.getByRole('link', { name: /Report mensile per inviare la mail/ })).toHaveCount(0);
+        await campanellaCoincideConElenco(page);
+
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(bannerRojac(page)).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test.describe('come assistente', () => {
+      test.use({ storageState: statoAutenticazione('assistente') });
+
+      test('solo l\'admin vede l\'allarme: l\'assistente non lo vede né in pagina né in dashboard', async ({
+        page,
+        adminDb,
+      }) => {
+        test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+        await saltaSeAllarmeNonAttivo(adminDb);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: TITOLO_ALLARME_ROJAC })).toHaveCount(0);
+
+        await page.goto('/dashboard');
+        await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+        await expect(bannerRojac(page)).toHaveCount(0);
+      });
+    });
+
+    // Un mese senza pasti comunicati e senza giorni di scuola aperti non conta:
+    // servirebbe un mese concluso interamente chiuso, che non si può creare
+    // nel passato senza toccare i dati degli altri test. Coperto dai test
+    // unit di lib/allarmeRojac.ts (meseRojacConta, mesiRojacMancanti).
+    test('un mese senza pasti comunicati e senza giorni di scuola non fa scattare l\'allarme (coperto da unit)', async () => {
+      test.skip(true, 'coperto da lib/allarmeRojac.test.ts (meseRojacConta, mesiRojacMancanti)');
+    });
+
+    // Ultimo di questo blocco: il registro è in sola aggiunta, la riga
+    // inserita resta fino al reset del DB di test.
+    test.describe('invio registrato', () => {
+      test.use({ storageState: statoAutenticazione('admin') });
+
+      test('l\'allarme "mail mensile a Rojac non inviata" sparisce quando il mese ha un invio registrato', async ({
+        page,
+        adminDb,
+      }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        await saltaSeAllarmeNonAttivo(adminDb);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(allarmeRojacPagina(page).getByRole('link', { name: new RegExp(descrizioneMeseRojac(primoMese)) })).toHaveCount(1);
+
+        const { data: utente } = await adminDb!.auth.getUser();
+        const { error } = await adminDb!.from('invii_rojac').insert({ mese: primoMese, inviato_da: utente.user!.id });
+        expect(error).toBeNull();
+
+        // Quel mese non compare più; se era l'unico mancante sparisce l'allarme
+        // (e il banner), e la campanella resta uguale all'elenco.
+        await expect
+          .poll(
+            async () => {
+              await page.goto('/dashboard/allarmi');
+              return allarmeRojacPagina(page)
+                .getByRole('link', { name: new RegExp(descrizioneMeseRojac(primoMese)) })
+                .count();
+            },
+            { message: `il mese ${primoMese} deve sparire dall'allarme` }
+          )
+          .toBe(0);
+        if (mesiDaControllare.length === 1) {
+          await expect(allarmeRojacPagina(page)).toHaveCount(0);
+          await page.goto('/dashboard');
+          await expect(bannerRojac(page)).toHaveCount(0);
+        }
+        await page.goto('/dashboard/allarmi');
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+  });
+
   // Email di riepilogo del cron (specs/07, "Email di riepilogo"). Il test non
   // legge la casella di posta: guarda l'esito che la route restituisce
   // (`riepilogo` e lo stato di ogni controllo). Servono CRON_SECRET e
@@ -757,6 +986,7 @@ test.describe('07 — Allarmi', () => {
     type EsitoCron = {
       riepilogo: 'tutto_ok' | 'inviato' | 'gia_inviato' | 'errore_registro';
       controlli: Record<string, 'ok' | 'da_sistemare' | 'non_applicabile' | 'non_controllato'>;
+      mesiRojacAvvisati: string[];
     };
 
     async function chiamaCron(request: import('@playwright/test').APIRequestContext): Promise<EsitoCron> {
@@ -861,9 +1091,29 @@ test.describe('07 — Allarmi', () => {
       expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
     });
 
-    test('email di riepilogo — la mail mensile dei pasti a Rojac non è ancora controllata', async ({ request }) => {
+    test('email di riepilogo — la mail mensile dei pasti a Rojac', async ({ request }) => {
       const esito = await chiamaCron(request);
-      expect(esito.controlli['mail-rojac-mensile']).toBe('non_controllato');
+      // Senza mesi conclusi da controllare il controllo è a posto; altrimenti
+      // dipende dal registro degli invii: ok o da sistemare, mai "non controllato".
+      if (mesiRojacDaControllare(dataOggiRoma()).length === 0) {
+        expect(esito.controlli['mail-rojac-mensile']).toBe('ok');
+      } else {
+        expect(['ok', 'da_sistemare']).toContain(esito.controlli['mail-rojac-mensile']);
+      }
+    });
+
+    test('email di riepilogo — una sola email per ogni mese di mail a Rojac mancante', async ({ request }) => {
+      const prima = await chiamaCron(request);
+      const seconda = await chiamaCron(request);
+      // Un mese già avvisato (dal primo giro, o da un giro precedente) non
+      // viene avvisato di nuovo: il secondo giro non ne segna nessuno e non
+      // invia altre email (il riepilogo del giorno c'è già).
+      expect(seconda.mesiRojacAvvisati).toEqual([]);
+      if (seconda.controlli['mail-rojac-mensile'] === 'da_sistemare') {
+        expect(seconda.riepilogo).toBe('gia_inviato');
+      }
+      // I mesi avvisati dal primo giro sono tra quelli da controllare.
+      expect(mesiRojacDaControllare(dataOggiRoma())).toEqual(expect.arrayContaining(prima.mesiRojacAvvisati));
     });
   });
 });

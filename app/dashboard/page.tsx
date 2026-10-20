@@ -17,6 +17,7 @@ import {
   allarmiPerDipendenti,
 } from '@/lib/allarmi';
 import { ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
+import { ID_ALLARME_ROJAC } from '@/lib/allarmeRojac';
 import { creaPromemoria } from './actions';
 import { ProssimiEventi } from './ProssimiEventi';
 import { caricaAllarmiCorrenti } from './allarmi/dati';
@@ -80,11 +81,14 @@ export default async function DashboardPage(
   const allarmiStaff =
     ruolo === 'admin' ? await allarmiPerDipendenti(supabase, dataOggi, giornoAttivoOggi, oraAttuale, user.id) : [];
 
-  // Allarme 4 (specs/07): rette non comunicate, solo per l'admin. Non si
-  // ricalcola: si prende dall'elenco condiviso con la pagina Allarmi e la
-  // campanella (stessa funzione, una lettura per richiesta).
-  const allarmeRette =
-    ruolo === 'admin' ? ((await caricaAllarmiCorrenti()) ?? []).find((a) => a.id === ID_ALLARME_RETTE) : undefined;
+  // Allarmi 4 e 5 (specs/07): rette non comunicate e mail mensile a Rojac non
+  // inviata, solo per l'admin. Non si ricalcolano: si prendono dall'elenco
+  // condiviso con la pagina Allarmi e la campanella (stessa funzione, una
+  // lettura per richiesta).
+  const allarmiAdmin =
+    ruolo === 'admin'
+      ? ((await caricaAllarmiCorrenti()) ?? []).filter((a) => a.id === ID_ALLARME_RETTE || a.id === ID_ALLARME_ROJAC)
+      : [];
 
   const bambini = await bambiniAttiviVisibili(
     supabase,
@@ -136,11 +140,15 @@ export default async function DashboardPage(
           </div>
         )}
 
-        {allarmeRette && (
-          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
-            <p className="font-semibold">⚠️ {allarmeRette.titolo}</p>
+        {allarmiAdmin.map((allarme) => (
+          <div
+            key={allarme.id}
+            role="alert"
+            className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
+          >
+            <p className="font-semibold">⚠️ {allarme.titolo}</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
-              {allarmeRette.voci.map((voce, indice) => (
+              {allarme.voci.map((voce, indice) => (
                 <li key={`${indice}-${voce.testo}`}>
                   {voce.href ? (
                     <Link href={voce.href} className="underline">
@@ -153,7 +161,7 @@ export default async function DashboardPage(
               ))}
             </ul>
           </div>
-        )}
+        ))}
 
         {ruolo === 'admin' && allarmiStaff.length > 0 && (
           <div className="rounded-xl border border-stone-300 bg-stone-50 p-4 text-sm text-stone-800">

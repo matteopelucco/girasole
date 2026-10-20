@@ -7,6 +7,7 @@ import {
   settimanaDiRiferimentoOre,
   type StatoPersonaleGiorno,
 } from '@/lib/allarmi';
+import { calcolaMesiRojacMancanti } from '@/lib/allarmeRojac';
 import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import { oggi } from '@/lib/date';
@@ -53,14 +54,26 @@ export async function calcolaAllarmiUtente(
       ? settimanaRiferimento
       : null;
 
-  // Solo l'admin vede le rette non comunicate (e i nomi dei bambini):
-  // per gli altri ruoli non si legge nulla (specs/07).
-  const [statoPersonaleGiorno, settimanaOreNonConfermata, personale, retteNonComunicate] = await Promise.all([
-    statoPersonale(),
-    settimanaOre(),
-    ruolo === 'admin' ? allarmiPerDipendenti(supabase, dataOggi, giornoAttivo, adesso, userId) : [],
-    ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
-  ]);
+  // Solo l'admin vede le rette non comunicate (e i nomi dei bambini) e la
+  // mail mensile a Rojac non inviata: per gli altri ruoli non si legge nulla
+  // (specs/07). Un errore di lettura del registro Rojac non deve rompere ogni
+  // pagina (la campanella è ovunque): si scrive nei log e l'allarme manca.
+  const mailRojac = async (): Promise<string[]> => {
+    try {
+      return await calcolaMesiRojacMancanti(supabase, dataOggi);
+    } catch (errore) {
+      console.error('Allarme mail Rojac non calcolato:', errore instanceof Error ? errore.message : errore);
+      return [];
+    }
+  };
+  const [statoPersonaleGiorno, settimanaOreNonConfermata, personale, retteNonComunicate, mailRojacNonInviata] =
+    await Promise.all([
+      statoPersonale(),
+      settimanaOre(),
+      ruolo === 'admin' ? allarmiPerDipendenti(supabase, dataOggi, giornoAttivo, adesso, userId) : [],
+      ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
+      ruolo === 'admin' ? mailRojac() : [],
+    ]);
 
   return componiAllarmi({
     oggi: dataOggi,
@@ -70,5 +83,6 @@ export async function calcolaAllarmiUtente(
     settimanaOreNonConfermata,
     personale,
     retteNonComunicate,
+    mailRojacNonInviata,
   });
 }

@@ -5,7 +5,8 @@
 -- Comportamento fissato (migration 0062): registro in sola aggiunta; solo
 -- l'admin legge (SELECT) e inserisce (INSERT, e solo a proprio nome);
 -- nessuno aggiorna o cancella; maestra, assistente, genitore e anonimo non
--- leggono né scrivono; nessun privilegio per anon e service_role.
+-- leggono né scrivono; nessun privilegio per anon; service_role ha il solo
+-- SELECT (migration 0066, lo legge il cron dell'allarme di specs/07).
 -- Il vincolo allarmi_inviati_tipo_check accetta anche `rojac_non_inviata`.
 --
 -- Tutto dentro una transazione chiusa da `rollback`. Dati fittizi
@@ -134,8 +135,8 @@ select ok(not has_table_privilege('authenticated', 'public.invii_rojac', 'UPDATE
   'authenticated: nessun UPDATE (registro in sola aggiunta)');
 select ok(not has_table_privilege('authenticated', 'public.invii_rojac', 'DELETE'),
   'authenticated: nessun DELETE (registro in sola aggiunta)');
-select ok(not has_table_privilege('service_role', 'public.invii_rojac', 'SELECT'),
-  'service_role: nessun SELECT (il cron della parte b lo chiederà con la sua migration)');
+select ok(has_table_privilege('service_role', 'public.invii_rojac', 'SELECT'),
+  'service_role: ha SELECT (migration 0066, lo legge il cron dell''allarme Rojac)');
 select ok(not has_table_privilege('service_role', 'public.invii_rojac', 'INSERT'),
   'service_role: nessun INSERT');
 select ok(not has_table_privilege('service_role', 'public.invii_rojac', 'UPDATE'),

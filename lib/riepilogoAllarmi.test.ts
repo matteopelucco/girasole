@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   costruisciControlliRiepilogo,
   formattaOraRoma,
+  giornalieroDaInviare,
   htmlRiepilogoAllarmi,
   oggettoRiepilogoAllarmi,
   riepilogoDaSistemare,
@@ -27,6 +28,7 @@ function input(parziale: Partial<InputRiepilogo> = {}): InputRiepilogo {
     },
     rette: { ora: ORA_11_45, mancanti: [] },
     ore: { ora: ORA_11_45, intervallo: 'dal 05/10 al 11/10', utenti: [] },
+    rojac: { ora: ORA_11_45, mancanti: [], daAvvisare: [] },
     ...parziale,
   };
 }
@@ -170,12 +172,58 @@ describe('costruisciControlliRiepilogo', () => {
     expect(controllo(controlli, 'rette-genitori').stato).toBe('ok');
   });
 
-  it('mail mensile pasti a Rojac: sempre "non ancora controllato", senza ora e mai da sistemare', () => {
+  it('mail mensile pasti a Rojac: senza mesi mancanti è ok e non fa scattare l\'email', () => {
     const controlli = costruisciControlliRiepilogo(input());
     const rojac = controllo(controlli, 'mail-rojac-mensile');
-    expect(rojac.stato).toBe('non_controllato');
-    expect(rojac.ora).toBeNull();
+    expect(rojac.stato).toBe('ok');
+    expect(rojac.ora).toEqual(ORA_11_45);
     expect(riepilogoDaSistemare(controlli)).toBe(false);
+    expect(giornalieroDaInviare(controlli)).toBe(false);
+  });
+
+  it('mail mensile pasti a Rojac: un mese mancante da avvisare è da sistemare e fa scattare l\'email', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({ rojac: { ora: ORA_11_45, mancanti: ['2026-10'], daAvvisare: ['2026-10'] } })
+    );
+    const rojac = controllo(controlli, 'mail-rojac-mensile');
+    expect(rojac.stato).toBe('da_sistemare');
+    expect(rojac.dettaglio).toEqual(['La mail dei pasti a Rojac non risulta inviata per il mese:', 'ottobre 2026']);
+    expect(rojac.azione).toContain('Report mensile');
+    expect(riepilogoDaSistemare(controlli)).toBe(true);
+    // Da solo non prenota l'invio giornaliero: i mesi si prenotano a parte.
+    expect(giornalieroDaInviare(controlli)).toBe(false);
+  });
+
+  it('mail mensile pasti a Rojac: più mesi mancanti, dal più vecchio, al plurale', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({ rojac: { ora: ORA_11_45, mancanti: ['2026-10', '2026-11'], daAvvisare: ['2026-11'] } })
+    );
+    expect(controllo(controlli, 'mail-rojac-mensile').dettaglio).toEqual([
+      'La mail dei pasti a Rojac non risulta inviata per i mesi:',
+      'ottobre 2026',
+      'novembre 2026',
+    ]);
+  });
+
+  it('mail mensile pasti a Rojac: mesi già avvisati restano da sistemare ma non fanno scattare l\'email', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({ rojac: { ora: ORA_11_45, mancanti: ['2026-10'], daAvvisare: [] } })
+    );
+    expect(controllo(controlli, 'mail-rojac-mensile').stato).toBe('da_sistemare');
+    expect(riepilogoDaSistemare(controlli)).toBe(false);
+    expect(giornalieroDaInviare(controlli)).toBe(false);
+  });
+
+  it('mail mensile pasti a Rojac già avvisata: se un altro controllo è da sistemare l\'email parte comunque', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({
+        oggi: '2026-10-20',
+        rette: { ora: ORA_11_45, mancanti: [{ id: 'b1', nome: 'Anna', cognome: 'Rossi', sezione: null }] },
+        rojac: { ora: ORA_11_45, mancanti: ['2026-10'], daAvvisare: [] },
+      })
+    );
+    expect(riepilogoDaSistemare(controlli)).toBe(true);
+    expect(giornalieroDaInviare(controlli)).toBe(true);
   });
 
   it('ore di lavoro: elenca gli utenti con la settimana non confermata', () => {
@@ -246,8 +294,18 @@ describe('htmlRiepilogoAllarmi', () => {
     expect(html).toContain('11:45');
     expect(html).toContain('DA SISTEMARE');
     expect(html).toContain('OK');
-    expect(html).toContain('NON ANCORA CONTROLLATO');
     expect(html).toContain('Cosa fare');
+  });
+
+  it('la mail mensile a Rojac mancante compare con i mesi e l\'azione', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({ rojac: { ora: ORA_11_45, mancanti: ['2026-10'], daAvvisare: ['2026-10'] } })
+    );
+    const html = htmlRiepilogoAllarmi(controlli, '2026-11-02');
+    expect(html).toContain('Mail mensile dei pasti a Rojac');
+    expect(html).toContain('ottobre 2026');
+    expect(html).toContain('Report mensile');
+    expect(html).toContain('DA SISTEMARE');
   });
 
   it('prima delle 10:00 spiega perché i controlli di giornata non sono stati fatti', () => {
