@@ -29,7 +29,7 @@ export async function SezioneChiusure({ oggi, eAdmin }: { oggi: string; eAdmin: 
   return (
     <>
       {error ? (
-        <p className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700">
+        <p className="rounded-xl border border-border bg-white px-4 py-3 text-sm text-stone-700">
           Non è stato possibile leggere i giorni di chiusura. Riprova tra poco.
         </p>
       ) : (

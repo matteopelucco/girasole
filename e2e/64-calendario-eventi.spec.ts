@@ -751,7 +751,7 @@ test.describe('64 — Calendario eventi', () => {
       // Come si presenta una voce della lista: periodo, nota e classi della scheda
       // (senza il solo effetto "al passaggio del mouse" del modo gestione).
       async function descriviVoce(voce: Locator) {
-        const scheda = voce.locator('.border-l-rose-400');
+        const scheda = voce.locator('.border-l-neutral-border');
         return {
           periodo: (await scheda.locator('p').nth(0).textContent())?.trim(),
           nota: (await scheda.locator('p').nth(1).textContent())?.trim(),

@@ -10,7 +10,7 @@ import { descrizioneDifferenzaOre } from '@/lib/oreLavoro';
 // Classe della card di un giorno lavorativo: verde con differenza 0,
 // rossa altrimenti, neutra se la differenza non è valutabile (null).
 export function classeCardOreLavoro(differenza: number | null): string {
-  if (differenza === null) return 'border-stone-200 bg-white';
+  if (differenza === null) return 'border-border bg-white';
   return differenza === 0 ? 'border-emerald-400 bg-emerald-50' : 'border-red-400 bg-red-50';
 }
 

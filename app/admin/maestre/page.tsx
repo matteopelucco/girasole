@@ -62,7 +62,7 @@ export default async function MaestrePage() {
             genitore).
           </p>
 
-          <div className="mt-4 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
+          <div className="mt-4 rounded-xl border border-border bg-white p-4 shadow-xs">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
             <p className="mt-1 text-xs text-stone-600">{REGOLA_PASSWORD}</p>
             <FormConEsito action={creaUtente} resetSuOk className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -136,7 +136,7 @@ export default async function MaestrePage() {
                   ))}
                 </select>
               </label>
-              <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:col-span-2">
+              <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
             </FormConEsito>
@@ -146,7 +146,7 @@ export default async function MaestrePage() {
             {profili?.map((p) => (
               <li
                 key={p.id}
-                className="relative rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs"
+                className="relative rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs"
               >
                 <div className="mb-2 pr-9 text-xs text-stone-600">{p.email}</div>
                 <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
@@ -215,7 +215,7 @@ export default async function MaestrePage() {
                       </option>
                     ))}
                   </select>
-                  <PulsanteInvio className="rounded-lg bg-emerald-700 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-800">
+                  <PulsanteInvio className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-hover">
                     Aggiorna
                   </PulsanteInvio>
                   {p.updated_at && (
@@ -285,7 +285,7 @@ export default async function MaestrePage() {
                 </option>
               ))}
             </select>
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Assegna
             </PulsanteInvio>
           </FormConEsito>
@@ -298,7 +298,7 @@ export default async function MaestrePage() {
 
           <ul className="mt-4 space-y-1">
             {staffAssegnabile.map((m) => (
-              <li key={m.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs">
+              <li key={m.id} className="rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs">
                 <div className="font-medium">
                   {m.nome} {m.cognome}{' '}
                   <span className="font-normal text-stone-600">({ETICHETTE_RUOLO[m.ruolo]})</span>

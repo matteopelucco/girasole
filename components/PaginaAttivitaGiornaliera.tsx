@@ -51,7 +51,7 @@ export function PaginaAttivitaGiornaliera({
         {riepilogoAggregato}
 
         {messaggioChiusura ? (
-          <p className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-800">
+          <p className="rounded-xl border border-neutral-border bg-neutral-soft p-3 text-sm text-neutral-text">
             🔒 {messaggioChiusura}
           </p>
         ) : (

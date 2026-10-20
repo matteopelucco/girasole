@@ -35,7 +35,7 @@ export default async function ProfiloOrarioDettaglioPage(props: { params: Promis
 
         <FormConEsito
           action={aggiornaProfiloOrario}
-          className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
+          className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
         >
           <input type="hidden" name="profilo_id" value={profiloOrario.id} />
           <input
@@ -47,7 +47,7 @@ export default async function ProfiloOrarioDettaglioPage(props: { params: Promis
           />
           <CampiOreSettimana valori={profiloOrario} />
           <p className="text-sm text-stone-600">Totale: {totaleOreSettimanali(profiloOrario)}h/settimana</p>
-          <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
             Salva modifiche
           </PulsanteInvio>
           {profiloOrario.updated_at && (

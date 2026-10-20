@@ -29,7 +29,7 @@ export default async function ReimpostaPasswordPage(
 
   return (
     <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-xs">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-white p-8 shadow-xs">
         <h1 className="mb-1 text-xl font-medium">Imposta una nuova password</h1>
         <p className="mb-6 text-sm text-stone-600">{REGOLA_PASSWORD}</p>
 
@@ -70,7 +70,7 @@ export default async function ReimpostaPasswordPage(
             </div>
           )}
 
-          <PulsanteInvio className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white transition hover:bg-emerald-800">
+          <PulsanteInvio className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-hover">
             Salva nuova password
           </PulsanteInvio>
         </form>

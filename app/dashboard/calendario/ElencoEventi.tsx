@@ -38,7 +38,7 @@ function SchedaEvento({ evento, passato }: { evento: EventoVista; passato: boole
     <li
       data-testid="evento"
       className={`rounded-xl border border-l-4 p-3 shadow-xs ${
-        passato ? 'border-stone-200 border-l-stone-300 bg-stone-50' : 'border-stone-200 border-l-amber-400 bg-white'
+        passato ? 'border-border border-l-stone-300 bg-stone-50' : 'border-border border-l-amber-400 bg-white'
       }`}
     >
       <p
@@ -91,9 +91,9 @@ export function TesseraGiorno({
       dateTime={data}
       className={`flex w-12 shrink-0 flex-col items-center rounded-xl border py-1.5 text-center ${
         eOggi
-          ? 'border-emerald-700 bg-emerald-700 text-white'
+          ? 'border-primary bg-primary text-white'
           : passato
-            ? 'border-stone-200 bg-stone-100 text-stone-700'
+            ? 'border-border bg-stone-100 text-stone-700'
             : 'border-amber-200 bg-amber-50 text-stone-900'
       }`}
     >
@@ -142,7 +142,7 @@ export function ElencoMesi({ mesi, passato }: { mesi: MeseVista[]; passato: bool
     <div className="space-y-6">
       {mesi.map((mese) => (
         <div key={mese.chiave} className="space-y-3">
-          <h4 className="border-b border-stone-200 pb-1 font-heading text-sm font-semibold capitalize text-stone-700">
+          <h4 className="border-b border-border pb-1 font-heading text-sm font-semibold capitalize text-stone-700">
             {mese.titolo}
           </h4>
           <ul className="space-y-3">

@@ -68,7 +68,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
         <FormConEsito
           action={aggiornaBambino}
-          className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
+          className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
         >
           <input type="hidden" name="bambino_id" value={bambino.id} />
           <div className="flex gap-2">
@@ -135,7 +135,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
             placeholder="Altre note (opzionale)"
             className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           />
-          <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
             Salva modifiche
           </PulsanteInvio>
           {bambino.updated_at && (
@@ -157,7 +157,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
           <h2 className="text-base font-medium">Costi</h2>
           <FormConEsito
             action={aggiornaCostiBambino}
-            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
+            className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
               />
             </label>
 
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Salva costi
             </PulsanteInvio>
             {costi?.updated_at && (
@@ -291,7 +291,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 return (
                   <li
                     key={voce.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-xs"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-white p-3 text-sm shadow-xs"
                   >
                     <div>
                       <span className={eCredito ? 'font-medium text-emerald-700' : 'font-medium text-red-700'}>
@@ -327,7 +327,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
           <FormConEsito
             action={aggiungiCreditoDebito}
-            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
+            className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
@@ -376,7 +376,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Aggiungi credito/debito
             </PulsanteInvio>
           </FormConEsito>

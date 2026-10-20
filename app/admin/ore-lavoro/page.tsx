@@ -69,7 +69,7 @@ export default async function OreLavoroAdminPage() {
 
         <ul className="space-y-2">
           {personale.map((p) => (
-            <li key={p.id} className="rounded-xl border border-stone-200 bg-white p-3 shadow-xs">
+            <li key={p.id} className="rounded-xl border border-border bg-white p-3 shadow-xs">
               <Link href={`/dashboard/ore-lavoro/mese?utente=${p.id}`} className="flex items-center justify-between gap-2">
                 <span>
                   <span className="font-medium">
@@ -96,7 +96,7 @@ export default async function OreLavoroAdminPage() {
         <form
           action="/admin/ore-lavoro/pdf"
           method="get"
-          className="flex flex-wrap items-end gap-2 rounded-xl border border-stone-200 bg-white p-3 shadow-xs"
+          className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-white p-3 shadow-xs"
         >
           <label className="text-sm font-medium text-stone-800">
             Mese
@@ -114,7 +114,7 @@ export default async function OreLavoroAdminPage() {
           </label>
           <button
             type="submit"
-            className="h-11 rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800"
+            className="h-11 rounded-lg bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
           >
             Genera PDF mensile
           </button>

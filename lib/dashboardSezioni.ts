@@ -34,7 +34,7 @@ export function cardsDashboard({
       href: percorsoGiornata(data),
       icona: '📋',
       etichetta: 'Presenze e pasti',
-      classi: 'bg-emerald-700 hover:bg-emerald-800',
+      classi: 'bg-primary hover:bg-primary-hover',
     });
   }
 

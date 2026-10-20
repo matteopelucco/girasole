@@ -72,7 +72,7 @@ async function ElencoProssimiEventi({ oggi }: { oggi: string }) {
         <li
           key={evento.id}
           data-testid="prossimo-evento"
-          className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 shadow-xs"
+          className="flex items-start gap-3 rounded-lg border border-border bg-white p-3 shadow-xs"
         >
           <TesseraGiorno
             data={evento.data}

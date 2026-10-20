@@ -27,7 +27,7 @@ export default async function ImpostazioniAvanzatePage() {
             <li key={sezione.href}>
               <Link
                 href={sezione.href}
-                className="flex min-h-11 items-start gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs transition-colors hover:bg-stone-50"
+                className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-white p-4 shadow-xs transition-colors hover:bg-stone-50"
               >
                 <span aria-hidden className="text-lg">
                   {sezione.icona}

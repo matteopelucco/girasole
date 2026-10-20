@@ -229,7 +229,7 @@ function TabellaSezione({ titolo, righe }: { titolo: string; righe: React.ReactN
   return (
     <div className="space-y-2">
       <h2 className="text-sm font-semibold text-stone-800">{titolo}</h2>
-      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
+      <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
         <table className="min-w-full divide-y divide-stone-200 text-sm">
           {INTESTAZIONE_COLONNE}
           <tbody className="divide-y divide-stone-100">{righe}</tbody>
@@ -487,7 +487,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
+      <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
         Nessun bambino attivo.
       </p>
     );
@@ -495,7 +495,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
     piePagina = (
       <PulsanteInvio
         confermaMessaggio="Sei sicuro di voler inviare le comunicazioni? Verrà inviata un'email a ogni bambino con email configurata non ancora comunicato questo mese."
-        className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+        className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
       >
         Invia comunicazioni
       </PulsanteInvio>
@@ -552,7 +552,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
+      <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
         Nessuna comunicazione inviata in questo mese.
       </p>
     );

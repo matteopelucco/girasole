@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="it" className={`${poppins.variable} ${openSans.variable}`}>
-      <body className="min-h-screen bg-slate-100 text-stone-900 antialiased">
+      <body className="min-h-screen bg-page text-stone-900 antialiased">
         <Suspense fallback={null}>
           <BarraCaricamento />
         </Suspense>

@@ -106,7 +106,7 @@ export function ColonnaPresenza({
               </p>
             )}
           </div>
-          <hr className="border-stone-200" />
+          <hr className="border-border" />
           <div className="grid grid-cols-2 gap-2">
             <PulsanteStato
               formAction={segnaPreAsilo.bind(null, bambinoId, rigaAttuale, data)}

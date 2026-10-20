@@ -25,7 +25,7 @@ export function Schede({ schede, attiva }: { schede: readonly Scheda[]; attiva: 
   }
 
   return (
-    <div role="tablist" aria-label="Schede della pagina" className="flex border-b border-stone-200">
+    <div role="tablist" aria-label="Schede della pagina" className="flex border-b border-border">
       {schede.map((scheda, indice) => {
         const selezionata = scheda.id === attiva;
         return (

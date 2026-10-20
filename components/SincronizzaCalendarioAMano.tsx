@@ -54,7 +54,7 @@ export function SincronizzaCalendarioAMano({
         <div
           role="alert"
           data-testid="esito-sincronizzazione"
-          className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+          className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text"
         >
           <p className="font-medium">ERRORE</p>
           <p className="mt-1 wrap-break-word">{esito.messaggio}</p>
