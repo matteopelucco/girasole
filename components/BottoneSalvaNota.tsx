@@ -31,7 +31,7 @@ export function BottoneSalvaNota({
     <PulsanteInvio
       mantieniTesto
       formAction={formAction}
-      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-sky-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-800"
+      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-sky-700 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-sky-800"
     >
       <IconaSalva />
       Salva nota

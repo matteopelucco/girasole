@@ -25,7 +25,7 @@ export function CampiOreSettimana({ valori }: { valori?: Partial<Record<string, 
             step={0.5}
             defaultValue={valori?.[g.campo] ?? 0}
             aria-label={g.etichetta}
-            className="mt-1 w-16 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-none focus:border-stone-500"
+            className="mt-1 w-16 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-hidden focus:border-stone-500"
           />
         </label>
       ))}

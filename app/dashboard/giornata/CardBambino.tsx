@@ -66,13 +66,13 @@ export function CardBambino({
   return (
     <li
       id={`bambino-${bambino.id}`}
-      className={`scroll-mt-4 overflow-hidden rounded-2xl border bg-white shadow-sm ${stile.bordoCard}`}
+      className={`scroll-mt-4 overflow-hidden rounded-2xl border bg-white shadow-xs ${stile.bordoCard}`}
     >
       {/* overflow-wrap:anywhere + min-w-0: un nome (o un'allergia) senza
           spazi più largo della card va a capo invece di far scorrere la
           pagina in orizzontale su telefono (specs/10). */}
       <header
-        className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 [overflow-wrap:anywhere] ${stile.sfondoIntestazione}`}
+        className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 wrap-anywhere ${stile.sfondoIntestazione}`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <AvatarBambino sesso={sesso} />

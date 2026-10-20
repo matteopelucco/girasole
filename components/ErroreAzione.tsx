@@ -13,7 +13,7 @@ export function ErroreAzione({ error, reset }: { error: Error & { digest?: strin
       <div className="w-full max-w-sm rounded-xl border border-red-200 bg-red-50 p-6 text-center">
         <h1 className="text-lg font-medium text-red-800">Qualcosa è andato storto</h1>
         <p className="mt-2 text-sm text-red-700">L&apos;azione non è andata a buon fine. Riprova.</p>
-        <p className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-left text-xs text-red-600">
+        <p className="mt-3 whitespace-pre-wrap wrap-break-word rounded-lg bg-white p-2 text-left text-xs text-red-600">
           {error.message || 'Errore sconosciuto.'}
         </p>
         {error.digest && (

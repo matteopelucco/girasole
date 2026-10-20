@@ -13,11 +13,11 @@
 const BASE = 'inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm';
 
 const CLASSI_SELEZIONATO: Record<string, string> = {
-  presente: `${BASE} bg-emerald-700 font-semibold text-white shadow-sm`,
-  si: `${BASE} bg-emerald-700 font-semibold text-white shadow-sm`,
-  assente: `${BASE} bg-stone-600 font-semibold text-white shadow-sm`,
-  no: `${BASE} bg-rose-600 font-semibold text-white shadow-sm`,
-  malattia: `${BASE} bg-rose-600 font-semibold text-white shadow-sm`,
+  presente: `${BASE} bg-emerald-700 font-semibold text-white shadow-xs`,
+  si: `${BASE} bg-emerald-700 font-semibold text-white shadow-xs`,
+  assente: `${BASE} bg-stone-600 font-semibold text-white shadow-xs`,
+  no: `${BASE} bg-rose-600 font-semibold text-white shadow-xs`,
+  malattia: `${BASE} bg-rose-600 font-semibold text-white shadow-xs`,
 };
 
 const CLASSE_NON_SELEZIONATO = `${BASE} border border-stone-300 bg-white font-medium text-stone-700 hover:border-stone-500`;
@@ -29,7 +29,7 @@ export function classePulsanteStato(stato: string, selezionato: boolean): string
 // Pulsanti "Pre-asilo"/"Post-asilo" (specs/13): toggle indipendenti dai
 // tre stati primari, colore distinto (sky) per non essere confusi con
 // "Presente" (emerald) pur implicandolo.
-const CLASSE_TOGGLE_ATTIVO = `${BASE} bg-sky-700 font-semibold text-white shadow-sm`;
+const CLASSE_TOGGLE_ATTIVO = `${BASE} bg-sky-700 font-semibold text-white shadow-xs`;
 
 export function classePulsanteToggle(selezionato: boolean): string {
   return selezionato ? CLASSE_TOGGLE_ATTIVO : CLASSE_NON_SELEZIONATO;

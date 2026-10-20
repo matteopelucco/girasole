@@ -125,7 +125,7 @@ export function ColonnaPresenza({
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 [overflow-wrap:anywhere]">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-stone-600 wrap-anywhere">
           <span>{presenza ? ETICHETTE_PRESENZA[presenza.stato] : 'Non ancora segnato'}</span>
           {presenza?.pre_asilo && <span className="text-sky-700">Pre-asilo</span>}
           {presenza?.post_asilo && <span className="text-sky-700">Post-asilo</span>}

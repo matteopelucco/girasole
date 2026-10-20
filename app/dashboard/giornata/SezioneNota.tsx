@@ -29,7 +29,7 @@ export function SezioneNota({
         <IntestazioneSezione id={idTitolo} icona={<IconaNota className="h-5 w-5" />}>
           Nota
         </IntestazioneSezione>
-        <p className="whitespace-pre-line text-sm text-stone-700 [overflow-wrap:anywhere]">{presenza.note}</p>
+        <p className="whitespace-pre-line text-sm text-stone-700 wrap-anywhere">{presenza.note}</p>
       </div>
     );
   }

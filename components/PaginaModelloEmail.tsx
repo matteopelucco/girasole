@@ -16,7 +16,7 @@ function FormModelloEmail({
   updatedAt: string | null | undefined;
 }) {
   return (
-    <FormConEsito action={action} className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+    <FormConEsito action={action} className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
       <label className="block text-xs text-stone-600">
         Oggetto
         <input
@@ -24,7 +24,7 @@ function FormModelloEmail({
           required
           defaultValue={oggetto}
           aria-label="Oggetto"
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
         />
       </label>
       <label className="block text-xs text-stone-600">
@@ -35,7 +35,7 @@ function FormModelloEmail({
           rows={14}
           defaultValue={corpo}
           aria-label="Corpo"
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
         />
       </label>
       <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">

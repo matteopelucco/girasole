@@ -701,6 +701,19 @@ solo `e2e/`) e **non fa parte della CI** né di `npx playwright test`: sta in
   un carattere di ripiego, e foto e confronto vanno fatti nelle stesse
   condizioni di rete.
 
+## Tailwind 4 (issue #334)
+Dal passaggio a Tailwind 4 non c'è più `tailwind.config.ts`: tema e font stanno
+in `app/globals.css` (`@theme`), la scansione dei sorgenti (compreso `lib/`) è
+automatica, e il plugin PostCSS è `@tailwindcss/postcss` (senza `autoprefixer`).
+Per restare identici alla versione 3, `globals.css` ridefinisce in esadecimale la
+palette di Tailwind 3 (solo le famiglie usate; un colore di una famiglia nuova
+va copiato da `tailwindcss@3.4`, `colors.js`) e ripristina i valori predefiniti
+che la 4 ha cambiato (colore dei bordi, cursore dei pulsanti, segnaposto,
+sfondo dei campi, margini interni di celle, voci dei menu e campo data). La
+palette di Tailwind 4 è `oklch(...)` e darebbe colori calcolati diversi da quelli
+che leggono le e2e (`rgb(...)`). Differenza che resta: `space-y-*` e `divide-y`
+cambiano lato del margine/bordo (vedi la PR #334 per i punti toccati).
+
 ## Review automatica di Claude in CI: interruttore (issue #160)
 - Il job `review` di `claude-board.yml` (review di ogni PR con Sonnet) è
   **spento di default** per costo: parte solo se la variabile di repository

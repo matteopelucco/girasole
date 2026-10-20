@@ -29,7 +29,7 @@ export function SelettoreSettimanaOreLavoro({
         defaultValue={lunedi}
         max={oggiData}
         required
-        className="min-h-11 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-500"
+        className="min-h-11 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-amber-500"
       />
       {utenteId && <input type="hidden" name="utente" value={utenteId} />}
       <button

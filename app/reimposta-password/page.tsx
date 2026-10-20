@@ -29,7 +29,7 @@ export default async function ReimpostaPasswordPage(
 
   return (
     <main className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-xl border border-stone-200 bg-white p-8 shadow-xs">
         <h1 className="mb-1 text-xl font-medium">Imposta una nuova password</h1>
         <p className="mb-6 text-sm text-stone-600">{REGOLA_PASSWORD}</p>
 
@@ -44,7 +44,7 @@ export default async function ReimpostaPasswordPage(
               type="password"
               required
               minLength={8}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
           </div>
           <div>
@@ -57,7 +57,7 @@ export default async function ReimpostaPasswordPage(
               type="password"
               required
               minLength={8}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
           </div>
 

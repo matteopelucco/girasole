@@ -67,7 +67,7 @@ export function CampoNota({ id, name, valore }: { id: string; name: string; valo
         rows={2}
         defaultValue={valore ?? ''}
         placeholder="Scrivi qui…"
-        className="block w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none placeholder:text-stone-500 focus:border-stone-500"
+        className="block w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden placeholder:text-stone-500 focus:border-stone-500"
       />
     </div>
   );

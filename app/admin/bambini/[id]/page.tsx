@@ -68,7 +68,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
         <FormConEsito
           action={aggiornaBambino}
-          className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+          className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
         >
           <input type="hidden" name="bambino_id" value={bambino.id} />
           <div className="flex gap-2">
@@ -77,14 +77,14 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
               required
               defaultValue={bambino.nome}
               placeholder="Nome"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <input
               name="cognome"
               required
               defaultValue={bambino.cognome}
               placeholder="Cognome"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
           </div>
           <div className="flex gap-2">
@@ -94,14 +94,14 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
               required
               defaultValue={bambino.data_nascita ?? ''}
               aria-label="Data di nascita"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <select
               name="sesso"
               required
               defaultValue={bambino.sesso ?? ''}
               aria-label="Sesso"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="" disabled>
                 Sesso
@@ -114,7 +114,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
             name="sezione_id"
             defaultValue={bambino.sezione_id ?? ''}
             aria-label="Sezione"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           >
             <option value="">Nessuna sezione</option>
             {sezioni?.map((sezione) => (
@@ -127,13 +127,13 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
             name="note_allergie"
             defaultValue={bambino.note_allergie ?? ''}
             placeholder="Allergie o intolleranze (opzionale)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           />
           <input
             name="altre_note"
             defaultValue={bambino.altre_note ?? ''}
             placeholder="Altre note (opzionale)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           />
           <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
             Salva modifiche
@@ -157,7 +157,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
           <h2 className="text-base font-medium">Costi</h2>
           <FormConEsito
             action={aggiornaCostiBambino}
-            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
@@ -170,7 +170,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   step={0.01}
                   defaultValue={costi?.prezzo_mensile ?? 0}
                   aria-label="Prezzo retta mensile (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 />
               </label>
               <label className="flex-1 text-xs text-stone-600">
@@ -185,7 +185,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   // senza ancora nessun costo salvato (specs/55).
                   defaultValue={costi?.prezzo_buono_pasto ?? 6}
                   aria-label="Prezzo buono pasto (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 />
               </label>
               <label className="flex-1 text-xs text-stone-600">
@@ -200,7 +200,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   // senza ancora nessun costo salvato (specs/55).
                   defaultValue={costi?.prezzo_marca_da_bollo ?? 2}
                   aria-label="Prezzo marca da bollo (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 />
               </label>
             </div>
@@ -225,7 +225,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     step={0.01}
                     defaultValue={costi?.prezzo_pre_asilo ?? 70}
                     aria-label="Prezzo pre-asilo (€)"
-                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                   />
                 </label>
               </div>
@@ -248,7 +248,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     step={0.01}
                     defaultValue={costi?.prezzo_post_asilo ?? 70}
                     aria-label="Prezzo post-asilo (€)"
-                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                   />
                 </label>
               </div>
@@ -261,7 +261,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 defaultValue={costi?.email_promemoria ?? ''}
                 placeholder="genitore@esempio.it (opzionale, più indirizzi separati da ;)"
                 aria-label="Email promemoria retta"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
 
@@ -291,7 +291,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 return (
                   <li
                     key={voce.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-xs"
                   >
                     <div>
                       <span className={eCredito ? 'font-medium text-emerald-700' : 'font-medium text-red-700'}>
@@ -327,7 +327,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
           <FormConEsito
             action={aggiungiCreditoDebito}
-            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+            className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
@@ -337,7 +337,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   name="tipo"
                   defaultValue="debito"
                   aria-label="Tipo"
-                  className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 >
                   <option value="debito">Debito</option>
                   <option value="credito">Credito</option>
@@ -351,7 +351,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   min={0.01}
                   step={0.01}
                   aria-label="Importo (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 />
               </label>
               <label className="text-xs text-stone-600">
@@ -362,7 +362,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   min={meseMinimo}
                   defaultValue={meseSuggerito}
                   aria-label="Mese di competenza"
-                  className="mt-1 block rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                  className="mt-1 block rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
                 />
               </label>
             </div>
@@ -373,7 +373,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 required
                 placeholder="Motivo del credito/debito"
                 aria-label="Nota"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">

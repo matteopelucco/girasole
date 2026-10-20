@@ -44,14 +44,14 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
 
         <h1 className="text-lg font-medium">Modifica avviso</h1>
 
-        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
           <input type="hidden" name="promemoria_id" value={promemoria.id} />
           <input
             name="titolo"
             required
             defaultValue={promemoria.titolo}
             placeholder="Titolo"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           />
           <textarea
             name="testo"
@@ -59,7 +59,7 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
             defaultValue={promemoria.testo}
             placeholder="Testo dell'avviso"
             rows={3}
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
           />
           <SelettoreDestinatarioAvviso
             sezioni={sezioni}

@@ -226,7 +226,7 @@ export function VerificaBonifico({
                 min={0}
                 step={0.01}
                 aria-label="Importo ricevuto (€)"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
             <label className="block text-xs text-stone-600">
@@ -235,7 +235,7 @@ export function VerificaBonifico({
                 ref={notaRef}
                 placeholder="Motivo della differenza"
                 aria-label="Nota bonifico"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
             <label className="block text-xs text-stone-600">
@@ -246,7 +246,7 @@ export function VerificaBonifico({
                 min={meseMinimo}
                 defaultValue={meseSuggerito}
                 aria-label="Mese su cui conteggiare la differenza"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
             </label>
             {!esitoModale.ok && (

@@ -195,7 +195,7 @@ export default async function DashboardPage(
               <Link
                 key={c.href}
                 href={c.href}
-                className={`rounded-2xl ${c.classi} px-4 py-8 text-center text-lg font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                className={`rounded-2xl ${c.classi} px-4 py-8 text-center text-lg font-semibold text-white shadow-xs transition hover:-translate-y-0.5 hover:shadow-md ${
                   c.spanIntero ? 'col-span-2' : ''
                 }`}
               >
@@ -220,20 +220,20 @@ export default async function DashboardPage(
           <FormConEsito
             action={creaPromemoria}
             resetSuOk
-            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
           >
             <input
               name="titolo"
               required
               placeholder="Titolo"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <textarea
               name="testo"
               required
               placeholder="Testo dell'avviso"
               rows={3}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-stone-500"
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
             <SelettoreDestinatarioAvviso sezioni={sezioni} bambini={bambini} />
             <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
@@ -243,7 +243,7 @@ export default async function DashboardPage(
 
           <ul className="mt-4 space-y-2">
             {promemoria?.map((p) => (
-              <li key={p.id} className="rounded-lg border border-stone-200 bg-white p-3 text-sm shadow-sm">
+              <li key={p.id} className="rounded-lg border border-stone-200 bg-white p-3 text-sm shadow-xs">
                 <Link href={`/dashboard/promemoria/${p.id}`} className="font-medium hover:underline">
                   {p.titolo}
                 </Link>

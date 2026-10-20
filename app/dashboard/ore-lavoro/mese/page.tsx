@@ -161,7 +161,7 @@ export default async function OreLavoroMesePage(
           </a>
         </div>
 
-        <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-sm">
+        <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-xs">
           <p>
             Ore previste: <strong>{riepilogo.orePreviste}h</strong>
           </p>
@@ -182,7 +182,7 @@ export default async function OreLavoroMesePage(
 
         <CalcoloMensileMonteOre righe={calcoloMensile} />
 
-        <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-sm">
+        <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm shadow-xs">
           <h2 className="font-medium text-stone-800">Settimane del mese</h2>
           <ul className="mt-2 space-y-1">
             {settimane.map((lunedi) => {
@@ -209,7 +209,7 @@ export default async function OreLavoroMesePage(
             const futuro = r.data > oggiData;
             const vacanza = isStatoNeutroOreLavoro(r.stato);
             return (
-              <li key={r.data} className="rounded-xl border border-stone-200 bg-white shadow-sm">
+              <li key={r.data} className="rounded-xl border border-stone-200 bg-white shadow-xs">
                 <Link
                   href={hrefSettimana(lunediSettimana(r.data))}
                   className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-3"

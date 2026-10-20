@@ -78,7 +78,7 @@ export function AvatarBambino({ sesso, className }: { sesso: string | null | und
 
   return (
     <span
-      className={`inline-block shrink-0 overflow-hidden rounded-full border-2 border-white shadow-sm ${stile.sfondoAvatar} ${className ?? 'h-12 w-12'}`}
+      className={`inline-block shrink-0 overflow-hidden rounded-full border-2 border-white shadow-xs ${stile.sfondoAvatar} ${className ?? 'h-12 w-12'}`}
     >
       <svg viewBox="0 0 64 64" className="h-full w-full" {...accessibilita}>
         {stile.sesso === 'F' ? <Bambina /> : stile.sesso === 'M' ? <Bambino /> : <Neutro />}

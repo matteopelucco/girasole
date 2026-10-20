@@ -27,7 +27,7 @@ export function SelettoreData({ basePath, data }: { basePath: string; data: stri
           name="data"
           defaultValue={data}
           aria-label="Data"
-          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-500"
+          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-amber-500"
         />
         <button
           type="submit"

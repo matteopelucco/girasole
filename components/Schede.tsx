@@ -42,7 +42,7 @@ export function Schede({ schede, attiva }: { schede: readonly Scheda[]; attiva: 
             aria-controls={selezionata ? ID_PANNELLO_SCHEDE : undefined}
             tabIndex={selezionata ? 0 : -1}
             onKeyDown={(evento) => suTasto(evento, indice)}
-            className={`-mb-px inline-flex min-h-11 flex-1 items-center justify-center border-b-2 px-4 text-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-900 sm:flex-none ${
+            className={`-mb-px inline-flex min-h-11 flex-1 items-center justify-center border-b-2 px-4 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-stone-900 sm:flex-none ${
               selezionata
                 ? 'border-stone-900 font-semibold text-stone-900'
                 : 'border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-900'

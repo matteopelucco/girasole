@@ -146,7 +146,7 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
             {/* Intestazione di sezione: titolo e riassunto testuale, non
                 una card (specs/10). */}
             <div className="px-1 pt-2">
-              <h2 className="text-base font-semibold text-stone-800 [overflow-wrap:anywhere]">
+              <h2 className="text-base font-semibold text-stone-800 wrap-anywhere">
                 {titoloRiepilogoSezione(gruppo.titolo)}
               </h2>
               <p className="mt-0.5 text-sm text-stone-600">

@@ -72,7 +72,7 @@ async function ElencoProssimiEventi({ oggi }: { oggi: string }) {
         <li
           key={evento.id}
           data-testid="prossimo-evento"
-          className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 shadow-sm"
+          className="flex items-start gap-3 rounded-lg border border-stone-200 bg-white p-3 shadow-xs"
         >
           <TesseraGiorno
             data={evento.data}
@@ -82,7 +82,7 @@ async function ElencoProssimiEventi({ oggi }: { oggi: string }) {
             eOggi={evento.eOggi}
           />
           <div className="min-w-0 flex-1">
-            <p data-testid="titolo-evento" className="text-sm font-medium text-stone-900 [overflow-wrap:anywhere]">
+            <p data-testid="titolo-evento" className="text-sm font-medium text-stone-900 wrap-anywhere">
               {evento.titolo}
             </p>
             <EtichetteEvento evento={evento} className="mt-1.5" />

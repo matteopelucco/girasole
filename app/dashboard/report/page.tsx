@@ -145,7 +145,7 @@ export default async function ReportPage(
         {sezioni.map((sezione) => {
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
           return (
-            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-sm">
+            <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
               <h2 className="text-sm font-semibold">{sezione.nome}</h2>
               {!lista.length && <p className="mt-2 text-sm text-stone-600">Nessun bambino in questa classe.</p>}
               {!!lista.length && (

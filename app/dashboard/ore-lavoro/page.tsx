@@ -321,7 +321,7 @@ export default async function OreLavoroPage(
         {soloLettura ? (
           <div className="space-y-2">
             {righe.map((r) => (
-              <div key={r.data} className={`rounded-xl border p-3 shadow-sm ${classeCardOreLavoro(r.stato === 'lavorativo' ? r.differenzaOre : null)}`}>
+              <div key={r.data} className={`rounded-xl border p-3 shadow-xs ${classeCardOreLavoro(r.stato === 'lavorativo' ? r.differenzaOre : null)}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-medium">
                     {r.etichetta} <span className="font-normal text-stone-600">{r.dataBreve}</span>

@@ -37,13 +37,13 @@ function SchedaEvento({ evento, passato }: { evento: EventoVista; passato: boole
   return (
     <li
       data-testid="evento"
-      className={`rounded-xl border border-l-4 p-3 shadow-sm ${
+      className={`rounded-xl border border-l-4 p-3 shadow-xs ${
         passato ? 'border-stone-200 border-l-stone-300 bg-stone-50' : 'border-stone-200 border-l-amber-400 bg-white'
       }`}
     >
       <p
         data-testid="titolo-evento"
-        className={`font-medium [overflow-wrap:anywhere] ${passato ? 'text-stone-600' : 'text-stone-900'}`}
+        className={`font-medium wrap-anywhere ${passato ? 'text-stone-600' : 'text-stone-900'}`}
       >
         {evento.titolo}
       </p>
@@ -51,7 +51,7 @@ function SchedaEvento({ evento, passato }: { evento: EventoVista; passato: boole
       <EtichetteEvento evento={evento} className="mt-1.5" />
 
       {evento.luogo && (
-        <p data-testid="luogo-evento" className="mt-2 text-sm text-stone-700 [overflow-wrap:anywhere]">
+        <p data-testid="luogo-evento" className="mt-2 text-sm text-stone-700 wrap-anywhere">
           <span aria-hidden>📍 </span>
           <span className="sr-only">Luogo: </span>
           {evento.luogo}
@@ -60,7 +60,7 @@ function SchedaEvento({ evento, passato }: { evento: EventoVista; passato: boole
       {evento.descrizione && (
         <p
           data-testid="descrizione-evento"
-          className="mt-2 whitespace-pre-line text-sm text-stone-700 [overflow-wrap:anywhere]"
+          className="mt-2 whitespace-pre-line text-sm text-stone-700 wrap-anywhere"
         >
           {evento.descrizione}
         </p>

@@ -104,7 +104,7 @@ export default async function PagamentiBambinoPage(
         </form>
 
         {!bambino ? (
-          <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-sm">
+          <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
             Scegli un bambino per vedere i suoi pagamenti.
           </p>
         ) : (
@@ -128,7 +128,7 @@ export default async function PagamentiBambinoPage(
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
               <table className="min-w-full divide-y divide-stone-200 text-sm">
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}
@@ -142,7 +142,7 @@ export default async function PagamentiBambinoPage(
                       <th
                         key={etichetta}
                         scope="col"
-                        className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700"
+                        className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700"
                       >
                         {etichetta}
                       </th>

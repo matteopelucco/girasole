@@ -184,37 +184,37 @@ const INTESTAZIONE_COLONNE = (
       <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
         Bambino
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Retta
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Marca da bollo
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Pasti mese corrente
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Conguaglio pasti mese precedente
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Pre-asilo
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Post-asilo
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Costi extra
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-left font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-left font-medium text-stone-700">
         Nota costi extra
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Credito/Debito
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-right font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
         Totale
       </th>
-      <th scope="col" className="max-w-[6.5rem] px-2 py-1.5 text-left font-medium text-stone-700">
+      <th scope="col" className="max-w-26 px-2 py-1.5 text-left font-medium text-stone-700">
         Stato
       </th>
     </tr>
@@ -229,7 +229,7 @@ function TabellaSezione({ titolo, righe }: { titolo: string; righe: React.ReactN
   return (
     <div className="space-y-2">
       <h2 className="text-sm font-semibold text-stone-800">{titolo}</h2>
-      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
         <table className="min-w-full divide-y divide-stone-200 text-sm">
           {INTESTAZIONE_COLONNE}
           <tbody className="divide-y divide-stone-100">{righe}</tbody>
@@ -390,7 +390,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
 
       const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
       const classeCampoImporto =
-        'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500';
+        'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500';
 
       return (
         <tr key={bambino.id}>
@@ -435,7 +435,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               defaultValue={0}
               name={`costi_extra_${bambino.id}`}
               ariaLabel={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-none focus:border-stone-500"
+              className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500"
             />
           </td>
           <td className="px-2 py-1.5 text-left">
@@ -444,7 +444,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               name={`note_extra_${bambino.id}`}
               placeholder="Nota (opzionale)"
               aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-none focus:border-stone-500"
+              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-hidden focus:border-stone-500"
             />
           </td>
           <td className="px-2 py-1.5 text-right">
@@ -487,7 +487,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-sm">
+      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
         Nessun bambino attivo.
       </p>
     );
@@ -552,7 +552,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-sm">
+      <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
         Nessuna comunicazione inviata in questo mese.
       </p>
     );
