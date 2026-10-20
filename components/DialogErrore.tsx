@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 import type { EsitoAzione } from './FormConEsito';
+import { Pulsante } from './ui/pulsante';
 
 // Popup bloccante per un'azione fallita (specs/05 - feedback.md, specs/18
 // - report-ore-lavoro.md, issue #189): un banner discreto sotto il pulsante
@@ -63,13 +64,14 @@ export function DialogErrore({
           </ul>
         )}
         {esito.dettaglio && <p className="mt-3 text-xs text-stone-600">{esito.dettaglio}</p>}
-        <button
-          type="button"
+        <Pulsante
+          variante="pericolo"
+          misura="normale"
           onClick={() => dialogRef.current?.close()}
-          className="mt-4 min-h-11 w-full rounded-lg bg-red-700 px-4 text-sm font-medium text-white hover:bg-red-800 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2"
+          className="mt-4 min-h-11 w-full py-0"
         >
           Chiudi e correggi
-        </button>
+        </Pulsante>
       </div>
     </dialog>
   );

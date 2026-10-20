@@ -1,5 +1,7 @@
 'use client';
 
+import { Pulsante } from './ui/pulsante';
+
 // Contenuto condiviso dagli error.tsx delle varie route (convenzione
 // Next.js: error.tsx cattura gli errori non gestiti puntualmente da
 // un'azione — vedi specs/05 - feedback.md, scenario "errore imprevisto
@@ -25,19 +27,14 @@ export function ErroreAzione({ error, reset }: { error: Error & { digest?: strin
           <p className="mt-2 text-[11px] text-red-400">Codice errore: {error.digest}</p>
         )}
         <div className="mt-4 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => reset()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
-          >
+          <Pulsante variante="primario" misura="normale" onClick={() => reset()}>
             Riprova
-          </button>
-          <a
-            href="/dashboard"
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100"
-          >
-            Torna alla dashboard
-          </a>
+          </Pulsante>
+          {/* <a> e non <Link>: dopo un errore serve ricaricare la pagina da
+              zero, non una navigazione client che riusa lo stato rotto. */}
+          <Pulsante asChild variante="secondario" misura="normale" className="bg-transparent text-inherit">
+            <a href="/dashboard">Torna alla dashboard</a>
+          </Pulsante>
         </div>
       </div>
     </main>
