@@ -1,3 +1,4 @@
+import { descrizioneMeseRojac } from './allarmeRojac';
 import { descrizioneBambinoRetta, GIORNO_ALLARME_RETTE, type BambinoRetta } from './allarmeRette';
 import type { StatoOperativoGiorno, UtenteSettimanaNonConfermata } from './allarmi';
 import { formattaDataItaliana } from './date';
@@ -26,6 +27,10 @@ export type ControlloRiepilogo = {
   azione: string | null;
   // Solo per "non_applicabile" / "non_controllato": perché.
   motivo: string | null;
+  // Vero se, essendo "da_sistemare", fa partire l'email. Falso solo per la
+  // mail mensile a Rojac quando tutti i mesi mancanti sono già stati
+  // avvisati: resta da sistemare nel riepilogo ma non rimanda l'email.
+  scattaEmail: boolean;
 };
 
 export type InputRiepilogo = {
@@ -42,6 +47,10 @@ export type InputRiepilogo = {
   giornata: { ora: Date; stato: StatoOperativoGiorno } | null;
   rette: { ora: Date; mancanti: BambinoRetta[] };
   ore: { ora: Date; intervallo: string; utenti: UtenteSettimanaNonConfermata[] };
+  // Mail mensile a Rojac (specs/07): i mesi conclusi senza invio registrato
+  // ("YYYY-MM", dal più vecchio) e, tra questi, quelli per cui l'email non è
+  // ancora partita (`daAvvisare`).
+  rojac: { ora: Date; mancanti: string[]; daAvvisare: string[] };
 };
 
 const AZIONE_APPELLO =
@@ -49,6 +58,7 @@ const AZIONE_APPELLO =
 const AZIONE_PASTI = 'Comunicare i pasti di oggi a Rojac dalla schermata "Presenze e pasti" (entro la giornata).';
 const AZIONE_RETTE = 'Inviare le comunicazioni delle rette ai genitori dalla tabella "Rette".';
 const AZIONE_ORE = 'Confermare le ore della settimana in "Ore di lavoro".';
+const AZIONE_ROJAC = 'Inviare la mail dei pasti a Rojac dal Report mensile del mese indicato.';
 
 // "HH:MM" nel fuso Europe/Rome.
 export function formattaOraRoma(istante: Date): string {
@@ -65,9 +75,18 @@ function controlloBase(
   nome: string,
   ora: Date | null,
   stato: StatoControllo,
-  extra: Partial<Pick<ControlloRiepilogo, 'dettaglio' | 'azione' | 'motivo'>> = {}
+  extra: Partial<Pick<ControlloRiepilogo, 'dettaglio' | 'azione' | 'motivo' | 'scattaEmail'>> = {}
 ): ControlloRiepilogo {
-  return { id, nome, ora, stato, dettaglio: extra.dettaglio ?? [], azione: extra.azione ?? null, motivo: extra.motivo ?? null };
+  return {
+    id,
+    nome,
+    ora,
+    stato,
+    dettaglio: extra.dettaglio ?? [],
+    azione: extra.azione ?? null,
+    motivo: extra.motivo ?? null,
+    scattaEmail: extra.scattaEmail ?? true,
+  };
 }
 
 function motivoGiornata(input: InputRiepilogo): string | null {
@@ -144,25 +163,45 @@ function controlloOre(input: InputRiepilogo): ControlloRiepilogo {
   });
 }
 
-// L'ordine è quello dell'email: giornata, mensili, ore. La mail mensile dei
-// pasti a Rojac non ha ancora un controllo vero (issue #282, in attesa del
-// registro degli invii #281): compare come "non ancora controllata" e non
-// fa mai scattare l'email.
-export function costruisciControlliRiepilogo(input: InputRiepilogo): ControlloRiepilogo[] {
-  const [appello, pasti] = controlliGiornata(input);
-  return [
-    appello,
-    pasti,
-    controlloRette(input),
-    controlloBase('mail-rojac-mensile', 'Mail mensile dei pasti a Rojac', null, 'non_controllato', {
-      motivo: 'controllo non ancora attivo',
-    }),
-    controlloOre(input),
-  ];
+// Mail mensile a Rojac (mensile, specs/07): "da sistemare" se un mese concluso
+// non ha un invio registrato. Fa partire l'email solo se almeno un mese non è
+// ancora stato avvisato (una sola email per mese mancante).
+function controlloRojac(input: InputRiepilogo): ControlloRiepilogo {
+  const nome = 'Mail mensile dei pasti a Rojac';
+  const { ora, mancanti, daAvvisare } = input.rojac;
+  if (!mancanti.length) {
+    return controlloBase('mail-rojac-mensile', nome, ora, 'ok', {
+      dettaglio: ['Nessun mese concluso senza la mail dei pasti inviata a Rojac.'],
+    });
+  }
+  return controlloBase('mail-rojac-mensile', nome, ora, 'da_sistemare', {
+    dettaglio: [
+      mancanti.length === 1
+        ? 'La mail dei pasti a Rojac non risulta inviata per il mese:'
+        : 'La mail dei pasti a Rojac non risulta inviata per i mesi:',
+      ...mancanti.map((mese) => descrizioneMeseRojac(mese)),
+    ],
+    azione: AZIONE_ROJAC,
+    scattaEmail: daAvvisare.length > 0,
+  });
 }
 
+// L'ordine è quello dell'email: giornata, mensili, ore.
+export function costruisciControlliRiepilogo(input: InputRiepilogo): ControlloRiepilogo[] {
+  const [appello, pasti] = controlliGiornata(input);
+  return [appello, pasti, controlloRette(input), controlloRojac(input), controlloOre(input)];
+}
+
+// Almeno un controllo "da sistemare" che fa partire l'email.
 export function riepilogoDaSistemare(controlli: ControlloRiepilogo[]): boolean {
-  return controlli.some((c) => c.stato === 'da_sistemare');
+  return controlli.some((c) => c.stato === 'da_sistemare' && c.scattaEmail);
+}
+
+// Almeno un controllo "da sistemare" diverso dalla mail mensile a Rojac: è
+// quello che prenota l'invio giornaliero (idempotenza per giorno), mentre i
+// mesi di Rojac si prenotano uno per uno.
+export function giornalieroDaInviare(controlli: ControlloRiepilogo[]): boolean {
+  return controlli.some((c) => c.stato === 'da_sistemare' && c.id !== 'mail-rojac-mensile');
 }
 
 export function oggettoRiepilogoAllarmi(controlli: ControlloRiepilogo[], oggi: string): string {

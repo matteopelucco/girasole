@@ -1,3 +1,4 @@
+import { descrizioneMeseRojac, hrefReportRojac, ID_ALLARME_ROJAC } from './allarmeRojac';
 import { descrizioneBambinoRetta, type BambinoRetta } from './allarmeRette';
 import { allarmePersonalePresenzePastiAttivo, type AllarmeDipendente, type StatoPersonaleGiorno } from './allarmi';
 import { formattaIntervalloItaliano } from './date';
@@ -43,6 +44,9 @@ export type InputElencoAllarmi = {
   // Bambini a cui manca la comunicazione della retta del mese (specs/07):
   // solo per l'admin e solo dal giorno 3; vuoto per gli altri.
   retteNonComunicate: BambinoRetta[];
+  // Mesi conclusi la cui mail a Rojac non risulta inviata ("YYYY-MM", dal
+  // più vecchio, specs/07): solo per l'admin; vuoto per gli altri.
+  mailRojacNonInviata: string[];
 };
 
 function vociPersonale(allarme: AllarmeDipendente): VoceAllarme[] {
@@ -100,6 +104,18 @@ export function componiAllarmi(input: InputElencoAllarmi): Allarme[] {
         },
         ...input.retteNonComunicate.map((bambino) => ({ testo: descrizioneBambinoRetta(bambino) })),
       ],
+    });
+  }
+
+  if (input.mailRojacNonInviata.length > 0) {
+    elenco.push({
+      id: ID_ALLARME_ROJAC,
+      tipo: 'proprio',
+      titolo: 'Mail mensile a Rojac non inviata',
+      voci: input.mailRojacNonInviata.map((mese) => ({
+        testo: `Pasti di ${descrizioneMeseRojac(mese)}: vai al Report mensile per inviare la mail`,
+        href: hrefReportRojac(mese),
+      })),
     });
   }
 
