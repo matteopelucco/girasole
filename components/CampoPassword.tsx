@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Campo } from '@/components/ui/campo';
 
 // Icone occhio/occhio-barrato lineari e monocromatiche (colore ereditato
 // da `currentColor`, coerente con il resto dell'interfaccia): niente
@@ -52,6 +53,8 @@ export function CampoPassword({
   placeholder,
   ariaLabel,
   autoComplete,
+  ariaDescribedBy,
+  ariaInvalid,
   onChange,
 }: {
   id?: string;
@@ -61,13 +64,16 @@ export function CampoPassword({
   placeholder?: string;
   ariaLabel?: string;
   autoComplete?: string;
+  // Collegano il campo al testo di aiuto/errore (components/ui/etichetta.tsx).
+  ariaDescribedBy?: string;
+  ariaInvalid?: boolean;
   onChange?: (valore: string) => void;
 }) {
   const [visibile, setVisibile] = useState(false);
 
   return (
     <div className="relative self-start">
-      <input
+      <Campo
         id={id}
         name={name}
         type={visibile ? 'text' : 'password'}
@@ -76,8 +82,10 @@ export function CampoPassword({
         placeholder={placeholder}
         aria-label={ariaLabel}
         autoComplete={autoComplete}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid || undefined}
         onChange={(e) => onChange?.(e.target.value)}
-        className="w-full rounded-lg border border-stone-300 px-3 py-2 pr-10 text-sm outline-hidden focus:border-stone-500"
+        className="w-full pr-10"
       />
       <button
         type="button"

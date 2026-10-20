@@ -36,6 +36,18 @@ test.describe('01 — UX/UI', () => {
       // Anello nel colore primario (emerald-700 = rgb(4, 120, 87)).
       await expect(accedi).toHaveCSS('box-shadow', /rgb\(4, 120, 87\)/);
     });
+
+    // specs/01 - ux.md, "Campi": il campo attivo mostra un anello di 2 px nel
+    // colore primario (emerald-700), non solo un bordo diverso. L'anello è
+    // un box-shadow: il valore calcolato contiene colore e spessore.
+    test('il campo password con il focus mostra un anello di 2 px nel colore primario', async ({ page }) => {
+      await page.goto('/login');
+      const campo = page.locator('#password');
+
+      await campo.focus();
+
+      await expect(campo).toHaveCSS('box-shadow', /rgb\(4, 120, 87\) 0px 0px 0px 2px/);
+    });
   });
 
   test.describe('dashboard maestra (mobile)', () => {
