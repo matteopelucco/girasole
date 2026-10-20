@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Campo } from '@/components/ui/campo';
 import { oggi, sommaGiorni, formattaDataItaliana } from '@/lib/date';
 
 // Il "calendario" richiesto da specs/01 - ux.md e specs/12 -
@@ -22,12 +23,12 @@ export function SelettoreData({ basePath, data }: { basePath: string; data: stri
         ←
       </Link>
       <form method="get" action={basePath} className="flex items-center gap-2">
-        <input
+        <Campo
           type="date"
           name="data"
           defaultValue={data}
           aria-label="Data"
-          className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-amber-500"
+          className="border-amber-300 bg-white"
         />
         <button
           type="submit"

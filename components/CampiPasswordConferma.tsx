@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { CampoPassword } from './CampoPassword';
+import { TestoAiuto, TestoErrore } from './ui/etichetta';
 
 // Password + conferma con riscontro in tempo reale (specs/03 -
 // utenti-e-ruoli.md, scenario "conferma password in tempo reale"): un
@@ -26,6 +27,7 @@ export function CampiPasswordConferma({
   const [password, setPassword] = useState('');
   const [conferma, setConferma] = useState('');
   const coincidono = conferma === '' || password === conferma;
+  const idEsito = useId();
 
   return (
     <>
@@ -46,12 +48,18 @@ export function CampiPasswordConferma({
           placeholder={etichettaConferma}
           ariaLabel={etichettaConferma}
           autoComplete="new-password"
+          ariaDescribedBy={conferma !== '' ? idEsito : undefined}
+          ariaInvalid={!coincidono}
           onChange={setConferma}
         />
         {conferma !== '' && (
-          <p className={`mt-1 text-xs ${coincidono ? 'text-green-700' : 'text-red-600'}`}>
-            {coincidono ? 'Le password coincidono.' : 'Le password non coincidono.'}
-          </p>
+          coincidono ? (
+            <TestoAiuto id={idEsito} className="text-green-700">
+              Le password coincidono.
+            </TestoAiuto>
+          ) : (
+            <TestoErrore id={idEsito}>Le password non coincidono.</TestoErrore>
+          )
         )}
       </div>
     </>
