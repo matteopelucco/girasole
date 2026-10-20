@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRef, useState, useTransition } from 'react';
 import { ESITO_INIZIALE, type EsitoAzione } from './FormConEsito';
+import { Finestra } from './ui/finestra';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana } from '@/lib/date';
 
@@ -209,14 +210,13 @@ export function VerificaBonifico({
       )}
 
       {apertoModale && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Importo bonifico diverso per ${bambinoNome}`}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-stone-900/40 p-4"
+        <Finestra
+          titolo={`Importo bonifico diverso — ${bambinoNome}`}
+          nome={`Importo bonifico diverso per ${bambinoNome}`}
+          larghezza="sm"
+          onChiudi={() => setApertoModale(false)}
         >
-          <div className="w-full max-w-sm space-y-3 rounded-xl bg-white p-5 text-left shadow-lg">
-            <h2 className="text-base font-medium">Importo bonifico diverso — {bambinoNome}</h2>
+          <div className="mt-3 space-y-3">
             <p className="text-xs text-stone-600">Importo atteso: {formattaImporto(totale)}</p>
             <label className="block text-xs text-stone-600">
               Importo ricevuto (€)
@@ -274,7 +274,7 @@ export function VerificaBonifico({
               </button>
             </div>
           </div>
-        </div>
+        </Finestra>
       )}
     </>
   );

@@ -726,6 +726,13 @@ stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
   componenti veri (pulsante, campo, etichetta, riquadro, finestra...) arrivano
   con le issue successive della serie "UX REVIEW"; quando arrivano, questo
   elenco si aggiorna nella stessa PR.
+- **Finestre di dialogo** (issue #342): `components/ui/finestra.tsx` è la
+  `Finestra` unica (EliminaUtente, InvioEmailRojac, InvioSingoloRetta,
+  VerificaBonifico, DialogErrore). Usa il `<dialog>` nativo e non Radix, per
+  scelta: una finestra "portata" in fondo al body uscirebbe dal `<form>` che la
+  contiene e i suoi pulsanti di invio (es. "Conferma invio" nella tabella delle
+  rette) non invierebbero più; in più non pesa nulla nel browser. Si monta solo
+  quando serve (`{aperta && <Finestra …>}`) e si chiude in `onChiudi`.
 - **Quando usarli**: ogni volta che serve un pulsante, un campo, un'etichetta di
   stato, un riquadro di avviso o una finestra di dialogo, si importa il
   componente da `@/components/ui/...`.

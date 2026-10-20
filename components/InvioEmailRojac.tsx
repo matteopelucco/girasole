@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FormConEsito, type EsitoAzione } from './FormConEsito';
 import { PulsanteInvio } from './PulsanteInvio';
+import { Finestra } from './ui/finestra';
 
 // Pulsante "Invia a Rojac" con anteprima e conferma (specs/61 -
 // email-pasti-rojac.md): mostra destinatario, copia, oggetto e corpo così
@@ -66,49 +67,41 @@ export function InvioEmailRojac({
       )}
 
       {aperta && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Anteprima mail a Rojac"
-          className="fixed inset-0 z-40 flex items-center justify-center bg-stone-900/40 p-4"
-        >
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-lg">
-            <h2 className="text-base font-medium">Anteprima mail a Rojac</h2>
-            <dl className="mt-3 space-y-3 text-sm">
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">A</dt>
-                <dd>{a}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">CC</dt>
-                <dd>{cc}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">Oggetto</dt>
-                <dd>{oggetto}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">Corpo</dt>
-                <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-border bg-stone-50 p-2 text-stone-700">
-                  {corpo}
-                </dd>
-              </div>
-            </dl>
-            <FormConEsito action={azioneEInforma} className="mt-4 flex flex-wrap justify-end gap-2" titoloPopupErrore="Mail non inviata">
-              <input type="hidden" name="mese" value={mese} />
-              <button
-                type="button"
-                onClick={() => setAperta(false)}
-                className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
-              >
-                Annulla
-              </button>
-              <PulsanteInvio className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover">
-                Conferma invio
-              </PulsanteInvio>
-            </FormConEsito>
-          </div>
-        </div>
+        <Finestra titolo="Anteprima mail a Rojac" larghezza="lg" onChiudi={() => setAperta(false)}>
+          <dl className="mt-3 space-y-3 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">A</dt>
+              <dd>{a}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">CC</dt>
+              <dd>{cc}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">Oggetto</dt>
+              <dd>{oggetto}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">Corpo</dt>
+              <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-border bg-stone-50 p-2 text-stone-700">
+                {corpo}
+              </dd>
+            </div>
+          </dl>
+          <FormConEsito action={azioneEInforma} className="mt-4 flex flex-wrap justify-end gap-2" titoloPopupErrore="Mail non inviata">
+            <input type="hidden" name="mese" value={mese} />
+            <button
+              type="button"
+              onClick={() => setAperta(false)}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
+            >
+              Annulla
+            </button>
+            <PulsanteInvio className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover">
+              Conferma invio
+            </PulsanteInvio>
+          </FormConEsito>
+        </Finestra>
       )}
     </div>
   );
