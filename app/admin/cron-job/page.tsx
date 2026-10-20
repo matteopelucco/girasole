@@ -30,7 +30,7 @@ export const maxDuration = 60;
 // Stringhe letterali: Tailwind non vede le classi composte a runtime.
 const CLASSI_STATO: Record<StatoLancio['stato'], string> = {
   OK: 'bg-emerald-100 text-emerald-800',
-  KO: 'bg-rose-100 text-rose-800',
+  KO: 'bg-red-100 text-red-800',
   'In corso': 'bg-amber-100 text-amber-900',
 };
 
@@ -95,7 +95,7 @@ async function SchedaCronJob({
       </p>
 
       {errore && (
-        <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+        <p role="alert" className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text">
           Non è stato possibile leggere il registro dei lanci. Riprova più tardi.
         </p>
       )}
@@ -114,7 +114,7 @@ async function SchedaCronJob({
           {gruppo.lanci.length === 0 ? (
             <p className="text-sm text-stone-600">Nessun lancio registrato.</p>
           ) : (
-            <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white shadow-xs">
+            <ul className="divide-y divide-stone-100 rounded-xl border border-border bg-white shadow-xs">
               {gruppo.lanci.map((lancio) => {
                 const { stato, messaggio } = statoLancio(lancio, adesso);
                 const etichetta = etichettaLancio(lancio);

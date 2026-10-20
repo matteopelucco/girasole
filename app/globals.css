@@ -152,6 +152,44 @@
   --color-stone-800: #292524;
   --color-stone-900: #1c1917;
   --color-stone-950: #0c0a09;
+
+  /* Token di significato (issue #335, specs/01 - ux.md, "Sistema grafico"):
+     nel codice si usa il token, non la tinta della palette. Unico punto in
+     cui si cambia il significato di un colore. Per "rose" vedi la spec: non
+     è un token (resta nel tema solo per i colori di stato, issue #350). */
+  --color-primary: var(--color-emerald-700);
+  --color-primary-hover: var(--color-emerald-800);
+
+  --color-success: var(--color-emerald-700);
+  --color-success-soft: var(--color-emerald-50);
+  --color-success-border: var(--color-emerald-200);
+  --color-success-text: var(--color-emerald-800);
+
+  --color-danger: var(--color-red-700);
+  --color-danger-soft: var(--color-red-50);
+  --color-danger-border: var(--color-red-200);
+  --color-danger-text: var(--color-red-800);
+
+  --color-warning: var(--color-amber-700);
+  --color-warning-soft: var(--color-amber-50);
+  --color-warning-border: var(--color-amber-200);
+  --color-warning-text: var(--color-amber-900);
+
+  --color-info: var(--color-sky-700);
+  --color-info-soft: var(--color-sky-50);
+  --color-info-border: var(--color-sky-200);
+  --color-info-text: var(--color-sky-900);
+
+  --color-neutral: var(--color-stone-600);
+  --color-neutral-soft: var(--color-stone-200);
+  --color-neutral-border: var(--color-stone-400);
+  --color-neutral-text: var(--color-stone-900);
+
+  --color-border: var(--color-stone-200);
+  --color-page: var(--color-slate-100);
+
+  --radius-base: var(--radius-lg);
+  --shadow-base: var(--shadow-md);
 }
 
 /*

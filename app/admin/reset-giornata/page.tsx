@@ -43,7 +43,7 @@ export default async function ResetGiornataPage(props: { searchParams: Promise<{
 
         <SelettoreData basePath="/admin/reset-giornata" data={data} />
 
-        <div className="space-y-3 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
+        <div className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs">
           <h2 className="text-sm font-medium text-stone-700">
             Dati registrati per {formattaDataItaliana(data)}
           </h2>
@@ -88,7 +88,7 @@ export default async function ResetGiornataPage(props: { searchParams: Promise<{
               type="button"
               disabled
               title="Nessuna presenza o pasto registrato per questa data"
-              className="cursor-not-allowed rounded-lg border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-400"
+              className="cursor-not-allowed rounded-lg border border-border bg-stone-50 px-4 py-2 text-sm font-medium text-stone-400"
             >
               Resetta giornata
             </button>

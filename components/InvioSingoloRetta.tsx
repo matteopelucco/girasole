@@ -144,7 +144,7 @@ export function InvioSingoloRetta({
               </div>
               <div>
                 <dt className="text-xs font-medium uppercase text-stone-500">Corpo</dt>
-                <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-stone-200 bg-stone-50 p-2 text-stone-700">
+                <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-border bg-stone-50 p-2 text-stone-700">
                   {anteprima.corpo}
                 </dd>
               </div>
@@ -160,7 +160,7 @@ export function InvioSingoloRetta({
               <PulsanteInvio
                 formAction={formAction}
                 mantieniTesto
-                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
               >
                 Conferma invio
               </PulsanteInvio>

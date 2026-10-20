@@ -45,7 +45,7 @@ export default async function ParametriFunzionamentoPage() {
             </p>
           </div>
           {nomi.length === 0 ? (
-            <p data-testid="nessuna-variabile" className="rounded-xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
+            <p data-testid="nessuna-variabile" className="rounded-xl border border-border bg-white p-4 text-sm text-stone-600">
               Nessuna variabile d&apos;ambiente da mostrare.
             </p>
           ) : (

@@ -19,7 +19,7 @@ export function BottoneSalvaNota({
         type="button"
         disabled
         title="Segna prima uno stato per poter salvare una nota"
-        className="inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-400"
+        className="inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-border bg-stone-50 px-4 py-2 text-sm font-medium text-stone-400"
       >
         <IconaSalva />
         Salva nota

@@ -24,7 +24,7 @@ export function FormVerificaPassword({
   onSubmit: (evento: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <form id={id} onSubmit={onSubmit} className="flex flex-col gap-2 rounded-xl border border-stone-200 bg-stone-50 p-4">
+    <form id={id} onSubmit={onSubmit} className="flex flex-col gap-2 rounded-xl border border-border bg-stone-50 p-4">
       <label htmlFor={idCampo} className="text-sm font-medium text-stone-700">
         La tua password
       </label>
@@ -33,7 +33,7 @@ export function FormVerificaPassword({
       <button
         type="submit"
         disabled={inCorso}
-        className="min-h-11 self-start rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+        className="min-h-11 self-start rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover disabled:opacity-60"
       >
         {inCorso ? 'Verifica in corso…' : 'Verifica e mostra'}
       </button>

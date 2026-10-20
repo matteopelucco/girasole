@@ -268,7 +268,7 @@ export function VerificaBonifico({
                 disabled={pendingModale}
                 aria-busy={pendingModale}
                 onClick={confermaImportoErrato}
-                className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pendingModale ? 'Attendere…' : 'Conferma'}
               </button>

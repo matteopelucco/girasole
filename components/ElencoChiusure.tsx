@@ -14,7 +14,7 @@ import { chiusuraInCorso, formattaPeriodoChiusura, type GiornoChiusura } from '@
 export type ModoElencoChiusure = 'lettura' | 'gestione';
 
 const CLASSI_SCHEDA =
-  'flex items-center justify-between gap-3 rounded-xl border border-stone-200 border-l-4 border-l-rose-400 bg-white px-3 py-2.5 shadow-xs';
+  'flex items-center justify-between gap-3 rounded-xl border border-border border-l-4 border-l-neutral-border bg-white px-3 py-2.5 shadow-xs';
 
 export function ElencoChiusure({
   chiusure,
@@ -46,7 +46,7 @@ export function ElencoChiusure({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {chiusuraInCorso(chiusura, oggi) && (
-                <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-900">
+                <span className="rounded-full bg-neutral-soft px-2.5 py-0.5 text-xs font-medium text-neutral-text">
                   In corso
                 </span>
               )}

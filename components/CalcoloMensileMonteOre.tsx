@@ -11,7 +11,7 @@ import type { RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
 // mostrata). Server Component, nessuno stato.
 export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMonteOre[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white p-3 shadow-xs">
+    <div className="overflow-x-auto rounded-xl border border-border bg-white p-3 shadow-xs">
       <h2 id="calcolo-mensile-titolo" className="mb-2 text-left font-medium text-stone-800">
         Calcolo mese per mese
       </h2>
@@ -20,7 +20,7 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
       ) : (
       <table aria-labelledby="calcolo-mensile-titolo" className="w-full text-left text-sm text-stone-700">
         <thead>
-          <tr className="border-b border-stone-200 text-xs text-stone-600">
+          <tr className="border-b border-border text-xs text-stone-600">
             <th scope="col" className="py-1 pr-3 font-medium">
               Mese
             </th>

@@ -172,7 +172,7 @@ export async function BoxComunicazioneRojac({
     );
   }
   return (
-    <section id="comunicazione-rojac" className="mt-3 scroll-mt-4 border-t border-stone-200 pt-3">
+    <section id="comunicazione-rojac" className="mt-3 scroll-mt-4 border-t border-border pt-3">
       <h3 className="mb-2 text-sm font-semibold text-stone-800">{TITOLO}</h3>
       {contenuto}
     </section>

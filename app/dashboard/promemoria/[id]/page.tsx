@@ -44,7 +44,7 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
 
         <h1 className="text-lg font-medium">Modifica avviso</h1>
 
-        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs">
+        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs">
           <input type="hidden" name="promemoria_id" value={promemoria.id} />
           <input
             name="titolo"
@@ -68,7 +68,7 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
             defaultSezioneId={promemoria.sezione_id ?? ''}
             defaultBambinoId={promemoria.bambino_id ?? ''}
           />
-          <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
             Salva modifiche
           </PulsanteInvio>
           {promemoria.updated_at && (

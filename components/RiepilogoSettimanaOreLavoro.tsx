@@ -63,7 +63,7 @@ export function RiepilogoSettimanaOreLavoro() {
   const riepilogo = riepilogoSettimanaDaDifferenze(Object.values(contesto?.giorni ?? {}));
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-600 shadow-xs">
+    <div className="rounded-xl border border-border bg-white p-3 text-sm text-stone-600 shadow-xs">
       <p>
         Ore previste: <strong>{riepilogo.orePreviste}h</strong>
       </p>

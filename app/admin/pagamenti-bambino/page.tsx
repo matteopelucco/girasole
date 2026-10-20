@@ -97,14 +97,14 @@ export default async function PagamentiBambinoPage(
           </div>
           <button
             type="submit"
-            className="rounded-lg bg-emerald-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
+            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
           >
             Mostra
           </button>
         </form>
 
         {!bambino ? (
-          <p className="rounded-xl border border-stone-200 bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
+          <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
             Scegli un bambino per vedere i suoi pagamenti.
           </p>
         ) : (
@@ -128,7 +128,7 @@ export default async function PagamentiBambinoPage(
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-xs">
+            <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
               <table className="min-w-full divide-y divide-stone-200 text-sm">
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}

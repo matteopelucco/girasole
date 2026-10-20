@@ -109,7 +109,7 @@ export function NavHeaderClient({
           menuAperto ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="border-b border-stone-200 px-4 py-4">
+        <div className="border-b border-border px-4 py-4">
           <Logo />
         </div>
         <ElencoVoci ruolo={ruolo} pathname={pathname} onNavigazione={() => setMenuAperto(false)} />

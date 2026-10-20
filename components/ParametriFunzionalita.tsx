@@ -5,7 +5,7 @@ export function ParametriFunzionalita() {
   return (
     <section
       aria-labelledby="parametri-funzionalita-titolo"
-      className="space-y-2 rounded-lg border border-stone-200 bg-white p-4"
+      className="space-y-2 rounded-lg border border-border bg-white p-4"
     >
       <h2 id="parametri-funzionalita-titolo" className="text-base font-medium">
         Parametri delle funzionalità

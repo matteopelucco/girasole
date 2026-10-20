@@ -49,14 +49,14 @@ export default async function AdminPage() {
               placeholder="Nome anno scolastico (es. 2026/2027)"
               className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Crea
             </PulsanteInvio>
           </FormConEsito>
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
-              <li key={anno.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs">
+              <li key={anno.id} className="rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs">
                 {anno.nome}
               </li>
             ))}
@@ -88,7 +88,7 @@ export default async function AdminPage() {
                 </option>
               ))}
             </select>
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Crea
             </PulsanteInvio>
           </FormConEsito>
@@ -97,7 +97,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => (
               <li
                 key={sezione.id}
-                className="flex items-center justify-between rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm shadow-xs"
+                className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs"
               >
                 <span>
                   {sezione.nome}
@@ -126,7 +126,7 @@ export default async function AdminPage() {
           <h1 className="text-lg font-medium">Bambini</h1>
           <FormConEsito
             action={creaBambino}
-            className="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4 shadow-xs"
+            className="mt-3 space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
           >
             <div className="flex gap-2">
               <input
@@ -187,7 +187,7 @@ export default async function AdminPage() {
               placeholder="Altre note (opzionale)"
               className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             />
-            <PulsanteInvio className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800">
+            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
               Aggiungi bambino
             </PulsanteInvio>
           </FormConEsito>
@@ -197,7 +197,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => {
               const lista = bambiniPerSezione.get(sezione.id) ?? [];
               return (
-                <div key={sezione.id} className="rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
+                <div key={sezione.id} className="rounded-lg border border-border bg-white p-3 shadow-xs">
                   <h3 className="text-sm font-semibold">{sezione.nome}</h3>
                   <ul className="mt-2 space-y-1">
                     {lista.map((bambino) => (
@@ -227,7 +227,7 @@ export default async function AdminPage() {
             )}
           </div>
 
-          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-stone-200 bg-white p-3 shadow-xs">
+          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-border bg-white p-3 shadow-xs">
             <h2 className="text-sm font-medium text-stone-700">Bambini senza classe o disattivati</h2>
             <ul className="mt-2 space-y-2">
               {bambiniSenzaClasseODisattivati.map((bambino) => (
