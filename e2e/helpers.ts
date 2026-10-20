@@ -239,6 +239,20 @@ export async function loginCome(page: Page, ruolo: Ruolo): Promise<void> {
   await page.waitForURL('/dashboard', { timeout: 20_000 });
 }
 
+// Finestre di dialogo (components/ui/finestra.tsx, issue #342): premendo Tab
+// e Maiusc+Tab più volte di quanti siano gli elementi focalizzabili, il
+// focus non esce mai dalla finestra (la pagina dietro è inerte). Le
+// finestre hanno al più 4 elementi focalizzabili: 7 Tab e 7 Maiusc+Tab
+// coprono il giro completo in entrambi i versi.
+export async function verificaFocusTrattenuto(page: Page, finestra: Locator): Promise<void> {
+  const dentro = () => finestra.evaluate((el) => el.contains(document.activeElement));
+  await expect.poll(dentro).toBe(true);
+  for (const tasto of [...Array(7).fill('Tab'), ...Array(7).fill('Shift+Tab')]) {
+    await page.keyboard.press(tasto);
+    await expect.poll(dentro).toBe(true);
+  }
+}
+
 // Esegue axe-core sulla pagina corrente e fa fallire il test se trova
 // violazioni di impatto "serious" o "critical". Le violazioni "minor"/
 // "moderate" vengono loggate ma non bloccano la suite, per non renderla

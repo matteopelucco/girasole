@@ -6,7 +6,13 @@
 // reali in comunicazioni_retta/crediti_debiti_bambini sul progetto
 // Supabase di test.
 import { test, expect } from '@playwright/test';
-import { clickEAttendiAzione, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  clickEAttendiAzione,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+  verificaFocusTrattenuto,
+} from './helpers';
 
 test.describe('59 — Verifica del bonifico di una retta', () => {
   // Stesso motivo di 56-comunicazione-retta-mensile.spec.ts: "Invia
@@ -119,6 +125,48 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     // docs/tasks-archivio.md) blocca l'invio, nessuna richiesta arriva al server.
     await popup.getByRole('button', { name: 'Conferma' }).click();
     await expect(rigaInviata.getByText('Bonifico ricevuto (importo diverso)', { exact: false })).toHaveCount(0);
+  });
+
+  // Finestre di dialogo (components/ui/finestra.tsx, issue #342): Esc, focus
+  // trattenuto e focus restituito sulla finestra "Importo diverso".
+  async function apriImportoDiverso(page: import('@playwright/test').Page, prezzoMensile: string) {
+    const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, prezzoMensile);
+    const apri = rigaInviata.getByRole('button', { name: 'Importo diverso' });
+    await apri.click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${cognome}`) });
+    await expect(popup).toBeVisible();
+    return { rigaInviata, apri, popup };
+  }
+
+  test('Esc chiude la finestra "Importo diverso" senza registrare nulla', async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const { rigaInviata, popup } = await apriImportoDiverso(page, '150');
+    await page.keyboard.press('Escape');
+    await expect(popup).toHaveCount(0);
+    await expect(rigaInviata.getByText('Bonifico da verificare')).toBeVisible();
+  });
+
+  test('la finestra "Importo diverso" trattiene il focus', async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const { popup } = await apriImportoDiverso(page, '160');
+    await verificaFocusTrattenuto(page, popup);
+  });
+
+  test('chiudendo la finestra "Importo diverso" il focus torna al pulsante', async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    const { apri, popup } = await apriImportoDiverso(page, '170');
+    await popup.getByRole('button', { name: 'Annulla' }).click();
+    await expect(popup).toHaveCount(0);
+    await expect(apri).toBeFocused();
+
+    await apri.click();
+    await expect(popup).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popup).toHaveCount(0);
+    await expect(apri).toBeFocused();
   });
 
   test('un bonifico già verificato mostra solo lo stato, "Annulla verifica" e nasconde "Annulla invio"', async ({

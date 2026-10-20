@@ -13,6 +13,7 @@ import {
   loginCome,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
+  verificaFocusTrattenuto,
 } from './helpers';
 
 test.describe('03 — Utenti e ruoli', () => {
@@ -122,6 +123,39 @@ test.describe('03 — Utenti e ruoli', () => {
 
     await eliminaUtenteDaScheda(page, page.getByText(email, { exact: false }).locator('..'));
     await expect(page.getByText(email, { exact: false })).toHaveCount(0);
+  });
+
+  test('la finestra di eliminazione trattiene il focus', async ({ page }) => {
+    const email = `e2e-focus-${Date.now()}@example.com`;
+    const riga = await creaUtenteDiProva(page, email);
+    const finestra = finestraEliminaUtente(page);
+
+    await riga.getByRole('button', { name: 'Elimina utente' }).click();
+    await expect(finestra).toBeVisible();
+    await verificaFocusTrattenuto(page, finestra);
+
+    await page.keyboard.press('Escape');
+    await expect(finestra).toHaveCount(0);
+    await eliminaUtenteDaScheda(page, riga);
+  });
+
+  test("chiudendo la finestra di eliminazione il focus torna all'icona cestino", async ({ page }) => {
+    const email = `e2e-focus-torna-${Date.now()}@example.com`;
+    const riga = await creaUtenteDiProva(page, email);
+    const finestra = finestraEliminaUtente(page);
+    const cestino = riga.getByRole('button', { name: 'Elimina utente' });
+
+    await cestino.click();
+    await finestra.getByRole('button', { name: 'Annulla' }).click();
+    await expect(finestra).toHaveCount(0);
+    await expect(cestino).toBeFocused();
+
+    await cestino.click();
+    await page.keyboard.press('Escape');
+    await expect(finestra).toHaveCount(0);
+    await expect(cestino).toBeFocused();
+
+    await eliminaUtenteDaScheda(page, riga);
   });
 
   test('il form si svuota dopo aver creato un utente con successo', async ({ page }) => {
