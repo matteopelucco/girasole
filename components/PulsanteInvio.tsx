@@ -1,7 +1,8 @@
 'use client';
 
 import { useFormStatus } from 'react-dom';
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
+import { Pulsante } from '@/components/ui/pulsante';
 
 // Pulsante di invio che riflette lo stato "avviato/in corso" di
 // un'azione (specs/05 - feedback.md): si disabilita e mostra un testo
@@ -18,7 +19,7 @@ export function PulsanteInvio({
   onClick,
   disabled,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
+}: Omit<ComponentProps<typeof Pulsante>, 'asChild' | 'type'> & {
   testoAttesa?: string;
   // Per i pulsanti compatti (es. Presente/Assente/Malattia) mantenere
   // l'etichetta originale è più leggibile che sostituirla col testo di
@@ -39,7 +40,7 @@ export function PulsanteInvio({
   const { pending } = useFormStatus();
 
   return (
-    <button
+    <Pulsante
       {...props}
       type="submit"
       // Disabilitato mentre l'azione è in corso, oppure quando chi lo usa
@@ -53,9 +54,11 @@ export function PulsanteInvio({
         }
         onClick?.(evento);
       }}
-      className={`${className ?? ''} disabled:cursor-not-allowed disabled:opacity-60`}
+      // Lo stato disabilitato e l'anello di focus li mette Pulsante. Senza
+      // `variante`/`misura` lo stile resta quello di `className`.
+      className={className}
     >
       {pending && !mantieniTesto ? testoAttesa : children}
-    </button>
+    </Pulsante>
   );
 }

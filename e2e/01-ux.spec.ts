@@ -22,6 +22,20 @@ test.describe('01 — UX/UI', () => {
 
       await nessunaViolazioneA11yGrave(page);
     });
+
+    // Issue #338: l'anello di focus del Pulsante (components/ui/pulsante.tsx)
+    // è uno solo, dal token `ring` (colore primario), uguale in ogni
+    // variante. "Accedi" passa da PulsanteInvio, che usa Pulsante.
+    test('il pulsante riceve il focus da tastiera con un anello visibile', async ({ page }) => {
+      await page.goto('/login');
+
+      const accedi = page.getByRole('button', { name: 'Accedi' });
+      await accedi.focus();
+
+      await expect(accedi).toBeFocused();
+      // Anello nel colore primario (emerald-700 = rgb(4, 120, 87)).
+      await expect(accedi).toHaveCSS('box-shadow', /rgb\(4, 120, 87\)/);
+    });
   });
 
   test.describe('dashboard maestra (mobile)', () => {
