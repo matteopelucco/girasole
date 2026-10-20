@@ -169,9 +169,10 @@ Allora vengo reindirizzato alla dashboard
 - Registro degli invii: tabella `invii_rojac` (migration 0062), una riga
   per invio riuscito: `mese` ("YYYY-MM"), `inviato_il` (istante),
   `inviato_da` (admin). RLS e GRANT: solo l'admin con SELECT e INSERT;
-  nessun UPDATE né DELETE, nessun accesso per `anon` e `service_role`.
-  Il registro serve anche all'allarme "mail a Rojac non inviata" (issue
-  #282, requisito a parte).
+  nessun UPDATE né DELETE, nessun accesso per `anon`. La `service_role`
+  (usata solo dal cron degli allarmi) ha il solo SELECT, concesso dalla
+  migration 0066. Il registro serve anche all'allarme "mail a Rojac non
+  inviata" ([07 - allarmi.md](07%20-%20allarmi.md), issue #282).
 - La riga si scrive solo dopo che `inviaEmail` è riuscito. Se la scrittura
   fallisce l'azione risponde comunque ok, con un avviso: la mail è partita
   e non si rimanda.
@@ -181,12 +182,10 @@ Allora vengo reindirizzato alla dashboard
   aggiorna" è coperto solo da unit test (l'e2e non può far fallire la
   scrittura sul database di test).
 - La stessa migration 0062 aggiunge il valore `rojac_non_inviata` al
-  vincolo su `allarmi_inviati.tipo`, per l'allarme della parte b: nessun
-  allarme in questo requisito.
+  vincolo su `allarmi_inviati.tipo`, usato dall'allarme di specs/07.
 
 ## Fuori scope
 - Invio automatico a fine mese e modifica dell'indirizzo di Rojac da
   interfaccia.
 - Blocco del doppio invio dello stesso mese (il registro lo permette, il
   blocco no: ogni invio resta una scelta esplicita dell'admin).
-- Allarme se la mail di un mese non è stata inviata (issue #282).

@@ -50,8 +50,8 @@ della maestra, `5x` amministrazione.
   incoerenti fra loro, in "Presenze e pasti", Report e report email
 - [07 - allarmi.md](07%20-%20allarmi.md) — campanella con pagina "Allarmi", banner in dashboard ed email
   di riepilogo giornaliera di tutti i controlli (appello e pasti dopo le
-  10:00, rette ai genitori dal giorno 3, settimane di ore di lavoro) con
-  ora e stato di ciascuno
+  10:00, rette ai genitori dal giorno 3, mail mensile dei pasti a Rojac,
+  settimane di ore di lavoro) con ora e stato di ciascuno
 - [10 - presenze-e-pasti.md](10%20-%20presenze-e-pasti.md) — schermata
   unica "Presenze e pasti": una card per bambino con la presenza a
   sinistra e il pasto a destra (solo presenza per l'assistente),
