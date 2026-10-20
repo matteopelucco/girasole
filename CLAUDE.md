@@ -16,6 +16,10 @@ Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel (free tier).
 - Server Components/Actions per default; `'use client'` solo se serve
   interattività.
 - Nessuna nuova dipendenza senza chiederlo (free tier).
+- UI: pulsanti, campi e simili da `components/ui/` (shadcn/ui, Tailwind 4,
+  token di `app/globals.css`); niente nuove stringhe di classi per pulsanti e
+  campi altrove; niente `lucide-react` né `@base-ui/react` (icone da
+  `components/icone.tsx`). Guida in `docs/sviluppo-dettagli.md`, ADR 0011.
 - Schema: file numerati in `supabase/migrations/`, mai dashboard.
   Applicazione: in locale `supabase db push --project-ref <ref-test>`, in
   test il reset di CI, in **produzione solo Matteo, a mano**, con

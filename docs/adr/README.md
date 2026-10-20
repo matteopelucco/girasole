@@ -25,3 +25,4 @@ nuovo che lo riferisce).
 | [0008](0008-coda-globale-e2e-db-di-test.md) | Le e2e di CI usano il DB di test una alla volta (coda globale) | Accettata |
 | [0009](0009-giro-di-fumo-sull-anteprima-vercel.md) | Giro di fumo sull'anteprima di Vercel: workflow a parte, non bloccante | Accettata |
 | [0010](0010-next-16-proxy-e-eslint-cli.md) | Next 16: `proxy.ts` al posto di `middleware.ts`, ESLint senza `next lint` | Accettata |
+| [0011](0011-libreria-componenti-shadcn.md) | Libreria di componenti: shadcn/ui, copiata in `components/ui/` | Accettata |
