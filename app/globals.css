@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 /* Tailwind 4 scansiona da solo i sorgenti (app/, components/, lib/): lib/
    conta, perché alcuni moduli (es. lib/classiStato.ts) contengono classi
@@ -190,6 +191,30 @@
 
   --radius-base: var(--radius-lg);
   --shadow-base: var(--shadow-md);
+
+  /* Nomi standard di shadcn/ui (issue #336), usati dai componenti di
+     components/ui/. Non introducono colori nuovi: puntano ai token di
+     significato qui sopra o a tinte già in uso, così un componente shadcn
+     ha lo stesso aspetto del resto dell'app. "primary" e "border" sono già
+     token (stesso nome di shadcn, stessi valori). Non si ridefiniscono
+     --radius-sm/md/lg/xl come fa il CLI di shadcn: cambierebbero ogni
+     rounded-* dell'app. */
+  --color-background: #fff;
+  --color-foreground: var(--color-stone-900);
+  --color-card: #fff;
+  --color-card-foreground: var(--color-stone-900);
+  --color-popover: #fff;
+  --color-popover-foreground: var(--color-stone-900);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--color-stone-100);
+  --color-secondary-foreground: var(--color-stone-900);
+  --color-muted: var(--color-stone-100);
+  --color-muted-foreground: var(--color-stone-500);
+  --color-accent: var(--color-stone-100);
+  --color-accent-foreground: var(--color-stone-900);
+  --color-destructive: var(--color-danger);
+  --color-input: var(--color-stone-300);
+  --color-ring: var(--color-primary);
 }
 
 /*
