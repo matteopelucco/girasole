@@ -45,6 +45,23 @@ ricevuto: se ha pagato meno del dovuto, un debito (verrà addebitato
 sulla prossima retta); se ha pagato più del dovuto, un credito (verrà
 scalato dalla prossima retta)
 
+## Scenario: Esc chiude la finestra "Importo diverso"
+Dato che ho aperto la finestra con "Importo diverso"
+Quando premo il tasto Esc
+Allora la finestra si chiude senza registrare nulla e lo stato resta
+"Bonifico da verificare"
+
+## Scenario: la finestra "Importo diverso" trattiene il focus
+Dato che ho aperto la finestra con "Importo diverso"
+Quando premo ripetutamente Tab (o Maiusc+Tab)
+Allora il focus resta sempre dentro la finestra e non raggiunge la
+pagina dietro di essa
+
+## Scenario: chiudendo la finestra "Importo diverso" il focus torna al pulsante
+Dato che ho aperto la finestra con il pulsante "Importo diverso"
+Quando la chiudo con "Annulla" oppure con Esc
+Allora il focus torna sul pulsante "Importo diverso"
+
 ## Scenario: la nota è obbligatoria per un importo diverso
 Dato che sto marcando un bonifico con importo diverso da quello atteso
 Quando provo a confermare senza aver scritto una nota
