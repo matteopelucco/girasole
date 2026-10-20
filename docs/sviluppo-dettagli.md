@@ -714,6 +714,61 @@ palette di Tailwind 4 è `oklch(...)` e darebbe colori calcolati diversi da quel
 che leggono le e2e (`rgb(...)`). Differenza che resta: `space-y-*` e `divide-y`
 cambiano lato del margine/bordo (vedi la PR #334 per i punti toccati).
 
+## Componenti di `components/ui/` (issue #337)
+Decisione e motivi: [ADR 0011](adr/0011-libreria-componenti-shadcn.md). I
+componenti sono quelli di **shadcn/ui**, copiati nel repo (non un pacchetto) e
+stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
+`specs/01 - ux.md`).
+
+- **Cosa c'è oggi**: la cartella `components/ui/` contiene solo `.gitkeep`
+  (nessun componente ancora) e l'helper `cn` sta in `lib/utils.ts` (unisce
+  classi e risolve i conflitti di Tailwind: `cn('p-2', 'p-4')` dà `p-4`). I
+  componenti veri (pulsante, campo, etichetta, riquadro, finestra...) arrivano
+  con le issue successive della serie "UX REVIEW"; quando arrivano, questo
+  elenco si aggiorna nella stessa PR.
+- **Quando usarli**: ogni volta che serve un pulsante, un campo, un'etichetta di
+  stato, un riquadro di avviso o una finestra di dialogo, si importa il
+  componente da `@/components/ui/...`.
+- **Regola**: niente nuove stringhe di classi per pulsanti e campi fuori da
+  `components/ui/`. Se manca una variante, si aggiunge al componente (con
+  `class-variance-authority`), non si copia una stringa nella pagina. Le
+  schermate non ancora migrate restano come sono finché non le riprende la
+  loro issue; `lib/classiStato.ts` e i pulsanti di stato si toccano solo nella
+  #350.
+- **Colori e misure**: solo i token di significato (`bg-primary`, `text-danger`,
+  `rounded-base`...), mai le tinte della palette. Non si ridefiniscono
+  `--radius-sm/md/lg/xl`.
+- **Come aggiungere un componente**:
+  1. Prima la spec e il test, come per ogni altra cosa (ciclo test-first).
+  2. Copiarlo con il CLI senza installarlo nel progetto:
+     `npx shadcn@latest add <nome>` (usa `components.json`; scrive in
+     `components/ui/`). In alternativa, copiare a mano il sorgente dal sito di
+     shadcn/ui.
+  3. Rivedere la differenza **prima di committare**: il CLI può riscrivere
+     `app/globals.css` o aggiungere dipendenze. Tenere solo quello che serve.
+     Non devono cambiare i token esistenti, né `--radius-*`.
+  4. Usare la variante **Radix** (pacchetto `radix-ui`). `@base-ui/react` non è
+     approvata: se il componente la importa, non va bene così.
+  5. **Icone**: `lucide-react` non è approvata, anche se `components.json` ha
+     `iconLibrary: lucide` e il sorgente copiato la importa. Sostituire le icone
+     con quelle di `components/icone.tsx` (aggiungendone una lì se manca;
+     sempre decorative, `aria-hidden`).
+  6. Controllare le dipendenze del componente: sono ammesse solo `clsx`,
+     `tailwind-merge`, `class-variance-authority`, `tw-animate-css` e
+     `radix-ui`. Altre vanno chieste a Matteo.
+  7. Se serve un colore nuovo, entra come token in `@theme`
+     (`app/globals.css`) e nella tabella della spec, non come tinta nel
+     componente.
+  8. Migrando una schermata, nome accessibile, ruolo, `data-testid` e struttura
+     dei contenitori non cambiano (le e2e usano `getByRole`, `getByLabel`,
+     `locator('..')`). Le e2e e il controllo axe-core della pagina restano verdi
+     e, per le schermate esistenti, `npm run test:visivo` mostra l'eventuale
+     differenza di aspetto (vedi "Confronto visivo").
+- **Aggiornamenti**: i componenti copiati non si aggiornano da soli. Per
+  riprendere una correzione di shadcn/ui si rilancia `npx shadcn@latest add
+  <nome> --overwrite` e si rivede la differenza, tenendo le modifiche locali
+  volute.
+
 ## Review automatica di Claude in CI: interruttore (issue #160)
 - Il job `review` di `claude-board.yml` (review di ogni PR con Sonnet) è
   **spento di default** per costo: parte solo se la variabile di repository
