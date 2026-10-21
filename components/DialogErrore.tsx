@@ -64,7 +64,7 @@ export function DialogErrore({
         variante="pericolo"
         misura="normale"
         onClick={(evento) => evento.currentTarget.closest('dialog')?.close()}
-        className="mt-4 min-h-11 w-full py-0"
+        className="mt-4 min-h-11 w-full py-0 sm:min-h-11"
       >
         Chiudi e correggi
       </Pulsante>
