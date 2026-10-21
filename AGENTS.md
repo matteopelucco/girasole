@@ -7,3 +7,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Setup standard di progetto
+
+Il modo in cui questo tipo di progetto è impostato (stack, infrastruttura,
+SDLC, PR, CI/CD, test, aggiornamento delle dipendenze, agenti) è descritto in
+[docs/bootstrap-progetto.md](docs/bootstrap-progetto.md). È indipendente dal
+dominio: i requisiti stanno in `specs/` e le regole operative in `CLAUDE.md`.
+Consultalo quando imposti o cambi l'architettura, la CI o il flusso di lavoro,
+non per le task di feature.
