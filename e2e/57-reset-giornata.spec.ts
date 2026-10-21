@@ -132,7 +132,20 @@ test.describe('57 — Reset giornata', () => {
     // "Annulla" chiude il riquadro di conferma senza eliminare nulla.
     await page.getByRole('button', { name: 'Resetta giornata' }).click();
     await expect(page.getByText(/Sei sicuro di voler eliminare/)).toBeVisible();
+    // specs/01 - ux.md, "Altezza minima su telefono" (issue #343): a 360 px i
+    // pulsanti piccoli del riquadro di conferma non scendono sotto 32 px e
+    // "Resetta giornata" (misura normale) è alto almeno 44 px.
+    await page.setViewportSize({ width: 360, height: 740 });
+    for (const nome of ['Sì, elimina tutto', 'Annulla']) {
+      const riquadro = await page.getByRole('button', { name: nome }).boundingBox();
+      expect(riquadro!.height).toBeGreaterThanOrEqual(32);
+    }
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByRole('button', { name: 'Annulla' }).click();
+    await page.getByRole('button', { name: 'Resetta giornata' }).waitFor();
+    await page.setViewportSize({ width: 360, height: 740 });
+    expect((await page.getByRole('button', { name: 'Resetta giornata' }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.reload();
     await expect(page.getByText(/^[1-9]\d* presenze$/)).toBeVisible();
 
