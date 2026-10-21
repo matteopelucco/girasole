@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -45,8 +46,13 @@ export async function requireUser() {
 
 // Richiede una sessione autenticata con il profilo (nome/cognome/ruolo)
 // già caricato — usato dalle pagine che lo mostrano (NavHeader) e/o ne
-// verificano il ruolo.
-export async function requireProfilo() {
+// verificano il ruolo. Una sola volta per richiesta (`cache` di React,
+// issue #367): pagina, campanella e allarmi della stessa richiesta la
+// chiamano ciascuno, ma getUser() e la lettura di `profili` partono una
+// volta sola. La cache vale solo durante il render dei Server Components
+// (fuori, ad esempio in una server action, la funzione gira ogni volta) e
+// non sopravvive alla richiesta: nessun dato passa da un utente all'altro.
+export const requireProfilo = cache(async () => {
   const { supabase, user } = await requireUser();
 
   const { data: profilo, error } = await supabase
@@ -64,7 +70,7 @@ export async function requireProfilo() {
   }
 
   return { supabase, user, profilo: profilo as Profilo | null };
-}
+});
 
 // Come requireProfilo(), ma reindirizza a /dashboard se il ruolo non è
 // admin — usato dalle pagine e server action sotto /admin.

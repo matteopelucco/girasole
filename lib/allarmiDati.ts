@@ -1,34 +1,40 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  allarmiPerDipendenti,
-  calcolaStatoPersonaleGiorno,
+  allarmiDipendentiDa,
   dopoOrarioAllarmePresenzePasti,
+  leggiDatiPersonale,
+  leggiPresenzeOggi,
   settimanaConfermata,
   settimanaDiRiferimentoOre,
+  statoPersonaleDa,
   type StatoPersonaleGiorno,
 } from '@/lib/allarmi';
 import { calcolaMesiRojacMancanti } from '@/lib/allarmeRojac';
 import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import { oggi } from '@/lib/date';
-import { componiAllarmi, type Allarme } from '@/lib/elencoAllarmi';
+import type { InputElencoAllarmi } from '@/lib/elencoAllarmi';
 import { sezioniAttiveVisibili } from '@/lib/sezioni';
 
 const STATO_VUOTO: StatoPersonaleGiorno = { sezioniPresenzeIncomplete: [], pastiNonConfermati: false };
 
-// Allarmi attivi dell'utente (specs/07 - allarmi.md): un'unica funzione
-// per il numero della campanella (su ogni pagina) e per la pagina
-// "Allarmi", così numero ed elenco coincidono (la condivisione per
-// richiesta è in app/dashboard/allarmi/dati.ts). Restituisce null per chi non ha la
-// campanella (genitore o ruolo non impostato): in quel caso non si
-// calcola nulla. Solo lettura con la sessione dell'utente (RLS), nessuna
-// service_role key. Fa I/O: coperta da e2e; la composizione dell'elenco
-// è pura e testata in lib/elencoAllarmi.ts.
-export async function calcolaAllarmiUtente(
+// Dati degli allarmi attivi dell'utente (specs/07 - allarmi.md): la base
+// unica per il numero della campanella (su ogni pagina), per la pagina
+// "Allarmi" e per i banner della dashboard, così coincidono (la
+// condivisione per richiesta è in app/dashboard/allarmi/dati.ts).
+// Restituisce null per chi non ha la campanella (genitore o ruolo non
+// impostato): in quel caso non si calcola nulla. Solo lettura con la
+// sessione dell'utente (RLS), nessuna service_role key. Fa I/O: coperta da
+// e2e; le parti di calcolo sono pure e testate in lib/allarmi.ts e
+// lib/elencoAllarmi.ts.
+//
+// Tutte le letture partono insieme (issue #367): nessuna aspetta l'altra,
+// salvo le dipendenze vere dentro leggiPresenzeOggi e leggiDatiPersonale.
+export async function calcolaDatiAllarmiUtente(
   supabase: SupabaseClient,
   userId: string,
   profilo: { ruolo: string; abilitato_ore_lavoro: boolean } | null
-): Promise<Allarme[] | null> {
+): Promise<InputElencoAllarmi | null> {
   const ruolo = profilo?.ruolo ?? null;
   if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') return null;
 
@@ -36,16 +42,16 @@ export async function calcolaAllarmiUtente(
   const dataOggi = oggi();
 
   // Il weekend si riconosce senza interrogare il database.
-  const chiusuraOggi = isGiornoChiuso(dataOggi, []) ? null : await chiusuraPerData(supabase, dataOggi);
-  const giornoAttivo = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
+  const weekend = isGiornoChiuso(dataOggi, []);
 
   // Per non pesare su ogni pagina, presenze e pasti si leggono solo
   // quando l'allarme può scattare (dopo le 10:00 di un giorno aperto).
-  const controllaPresenzePasti = giornoAttivo && dopoOrarioAllarmePresenzePasti(adesso);
-  const statoPersonale = async (): Promise<StatoPersonaleGiorno> => {
-    if (!controllaPresenzePasti) return STATO_VUOTO;
+  // Si leggono insieme alla chiusura del giorno, senza aspettarla: in un
+  // giorno di chiusura (raro) la lettura va persa e il risultato si scarta.
+  const presenzeOggi = async () => {
+    if (weekend || !dopoOrarioAllarmePresenzePasti(adesso)) return null;
     const sezioni = await sezioniAttiveVisibili(supabase, userId, ruolo);
-    return calcolaStatoPersonaleGiorno(supabase, ruolo, sezioni, dataOggi);
+    return leggiPresenzeOggi(supabase, ruolo, sezioni, dataOggi);
   };
 
   const settimanaRiferimento = settimanaDiRiferimentoOre(adesso, dataOggi);
@@ -54,10 +60,11 @@ export async function calcolaAllarmiUtente(
       ? settimanaRiferimento
       : null;
 
-  // Solo l'admin vede le rette non comunicate (e i nomi dei bambini) e la
-  // mail mensile a Rojac non inviata: per gli altri ruoli non si legge nulla
-  // (specs/07). Un errore di lettura del registro Rojac non deve rompere ogni
-  // pagina (la campanella è ovunque): si scrive nei log e l'allarme manca.
+  // Solo l'admin vede il riepilogo del personale, le rette non comunicate
+  // (e i nomi dei bambini) e la mail mensile a Rojac non inviata: per gli
+  // altri ruoli non si legge nulla (specs/07). Un errore di lettura del
+  // registro Rojac non deve rompere ogni pagina (la campanella è ovunque):
+  // si scrive nei log e l'allarme manca.
   const mailRojac = async (): Promise<string[]> => {
     try {
       return await calcolaMesiRojacMancanti(supabase, dataOggi);
@@ -66,23 +73,27 @@ export async function calcolaAllarmiUtente(
       return [];
     }
   };
-  const [statoPersonaleGiorno, settimanaOreNonConfermata, personale, retteNonComunicate, mailRojacNonInviata] =
+  const [chiusuraOggi, presenzeLette, settimanaOreNonConfermata, datiPersonale, retteNonComunicate, mailRojacNonInviata] =
     await Promise.all([
-      statoPersonale(),
+      weekend ? null : chiusuraPerData(supabase, dataOggi),
+      presenzeOggi(),
       settimanaOre(),
-      ruolo === 'admin' ? allarmiPerDipendenti(supabase, dataOggi, giornoAttivo, adesso, userId) : [],
+      ruolo === 'admin' ? leggiDatiPersonale(supabase, userId, settimanaRiferimento.inizio) : null,
       ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
       ruolo === 'admin' ? mailRojac() : [],
     ]);
 
-  return componiAllarmi({
+  const giornoAttivo = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
+  const presenze = giornoAttivo ? presenzeLette : null;
+
+  return {
     oggi: dataOggi,
     adesso,
     giornoAttivo,
-    statoPersonale: statoPersonaleGiorno,
+    statoPersonale: presenze ? statoPersonaleDa(presenze) : STATO_VUOTO,
     settimanaOreNonConfermata,
-    personale,
+    personale: datiPersonale ? allarmiDipendentiDa(datiPersonale, presenze, settimanaRiferimento) : [],
     retteNonComunicate,
     mailRojacNonInviata,
-  });
+  };
 }
