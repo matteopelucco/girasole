@@ -50,6 +50,31 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
+  // Issue #340: Riquadro e StatoVuoto (components/ui) tengono l'aspetto delle
+  // schede di prima: angoli rounded-xl (12 px); lo stato vuoto ha il bordo
+  // tratteggiato, la scheda di una chiusura il filo di 4 px a sinistra.
+  test.describe('riquadro e stato vuoto (elenco giorni di chiusura)', () => {
+    test.use({ viewport: MOBILE, storageState: statoAutenticazione('admin') });
+
+    test('la scheda o lo stato vuoto dell’elenco hanno gli angoli e il bordo previsti', async ({ page }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+      await page.goto('/admin/calendario');
+
+      const scheda = page.getByTestId('chiusura').first().locator('> *').first();
+      if (await scheda.count()) {
+        await expect(scheda).toHaveCSS('border-top-left-radius', '12px');
+        await expect(scheda).toHaveCSS('border-left-width', '4px');
+      } else {
+        const vuoto = page.getByText('Nessun giorno di chiusura ancora inserito.');
+        await expect(vuoto).toHaveCSS('border-top-left-radius', '12px');
+        await expect(vuoto).toHaveCSS('border-top-style', 'dashed');
+      }
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
   test.describe('dashboard maestra (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 
