@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { risolviPeriodoReport, aggregaConteggiPresenzePasti, type TipoReport } from '@/lib/report';
@@ -149,22 +150,22 @@ export default async function ReportPage(
               <h2 className="text-sm font-semibold">{sezione.nome}</h2>
               {!lista.length && <p className="mt-2 text-sm text-stone-600">Nessun bambino in questa classe.</p>}
               {!!lista.length && (
-                <table className="mt-2 w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-stone-600">
-                      <th className="py-1">Bambino</th>
-                      <th className="py-1 text-right">Presenze</th>
-                      <th className="py-1 text-right">Pre-asilo</th>
-                      <th className="py-1 text-right">Post-asilo</th>
-                      <th className="py-1 text-right">Pasti</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Tabella className="mt-2">
+                  <TabellaIntestazione>
+                    <TabellaRiga className="text-left text-xs text-stone-600">
+                      <TabellaTitolo className="py-1">Bambino</TabellaTitolo>
+                      <TabellaTitolo allinea="destra" className="py-1">Presenze</TabellaTitolo>
+                      <TabellaTitolo allinea="destra" className="py-1">Pre-asilo</TabellaTitolo>
+                      <TabellaTitolo allinea="destra" className="py-1">Post-asilo</TabellaTitolo>
+                      <TabellaTitolo allinea="destra" className="py-1">Pasti</TabellaTitolo>
+                    </TabellaRiga>
+                  </TabellaIntestazione>
+                  <TabellaCorpo>
                     {lista.map((b) => {
                       const riga = righePerBambino.get(b.id);
                       return (
-                        <tr key={b.id} className="border-t border-stone-100">
-                          <td className="py-1">
+                        <TabellaRiga key={b.id} className="border-t border-stone-100">
+                          <TabellaCella className="py-1">
                             <span className="flex flex-wrap items-center gap-1">
                               {puoFareDrillDown ? (
                                 <Link
@@ -180,16 +181,16 @@ export default async function ReportPage(
                               )}
                               <AvvisoInconsistenza messaggi={riga?.inconsistenze ?? []} />
                             </span>
-                          </td>
-                          <td className="py-1 text-right">{riga?.presenze ?? 0}</td>
-                          <td className="py-1 text-right">{riga?.preAsilo ?? 0}</td>
-                          <td className="py-1 text-right">{riga?.postAsilo ?? 0}</td>
-                          <td className="py-1 text-right">{riga?.pasti ?? 0}</td>
-                        </tr>
+                          </TabellaCella>
+                          <TabellaCella allinea="destra" className="py-1">{riga?.presenze ?? 0}</TabellaCella>
+                          <TabellaCella allinea="destra" className="py-1">{riga?.preAsilo ?? 0}</TabellaCella>
+                          <TabellaCella allinea="destra" className="py-1">{riga?.postAsilo ?? 0}</TabellaCella>
+                          <TabellaCella allinea="destra" className="py-1">{riga?.pasti ?? 0}</TabellaCella>
+                        </TabellaRiga>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TabellaCorpo>
+                </Tabella>
               )}
             </div>
           );

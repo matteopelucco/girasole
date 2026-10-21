@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from 'react';
 import { FormVerificaPassword } from './FormVerificaPassword';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { SEGNAPOSTO_VALORE, type Parametro } from '@/lib/parametriAmbiente';
 
 type EsitoValori = { ok: true; parametri: Parametro[] } | { ok: false; messaggio: string };
@@ -79,26 +80,26 @@ export function VariabiliAmbiente({
         />
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
-        <table className="w-full table-fixed divide-y divide-stone-200 text-sm">
+      <TabellaScorrevole>
+        <Tabella separatori className="table-fixed">
           <caption className="sr-only">Variabili d&apos;ambiente e relativi valori</caption>
-          <thead>
-            <tr>
-              <th scope="col" className="w-2/5 px-3 py-2 text-left font-medium text-stone-700">
+          <TabellaIntestazione>
+            <TabellaRiga>
+              <TabellaTitolo allinea="sinistra" scope="col" className="w-2/5 px-3 py-2 font-medium text-stone-700">
                 Nome
-              </th>
-              <th scope="col" className="px-3 py-2 text-left font-medium text-stone-700">
+              </TabellaTitolo>
+              <TabellaTitolo allinea="sinistra" scope="col" className="px-3 py-2 font-medium text-stone-700">
                 Valore
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
+              </TabellaTitolo>
+            </TabellaRiga>
+          </TabellaIntestazione>
+          <TabellaCorpo separatori>
             {nomi.map((nome) => (
-              <tr key={nome} data-testid="riga-variabile">
-                <th scope="row" className="break-all px-3 py-2 text-left align-top font-normal">
+              <TabellaRiga key={nome} data-testid="riga-variabile">
+                <TabellaTitolo allinea="sinistra" scope="row" className="break-all px-3 py-2 align-top font-normal">
                   <code data-testid="nome-variabile">{nome}</code>
-                </th>
-                <td data-testid="valore-variabile" className="break-all px-3 py-2 align-top">
+                </TabellaTitolo>
+                <TabellaCella data-testid="valore-variabile" className="break-all px-3 py-2 align-top">
                   {valori ? (
                     <code>{valori.get(nome) ?? ''}</code>
                   ) : (
@@ -109,12 +110,12 @@ export function VariabiliAmbiente({
                       <span className="sr-only">Valore nascosto</span>
                     </>
                   )}
-                </td>
-              </tr>
+                </TabellaCella>
+              </TabellaRiga>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TabellaCorpo>
+        </Tabella>
+      </TabellaScorrevole>
     </div>
   );
 }

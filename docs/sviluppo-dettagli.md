@@ -741,8 +741,12 @@ stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
   (`EtichettaPillola`), `riquadro.tsx` (`Riquadro`), `avviso.tsx` (`Avviso`,
   `role="alert"` solo per l'errore) e `stato-vuoto.tsx` (`StatoVuoto`). Dettagli e
   valori scelti in `specs/01 - ux.md`.
+- **Tabella** (issue #341): `tabella.tsx` (`Tabella`, `TabellaRiga`,
+  `TabellaTitolo`, `TabellaCella`, `TabellaScorrevole`...). Per una nuova
+  tabella dati si usano questi pezzi, non `<table>`: `scope` e `<caption>` li
+  scrive la pagina. Dettagli in `specs/01 - ux.md`.
 - **Quando usarli**: ogni volta che serve un pulsante, un campo, un'etichetta di
-  stato, un riquadro di avviso o una finestra di dialogo, si importa il
+  stato, una tabella, un riquadro di avviso o una finestra di dialogo, si importa il
   componente da `@/components/ui/...`.
 - **Regola**: niente nuove stringhe di classi per pulsanti e campi fuori da
   `components/ui/`. Se manca una variante, si aggiunge al componente (con

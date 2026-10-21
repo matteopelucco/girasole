@@ -16,6 +16,7 @@ import {
   ultimoGiornoMese,
 } from '@/lib/date';
 import { raggruppaPerSezione } from '@/lib/sezioni';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
 import {
@@ -107,45 +108,45 @@ function RigaComunicazione({
   meseReale: string;
 }) {
   return (
-    <tr className="bg-emerald-50/40">
-      <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
+    <TabellaRiga className="bg-emerald-50/40">
+      <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">
         <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
           {bambino.nome} {bambino.cognome}
         </Link>
         <div className="text-xs text-stone-500">({comunicazione.email_destinatario})</div>
-      </th>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaTitolo>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.retta_mensile))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.marca_da_bollo))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costo_pasti))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.conguaglio_pasti))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costo_pre_asilo))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costo_post_asilo))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costi_extra))} €
-      </td>
-      <td className="px-2 py-1.5 text-left text-stone-600">{comunicazione.note_costi_extra ?? ''}</td>
-      <td className="px-2 py-1.5 text-right">
+      </TabellaCella>
+      <TabellaCella allinea="sinistra" className="px-2 py-1.5 text-stone-600">{comunicazione.note_costi_extra ?? ''}</TabellaCella>
+      <TabellaCella allinea="destra" className="px-2 py-1.5">
         <div>{formattaImporto(Number(comunicazione.credito_debito))} €</div>
         {comunicazione.nota_credito_debito && (
           <div className="text-left text-xs text-stone-500">{comunicazione.nota_credito_debito}</div>
         )}
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">
+      </TabellaCella>
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5 font-medium">
         {formattaImporto(Number(comunicazione.totale))} €
-      </td>
-      <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
+      </TabellaCella>
+      <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-1.5 text-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-emerald-800">Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}</span>
           {mostraAnnullaInvio && comunicazione.bonifico_stato === 'in_attesa' && (
@@ -173,52 +174,52 @@ function RigaComunicazione({
           marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
           resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
         />
-      </td>
-    </tr>
+      </TabellaCella>
+    </TabellaRiga>
   );
 }
 
 const INTESTAZIONE_COLONNE = (
-  <thead>
-    <tr>
-      <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+  <TabellaIntestazione>
+    <TabellaRiga>
+      <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
         Bambino
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Retta
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Marca da bollo
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Pasti mese corrente
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Conguaglio pasti mese precedente
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Pre-asilo
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Post-asilo
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Costi extra
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-left font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="sinistra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Nota costi extra
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Credito/Debito
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Totale
-      </th>
-      <th scope="col" className="max-w-26 px-2 py-1.5 text-left font-medium text-stone-700">
+      </TabellaTitolo>
+      <TabellaTitolo allinea="sinistra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Stato
-      </th>
-    </tr>
-  </thead>
+      </TabellaTitolo>
+    </TabellaRiga>
+  </TabellaIntestazione>
 );
 
 // Una tabella per sezione, col nome della sezione come titolo
@@ -229,12 +230,12 @@ function TabellaSezione({ titolo, righe }: { titolo: string; righe: React.ReactN
   return (
     <div className="space-y-2">
       <h2 className="text-sm font-semibold text-stone-800">{titolo}</h2>
-      <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
-        <table className="min-w-full divide-y divide-stone-200 text-sm">
+      <TabellaScorrevole>
+        <Tabella separatori>
           {INTESTAZIONE_COLONNE}
-          <tbody className="divide-y divide-stone-100">{righe}</tbody>
-        </table>
-      </div>
+          <TabellaCorpo separatori>{righe}</TabellaCorpo>
+        </Tabella>
+      </TabellaScorrevole>
     </div>
   );
 }
@@ -356,19 +357,19 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
 
       if (!costiBambino?.email_promemoria) {
         return (
-          <tr key={bambino.id}>
-            <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
+          <TabellaRiga key={bambino.id}>
+            <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">
               <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
                 {bambino.nome} {bambino.cognome}
               </Link>
-            </th>
-            <td colSpan={11} className="px-2 py-1.5 text-left text-xs text-amber-700">
+            </TabellaTitolo>
+            <TabellaCella allinea="sinistra" colSpan={11} className="px-2 py-1.5 text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
               </Link>
-            </td>
-          </tr>
+            </TabellaCella>
+          </TabellaRiga>
         );
       }
 
@@ -393,25 +394,25 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500';
 
       return (
-        <tr key={bambino.id}>
-          <th scope="row" className="whitespace-nowrap px-2 py-1.5 text-left font-normal">
+        <TabellaRiga key={bambino.id}>
+          <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">
             <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
               {bambino.nome} {bambino.cognome}
             </Link>
             <div className="text-xs text-stone-500">({costiBambino.email_promemoria})</div>
-          </th>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.rettaMensile)} €</td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.marcaDaBollo)} €</td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">{formattaImporto(riepilogo.costoPasti)} €</td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+          </TabellaTitolo>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.rettaMensile)} €</TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.marcaDaBollo)} €</TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.costoPasti)} €</TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
             <CampoImportoConEuro
               defaultValue={riepilogo.conguaglioPasti}
               name={`conguaglio_pasti_${bambino.id}`}
               ariaLabel={`Conguaglio pasti mese precedente per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+          </TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
             <CampoImportoConEuro
               min={0}
               defaultValue={riepilogo.costoPreAsilo}
@@ -419,8 +420,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               ariaLabel={`Pre-asilo per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+          </TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
             <CampoImportoConEuro
               min={0}
               defaultValue={riepilogo.costoPostAsilo}
@@ -428,8 +429,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               ariaLabel={`Post-asilo per ${nomeCompleto}`}
               className={classeCampoImporto}
             />
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right">
+          </TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
             <CampoImportoConEuro
               min={0}
               defaultValue={0}
@@ -437,8 +438,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               ariaLabel={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
               className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500"
             />
-          </td>
-          <td className="px-2 py-1.5 text-left">
+          </TabellaCella>
+          <TabellaCella allinea="sinistra" className="px-2 py-1.5">
             <input
               type="text"
               name={`note_extra_${bambino.id}`}
@@ -446,15 +447,15 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
               className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-hidden focus:border-stone-500"
             />
-          </td>
-          <td className="px-2 py-1.5 text-right">
+          </TabellaCella>
+          <TabellaCella allinea="destra" className="px-2 py-1.5">
             <div>{formattaImporto(riepilogo.creditoDebito)} €</div>
             {creditoDebito?.nota && <div className="text-left text-xs text-stone-500">{creditoDebito.nota}</div>}
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-right font-medium">
+          </TabellaCella>
+          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5 font-medium">
             {formattaImporto(riepilogo.totale)} €
-          </td>
-          <td className="whitespace-nowrap px-2 py-1.5 text-left text-xs">
+          </TabellaCella>
+          <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-1.5 text-xs">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-stone-500">Da inviare</span>
               <InvioSingoloRetta
@@ -473,8 +474,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
                 formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}
               />
             </div>
-          </td>
-        </tr>
+          </TabellaCella>
+        </TabellaRiga>
       );
     }
 

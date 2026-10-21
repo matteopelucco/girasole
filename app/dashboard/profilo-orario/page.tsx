@@ -1,4 +1,5 @@
 import { NavHeader } from '@/components/NavHeader';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaPiede, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oreGiorniFeriali, rigaOSollevaErrore, totaleOreSettimanali, type ProfiloOrarioConNome } from '@/lib/profiliOrari';
 
@@ -41,33 +42,33 @@ export default async function ProfiloOrarioPage() {
         {profiloOrario ? (
           <section className="rounded-xl border border-border bg-white p-4 shadow-xs">
             <h2 className="text-base font-medium">{profiloOrario.nome}</h2>
-            <table className="mt-3 w-full text-sm">
+            <Tabella className="mt-3">
               <caption className="sr-only">Ore previste per giorno</caption>
-              <thead className="sr-only">
-                <tr>
-                  <th scope="col">Giorno</th>
-                  <th scope="col">Ore previste</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
+              <TabellaIntestazione className="sr-only">
+                <TabellaRiga>
+                  <TabellaTitolo scope="col">Giorno</TabellaTitolo>
+                  <TabellaTitolo scope="col">Ore previste</TabellaTitolo>
+                </TabellaRiga>
+              </TabellaIntestazione>
+              <TabellaCorpo separatori>
                 {oreGiorniFeriali(profiloOrario).map((g) => (
-                  <tr key={g.giorno}>
-                    <th scope="row" className="py-2 text-left font-normal text-stone-700">
+                  <TabellaRiga key={g.giorno}>
+                    <TabellaTitolo allinea="sinistra" scope="row" className="py-2 font-normal text-stone-700">
                       {g.giorno}
-                    </th>
-                    <td className="py-2 text-right font-medium">{g.ore}h</td>
-                  </tr>
+                    </TabellaTitolo>
+                    <TabellaCella allinea="destra" className="py-2 font-medium">{g.ore}h</TabellaCella>
+                  </TabellaRiga>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-stone-300">
-                  <th scope="row" className="py-2 text-left font-semibold">
+              </TabellaCorpo>
+              <TabellaPiede>
+                <TabellaRiga className="border-t border-stone-300">
+                  <TabellaTitolo allinea="sinistra" scope="row" className="py-2 font-semibold">
                     Totale settimanale
-                  </th>
-                  <td className="py-2 text-right font-semibold">{totaleOreSettimanali(profiloOrario)}h</td>
-                </tr>
-              </tfoot>
-            </table>
+                  </TabellaTitolo>
+                  <TabellaCella allinea="destra" className="py-2 font-semibold">{totaleOreSettimanali(profiloOrario)}h</TabellaCella>
+                </TabellaRiga>
+              </TabellaPiede>
+            </Tabella>
           </section>
         ) : (
           <div className="rounded-xl border border-dashed border-stone-300 p-4 text-sm text-stone-700">
