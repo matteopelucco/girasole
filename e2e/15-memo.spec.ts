@@ -290,8 +290,7 @@ test.describe('15 — Avvisi', () => {
     await expect(page.getByRole('heading', { name: 'Modifica avviso' })).toBeVisible();
 
     await page.getByPlaceholder('Titolo').fill(titoloModificato);
-    await page.getByRole('button', { name: 'Salva modifiche' }).click();
-    await expect(page.getByPlaceholder('Titolo')).toHaveValue(titoloModificato, { timeout: 20_000 });
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modifiche' }));
 
     await page.goto('/dashboard');
     await expect(page.getByText(titoloModificato)).toBeVisible();
