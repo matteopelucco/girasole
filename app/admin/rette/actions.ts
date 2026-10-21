@@ -354,7 +354,11 @@ export async function inviaComunicazioniRetta(
 // dal form, mai fidandosi ciecamente del client. formAction diretto
 // (bind di bambinoId), non tramite useFormState — stesso motivo di
 // annullaComunicazioneRetta sotto: niente <form> annidati nella tabella.
-export async function inviaComunicazioneRettaSingola(bambinoId: string, formData: FormData) {
+//
+// `inviaMail` è fissato dalla pagina con bind (true per "Conferma invio",
+// false per "Conferma senza inviare"), mai letto dal form: il valore di un
+// pulsante submitter non arriva in modo affidabile alle Server Action.
+export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMail: boolean, formData: FormData) {
   const { supabase, user, profilo } = await requireAdmin();
 
   const meseCorrente = meseDaData(oggi());
@@ -412,8 +416,7 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
     notaCreditoDebito,
     template,
     { id: user.id, nome: inviataDaNome },
-    // "Conferma senza inviare" aggiunge senza_invio=1 (name/value del pulsante).
-    formData.get('senza_invio') !== '1'
+    inviaMail
   );
 
   revalidatePath('/admin/rette');

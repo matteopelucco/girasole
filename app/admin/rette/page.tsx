@@ -471,7 +471,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
                 notaCreditoDebito={creditoDebito?.nota ?? null}
                 oggettoTemplate={oggettoTemplate}
                 corpoTemplate={corpoTemplate}
-                formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id)}
+                formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id, true)}
+                formActionSenzaInvio={inviaComunicazioneRettaSingola.bind(null, bambino.id, false)}
               />
             </div>
           </TabellaCella>
