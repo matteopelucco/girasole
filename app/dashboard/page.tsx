@@ -5,22 +5,15 @@ import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
 import { requireProfilo } from '@/lib/auth';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
-import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
+import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { cardsDashboard } from '@/lib/dashboardSezioni';
 import { percorsoGiornata } from '@/lib/giornata';
-import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
-import {
-  allarmePersonalePresenzePastiAttivo,
-  calcolaStatoPersonaleGiorno,
-  settimanaDiRiferimentoOre,
-  settimanaConfermata,
-  allarmiPerDipendenti,
-} from '@/lib/allarmi';
+import { allarmePersonalePresenzePastiAttivo } from '@/lib/allarmi';
 import { ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
 import { ID_ALLARME_ROJAC } from '@/lib/allarmeRojac';
 import { creaPromemoria } from './actions';
 import { ProssimiEventi } from './ProssimiEventi';
-import { caricaAllarmiCorrenti } from './allarmi/dati';
+import { caricaAllarmiCorrenti, caricaDatiAllarmiCorrenti } from './allarmi/dati';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,57 +43,44 @@ export default async function DashboardPage(
   }
 
   const dataOggi = oggi();
-  const sezioni = await sezioniAttiveVisibili(supabase, user.id, ruolo);
+
+  // Tutte le letture partono insieme (issue #367). Gli allarmi (specs/07 -
+  // allarmi.md) non si ricalcolano qui: si prendono dai dati condivisi con
+  // la campanella e la pagina Allarmi (una lettura per richiesta), con la
+  // sessione normale dell'utente, nessuna service_role key.
+  const [{ sezioni, bambini }, datiAllarmi, elencoAllarmi, { data: promemoria }] = await Promise.all([
+    sezioniEBambiniVisibili(supabase, user.id, ruolo),
+    caricaDatiAllarmiCorrenti(),
+    caricaAllarmiCorrenti(),
+    supabase
+      .from('promemoria')
+      .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20),
+  ]);
+
   const haSezioni = ruolo === 'admin' || sezioni.length > 0;
   const cards = cardsDashboard({ data: dataOggi, haSezioni, abilitatoOreLavoro: profilo?.abilitato_ore_lavoro });
 
-  // Allarme 1 (specs/07 - allarmi.md): presenze/pasti non ancora
-  // segnati dopo le 10:00, personale — solo le mie sezioni (tutte le
-  // sezioni attive se sono admin). Usa la sessione normale dell'utente,
-  // che ha già visibilità RLS sulle proprie sezioni: nessuna
-  // service_role key necessaria.
-  const oraAttuale = new Date();
-  const chiusuraOggi = await chiusuraPerData(supabase, dataOggi);
-  const giornoAttivoOggi = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
-  const statoPersonale = await calcolaStatoPersonaleGiorno(supabase, ruolo, sezioni, dataOggi);
-  const mostraAllarmePersonale = allarmePersonalePresenzePastiAttivo(oraAttuale, giornoAttivoOggi, statoPersonale);
+  // Allarme 1: presenze/pasti non ancora segnati dopo le 10:00, personale —
+  // solo le mie sezioni (tutte le sezioni attive se sono admin).
+  const statoPersonale = datiAllarmi?.statoPersonale ?? { sezioniPresenzeIncomplete: [], pastiNonConfermati: false };
+  const mostraAllarmePersonale =
+    !!datiAllarmi &&
+    allarmePersonalePresenzePastiAttivo(datiAllarmi.adesso, datiAllarmi.giornoAttivo, datiAllarmi.statoPersonale);
 
-  // Allarme 2 (specs/07): la mia settimana di ore di lavoro di
-  // riferimento (quella precedente fino a venerdì 18:00, poi quella
-  // corrente) non confermata — solo per me.
-  const settimanaOreRiferimento = settimanaDiRiferimentoOre(oraAttuale, dataOggi);
-  let mostraAllarmeSettimanaOre = false;
-  if (profilo?.abilitato_ore_lavoro) {
-    const confermata = await settimanaConfermata(supabase, user.id, settimanaOreRiferimento.inizio);
-    mostraAllarmeSettimanaOre = !confermata;
-  }
+  // Allarme 2: la mia settimana di ore di lavoro di riferimento (quella
+  // precedente fino a venerdì 18:00, poi quella corrente) non confermata.
+  const settimanaOreNonConfermata = datiAllarmi?.settimanaOreNonConfermata ?? null;
 
-  // Allarme 3 (specs/07): riepilogo read-only, solo per l'admin, degli
-  // allarmi (presenze/pasti, settimana ore) di tutto il personale —
-  // nessuna azione da qui, solo visibilità.
-  const allarmiStaff =
-    ruolo === 'admin' ? await allarmiPerDipendenti(supabase, dataOggi, giornoAttivoOggi, oraAttuale, user.id) : [];
+  // Allarme 3: riepilogo read-only, solo per l'admin, degli allarmi
+  // (presenze/pasti, settimana ore) di tutto il personale — nessuna azione
+  // da qui, solo visibilità. Vuoto per gli altri ruoli.
+  const allarmiStaff = datiAllarmi?.personale ?? [];
 
-  // Allarmi 4 e 5 (specs/07): rette non comunicate e mail mensile a Rojac non
-  // inviata, solo per l'admin. Non si ricalcolano: si prendono dall'elenco
-  // condiviso con la pagina Allarmi e la campanella (stessa funzione, una
-  // lettura per richiesta).
-  const allarmiAdmin =
-    ruolo === 'admin'
-      ? ((await caricaAllarmiCorrenti()) ?? []).filter((a) => a.id === ID_ALLARME_RETTE || a.id === ID_ALLARME_ROJAC)
-      : [];
-
-  const bambini = await bambiniAttiviVisibili(
-    supabase,
-    ruolo,
-    sezioni.map((s) => s.id)
-  );
-
-  const { data: promemoria } = await supabase
-    .from('promemoria')
-    .select('id, titolo, testo, destinatario_tipo, sezione_id, bambino_id, created_at')
-    .order('created_at', { ascending: false })
-    .limit(20);
+  // Allarmi 4 e 5: rette non comunicate e mail mensile a Rojac non inviata,
+  // solo per l'admin (per gli altri ruoli non sono nell'elenco).
+  const allarmiAdmin = (elencoAllarmi ?? []).filter((a) => a.id === ID_ALLARME_RETTE || a.id === ID_ALLARME_ROJAC);
 
   return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
@@ -128,12 +108,12 @@ export default async function DashboardPage(
           </div>
         )}
 
-        {mostraAllarmeSettimanaOre && (
+        {settimanaOreNonConfermata && (
           <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
             <p className="font-semibold">⏰ Non hai confermato le ore della settimana</p>
             <p className="mt-1">
-              Settimana {formattaIntervalloItaliano(settimanaOreRiferimento.inizio, settimanaOreRiferimento.fine)}.{' '}
-              <Link href={`/dashboard/ore-lavoro?settimana=${settimanaOreRiferimento.inizio}`} className="underline">
+              Settimana {formattaIntervalloItaliano(settimanaOreNonConfermata.inizio, settimanaOreNonConfermata.fine)}.{' '}
+              <Link href={`/dashboard/ore-lavoro?settimana=${settimanaOreNonConfermata.inizio}`} className="underline">
                 Vai su Ore di lavoro per confermarla.
               </Link>
             </p>

@@ -142,8 +142,8 @@ export async function bambiniAttiviVisibili(
 }
 
 // Sezioni e bambini visibili per l'utente corrente, in un solo giro: le
-// due chiamate vanno sempre in coppia (il secondo elenco dipende dal
-// primo) — usata dalla pagina Report (specs/51) e dall'elenco classi di
+// due chiamate vanno sempre in coppia (per maestra e assistente il secondo
+// elenco dipende dal primo) — usata dalla pagina Report (specs/51) e dall'elenco classi di
 // Presenze/Pasti (specs/12), per non ripetere la stessa sequenza di
 // query in più punti (CLAUDE.md, jscpd).
 export async function sezioniEBambiniVisibili(
@@ -151,6 +151,15 @@ export async function sezioniEBambiniVisibili(
   userId: string,
   ruolo: string | null | undefined
 ): Promise<{ sezioni: SezioneAttiva[]; bambini: BambinoBase[] }> {
+  // Per l'admin i bambini non dipendono dalle sezioni (li vede tutti):
+  // le due letture partono insieme (issue #367).
+  if (ruolo === 'admin') {
+    const [sezioni, bambini] = await Promise.all([
+      sezioniAttiveVisibili(supabase, userId, ruolo),
+      bambiniAttiviVisibili(supabase, ruolo, []),
+    ]);
+    return { sezioni, bambini };
+  }
   const sezioni = await sezioniAttiveVisibili(supabase, userId, ruolo);
   const bambini = await bambiniAttiviVisibili(
     supabase,
