@@ -8,14 +8,15 @@ la tua task lo richiede.
 
 ## Stack
 Next.js 16 (App Router, Server Actions, Server Components), TypeScript,
-Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel (free tier).
+Tailwind CSS, Supabase (Postgres + Auth + RLS), deploy Vercel. Piano **Pro**
+sia su Vercel sia su Supabase (da ottobre 2026, prima free tier).
 
 ## Convenzioni
 - UI italiana; variabili/funzioni/file inglesi, salvo dominio
   (`bambini`, `presenze`, `pasti`, `promemoria`, `sezioni`).
 - Server Components/Actions per default; `'use client'` solo se serve
   interattività.
-- Nessuna nuova dipendenza senza chiederlo (free tier).
+- Nessuna nuova dipendenza senza chiederlo.
 - UI: pulsanti, campi e simili da `components/ui/` (shadcn/ui, Tailwind 4,
   token di `app/globals.css`); niente nuove stringhe di classi per pulsanti e
   campi altrove; niente `lucide-react` né `@base-ui/react` (icone da
