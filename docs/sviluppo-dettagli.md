@@ -13,7 +13,11 @@ Contesto operativo per Claude Code su questo progetto.
 - TypeScript
 - Tailwind CSS
 - Supabase (Postgres + Auth + Row Level Security) — client in `lib/supabase/`
-- Deploy: Vercel (free tier)
+- Deploy: Vercel
+- Piani: **Pro** sia su Vercel sia su Supabase (da ottobre 2026; prima free
+  tier/Hobby). I vincoli del piano free citati nello storico (es. il limite
+  di 2 cron job di Vercel Hobby in `specs/07 - allarmi.md`) non valgono più
+  come limite, restano solo come motivazione delle scelte fatte allora.
 
 ## Convenzioni
 - UI e testi visibili all'utente in italiano. Nomi di variabili/funzioni/file in
@@ -22,8 +26,8 @@ Contesto operativo per Claude Code su questo progetto.
   tabelle del database.
 - Preferire Server Components e Server Actions; usare Client Components
   (`'use client'`) solo dove serve interattività (form dinamici, toggle, ecc.).
-- Non introdurre nuove dipendenze senza chiederlo prima — l'obiettivo è restare
-  comodamente dentro il free tier di Vercel e Supabase.
+- Non introdurre nuove dipendenze senza chiederlo prima — l'obiettivo è tenere
+  il progetto leggero e sotto controllo (anche ora che i piani sono Pro).
 - Ogni nuova tabella o modifica allo schema va in `supabase/migrations/` come
   nuovo file numerato, mai modificata a mano dalla dashboard Supabase in
   produzione. **Anche l'applicazione di una migration non passa più dal SQL
