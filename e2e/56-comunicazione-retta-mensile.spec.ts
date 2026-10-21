@@ -8,7 +8,14 @@
 // comunicazioni_retta: usa un indirizzo di dominio "example.com", mai
 // un indirizzo reale.
 import { test, expect } from '@playwright/test';
-import { formCreaBambino, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, clickEAttendiAzione } from './helpers';
+import {
+  formCreaBambino,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+  clickEAttendiAzione,
+  verificaFocusTrattenuto,
+} from './helpers';
 
 test.describe('56 — Comunicazione retta mensile', () => {
   // "Invia comunicazioni" agisce su TUTTI i bambini attivi idonei del
@@ -329,6 +336,50 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(popup).toContainText(email);
     await expect(popup.getByRole('button', { name: 'Conferma invio' })).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
+  });
+
+  // Finestre di dialogo (components/ui/finestra.tsx, issue #342): Esc,
+  // focus trattenuto e focus restituito, sull'anteprima della comunicazione
+  // singola. Nessuna email parte: si chiude sempre l'anteprima.
+  async function apriAnteprimaRiga(page: import('@playwright/test').Page, etichetta: string) {
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-${etichetta}-${Date.now()}@example.com`,
+      prezzoMensile: '100',
+      prezzoBuonoPasto: '0',
+    });
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    const apri = riga.getByRole('button', { name: 'Invia comunicazione' });
+    await apri.click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await expect(popup).toBeVisible();
+    return { riga, apri, popup };
+  }
+
+  test("Esc chiude l'anteprima della comunicazione singola senza inviare nulla", async ({ page }) => {
+    const { riga, popup } = await apriAnteprimaRiga(page, 'esc');
+    await page.keyboard.press('Escape');
+    await expect(popup).toHaveCount(0);
+    await expect(riga.getByRole('button', { name: 'Invia comunicazione' })).toBeVisible();
+    await expect(riga.getByText(/Inviata il/)).toHaveCount(0);
+  });
+
+  test("l'anteprima della comunicazione singola trattiene il focus", async ({ page }) => {
+    const { popup } = await apriAnteprimaRiga(page, 'tab');
+    await verificaFocusTrattenuto(page, popup);
+  });
+
+  test('chiudendo l\'anteprima il focus torna a "Invia comunicazione"', async ({ page }) => {
+    const { apri, popup } = await apriAnteprimaRiga(page, 'focus');
+    await popup.getByRole('button', { name: 'Annulla' }).click();
+    await expect(popup).toHaveCount(0);
+    await expect(apri).toBeFocused();
+
+    await apri.click();
+    await expect(popup).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(popup).toHaveCount(0);
+    await expect(apri).toBeFocused();
   });
 
   test("il markup nel nome del bambino è mostrato come testo nell'anteprima", async ({ page }) => {

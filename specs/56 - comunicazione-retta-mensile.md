@@ -152,6 +152,25 @@ E se premo "Conferma invio" quell'unica email parte e viene registrata
 E se premo "Annulla" il popup si chiude senza inviare nulla, la riga
 resta "da inviare" con i valori che avevo scritto
 
+## Scenario: Esc chiude l'anteprima della comunicazione singola
+Dato che ho aperto l'anteprima con "Invia comunicazione" sulla riga di un
+bambino
+Quando premo il tasto Esc
+Allora l'anteprima si chiude senza inviare nulla e la riga resta "da
+inviare"
+
+## Scenario: l'anteprima della comunicazione singola trattiene il focus
+Dato che ho aperto l'anteprima con "Invia comunicazione"
+Quando premo ripetutamente Tab (o Maiusc+Tab)
+Allora il focus resta sempre dentro l'anteprima e non raggiunge la
+tabella dietro di essa
+
+## Scenario: chiudendo l'anteprima il focus torna a "Invia comunicazione"
+Dato che ho aperto l'anteprima con "Invia comunicazione" sulla riga di un
+bambino
+Quando la chiudo con "Annulla" oppure con Esc
+Allora il focus torna sul pulsante "Invia comunicazione" di quella riga
+
 ## Scenario: un bambino già comunicato questo mese non viene reinviato
 Dato che un bambino ha già una comunicazione registrata per il mese
 corrente

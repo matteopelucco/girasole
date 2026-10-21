@@ -21,6 +21,7 @@ import {
   nessunaViolazioneA11yGrave,
   popupErrore,
   statoAutenticazione,
+  verificaFocusTrattenuto,
   type Ruolo,
 } from './helpers';
 
@@ -138,6 +139,44 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
       await popup.getByRole('button', { name: 'Annulla' }).click();
       await expect(popup).toHaveCount(0);
       await expect(page.getByText('Riepilogo inviato a Rojac')).toHaveCount(0);
+    });
+
+    test("Esc chiude l'anteprima senza inviare nulla", async ({ page }) => {
+      test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
+      await page.goto(MESE_NOTO);
+      await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
+      const popup = page.getByRole('dialog', { name: 'Anteprima mail a Rojac' });
+      await expect(popup).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(popup).toHaveCount(0);
+      await expect(page.getByText('Riepilogo inviato a Rojac')).toHaveCount(0);
+    });
+
+    test("l'anteprima trattiene il focus", async ({ page }) => {
+      test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
+      await page.goto(MESE_NOTO);
+      await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
+      const popup = page.getByRole('dialog', { name: 'Anteprima mail a Rojac' });
+      await expect(popup).toBeVisible();
+      await verificaFocusTrattenuto(page, popup);
+    });
+
+    test('chiudendo l\'anteprima il focus torna a "Invia a Rojac"', async ({ page }) => {
+      test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
+      await page.goto(MESE_NOTO);
+      const apri = riquadro(page).getByRole('button', { name: 'Invia a Rojac' });
+      const popup = page.getByRole('dialog', { name: 'Anteprima mail a Rojac' });
+
+      await apri.click();
+      await popup.getByRole('button', { name: 'Annulla' }).click();
+      await expect(popup).toHaveCount(0);
+      await expect(apri).toBeFocused();
+
+      await apri.click();
+      await expect(popup).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(popup).toHaveCount(0);
+      await expect(apri).toBeFocused();
     });
 
     test('un errore del servizio email mostra un messaggio chiaro e non conta come inviato', async ({ page }) => {

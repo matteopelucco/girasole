@@ -58,6 +58,22 @@ Dato che l'anteprima è aperta
 Quando premo "Annulla"
 Allora l'anteprima si chiude e nessuna mail parte
 
+## Scenario: Esc chiude l'anteprima senza inviare nulla
+Dato che l'anteprima è aperta
+Quando premo il tasto Esc
+Allora l'anteprima si chiude e nessuna mail parte
+
+## Scenario: l'anteprima trattiene il focus
+Dato che l'anteprima è aperta
+Quando premo ripetutamente Tab (o Maiusc+Tab)
+Allora il focus resta sempre dentro l'anteprima e non raggiunge il report
+dietro di essa
+
+## Scenario: chiudendo l'anteprima il focus torna a "Invia a Rojac"
+Dato che ho aperto l'anteprima con "Invia a Rojac"
+Quando la chiudo con "Annulla" oppure con Esc
+Allora il focus torna sul pulsante "Invia a Rojac"
+
 ## Scenario: confermare l'invio manda la mail a Rojac con l'asilo in copia
 Dato che l'anteprima è aperta, l'indirizzo di Rojac è configurato e il
 servizio email è raggiungibile

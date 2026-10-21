@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { PulsanteInvio } from './PulsanteInvio';
+import { Finestra } from './ui/finestra';
 import { formattaImporto, sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
 import { formattaMeseItaliano } from '@/lib/date';
 
@@ -125,48 +126,45 @@ export function InvioSingoloRetta({
       </button>
 
       {anteprima && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Anteprima comunicazione per ${nome} ${cognome}`}
-          className="fixed inset-0 z-40 flex items-center justify-center bg-stone-900/40 p-4"
+        <Finestra
+          titolo={`Anteprima comunicazione — ${nome} ${cognome}`}
+          nome={`Anteprima comunicazione per ${nome} ${cognome}`}
+          larghezza="lg"
+          onChiudi={() => setAnteprima(null)}
         >
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-lg">
-            <h2 className="text-base font-medium">Anteprima comunicazione — {nome} {cognome}</h2>
-            <dl className="mt-3 space-y-3 text-sm">
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">A</dt>
-                <dd>{email}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">Oggetto</dt>
-                <dd>{anteprima.oggetto}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium uppercase text-stone-500">Corpo</dt>
-                <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-border bg-stone-50 p-2 text-stone-700">
-                  {anteprima.corpo}
-                </dd>
-              </div>
-            </dl>
-            <div className="mt-4 flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setAnteprima(null)}
-                className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
-              >
-                Annulla
-              </button>
-              <PulsanteInvio
-                formAction={formAction}
-                mantieniTesto
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
-              >
-                Conferma invio
-              </PulsanteInvio>
+          <dl className="mt-3 space-y-3 text-sm">
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">A</dt>
+              <dd>{email}</dd>
             </div>
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">Oggetto</dt>
+              <dd>{anteprima.oggetto}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium uppercase text-stone-500">Corpo</dt>
+              <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-border bg-stone-50 p-2 text-stone-700">
+                {anteprima.corpo}
+              </dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setAnteprima(null)}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
+            >
+              Annulla
+            </button>
+            <PulsanteInvio
+              formAction={formAction}
+              mantieniTesto
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
+            >
+              Conferma invio
+            </PulsanteInvio>
           </div>
-        </div>
+        </Finestra>
       )}
     </>
   );

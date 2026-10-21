@@ -195,6 +195,19 @@ Allora la finestra si chiude, l'account resta nell'elenco
 E riaprendo la finestra la casella "Ne sono consapevole" è di nuovo non
 spuntata
 
+## Scenario: la finestra di eliminazione trattiene il focus
+Dato che ho aperto la finestra di conferma dell'eliminazione di un
+account
+Quando premo ripetutamente Tab (o Maiusc+Tab)
+Allora il focus resta sempre dentro la finestra e non raggiunge la pagina
+dietro di essa
+
+## Scenario: chiudendo la finestra di eliminazione il focus torna all'icona cestino
+Dato che ho aperto la finestra di conferma con l'icona cestino "Elimina
+utente" di un account
+Quando la chiudo con "Annulla" oppure con Esc
+Allora il focus torna su quell'icona cestino
+
 ## Scenario: l'admin non può eliminare il proprio account
 Quando su `/admin/maestre` provo a eliminare il mio stesso account,
 confermando nella finestra di conferma
