@@ -115,7 +115,7 @@ export function NavHeaderClient({
         <ElencoVoci ruolo={ruolo} pathname={pathname} onNavigazione={() => setMenuAperto(false)} />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-64 [&>main]:w-full">
         <header className="sticky top-0 z-10 flex items-center border-b-2 border-amber-400 bg-white px-4 py-3 shadow-xs">
           <div className="flex items-center gap-3 lg:hidden">
             <button
