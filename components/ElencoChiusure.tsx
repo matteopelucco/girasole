@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { cn } from '@/lib/utils';
 import { chiusuraInCorso, formattaPeriodoChiusura, type GiornoChiusura } from '@/lib/calendarioScolastico';
 
 // Lista dei giorni di chiusura (specs/64 e specs/53, issue #328): un solo
@@ -13,8 +17,7 @@ import { chiusuraInCorso, formattaPeriodoChiusura, type GiornoChiusura } from '@
 // separazione).
 export type ModoElencoChiusure = 'lettura' | 'gestione';
 
-const CLASSI_SCHEDA =
-  'flex items-center justify-between gap-3 rounded-xl border border-border border-l-4 border-l-neutral-border bg-white px-3 py-2.5 shadow-xs';
+const CLASSI_SCHEDA = 'flex items-center justify-between gap-3 px-3 py-2.5';
 
 export function ElencoChiusure({
   chiusure,
@@ -27,9 +30,9 @@ export function ElencoChiusure({
 }) {
   if (chiusure.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-3 text-sm text-stone-700">
+      <StatoVuoto>
         {modo === 'gestione' ? 'Nessun giorno di chiusura ancora inserito.' : 'Nessun giorno di chiusura in programma.'}
-      </p>
+      </StatoVuoto>
     );
   }
 
@@ -46,9 +49,7 @@ export function ElencoChiusure({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {chiusuraInCorso(chiusura, oggi) && (
-                <span className="rounded-full bg-neutral-soft px-2.5 py-0.5 text-xs font-medium text-neutral-text">
-                  In corso
-                </span>
+                <EtichettaPillola tono="neutro">In corso</EtichettaPillola>
               )}
               {modo === 'gestione' && <span className="text-xs text-stone-600">Modifica</span>}
             </div>
@@ -58,11 +59,16 @@ export function ElencoChiusure({
         return (
           <li key={chiusura.id} data-testid="chiusura">
             {modo === 'gestione' ? (
-              <Link href={`/admin/calendario/${chiusura.id}`} className={`${CLASSI_SCHEDA} hover:bg-stone-50`}>
+              <Link
+                href={`/admin/calendario/${chiusura.id}`}
+                className={cn(riquadroVariants({ accento: 'neutro' }), CLASSI_SCHEDA, 'hover:bg-stone-50')}
+              >
                 {contenuto}
               </Link>
             ) : (
-              <div className={CLASSI_SCHEDA}>{contenuto}</div>
+              <Riquadro accento="neutro" className={CLASSI_SCHEDA}>
+                {contenuto}
+              </Riquadro>
             )}
           </li>
         );
