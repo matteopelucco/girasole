@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { PulsanteInvio } from './PulsanteInvio';
+import { Avviso } from '@/components/ui/avviso';
 import { MESSAGGIO_IN_CORSO, type EsitoSincronizzazioneManuale } from '@/lib/sincronizzazioneManuale';
 
 // Azione "Sincronizza calendario" della scheda "Azioni" (specs/64, "Sincronizzazione
@@ -31,10 +32,7 @@ export function SincronizzaCalendarioAMano({
       </div>
 
       <form action={lancia}>
-        <PulsanteInvio
-          mantieniTesto
-          className="inline-flex min-h-11 items-center rounded-full bg-amber-700 px-4 text-sm font-medium text-white hover:bg-amber-800"
-        >
+        <PulsanteInvio mantieniTesto variante="primario" misura="normale" className="bg-warning hover:bg-amber-800">
           Sincronizza calendario ora
         </PulsanteInvio>
       </form>
@@ -51,14 +49,10 @@ export function SincronizzaCalendarioAMano({
       </div>
 
       {!inCorso && esito?.stato === 'ERRORE' && (
-        <div
-          role="alert"
-          data-testid="esito-sincronizzazione"
-          className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text"
-        >
+        <Avviso tono="errore" data-testid="esito-sincronizzazione" className="p-3">
           <p className="font-medium">ERRORE</p>
           <p className="mt-1 wrap-break-word">{esito.messaggio}</p>
-        </div>
+        </Avviso>
       )}
     </section>
   );

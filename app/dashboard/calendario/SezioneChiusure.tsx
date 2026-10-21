@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { ElencoChiusure } from '@/components/ElencoChiusure';
 import { createClient } from '@/lib/supabase/server';
 import type { GiornoChiusura } from '@/lib/calendarioScolastico';
@@ -29,9 +30,7 @@ export async function SezioneChiusure({ oggi, eAdmin }: { oggi: string; eAdmin: 
   return (
     <>
       {error ? (
-        <p className="rounded-xl border border-border bg-white px-4 py-3 text-sm text-stone-700">
-          Non è stato possibile leggere i giorni di chiusura. Riprova tra poco.
-        </p>
+        <StatoVuoto>Non è stato possibile leggere i giorni di chiusura. Riprova tra poco.</StatoVuoto>
       ) : (
         <ElencoChiusure chiusure={chiusure} oggi={oggi} modo="lettura" />
       )}
