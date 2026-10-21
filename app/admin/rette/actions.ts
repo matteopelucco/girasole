@@ -162,7 +162,10 @@ async function inviaEPersistiComunicazione(
   noteExtra: string | null,
   notaCreditoDebito: string | null,
   template: TemplateRetta,
-  inviataDa: { id: string; nome: string }
+  inviataDa: { id: string; nome: string },
+  // false = "Conferma senza inviare" (specs/56): stessa sequenza, ma il
+  // solo passo dell'invio e-mail (famiglia e copia all'asilo) è saltato.
+  inviaMail: boolean
 ): Promise<boolean> {
   const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra, notaCreditoDebito);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
@@ -174,13 +177,15 @@ async function inviaEPersistiComunicazione(
     // solo invio, con tutti gli indirizzi come destinatari.
     // Reply-To all'asilo: le risposte dei genitori non tornano al mittente
     // tecnico (specs/56, issue #245).
-    await inviaEmail({
-      a: emailsDaCampo(email),
-      cc: destinatarioNotifiche(),
-      rispondiA: destinatarioNotifiche(),
-      oggetto,
-      html: corpoHtml,
-    });
+    if (inviaMail) {
+      await inviaEmail({
+        a: emailsDaCampo(email),
+        cc: destinatarioNotifiche(),
+        rispondiA: destinatarioNotifiche(),
+        oggetto,
+        html: corpoHtml,
+      });
+    }
   } catch (errore) {
     return false;
   }
@@ -310,7 +315,8 @@ export async function inviaComunicazioniRetta(
       noteExtra,
       notaCreditoDebito,
       template,
-      inviataDa
+      inviataDa,
+      true
     );
     if (riuscito) {
       inviate++;
@@ -405,7 +411,9 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
     noteExtra,
     notaCreditoDebito,
     template,
-    { id: user.id, nome: inviataDaNome }
+    { id: user.id, nome: inviataDaNome },
+    // "Conferma senza inviare" aggiunge senza_invio=1 (name/value del pulsante).
+    formData.get('senza_invio') !== '1'
   );
 
   revalidatePath('/admin/rette');

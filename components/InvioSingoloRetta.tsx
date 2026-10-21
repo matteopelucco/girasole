@@ -163,6 +163,17 @@ export function InvioSingoloRetta({
             >
               Conferma invio
             </PulsanteInvio>
+            {/* Stessa azione di "Conferma invio", ma con senza_invio=1: salta
+                solo l'invio e-mail (specs/56). Comando tenue, non un pulsante. */}
+            <PulsanteInvio
+              formAction={formAction}
+              name="senza_invio"
+              value="1"
+              mantieniTesto
+              className="rounded-base px-2 py-1.5 text-sm text-stone-600 underline hover:text-stone-900"
+            >
+              Conferma senza inviare
+            </PulsanteInvio>
           </div>
         </Finestra>
       )}
