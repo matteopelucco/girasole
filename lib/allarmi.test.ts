@@ -4,14 +4,18 @@ import {
   dopoSogliaVenerdiSera,
   settimanaDiRiferimentoOre,
   allarmePersonalePresenzePastiAttivo,
+  sezioniIncompleteDa,
+  statoPersonaleDa,
+  allarmiDipendentiDa,
+  type DatiPersonale,
+  type PresenzeOggi,
   type StatoPersonaleGiorno,
 } from './allarmi';
 
 // Solo le funzioni pure di questo modulo (nessun I/O) — vedi CLAUDE.md,
-// criterio unit test: calcolaStatoOperativoGiorno/
-// calcolaStatoPersonaleGiorno/settimanaConfermata/
-// utentiConSettimanaNonConfermata/allarmiPerDipendenti fanno query
-// Supabase, coperte solo da e2e.
+// criterio unit test: calcolaStatoOperativoGiorno/leggiPresenzeOggi/
+// leggiDatiPersonale/settimanaConfermata/utentiConSettimanaNonConfermata
+// fanno query Supabase, coperte solo da e2e.
 
 // Un istante alle 10:00 Europe/Rome corrisponde a 09:00 UTC in inverno
 // (CET, UTC+1) e 08:00 UTC in estate (CEST, UTC+2).
@@ -140,5 +144,129 @@ describe('allarmePersonalePresenzePastiAttivo', () => {
     expect(allarmePersonalePresenzePastiAttivo(DIECI_INVERNO, true, statoPersonale({ pastiNonConfermati: true }))).toBe(
       true
     );
+  });
+});
+
+describe('sezioniIncompleteDa', () => {
+  const bambini = [
+    { id: 'b1', sezione_id: 'sez-1' },
+    { id: 'b2', sezione_id: 'sez-1' },
+    { id: 'b3', sezione_id: 'sez-2' },
+  ];
+
+  it('nessuna sezione se tutti i bambini hanno la presenza', () => {
+    expect(sezioniIncompleteDa(bambini, ['b1', 'b2', 'b3'])).toEqual(new Set());
+  });
+
+  it('la sezione di ogni bambino senza presenza, una volta sola', () => {
+    expect(sezioniIncompleteDa(bambini, ['b3'])).toEqual(new Set(['sez-1']));
+  });
+
+  it('nessuna sezione se non ci sono bambini', () => {
+    expect(sezioniIncompleteDa([], [])).toEqual(new Set());
+  });
+});
+
+const SEZIONE_TULIPANI = { id: 'sez-2', nome: 'Tulipani' };
+
+function presenzeOggi(sovrascrizioni: Partial<PresenzeOggi> = {}): PresenzeOggi {
+  return {
+    sezioni: [SEZIONE_GIRASOLI, SEZIONE_TULIPANI],
+    idSezioniIncomplete: new Set(),
+    pastiNonConfermati: false,
+    ...sovrascrizioni,
+  };
+}
+
+describe('statoPersonaleDa', () => {
+  it('solo le sezioni con presenze incomplete, nell\'ordine delle sezioni', () => {
+    expect(statoPersonaleDa(presenzeOggi({ idSezioniIncomplete: new Set(['sez-2', 'sez-1']) }))).toEqual({
+      sezioniPresenzeIncomplete: [SEZIONE_GIRASOLI, SEZIONE_TULIPANI],
+      pastiNonConfermati: false,
+    });
+  });
+
+  it('riporta i pasti non confermati', () => {
+    expect(statoPersonaleDa(presenzeOggi({ pastiNonConfermati: true }))).toEqual({
+      sezioniPresenzeIncomplete: [],
+      pastiNonConfermati: true,
+    });
+  });
+});
+
+const SETTIMANA = { inizio: '2026-01-12', fine: '2026-01-18' };
+
+function datiPersonale(sovrascrizioni: Partial<DatiPersonale> = {}): DatiPersonale {
+  return {
+    dipendenti: [
+      { id: 'm1', nome: 'Anna', cognome: 'Rossi', ruolo: 'maestra', abilitato_ore_lavoro: true },
+      { id: 'a1', nome: 'Bea', cognome: 'Verdi', ruolo: 'assistente', abilitato_ore_lavoro: false },
+    ],
+    assegnazioni: [
+      { maestraId: 'm1', sezione: { ...SEZIONE_GIRASOLI, attiva: true } },
+      { maestraId: 'a1', sezione: { ...SEZIONE_TULIPANI, attiva: true } },
+    ],
+    idSettimanaConfermata: new Set(['m1']),
+    ...sovrascrizioni,
+  };
+}
+
+describe('allarmiDipendentiDa', () => {
+  it('nessuna riga se nessuno è in allarme', () => {
+    expect(allarmiDipendentiDa(datiPersonale(), presenzeOggi(), SETTIMANA)).toEqual([]);
+  });
+
+  it('presenze incomplete solo nelle sezioni attive di ciascuno', () => {
+    const dati = datiPersonale({
+      assegnazioni: [
+        { maestraId: 'm1', sezione: { ...SEZIONE_GIRASOLI, attiva: true } },
+        { maestraId: 'a1', sezione: { ...SEZIONE_TULIPANI, attiva: false } },
+      ],
+    });
+    expect(
+      allarmiDipendentiDa(dati, presenzeOggi({ idSezioniIncomplete: new Set(['sez-1', 'sez-2']) }), SETTIMANA)
+    ).toEqual([
+      {
+        utenteId: 'm1',
+        nome: 'Anna',
+        cognome: 'Rossi',
+        sezioniPresenzeIncomplete: ['Girasoli'],
+        pastiNonConfermati: false,
+        settimanaOreNonConfermata: null,
+      },
+    ]);
+  });
+
+  it('pasti non comunicati solo per chi ha sezioni e non è assistente', () => {
+    const dati = datiPersonale({
+      dipendenti: [
+        ...datiPersonale().dipendenti,
+        { id: 'm2', nome: 'Carla', cognome: 'Bianchi', ruolo: 'maestra', abilitato_ore_lavoro: false },
+      ],
+    });
+    expect(allarmiDipendentiDa(dati, presenzeOggi({ pastiNonConfermati: true }), SETTIMANA)).toEqual([
+      {
+        utenteId: 'm1',
+        nome: 'Anna',
+        cognome: 'Rossi',
+        sezioniPresenzeIncomplete: [],
+        pastiNonConfermati: true,
+        settimanaOreNonConfermata: null,
+      },
+    ]);
+  });
+
+  it('senza dati di presenze (prima delle 10:00 o giorno chiuso) conta solo la settimana ore', () => {
+    const dati = datiPersonale({ idSettimanaConfermata: new Set() });
+    expect(allarmiDipendentiDa(dati, null, SETTIMANA)).toEqual([
+      {
+        utenteId: 'm1',
+        nome: 'Anna',
+        cognome: 'Rossi',
+        sezioniPresenzeIncomplete: [],
+        pastiNonConfermati: false,
+        settimanaOreNonConfermata: SETTIMANA,
+      },
+    ]);
   });
 });
