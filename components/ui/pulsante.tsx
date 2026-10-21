@@ -33,8 +33,14 @@ const pulsanteVariants = cva(
         pericolo: 'rounded-base bg-danger text-primary-foreground hover:bg-danger-text',
       },
       misura: {
-        normale: 'px-4 py-2 text-sm font-medium',
-        piccolo: 'px-3 py-1 text-xs font-medium',
+        // Altezza minima per il tocco su telefono (issue #343): 44 px sotto
+        // 640 px (`sm`), poi torna l'altezza naturale. `inline-flex` perché
+        // `min-height` non vale su un elemento in linea (link con `asChild`).
+        normale:
+          'inline-flex min-h-11 items-center justify-center px-4 py-2 text-sm font-medium sm:min-h-0',
+        // Mai sotto 32 px su telefono (issue #343).
+        piccolo:
+          'inline-flex min-h-8 items-center justify-center px-3 py-1 text-xs font-medium sm:min-h-0',
       },
     },
   },

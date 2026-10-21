@@ -251,4 +251,49 @@ test.describe('01 — UX/UI', () => {
       await nessunaViolazioneA11yGrave(page);
     });
   });
+
+  // Issue #343, specs/01 - ux.md, "Altezza minima su telefono": sotto 640 px
+  // Pulsante e Campo in misura normale sono alti almeno 44 px; da 640 px
+  // in su tornano all'altezza di prima. Il login ha un campo email, un campo
+  // password e il pulsante "Accedi" (tutti misura normale). La misura
+  // piccolo (>= 32 px) si controlla in 57-reset-giornata.spec.ts.
+  test.describe('altezza minima su telefono (login)', () => {
+    async function altezze(page: Page) {
+      const altezza = async (selettore: ReturnType<Page['locator']>) =>
+        (await selettore.boundingBox())!.height;
+      return {
+        email: await altezza(page.locator('#email')),
+        password: await altezza(page.locator('#password')),
+        accedi: await altezza(page.getByRole('button', { name: 'Accedi' })),
+      };
+    }
+
+    test.describe('a 360 px', () => {
+      test.use({ viewport: { width: 360, height: 740 } });
+
+      test('campi e pulsante sono alti almeno 44 px, senza scorrimento orizzontale', async ({ page }) => {
+        await page.goto('/login');
+
+        const { email, password, accedi } = await altezze(page);
+        expect(email).toBeGreaterThanOrEqual(44);
+        expect(password).toBeGreaterThanOrEqual(44);
+        expect(accedi).toBeGreaterThanOrEqual(44);
+        expect(await nessunOverflowOrizzontale(page)).toBe(false);
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test.describe('a 1024 px', () => {
+      test.use({ viewport: { width: 1024, height: 768 } });
+
+      test('da 640 px in su l’altezza torna quella naturale (sotto 44 px)', async ({ page }) => {
+        await page.goto('/login');
+
+        const { email, password, accedi } = await altezze(page);
+        expect(email).toBeLessThan(44);
+        expect(password).toBeLessThan(44);
+        expect(accedi).toBeLessThan(44);
+      });
+    });
+  });
 });

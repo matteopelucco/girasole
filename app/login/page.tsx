@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { CampoPassword } from '@/components/CampoPassword';
+import { Campo } from '@/components/ui/campo';
 import { login } from './actions';
 
 const MESSAGGI_ERRORE: Record<string, string> = {
@@ -39,13 +40,13 @@ export default async function LoginPage(
             <label className="mb-1 block text-sm text-stone-600" htmlFor="email">
               Email
             </label>
-            <input
+            <Campo
               id="email"
               name="email"
               type="email"
               required
               defaultValue={searchParams?.email ?? ''}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             />
           </div>
           <div>
@@ -72,7 +73,7 @@ export default async function LoginPage(
             </div>
           )}
 
-          <PulsanteInvio className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-hover">
+          <PulsanteInvio variante="primario" misura="normale" className="w-full">
             Accedi
           </PulsanteInvio>
         </form>

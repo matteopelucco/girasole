@@ -26,8 +26,10 @@ export const campoVariants = cva(
   {
     variants: {
       misura: {
-        normale: 'px-3 py-2',
-        piccolo: 'px-2 py-1',
+        // 44 px minimi sotto 640 px (issue #343), poi altezza naturale.
+        normale: 'min-h-11 px-3 py-2 sm:min-h-0',
+        // Mai sotto 32 px su telefono (issue #343).
+        piccolo: 'min-h-8 px-2 py-1 sm:min-h-0',
       },
     },
     defaultVariants: {
