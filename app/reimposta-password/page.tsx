@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { REGOLA_PASSWORD } from '@/lib/password';
+import { Campo } from '@/components/ui/campo';
+import { Etichetta } from '@/components/ui/etichetta';
+import { Avviso } from '@/components/ui/avviso';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { impostaNuovaPassword } from './actions';
 
@@ -35,42 +38,42 @@ export default async function ReimpostaPasswordPage(
 
         <form action={impostaNuovaPassword} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-stone-600" htmlFor="password">
+            <Etichetta htmlFor="password" className="mb-1">
               Nuova password
-            </label>
-            <input
+            </Etichetta>
+            <Campo
               id="password"
               name="password"
               type="password"
               required
               minLength={8}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-stone-600" htmlFor="conferma">
+            <Etichetta htmlFor="conferma" className="mb-1">
               Conferma password
-            </label>
-            <input
+            </Etichetta>
+            <Campo
               id="conferma"
               name="conferma"
               type="password"
               required
               minLength={8}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             />
           </div>
 
           {messaggioErrore && (
-            <div role="alert">
-              <p className="text-sm text-red-600">{messaggioErrore}</p>
+            <Avviso tono="errore">
+              <p>{messaggioErrore}</p>
               {searchParams?.dettaglio && (
-                <p className="mt-1 text-xs text-red-500">{decodeURIComponent(searchParams.dettaglio)}</p>
+                <p className="mt-1 text-xs">{decodeURIComponent(searchParams.dettaglio)}</p>
               )}
-            </div>
+            </Avviso>
           )}
 
-          <PulsanteInvio className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition hover:bg-primary-hover">
+          <PulsanteInvio variante="primario" misura="normale" className="w-full">
             Salva nuova password
           </PulsanteInvio>
         </form>
