@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { CampoPassword } from '@/components/CampoPassword';
 import { Campo } from '@/components/ui/campo';
+import { Etichetta } from '@/components/ui/etichetta';
+import { Avviso } from '@/components/ui/avviso';
 import { login } from './actions';
 
 const MESSAGGI_ERRORE: Record<string, string> = {
@@ -37,9 +39,9 @@ export default async function LoginPage(
 
         <form action={login} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-stone-600" htmlFor="email">
+            <Etichetta htmlFor="email" className="mb-1">
               Email
-            </label>
+            </Etichetta>
             <Campo
               id="email"
               name="email"
@@ -50,27 +52,23 @@ export default async function LoginPage(
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-stone-600" htmlFor="password">
+            <Etichetta htmlFor="password" className="mb-1">
               Password
-            </label>
+            </Etichetta>
             <CampoPassword id="password" name="password" required autoComplete="current-password" />
           </div>
 
           {searchParams?.reset === 'ok' && (
-            <p className="text-sm text-green-700">
-              Password aggiornata. Accedi con la nuova password.
-            </p>
+            <Avviso tono="successo">Password aggiornata. Accedi con la nuova password.</Avviso>
           )}
 
           {searchParams?.errore && (
-            <div className="space-y-1">
-              <p className="text-sm text-red-600">
-                {MESSAGGI_ERRORE[searchParams.errore] ?? MESSAGGI_ERRORE.credenziali}
-              </p>
-              <Link href="/recupera-password" className="text-sm text-stone-600 underline">
+            <Avviso tono="errore" className="space-y-1">
+              <p>{MESSAGGI_ERRORE[searchParams.errore] ?? MESSAGGI_ERRORE.credenziali}</p>
+              <Link href="/recupera-password" className="text-stone-600 underline">
                 Non ricordi la password?
               </Link>
-            </div>
+            </Avviso>
           )}
 
           <PulsanteInvio variante="primario" misura="normale" className="w-full">
