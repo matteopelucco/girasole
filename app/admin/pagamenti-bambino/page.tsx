@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaPiede, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, oggi } from '@/lib/date';
@@ -128,86 +129,86 @@ export default async function PagamentiBambinoPage(
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-border bg-white shadow-xs">
-              <table className="min-w-full divide-y divide-stone-200 text-sm">
+            <TabellaScorrevole>
+              <Tabella separatori>
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}
                 </caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+                <TabellaIntestazione>
+                  <TabellaRiga>
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
                       Mese
-                    </th>
+                    </TabellaTitolo>
                     {ETICHETTE_VOCI.map((etichetta) => (
-                      <th
+                      <TabellaTitolo allinea="destra"
                         key={etichetta}
                         scope="col"
-                        className="max-w-26 px-2 py-1.5 text-right font-medium text-stone-700"
+                        className="max-w-26 px-2 py-1.5 font-medium text-stone-700"
                       >
                         {etichetta}
-                      </th>
+                      </TabellaTitolo>
                     ))}
-                    <th scope="col" className="px-2 py-1.5 text-right text-base font-semibold text-stone-900">
+                    <TabellaTitolo allinea="destra" scope="col" className="px-2 py-1.5 text-base font-semibold text-stone-900">
                       Totale
-                    </th>
-                    <th scope="col" className="px-2 py-1.5 text-left font-medium text-stone-700">
+                    </TabellaTitolo>
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
                       Inviata
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
+                    </TabellaTitolo>
+                  </TabellaRiga>
+                </TabellaIntestazione>
+                <TabellaCorpo separatori>
                   {mesi.map((mese) => {
                     const comunicazione = comunicazionePerMese.get(mese);
                     return (
-                      <tr key={mese} className={comunicazione ? 'bg-emerald-50/40' : undefined}>
-                        <th scope="row" className="whitespace-nowrap px-2 py-2 text-left font-normal capitalize">
+                      <TabellaRiga key={mese} className={comunicazione ? 'bg-emerald-50/40' : undefined}>
+                        <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-2 font-normal capitalize">
                           {formattaMeseItaliano(mese)}
-                        </th>
+                        </TabellaTitolo>
                         {comunicazione ? (
                           <>
                             {vociComunicazione(comunicazione).map((voce) => (
-                              <td key={voce.etichetta} className="px-2 py-2 text-right">
+                              <TabellaCella allinea="destra" key={voce.etichetta} className="px-2 py-2">
                                 <div className="whitespace-nowrap">{formattaImporto(voce.importo)} €</div>
                                 {voce.nota && <div className="text-left text-xs text-stone-500">{voce.nota}</div>}
-                              </td>
+                              </TabellaCella>
                             ))}
-                            <td className="whitespace-nowrap px-2 py-2 text-right text-base font-bold text-stone-900">
+                            <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-2 text-base font-bold text-stone-900">
                               {formattaImporto(Number(comunicazione.totale))} €
-                            </td>
-                            <td className="whitespace-nowrap px-2 py-2 text-left text-xs text-emerald-800">
+                            </TabellaCella>
+                            <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-2 text-xs text-emerald-800">
                               Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
-                            </td>
+                            </TabellaCella>
                           </>
                         ) : (
-                          <td
+                          <TabellaCella allinea="sinistra"
                             colSpan={ETICHETTE_VOCI.length + 2}
-                            className="px-2 py-2 text-left text-xs text-stone-500"
+                            className="px-2 py-2 text-xs text-stone-500"
                           >
                             Non ancora comunicata
-                          </td>
+                          </TabellaCella>
                         )}
-                      </tr>
+                      </TabellaRiga>
                     );
                   })}
-                </tbody>
+                </TabellaCorpo>
                 {comunicazioni.length > 0 && (
-                  <tfoot>
-                    <tr className="border-t-2 border-stone-300 bg-stone-50">
-                      <td
+                  <TabellaPiede>
+                    <TabellaRiga className="border-t-2 border-stone-300 bg-stone-50">
+                      <TabellaCella allinea="destra"
                         colSpan={ETICHETTE_VOCI.length + 1}
-                        className="px-2 py-2 text-right text-sm font-semibold text-stone-700"
+                        className="px-2 py-2 text-sm font-semibold text-stone-700"
                       >
                         Totale richiesto ({comunicazioni.length} {comunicazioni.length === 1 ? 'mese' : 'mesi'})
-                      </td>
-                      <td className="whitespace-nowrap px-2 py-2 text-right text-base font-bold text-stone-900">
+                      </TabellaCella>
+                      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-2 text-base font-bold text-stone-900">
                         {formattaImporto(totaleRichiesto(comunicazioni))} €
-                      </td>
-                      <td />
-                    </tr>
-                  </tfoot>
+                      </TabellaCella>
+                      <TabellaCella />
+                    </TabellaRiga>
+                  </TabellaPiede>
                 )}
-              </table>
-            </div>
+              </Tabella>
+            </TabellaScorrevole>
           </section>
         )}
       </main>

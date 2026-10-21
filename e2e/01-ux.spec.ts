@@ -75,6 +75,50 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
+  // Issue #341: la Tabella (components/ui/tabella.tsx) tiene la struttura di
+  // prima (intestazioni di colonna e di riga con `scope`) e, a 360 px, lo
+  // scorrimento orizzontale resta dentro il contenitore: la pagina no.
+  test.describe('tabella (360 px)', () => {
+    const STRETTO = { width: 360, height: 740 };
+
+    test.describe('maestra', () => {
+      test.use({ viewport: STRETTO, storageState: statoAutenticazione('maestra') });
+
+      test('profilo orario: intestazioni con scope e nessuno scorrimento di pagina', async ({ page }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+        await page.goto('/dashboard/profilo-orario');
+        const tabella = page.getByRole('table', { name: 'Ore previste per giorno' });
+        test.skip((await tabella.count()) === 0, 'nessun profilo orario assegnato a questo account');
+
+        await expect(tabella.locator('thead th[scope="col"]')).toHaveCount(2);
+        await expect(tabella.locator('tbody th[scope="row"]').first()).toBeVisible();
+        await expect(tabella.locator('tfoot th[scope="row"]')).toHaveText('Totale settimanale');
+        expect(await nessunOverflowOrizzontale(page)).toBe(false);
+
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+
+    test.describe('admin', () => {
+      test.use({ viewport: STRETTO, storageState: statoAutenticazione('admin') });
+
+      test('rette: la tabella scorre dentro il suo contenitore, la pagina no', async ({ page }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+        await page.goto('/admin/rette');
+        const tabella = page.getByRole('table').first();
+        test.skip((await tabella.count()) === 0, 'nessun bambino attivo per le rette');
+
+        await expect(tabella.locator('thead th[scope="col"]').first()).toBeVisible();
+        await expect(tabella.locator('..')).toHaveCSS('overflow-x', 'auto');
+        expect(await nessunOverflowOrizzontale(page)).toBe(false);
+
+        await nessunaViolazioneA11yGrave(page);
+      });
+    });
+  });
+
   test.describe('dashboard maestra (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 

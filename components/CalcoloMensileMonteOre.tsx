@@ -1,3 +1,4 @@
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { formattaMeseItaliano } from '@/lib/date';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
 import { saldoMonteOreBreve } from '@/lib/monteOre';
@@ -18,40 +19,40 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
       {!righe.length ? (
         <p className="text-sm text-stone-600">Nessun dato: non ci sono ancora ore registrate né movimenti.</p>
       ) : (
-      <table aria-labelledby="calcolo-mensile-titolo" className="w-full text-left text-sm text-stone-700">
-        <thead>
-          <tr className="border-b border-border text-xs text-stone-600">
-            <th scope="col" className="py-1 pr-3 font-medium">
+      <Tabella aria-labelledby="calcolo-mensile-titolo" className="text-left text-stone-700">
+        <TabellaIntestazione>
+          <TabellaRiga className="border-b border-border text-xs text-stone-600">
+            <TabellaTitolo scope="col" className="py-1 pr-3 font-medium">
               Mese
-            </th>
-            <th scope="col" className="py-1 pr-3 text-right font-medium">
+            </TabellaTitolo>
+            <TabellaTitolo allinea="destra" scope="col" className="py-1 pr-3 font-medium">
               Ore previste
-            </th>
-            <th scope="col" className="py-1 pr-3 text-right font-medium">
+            </TabellaTitolo>
+            <TabellaTitolo allinea="destra" scope="col" className="py-1 pr-3 font-medium">
               Differenza ore
-            </th>
-            <th scope="col" className="py-1 pr-3 text-right font-medium">
+            </TabellaTitolo>
+            <TabellaTitolo allinea="destra" scope="col" className="py-1 pr-3 font-medium">
               Movimenti (+ a credito / − da recuperare)
-            </th>
-            <th scope="col" className="py-1 text-right font-medium">
+            </TabellaTitolo>
+            <TabellaTitolo allinea="destra" scope="col" className="py-1 font-medium">
               Saldo a fine mese
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+            </TabellaTitolo>
+          </TabellaRiga>
+        </TabellaIntestazione>
+        <TabellaCorpo>
           {righe.map((r) => (
-            <tr key={r.mese} className="border-b border-stone-100 last:border-0">
-              <th scope="row" className="py-1 pr-3 font-normal capitalize">
+            <TabellaRiga key={r.mese} className="border-b border-stone-100 last:border-0">
+              <TabellaTitolo scope="row" className="py-1 pr-3 font-normal capitalize">
                 {formattaMeseItaliano(r.mese)}
-              </th>
-              <td className="py-1 pr-3 text-right">{r.orePreviste}h</td>
-              <td className="py-1 pr-3 text-right">{formattaOreConSegno(r.differenza)}h</td>
-              <td className="py-1 pr-3 text-right">{formattaOreConSegno(r.movimenti)}h</td>
-              <td className="py-1 text-right font-medium">{saldoMonteOreBreve(r.saldo)}</td>
-            </tr>
+              </TabellaTitolo>
+              <TabellaCella allinea="destra" className="py-1 pr-3">{r.orePreviste}h</TabellaCella>
+              <TabellaCella allinea="destra" className="py-1 pr-3">{formattaOreConSegno(r.differenza)}h</TabellaCella>
+              <TabellaCella allinea="destra" className="py-1 pr-3">{formattaOreConSegno(r.movimenti)}h</TabellaCella>
+              <TabellaCella allinea="destra" className="py-1 font-medium">{saldoMonteOreBreve(r.saldo)}</TabellaCella>
+            </TabellaRiga>
           ))}
-        </tbody>
-      </table>
+        </TabellaCorpo>
+      </Tabella>
       )}
     </div>
   );

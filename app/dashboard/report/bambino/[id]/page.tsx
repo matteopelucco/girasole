@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
+import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff } from '@/lib/auth';
 import { formattaDataItaliana, giorniInRange } from '@/lib/date';
 import { risolviPeriodoReport } from '@/lib/report';
@@ -75,18 +76,18 @@ export default async function DrillDownBambinoPage(
           <p className="text-sm capitalize text-stone-600">{etichettaPeriodo}</p>
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-stone-600">
-              <th className="py-1">Giorno</th>
-              <th className="py-1">Presenza</th>
-              <th className="py-1">Pre-asilo</th>
-              <th className="py-1">Post-asilo</th>
-              <th className="py-1">Pasto</th>
-              <th className="py-1">Avviso</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Tabella>
+          <TabellaIntestazione>
+            <TabellaRiga className="text-left text-xs text-stone-600">
+              <TabellaTitolo className="py-1">Giorno</TabellaTitolo>
+              <TabellaTitolo className="py-1">Presenza</TabellaTitolo>
+              <TabellaTitolo className="py-1">Pre-asilo</TabellaTitolo>
+              <TabellaTitolo className="py-1">Post-asilo</TabellaTitolo>
+              <TabellaTitolo className="py-1">Pasto</TabellaTitolo>
+              <TabellaTitolo className="py-1">Avviso</TabellaTitolo>
+            </TabellaRiga>
+          </TabellaIntestazione>
+          <TabellaCorpo>
             {giorni.map((g) => {
               const presenza = presenzaPerGiorno.get(g);
               const mangiato = pastoPerGiorno.get(g);
@@ -97,20 +98,20 @@ export default async function DrillDownBambinoPage(
                 mangiato: mangiato as StatoPasto | undefined,
               });
               return (
-                <tr key={g} className="border-t border-stone-100">
-                  <td className="py-1 capitalize">{formattaDataItaliana(g)}</td>
-                  <td className="py-1">{ETICHETTE_PRESENZA[presenza?.stato ?? ''] ?? 'Non segnato'}</td>
-                  <td className="py-1">{presenza?.pre_asilo ? 'Sì' : '—'}</td>
-                  <td className="py-1">{presenza?.post_asilo ? 'Sì' : '—'}</td>
-                  <td className="py-1">{ETICHETTE_PASTO[mangiato ?? ''] ?? 'Non segnato'}</td>
-                  <td className="py-1">
+                <TabellaRiga key={g} className="border-t border-stone-100">
+                  <TabellaCella className="py-1 capitalize">{formattaDataItaliana(g)}</TabellaCella>
+                  <TabellaCella className="py-1">{ETICHETTE_PRESENZA[presenza?.stato ?? ''] ?? 'Non segnato'}</TabellaCella>
+                  <TabellaCella className="py-1">{presenza?.pre_asilo ? 'Sì' : '—'}</TabellaCella>
+                  <TabellaCella className="py-1">{presenza?.post_asilo ? 'Sì' : '—'}</TabellaCella>
+                  <TabellaCella className="py-1">{ETICHETTE_PASTO[mangiato ?? ''] ?? 'Non segnato'}</TabellaCella>
+                  <TabellaCella className="py-1">
                     <AvvisoInconsistenza messaggi={problemi} />
-                  </td>
-                </tr>
+                  </TabellaCella>
+                </TabellaRiga>
               );
             })}
-          </tbody>
-        </table>
+          </TabellaCorpo>
+        </Tabella>
       </main>
     </NavHeader>
   );
