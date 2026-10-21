@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { calendarioCollegato } from '@/lib/calendarioImpostazioniDati';
 import { costruisciVistaEventi, type EventoRiga } from '@/lib/calendarioEventiVista';
 import { sommaGiorni } from '@/lib/date';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { ElencoMesi } from './ElencoEventi';
 
 // Quanti giorni indietro si mostrano gli eventi passati (il cron ne salva circa 30).
@@ -10,12 +11,9 @@ const GIORNI_PASSATI = 30;
 
 function Messaggio({ children, testid }: { children: React.ReactNode; testid?: string }) {
   return (
-    <p
-      data-testid={testid}
-      className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-5 text-center text-sm text-stone-700"
-    >
+    <StatoVuoto data-testid={testid} allineamento="centro">
       {children}
-    </p>
+    </StatoVuoto>
   );
 }
 

@@ -737,6 +737,10 @@ stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
   contiene e i suoi pulsanti di invio (es. "Conferma invio" nella tabella delle
   rette) non invierebbero più; in più non pesa nulla nel browser. Si monta solo
   quando serve (`{aperta && <Finestra …>}`) e si chiude in `onChiudi`.
+- **Etichette, riquadri, avvisi, stato vuoto** (issue #340): `etichetta-pillola.tsx`
+  (`EtichettaPillola`), `riquadro.tsx` (`Riquadro`), `avviso.tsx` (`Avviso`,
+  `role="alert"` solo per l'errore) e `stato-vuoto.tsx` (`StatoVuoto`). Dettagli e
+  valori scelti in `specs/01 - ux.md`.
 - **Quando usarli**: ogni volta che serve un pulsante, un campo, un'etichetta di
   stato, un riquadro di avviso o una finestra di dialogo, si importa il
   componente da `@/components/ui/...`.
