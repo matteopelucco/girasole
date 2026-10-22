@@ -162,7 +162,10 @@ async function inviaEPersistiComunicazione(
   noteExtra: string | null,
   notaCreditoDebito: string | null,
   template: TemplateRetta,
-  inviataDa: { id: string; nome: string }
+  inviataDa: { id: string; nome: string },
+  // false = "Conferma senza inviare" (specs/56): stessa sequenza, ma il
+  // solo passo dell'invio e-mail (famiglia e copia all'asilo) è saltato.
+  inviaMail: boolean
 ): Promise<boolean> {
   const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra, notaCreditoDebito);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
@@ -174,13 +177,15 @@ async function inviaEPersistiComunicazione(
     // solo invio, con tutti gli indirizzi come destinatari.
     // Reply-To all'asilo: le risposte dei genitori non tornano al mittente
     // tecnico (specs/56, issue #245).
-    await inviaEmail({
-      a: emailsDaCampo(email),
-      cc: destinatarioNotifiche(),
-      rispondiA: destinatarioNotifiche(),
-      oggetto,
-      html: corpoHtml,
-    });
+    if (inviaMail) {
+      await inviaEmail({
+        a: emailsDaCampo(email),
+        cc: destinatarioNotifiche(),
+        rispondiA: destinatarioNotifiche(),
+        oggetto,
+        html: corpoHtml,
+      });
+    }
   } catch (errore) {
     return false;
   }
@@ -310,7 +315,8 @@ export async function inviaComunicazioniRetta(
       noteExtra,
       notaCreditoDebito,
       template,
-      inviataDa
+      inviataDa,
+      true
     );
     if (riuscito) {
       inviate++;
@@ -348,7 +354,11 @@ export async function inviaComunicazioniRetta(
 // dal form, mai fidandosi ciecamente del client. formAction diretto
 // (bind di bambinoId), non tramite useFormState — stesso motivo di
 // annullaComunicazioneRetta sotto: niente <form> annidati nella tabella.
-export async function inviaComunicazioneRettaSingola(bambinoId: string, formData: FormData) {
+//
+// `inviaMail` è fissato dalla pagina con bind (true per "Conferma invio",
+// false per "Conferma senza inviare"), mai letto dal form: il valore di un
+// pulsante submitter non arriva in modo affidabile alle Server Action.
+export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMail: boolean, formData: FormData) {
   const { supabase, user, profilo } = await requireAdmin();
 
   const meseCorrente = meseDaData(oggi());
@@ -405,7 +415,8 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, formData
     noteExtra,
     notaCreditoDebito,
     template,
-    { id: user.id, nome: inviataDaNome }
+    { id: user.id, nome: inviataDaNome },
+    inviaMail
   );
 
   revalidatePath('/admin/rette');

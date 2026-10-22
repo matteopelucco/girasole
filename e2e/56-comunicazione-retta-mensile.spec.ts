@@ -458,6 +458,30 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaBAncoraDaInviare.getByRole('button', { name: 'Invia comunicazione' })).toBeVisible();
   });
 
+  // Senza RESEND_API_KEY (CI) un invio vero fallirebbe e la riga resterebbe
+  // "da inviare": vederla "Inviata" prova che la posta non è stata chiamata.
+  test('"Conferma senza inviare" registra la comunicazione senza spedire email', async ({ page }) => {
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-senza-invio-${Date.now()}@example.com`,
+      prezzoMensile: '120',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await expect(popup.getByRole('button', { name: 'Conferma senza inviare' })).toBeVisible();
+    await nessunaViolazioneA11yGrave(page);
+    await clickEAttendiAzione(page, popup.getByRole('button', { name: 'Conferma senza inviare' }));
+    await page.reload();
+
+    const rigaInviata = page.locator('tr', { hasText: cognome });
+    await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+    // 120 retta + 2 marca da bollo (default), 0 pasti/extra.
+    await expect(rigaInviata).toContainText('122,00');
+  });
+
   // Il Reply-To non è osservabile dall'interfaccia: il payload è verificato
   // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
   // reply_to vada a buon fine (Resend rifiuta un payload non valido).

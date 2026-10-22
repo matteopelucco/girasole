@@ -152,6 +152,19 @@ E se premo "Conferma invio" quell'unica email parte e viene registrata
 E se premo "Annulla" il popup si chiude senza inviare nulla, la riga
 resta "da inviare" con i valori che avevo scritto
 
+## Scenario: confermare senza inviare registra la comunicazione ma non manda nessuna email
+Dato che ho aperto l'anteprima con "Invia comunicazione" sulla riga di un
+bambino non ancora comunicato (per esempio perché la famiglia è già stata
+avvisata in altro modo)
+Quando premo "Conferma senza inviare", un comando meno evidente di
+"Conferma invio"
+Allora succede la stessa sequenza di "Conferma invio" (stessi controlli,
+stessa registrazione con gli stessi importi e la stessa data/ora, stesso
+aggiornamento della pagina, credito/debito conteggiato) e la riga passa a
+"Inviata"
+E non parte nessuna email: né alla famiglia né all'asilo in copia
+E "Conferma invio" continua a inviare la mail come prima
+
 ## Scenario: Esc chiude l'anteprima della comunicazione singola
 Dato che ho aperto l'anteprima con "Invia comunicazione" sulla riga di un
 bambino

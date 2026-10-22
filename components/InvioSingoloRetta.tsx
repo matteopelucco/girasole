@@ -64,6 +64,7 @@ export function InvioSingoloRetta({
   oggettoTemplate,
   corpoTemplate,
   formAction,
+  formActionSenzaInvio,
 }: {
   bambinoId: string;
   nome: string;
@@ -78,6 +79,8 @@ export function InvioSingoloRetta({
   oggettoTemplate: string;
   corpoTemplate: string;
   formAction: (formData: FormData) => void | Promise<void>;
+  // Stessa azione con l'invio e-mail disattivato (fissato dalla pagina).
+  formActionSenzaInvio: (formData: FormData) => void | Promise<void>;
 }) {
   const [anteprima, setAnteprima] = useState<{ oggetto: string; corpo: string } | null>(null);
   const bottoneRef = useRef<HTMLButtonElement>(null);
@@ -162,6 +165,15 @@ export function InvioSingoloRetta({
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
             >
               Conferma invio
+            </PulsanteInvio>
+            {/* Stessa azione di "Conferma invio", ma con l'invio e-mail
+                disattivato (specs/56). Comando tenue, non un pulsante. */}
+            <PulsanteInvio
+              formAction={formActionSenzaInvio}
+              mantieniTesto
+              className="rounded-base px-2 py-1.5 text-sm text-stone-600 underline hover:text-stone-900"
+            >
+              Conferma senza inviare
             </PulsanteInvio>
           </div>
         </Finestra>
