@@ -2,7 +2,10 @@ import { ElencoChiusure } from '@/components/ElencoChiusure';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Campo } from '@/components/ui/campo';
+import { riquadroVariants } from '@/components/ui/riquadro';
 import { requireAdmin } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import type { GiornoChiusura } from '@/lib/calendarioScolastico';
 import { oggi } from '@/lib/date';
 import { creaGiornoChiusura } from './actions';
@@ -38,30 +41,14 @@ export default async function CalendarioScolasticoPage() {
         <FormConEsito
           action={creaGiornoChiusura}
           resetSuOk
-          className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
+          className={cn(riquadroVariants(), 'space-y-2 p-4')}
         >
           <div className="flex flex-wrap gap-2">
-            <input
-              name="data_inizio"
-              type="date"
-              required
-              aria-label="Data di inizio"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-            />
-            <input
-              name="data_fine"
-              type="date"
-              required
-              aria-label="Data di fine"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-            />
+            <Campo name="data_inizio" type="date" required aria-label="Data di inizio" className="flex-1" />
+            <Campo name="data_fine" type="date" required aria-label="Data di fine" className="flex-1" />
           </div>
-          <input
-            name="nota"
-            placeholder="Nota (opzionale, es. Vacanze di Natale)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-          />
-          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+          <Campo name="nota" placeholder="Nota (opzionale, es. Vacanze di Natale)" className="w-full" />
+          <PulsanteInvio variante="primario" misura="normale">
             Aggiungi giorno di chiusura
           </PulsanteInvio>
         </FormConEsito>

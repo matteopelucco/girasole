@@ -9,14 +9,6 @@ import { ElencoMesi } from './ElencoEventi';
 // Quanti giorni indietro si mostrano gli eventi passati (il cron ne salva circa 30).
 const GIORNI_PASSATI = 30;
 
-function Messaggio({ children, testid }: { children: React.ReactNode; testid?: string }) {
-  return (
-    <StatoVuoto data-testid={testid} allineamento="centro">
-      {children}
-    </StatoVuoto>
-  );
-}
-
 // Eventi dal Google Calendar (specs/64), letti SOLO dalla tabella
 // `calendario_eventi` con la sessione di chi guarda (RLS: admin, maestra,
 // assistente): la pagina non chiama mai Google. Una query a sé, separata dai
@@ -35,22 +27,22 @@ export async function SezioneEventi({ oggi, eAdmin }: { oggi: string; eAdmin: bo
 
   if (error) {
     console.error('Calendario: impossibile leggere gli eventi', error.message);
-    return <Messaggio>Non è stato possibile leggere gli eventi. Riprova tra poco.</Messaggio>;
+    return <StatoVuoto allineamento="centro">Non è stato possibile leggere gli eventi. Riprova tra poco.</StatoVuoto>;
   }
 
   const righe = (data ?? []) as EventoRiga[];
 
   if (righe.length === 0) {
-    if (!eAdmin) return <Messaggio testid="nessun-evento">Non ci sono eventi a calendario.</Messaggio>;
+    if (!eAdmin) return <StatoVuoto data-testid="nessun-evento" allineamento="centro">Non ci sono eventi a calendario.</StatoVuoto>;
 
     // Solo per l'admin: collegato o no (senza leggere l'indirizzo).
     const collegato = await calendarioCollegato(supabase);
     return collegato ? (
-      <Messaggio testid="nessun-evento">
+      <StatoVuoto data-testid="nessun-evento" allineamento="centro">
         Non ci sono eventi a calendario. Gli eventi di Google si aggiornano ogni notte.
-      </Messaggio>
+      </StatoVuoto>
     ) : (
-      <Messaggio testid="nessun-evento">
+      <StatoVuoto data-testid="nessun-evento" allineamento="centro">
         Il Google Calendar non è ancora collegato. Per mostrare qui gli eventi, inserisci l&apos;indirizzo del calendario in{' '}
         <Link
           href="/admin/parametri-funzionamento"
@@ -59,7 +51,7 @@ export async function SezioneEventi({ oggi, eAdmin }: { oggi: string; eAdmin: bo
           Parametri di funzionamento
         </Link>
         .
-      </Messaggio>
+      </StatoVuoto>
     );
   }
 
@@ -72,7 +64,7 @@ export async function SezioneEventi({ oggi, eAdmin }: { oggi: string; eAdmin: bo
         {prossimi.length > 0 ? (
           <ElencoMesi mesi={prossimi} passato={false} />
         ) : (
-          <Messaggio>Nessun evento in programma.</Messaggio>
+          <StatoVuoto allineamento="centro">Nessun evento in programma.</StatoVuoto>
         )}
       </div>
 

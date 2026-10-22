@@ -3,6 +3,12 @@ import { NavHeader } from '@/components/NavHeader';
 import { LancioManualeCron } from '@/components/LancioManualeCron';
 import { SincronizzaCalendarioAMano } from '@/components/SincronizzaCalendarioAMano';
 import { Schede } from '@/components/Schede';
+import { Avviso } from '@/components/ui/avviso';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { Pulsante } from '@/components/ui/pulsante';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { cn } from '@/lib/utils';
 import { requireAdmin } from '@/lib/auth';
 import {
   LIMITE_MASSIMO,
@@ -95,9 +101,9 @@ async function SchedaCronJob({
       </p>
 
       {errore && (
-        <p role="alert" className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text">
+        <Avviso tono="errore" className="p-3">
           Non è stato possibile leggere il registro dei lanci. Riprova più tardi.
-        </p>
+        </Avviso>
       )}
 
       {gruppi.map((gruppo) => (
@@ -112,9 +118,9 @@ async function SchedaCronJob({
           <LancioManualeCron nome={gruppo.nome} titolo={gruppo.titolo} azione={lanciaCronAMano} />
 
           {gruppo.lanci.length === 0 ? (
-            <p className="text-sm text-stone-600">Nessun lancio registrato.</p>
+            <StatoVuoto>Nessun lancio registrato.</StatoVuoto>
           ) : (
-            <ul className="divide-y divide-stone-100 rounded-xl border border-border bg-white shadow-xs">
+            <ul className={cn(riquadroVariants(), 'divide-y divide-stone-100')}>
               {gruppo.lanci.map((lancio) => {
                 const { stato, messaggio } = statoLancio(lancio, adesso);
                 const etichetta = etichettaLancio(lancio);
@@ -128,20 +134,14 @@ async function SchedaCronJob({
                           {formattaInizioLancio(lancio.iniziato_il)}
                         </time>
                         {etichetta && (
-                          <span
-                            data-testid="tag-estemporaneo"
-                            className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
-                          >
+                          <EtichettaPillola data-testid="tag-estemporaneo" tono="neutro" className="ml-2 font-medium">
                             {etichetta}
-                          </span>
+                          </EtichettaPillola>
                         )}
                       </span>
-                      <span
-                        data-testid="stato-lancio"
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${CLASSI_STATO[stato]}`}
-                      >
+                      <EtichettaPillola data-testid="stato-lancio" tono="neutro" className={cn('px-2.5', CLASSI_STATO[stato])}>
                         {stato}
-                      </span>
+                      </EtichettaPillola>
                     </div>
                     {messaggio && <p className="mt-1 wrap-break-word text-stone-700">{messaggio}</p>}
                   </li>
@@ -151,13 +151,11 @@ async function SchedaCronJob({
           )}
 
           {gruppo.altri && limiti[gruppo.nome] < LIMITE_MASSIMO && (
-            <Link
-              href={hrefCaricaAltri(gruppo.nome, limiti)}
-              scroll={false}
-              className="inline-flex min-h-11 items-center rounded-full border border-stone-300 bg-white px-4 text-sm font-medium text-stone-700 hover:border-stone-500"
-            >
-              Carica altri
-            </Link>
+            <Pulsante asChild variante="secondario" misura="normale">
+              <Link href={hrefCaricaAltri(gruppo.nome, limiti)} scroll={false}>
+                Carica altri
+              </Link>
+            </Pulsante>
           )}
         </section>
       ))}

@@ -1,5 +1,8 @@
 import type { EventoVista, GiornoVista, MeseVista } from '@/lib/calendarioEventiVista';
 import { formattaDataItaliana } from '@/lib/date';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { cn } from '@/lib/utils';
 
 // Elenco degli eventi della pagina "Calendario" (specs/64): mesi, giorni,
 // schede. Solo presentazione. Titolo, descrizione e luogo arrivano da un feed
@@ -11,23 +14,24 @@ import { formattaDataItaliana } from '@/lib/date';
 export function EtichetteEvento({ evento, className = '' }: { evento: EventoVista; className?: string }) {
   return (
     <div className={`${className} flex flex-wrap items-center gap-1.5 text-xs font-medium`}>
-      <span
-        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 ${
-          evento.orario.tutto ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900'
-        }`}
+      <EtichettaPillola
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 font-medium',
+          evento.orario.tutto ? 'bg-amber-100 text-amber-900' : 'bg-sky-100 text-sky-900',
+        )}
       >
         <span aria-hidden>{evento.orario.tutto ? '☀️' : '🕒'}</span>
         <span data-testid="orario-evento">{evento.orario.testo}</span>
-      </span>
+      </EtichettaPillola>
       {evento.orario.intervallo && (
-        <span data-testid="intervallo-evento" className="rounded-full bg-stone-100 px-2.5 py-0.5 text-stone-700">
+        <EtichettaPillola data-testid="intervallo-evento" tono="neutro" className="px-2.5 font-medium">
           {evento.orario.intervallo}
-        </span>
+        </EtichettaPillola>
       )}
       {evento.inCorso && (
-        <span data-testid="in-corso" className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-emerald-900">
+        <EtichettaPillola data-testid="in-corso" tono="neutro" className="px-2.5 font-medium">
           In corso
-        </span>
+        </EtichettaPillola>
       )}
     </div>
   );
@@ -37,9 +41,11 @@ function SchedaEvento({ evento, passato }: { evento: EventoVista; passato: boole
   return (
     <li
       data-testid="evento"
-      className={`rounded-xl border border-l-4 p-3 shadow-xs ${
-        passato ? 'border-border border-l-stone-300 bg-stone-50' : 'border-border border-l-amber-400 bg-white'
-      }`}
+      className={cn(
+        riquadroVariants(),
+        'border-l-4 p-3',
+        passato ? 'border-l-stone-300 bg-stone-50' : 'border-l-amber-400',
+      )}
     >
       <p
         data-testid="titolo-evento"

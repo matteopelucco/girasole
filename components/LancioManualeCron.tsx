@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from 'react';
 import { PulsanteInvio } from './PulsanteInvio';
+import { Avviso } from '@/components/ui/avviso';
+import { Pulsante } from '@/components/ui/pulsante';
 import { MESSAGGIO_CONFERMA_LANCIO, type EsitoLancioManuale, type NomeCron } from '@/lib/cronEsecuzioni';
 
 // Pulsante "Lancia ora" di un job nella pagina Cron Job (specs/63, "Lancio a
@@ -28,40 +30,24 @@ export function LancioManualeCron({
   return (
     <div className="space-y-2">
       {!confermaAperta && (
-        <button
-          type="button"
-          onClick={() => setConfermaAperta(true)}
-          className="inline-flex min-h-11 items-center rounded-full bg-amber-700 px-4 text-sm font-medium text-white hover:bg-amber-800"
-        >
+        <Pulsante variante="primario" misura="normale" onClick={() => setConfermaAperta(true)} className="bg-warning hover:bg-amber-800">
           Lancia ora
-        </button>
+        </Pulsante>
       )}
 
       {confermaAperta && (
-        <div
-          role="group"
-          aria-label={`Conferma lancio: ${titolo}`}
-          className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm"
-        >
-          <p className="text-amber-900">{MESSAGGIO_CONFERMA_LANCIO}</p>
+        <Avviso tono="attenzione" role="group" aria-label={`Conferma lancio: ${titolo}`} className="p-3">
+          <p>{MESSAGGIO_CONFERMA_LANCIO}</p>
           <form action={lancia} className="mt-2 flex flex-wrap gap-2">
             <input type="hidden" name="nome" value={nome} />
-            <PulsanteInvio
-              testoAttesa="Lancio in corso…"
-              className="inline-flex min-h-11 items-center rounded-full bg-amber-700 px-4 text-sm font-medium text-white hover:bg-amber-800"
-            >
+            <PulsanteInvio testoAttesa="Lancio in corso…" variante="primario" misura="normale" className="bg-warning hover:bg-amber-800">
               Sì, lancia ora
             </PulsanteInvio>
-            <button
-              type="button"
-              disabled={inCorso}
-              onClick={() => setConfermaAperta(false)}
-              className="inline-flex min-h-11 items-center rounded-full border border-stone-300 bg-white px-4 text-sm font-medium text-stone-700 hover:border-stone-500 disabled:cursor-not-allowed disabled:opacity-60"
-            >
+            <Pulsante variante="secondario" misura="normale" disabled={inCorso} onClick={() => setConfermaAperta(false)}>
               Annulla
-            </button>
+            </Pulsante>
           </form>
-        </div>
+        </Avviso>
       )}
 
       {/* Sempre presente, così i lettori di schermo annunciano il cambio di testo. */}
@@ -77,24 +63,16 @@ export function LancioManualeCron({
       </div>
 
       {!inCorso && esito?.stato === 'KO' && (
-        <div
-          role="alert"
-          data-testid="esito-lancio"
-          className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text"
-        >
+        <Avviso tono="errore" data-testid="esito-lancio" className="p-3">
           <p className="font-medium">Lancio a mano completato: KO</p>
           <p className="mt-1 wrap-break-word">{esito.messaggio}</p>
-        </div>
+        </Avviso>
       )}
 
       {!inCorso && esito?.stato === 'rifiutato' && (
-        <p
-          role="alert"
-          data-testid="esito-lancio"
-          className="rounded-xl border border-danger-border bg-danger-soft p-3 text-sm text-danger-text"
-        >
+        <Avviso tono="errore" data-testid="esito-lancio" className="p-3">
           {esito.messaggio}
-        </p>
+        </Avviso>
       )}
     </div>
   );
