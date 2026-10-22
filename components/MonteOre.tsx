@@ -2,6 +2,8 @@ import { formattaDataItaliana, formattaDataOraItaliana } from '@/lib/date';
 import { descrizioneSaldoMonteOre, LEGENDA_MONTE_ORE, saldoMonteOreBreve } from '@/lib/monteOre';
 import { FormConEsito, type EsitoAzione } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Campo } from '@/components/ui/campo';
+import { Selezione } from '@/components/ui/selezione';
 
 type MovimentoMonteOre = {
   id: string;
@@ -49,36 +51,39 @@ export function MonteOre({
             <input type="hidden" name="utente_id" value={utenteId} />
             <label className="text-xs font-medium text-purple-900">
               Ore
-              <input
+              <Campo
                 type="number"
                 name="ore"
                 min="0.01"
                 step="0.01"
-                className="mt-1 block w-24 rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                misura="piccolo"
+                className="mt-1 block w-24"
               />
             </label>
             <label className="text-xs font-medium text-purple-900">
               Verso del movimento
-              <select
+              <Selezione
                 name="verso"
                 defaultValue=""
-                className="mt-1 block rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                misura="piccolo"
+                className="mt-1 block"
               >
                 <option value="">Scegli…</option>
                 <option value="credito">Il dipendente ha erogato ore in più (+)</option>
                 <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
-              </select>
+              </Selezione>
             </label>
             <label className="min-w-48 flex-1 text-xs font-medium text-purple-900">
               Nota
-              <input
+              <Campo
                 type="text"
                 name="nota"
                 placeholder="Motivo del movimento"
-                className="mt-1 block w-full rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                misura="piccolo"
+                className="mt-1 block w-full"
               />
             </label>
-            <PulsanteInvio className="rounded-lg bg-purple-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-800">
+            <PulsanteInvio variante="primario" misura="normale">
               Registra movimento
             </PulsanteInvio>
           </FormConEsito>
@@ -103,39 +108,42 @@ export function MonteOre({
                       <input type="hidden" name="id" value={m.id} />
                       <label className="text-xs font-medium text-purple-900">
                         Ore
-                        <input
+                        <Campo
                           type="number"
                           name="ore"
                           min="0.01"
                           step="0.01"
                           defaultValue={Math.abs(Number(m.variazione))}
                           aria-label={`Ore movimento ${m.id}`}
-                          className="mt-1 block w-24 rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                          misura="piccolo"
+                          className="mt-1 block w-24"
                         />
                       </label>
                       <label className="text-xs font-medium text-purple-900">
                         Verso del movimento
-                        <select
+                        <Selezione
                           name="verso"
                           defaultValue={Number(m.variazione) < 0 ? 'debito' : 'credito'}
                           aria-label={`Verso movimento ${m.id}`}
-                          className="mt-1 block rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                          misura="piccolo"
+                          className="mt-1 block"
                         >
                           <option value="credito">Il dipendente ha erogato ore in più (+)</option>
                           <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
-                        </select>
+                        </Selezione>
                       </label>
                       <label className="min-w-48 flex-1 text-xs font-medium text-purple-900">
                         Nota
-                        <input
+                        <Campo
                           type="text"
                           name="nota"
                           defaultValue={m.nota ?? ''}
                           aria-label={`Nota movimento ${m.id}`}
-                          className="mt-1 block w-full rounded-lg border border-purple-300 px-2 py-1.5 text-sm outline-hidden focus:border-purple-500"
+                          misura="piccolo"
+                          className="mt-1 block w-full"
                         />
                       </label>
-                      <PulsanteInvio className="rounded-lg bg-purple-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-800">
+                      <PulsanteInvio variante="primario" misura="normale">
                         Salva modifica
                       </PulsanteInvio>
                     </FormConEsito>
@@ -144,7 +152,8 @@ export function MonteOre({
                     <input type="hidden" name="id" value={m.id} />
                     <PulsanteInvio
                       confermaMessaggio="Eliminare questo movimento di monte ore?"
-                      className="rounded-sm border border-red-300 px-1.5 py-0.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                      variante="pericolo"
+                      misura="piccolo"
                     >
                       Elimina
                     </PulsanteInvio>

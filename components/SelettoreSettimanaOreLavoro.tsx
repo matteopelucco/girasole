@@ -1,3 +1,6 @@
+import { Campo } from '@/components/ui/campo';
+import { Pulsante } from '@/components/ui/pulsante';
+
 // Selettore di settimana di "Ore di lavoro" (specs/18, "saltare a una
 // settimana qualunque"): un <form method="get"> con un campo data
 // nativo (tastiera e telefono, funziona anche senza JavaScript, come
@@ -22,22 +25,11 @@ export function SelettoreSettimanaOreLavoro({
       <label htmlFor="selettore-settimana" className="text-sm text-amber-900">
         Vai alla settimana del
       </label>
-      <input
-        id="selettore-settimana"
-        type="date"
-        name="settimana"
-        defaultValue={lunedi}
-        max={oggiData}
-        required
-        className="min-h-11 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm outline-hidden focus:border-amber-500"
-      />
+      <Campo id="selettore-settimana" type="date" name="settimana" defaultValue={lunedi} max={oggiData} required />
       {utenteId && <input type="hidden" name="utente" value={utenteId} />}
-      <button
-        type="submit"
-        className="min-h-11 rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
-      >
+      <Pulsante type="submit" variante="primario" misura="normale">
         Vai
-      </button>
+      </Pulsante>
     </form>
   );
 }

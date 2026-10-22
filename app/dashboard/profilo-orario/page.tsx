@@ -1,4 +1,5 @@
 import { NavHeader } from '@/components/NavHeader';
+import { riquadroVariants } from '@/components/ui/riquadro';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaPiede, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff, assicuraAccessoOreLavoro } from '@/lib/auth';
 import { oreGiorniFeriali, rigaOSollevaErrore, totaleOreSettimanali, type ProfiloOrarioConNome } from '@/lib/profiliOrari';
@@ -40,7 +41,7 @@ export default async function ProfiloOrarioPage() {
         </div>
 
         {profiloOrario ? (
-          <section className="rounded-xl border border-border bg-white p-4 shadow-xs">
+          <section className={riquadroVariants({ className: 'p-4' })}>
             <h2 className="text-base font-medium">{profiloOrario.nome}</h2>
             <Tabella className="mt-3">
               <caption className="sr-only">Ore previste per giorno</caption>

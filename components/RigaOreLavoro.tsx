@@ -11,6 +11,9 @@ import {
 } from '@/lib/oreLavoro';
 import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
 import { useAggiornaGiornoRiepilogo } from '@/components/RiepilogoSettimanaOreLavoro';
+import { Campo } from '@/components/ui/campo';
+import { Pulsante } from '@/components/ui/pulsante';
+import { Selezione } from '@/components/ui/selezione';
 
 export type ValoriGiornoOreLavoro = {
   data: string;
@@ -23,13 +26,9 @@ export type ValoriGiornoOreLavoro = {
   notaAssenza: string;
 };
 
-const CLASSE_INPUT =
-  'mt-1 rounded-lg border border-stone-300 px-2 py-1 text-sm outline-hidden focus:border-stone-500';
 const CLASSE_LABEL = 'flex flex-col text-xs text-stone-600';
-// Bersagli tattili di almeno 44px (specs/01 - ux.md, uso da telefono).
-const CLASSE_INPUT_TATTILE = 'mt-1 h-11 rounded-lg border border-stone-300 px-2 text-base outline-hidden focus:border-stone-500';
-const CLASSE_PULSANTE_PASSO =
-  'mt-1 h-11 w-11 shrink-0 rounded-lg border border-stone-300 bg-white text-xl font-medium text-stone-700 hover:bg-stone-100';
+// Pulsanti "+" e "−": quadrati, almeno 44px (specs/01 - ux.md, uso da telefono).
+const CLASSE_PULSANTE_PASSO = 'mt-1 size-11 shrink-0 px-0 text-xl';
 
 const PASSO_ORE = 0.25;
 
@@ -111,19 +110,19 @@ export function RigaOreLavoro({
         <span className="font-medium">
           {etichettaGiorno} <span className="font-normal text-stone-600">{dataBreve}</span>
         </span>
-        <select
+        <Selezione
           name={nomeCampo('stato')}
           value={stato}
           onChange={(e) => setStato(e.target.value as StatoGiornoOreLavoro)}
           aria-label={`Stato ${etichettaGiorno}`}
-          className="rounded-lg border border-stone-300 px-2 py-1 text-sm outline-hidden focus:border-stone-500"
+          misura="piccolo"
         >
           {Object.entries(ETICHETTE_STATO_ORE_LAVORO).map(([valore, etichetta]) => (
             <option key={valore} value={valore}>
               {etichetta}
             </option>
           ))}
-        </select>
+        </Selezione>
       </div>
 
       {messaggioChiuso && <p className="mt-1 text-xs text-stone-700">{messaggioChiuso}</p>}
@@ -137,15 +136,16 @@ export function RigaOreLavoro({
             <div className={CLASSE_LABEL}>
               <label htmlFor={`differenza-${valori.data}`}>Differenza ore (in più + / in meno −)</label>
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
+                <Pulsante
+                  variante="secondario"
+                  misura="normale"
                   onClick={() => cambiaDifferenza(-PASSO_ORE)}
                   aria-label={`Un quarto d'ora in meno ${etichettaGiorno}`}
                   className={CLASSE_PULSANTE_PASSO}
                 >
                   −
-                </button>
-                <input
+                </Pulsante>
+                <Campo
                   id={`differenza-${valori.data}`}
                   type="number"
                   step={PASSO_ORE}
@@ -154,16 +154,17 @@ export function RigaOreLavoro({
                   onChange={(e) => setDifferenzaTesto(e.target.value)}
                   aria-label={`Differenza ore ${etichettaGiorno}`}
                   aria-invalid={problema ? true : undefined}
-                  className={`${CLASSE_INPUT_TATTILE} w-24 text-center`}
+                  className="mt-1 w-24 text-center"
                 />
-                <button
-                  type="button"
+                <Pulsante
+                  variante="secondario"
+                  misura="normale"
                   onClick={() => cambiaDifferenza(PASSO_ORE)}
                   aria-label={`Un quarto d'ora in più ${etichettaGiorno}`}
                   className={CLASSE_PULSANTE_PASSO}
                 >
                   +
-                </button>
+                </Pulsante>
               </div>
             </div>
           </div>
@@ -175,14 +176,14 @@ export function RigaOreLavoro({
           {fuoriRegola && (
             <label className={`${CLASSE_LABEL} max-w-md`}>
               Motivo (obbligatorio)
-              <input
+              <Campo
                 type="text"
                 name={nomeCampo('motivo')}
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
                 aria-label={`Motivo ${etichettaGiorno}`}
                 placeholder="Perché hai fatto più o meno ore?"
-                className={CLASSE_INPUT_TATTILE}
+                className="mt-1"
               />
             </label>
           )}
@@ -196,12 +197,13 @@ export function RigaOreLavoro({
       {stato === 'malattia' && (
         <label className={`${CLASSE_LABEL} mt-2`}>
           Codice malattia
-          <input
+          <Campo
             type="text"
             name={nomeCampo('codice_malattia')}
             defaultValue={valori.codiceMalattia}
             aria-label={`Codice malattia ${etichettaGiorno}`}
-            className={CLASSE_INPUT}
+            misura="piccolo"
+            className="mt-1"
           />
         </label>
       )}
@@ -209,12 +211,13 @@ export function RigaOreLavoro({
       {stato === 'assenza' && (
         <label className={`${CLASSE_LABEL} mt-2`}>
           Nota giustificativa
-          <input
+          <Campo
             type="text"
             name={nomeCampo('nota_assenza')}
             defaultValue={valori.notaAssenza}
             aria-label={`Nota assenza ${etichettaGiorno}`}
-            className={CLASSE_INPUT}
+            misura="piccolo"
+            className="mt-1"
           />
         </label>
       )}
