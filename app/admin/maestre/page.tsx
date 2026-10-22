@@ -2,10 +2,15 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { EliminaUtente } from '@/components/EliminaUtente';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { Campo } from '@/components/ui/campo';
+import { Selezione } from '@/components/ui/selezione';
 import { CampiPasswordConferma } from '@/components/CampiPasswordConferma';
 import { REGOLA_PASSWORD } from '@/lib/password';
 import { requireAdmin } from '@/lib/auth';
 import { formattaDataOraItaliana } from '@/lib/date';
+import { cn } from '@/lib/utils';
 import {
   creaUtente,
   aggiornaUtente,
@@ -62,59 +67,54 @@ export default async function MaestrePage() {
             genitore).
           </p>
 
-          <div className="mt-4 rounded-xl border border-border bg-white p-4 shadow-xs">
+          <Riquadro className="mt-4 p-4">
             <h2 className="text-sm font-medium">Crea nuovo utente</h2>
             <p className="mt-1 text-xs text-stone-600">{REGOLA_PASSWORD}</p>
             <FormConEsito action={creaUtente} resetSuOk className="mt-3 grid gap-2 sm:grid-cols-2">
-              <input
+              <Campo
                 name="nome"
                 required
                 placeholder="Nome"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
-              <input
+              <Campo
                 name="cognome"
                 required
                 placeholder="Cognome"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
-              <input
+              <Campo
                 name="email"
                 type="email"
                 required
                 placeholder="Email"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
-              <input
+              <Campo
                 name="telefono"
                 type="tel"
                 required
                 placeholder="Telefono"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               />
               <CampiPasswordConferma />
-              <select
+              <Selezione
                 name="ruolo"
                 required
                 defaultValue="genitore"
                 aria-label="Ruolo"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
               >
                 {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
                   <option key={valore} value={valore}>
                     {etichetta}
                   </option>
                 ))}
-              </select>
-              <input
+              </Selezione>
+              <Campo
                 name="indirizzo_residenza"
                 placeholder="Indirizzo di residenza (opzionale)"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500 sm:col-span-2"
+                className="sm:col-span-2"
               />
-              <input
+              <Campo
                 name="note"
                 placeholder="Note (opzionale)"
-                className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500 sm:col-span-2"
+                className="sm:col-span-2"
               />
               <label className="flex items-center gap-2 text-sm text-stone-700 sm:col-span-2">
                 <input type="checkbox" name="abilitato_ore_lavoro" className="h-4 w-4" />
@@ -122,11 +122,11 @@ export default async function MaestrePage() {
               </label>
               <label className="flex flex-col text-sm text-stone-700 sm:col-span-2">
                 Profilo orario (opzionale)
-                <select
+                <Selezione
                   name="profilo_orario_id"
                   defaultValue=""
                   aria-label="Profilo orario"
-                  className="mt-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1"
                 >
                   <option value="">Nessun profilo orario</option>
                   {profiliOrari?.map((po) => (
@@ -134,65 +134,70 @@ export default async function MaestrePage() {
                       {po.nome}
                     </option>
                   ))}
-                </select>
+                </Selezione>
               </label>
-              <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover sm:col-span-2">
+              <PulsanteInvio variante="primario" misura="normale" className="sm:col-span-2">
                 Crea utente
               </PulsanteInvio>
             </FormConEsito>
-          </div>
+          </Riquadro>
 
           <ul className="mt-4 space-y-2">
             {profili?.map((p) => (
               <li
                 key={p.id}
-                className="relative rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs"
+                className={cn(riquadroVariants(), 'rounded-lg relative px-3 py-2 text-sm')}
               >
                 <div className="mb-2 pr-9 text-xs text-stone-600">{p.email}</div>
                 <FormConEsito action={aggiornaUtente} className="flex flex-wrap items-center gap-2">
                   <input type="hidden" name="profilo_id" value={p.id} />
-                  <input
+                  <Campo
                     name="nome"
                     defaultValue={p.nome}
                     placeholder="Nome"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
+                    className="w-24"
                   />
-                  <input
+                  <Campo
                     name="cognome"
                     defaultValue={p.cognome}
                     placeholder="Cognome"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
+                    className="w-24"
                   />
-                  <input
+                  <Campo
                     name="telefono"
                     defaultValue={p.telefono ?? ''}
                     placeholder="Telefono"
-                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
+                    className="w-28"
                   />
-                  <input
+                  <Campo
                     name="indirizzo_residenza"
                     defaultValue={p.indirizzo_residenza ?? ''}
                     placeholder="Indirizzo"
-                    className="w-28 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
+                    className="w-28"
                   />
-                  <input
+                  <Campo
                     name="note"
                     defaultValue={p.note ?? ''}
                     placeholder="Note"
-                    className="w-24 rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
+                    className="w-24"
                   />
-                  <select
+                  <Selezione
                     name="ruolo"
                     defaultValue={p.ruolo}
                     aria-label="Ruolo"
-                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
                   >
                     {Object.entries(ETICHETTE_RUOLO).map(([valore, etichetta]) => (
                       <option key={valore} value={valore}>
                         {etichetta}
                       </option>
                     ))}
-                  </select>
+                  </Selezione>
                   <label className="flex items-center gap-1 text-xs text-stone-700">
                     <input
                       type="checkbox"
@@ -202,11 +207,11 @@ export default async function MaestrePage() {
                     />
                     Ore di lavoro
                   </label>
-                  <select
+                  <Selezione
                     name="profilo_orario_id"
                     defaultValue={p.profilo_orario_id ?? ''}
                     aria-label="Profilo orario"
-                    className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                    misura="piccolo"
                   >
                     <option value="">Nessun profilo orario</option>
                     {profiliOrari?.map((po) => (
@@ -214,8 +219,8 @@ export default async function MaestrePage() {
                         {po.nome}
                       </option>
                     ))}
-                  </select>
-                  <PulsanteInvio className="rounded-lg bg-primary px-3 py-1 text-xs font-medium text-white hover:bg-primary-hover">
+                  </Selezione>
+                  <PulsanteInvio variante="primario" misura="piccolo">
                     Aggiorna
                   </PulsanteInvio>
                   {p.updated_at && (
@@ -236,7 +241,7 @@ export default async function MaestrePage() {
                     etichettaPassword="Nuova password"
                     etichettaConferma="Conferma nuova password"
                   />
-                  <PulsanteInvio className="rounded-lg bg-stone-700 px-3 py-1 text-xs font-medium text-white hover:bg-stone-800">
+                  <PulsanteInvio variante="primario" misura="piccolo" className="bg-stone-700 hover:bg-stone-800">
                     Imposta password
                   </PulsanteInvio>
                 </FormConEsito>
@@ -244,7 +249,9 @@ export default async function MaestrePage() {
               </li>
             ))}
             {!profili?.length && (
-              <li className="text-sm text-stone-600">Nessun utente registrato.</li>
+              <li>
+                <StatoVuoto>Nessun utente registrato.</StatoVuoto>
+              </li>
             )}
           </ul>
         </section>
@@ -253,12 +260,11 @@ export default async function MaestrePage() {
           <h1 className="text-lg font-medium">Assegna maestre e assistenti alle sezioni</h1>
 
           <FormConEsito action={assegnaSezione} className="mt-3 flex flex-wrap gap-2">
-            <select
+            <Selezione
               name="maestra_id"
               required
               defaultValue=""
               aria-label="Maestra o assistente"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="" disabled>
                 Maestra o assistente
@@ -268,13 +274,12 @@ export default async function MaestrePage() {
                   {m.nome} {m.cognome} ({ETICHETTE_RUOLO[m.ruolo]})
                 </option>
               ))}
-            </select>
-            <select
+            </Selezione>
+            <Selezione
               name="sezione_id"
               required
               defaultValue=""
               aria-label="Sezione"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="" disabled>
                 Sezione
@@ -284,21 +289,21 @@ export default async function MaestrePage() {
                   {s.nome}
                 </option>
               ))}
-            </select>
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            </Selezione>
+            <PulsanteInvio variante="primario" misura="normale">
               Assegna
             </PulsanteInvio>
           </FormConEsito>
           {!staffAssegnabile.length && (
-            <p className="mt-2 text-sm text-stone-600">
+            <StatoVuoto className="mt-2">
               Nessun utente ha ancora il ruolo maestra o assistente: creane uno o promuovilo nella
               sezione qui sopra.
-            </p>
+            </StatoVuoto>
           )}
 
           <ul className="mt-4 space-y-1">
             {staffAssegnabile.map((m) => (
-              <li key={m.id} className="rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs">
+              <li key={m.id} className={cn(riquadroVariants(), 'rounded-lg px-3 py-2 text-sm')}>
                 <div className="font-medium">
                   {m.nome} {m.cognome}{' '}
                   <span className="font-normal text-stone-600">({ETICHETTE_RUOLO[m.ruolo]})</span>
@@ -316,7 +321,9 @@ export default async function MaestrePage() {
                           <input type="hidden" name="maestra_id" value={a.maestra_id} />
                           <input type="hidden" name="sezione_id" value={a.sezione_id} />
                           <PulsanteInvio
-                            className="flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700 hover:bg-stone-200"
+                            variante="secondario"
+                            misura="piccolo"
+                            className="gap-1 rounded-full border-0 bg-neutral-soft px-2 py-0.5 text-neutral-text hover:bg-stone-200"
                             title="Rimuovi assegnazione"
                           >
                             {nomeSezione} ✕

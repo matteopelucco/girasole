@@ -3,11 +3,14 @@ import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { Campo } from '@/components/ui/campo';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { CampiOreSettimana } from '@/components/CampiOreSettimana';
 import { requireAdmin } from '@/lib/auth';
 import { formattaDataOraItaliana } from '@/lib/date';
 import { totaleOreSettimanali } from '@/lib/profiliOrari';
+import { cn } from '@/lib/utils';
 import { aggiornaProfiloOrario, eliminaProfiloOrario } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -35,19 +38,19 @@ export default async function ProfiloOrarioDettaglioPage(props: { params: Promis
 
         <FormConEsito
           action={aggiornaProfiloOrario}
-          className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
+          className={cn(riquadroVariants(), 'space-y-2 p-4')}
         >
           <input type="hidden" name="profilo_id" value={profiloOrario.id} />
-          <input
+          <Campo
             name="nome"
             required
             defaultValue={profiloOrario.nome}
             placeholder="Nome (es. 35 ore settimanali)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+            className="w-full"
           />
           <CampiOreSettimana valori={profiloOrario} />
           <p className="text-sm text-stone-600">Totale: {totaleOreSettimanali(profiloOrario)}h/settimana</p>
-          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+          <PulsanteInvio variante="primario" misura="normale">
             Salva modifiche
           </PulsanteInvio>
           {profiloOrario.updated_at && (

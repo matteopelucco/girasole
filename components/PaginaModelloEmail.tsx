@@ -2,7 +2,11 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito, type EsitoAzione } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { Campo } from '@/components/ui/campo';
+import { TestoLungo } from '@/components/ui/testo-lungo';
 import { formattaDataOraItaliana } from '@/lib/date';
+import { cn } from '@/lib/utils';
 
 function FormModelloEmail({
   action,
@@ -16,29 +20,29 @@ function FormModelloEmail({
   updatedAt: string | null | undefined;
 }) {
   return (
-    <FormConEsito action={action} className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs">
+    <FormConEsito action={action} className={cn(riquadroVariants(), 'space-y-3 p-4')}>
       <label className="block text-xs text-stone-600">
         Oggetto
-        <input
+        <Campo
           name="oggetto"
           required
           defaultValue={oggetto}
           aria-label="Oggetto"
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+          className="mt-1 w-full"
         />
       </label>
       <label className="block text-xs text-stone-600">
         Corpo
-        <textarea
+        <TestoLungo
           name="corpo"
           required
           rows={14}
           defaultValue={corpo}
           aria-label="Corpo"
-          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+          className="mt-1 w-full"
         />
       </label>
-      <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+      <PulsanteInvio variante="primario" misura="normale">
         Salva modello
       </PulsanteInvio>
       {updatedAt && (

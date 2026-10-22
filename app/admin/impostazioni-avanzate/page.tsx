@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { riquadroVariants } from '@/components/ui/riquadro';
 import { requireAdmin } from '@/lib/auth';
 import { SOTTOSEZIONI_IMPOSTAZIONI } from '@/lib/impostazioniAvanzate';
+import { cn } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,7 @@ export default async function ImpostazioniAvanzatePage() {
             <li key={sezione.href}>
               <Link
                 href={sezione.href}
-                className="flex min-h-11 items-start gap-3 rounded-xl border border-border bg-white p-4 shadow-xs transition-colors hover:bg-stone-50"
+                className={cn(riquadroVariants(), 'flex min-h-11 items-start gap-3 p-4 transition-colors hover:bg-stone-50')}
               >
                 <span aria-hidden className="text-lg">
                   {sezione.icona}
