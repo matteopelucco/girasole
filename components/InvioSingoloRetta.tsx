@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { PulsanteInvio } from './PulsanteInvio';
 import { Finestra } from './ui/finestra';
+import { Pulsante } from './ui/pulsante';
 import { formattaImporto, sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
 import { formattaMeseItaliano } from '@/lib/date';
 
@@ -119,14 +120,15 @@ export function InvioSingoloRetta({
 
   return (
     <>
-      <button
+      <Pulsante
         ref={bottoneRef}
-        type="button"
+        variante="secondario"
+        misura="piccolo"
         onClick={apriAnteprima}
-        className="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+        className="border-emerald-300 bg-transparent px-2 py-0.5 text-success hover:bg-success-soft"
       >
         Invia comunicazione
-      </button>
+      </Pulsante>
 
       {anteprima && (
         <Finestra
@@ -152,18 +154,10 @@ export function InvioSingoloRetta({
             </div>
           </dl>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setAnteprima(null)}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
-            >
+            <Pulsante variante="secondario" misura="normale" onClick={() => setAnteprima(null)}>
               Annulla
-            </button>
-            <PulsanteInvio
-              formAction={formAction}
-              mantieniTesto
-              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
-            >
+            </Pulsante>
+            <PulsanteInvio formAction={formAction} mantieniTesto variante="primario" misura="normale">
               Conferma invio
             </PulsanteInvio>
             {/* Stessa azione di "Conferma invio", ma con l'invio e-mail

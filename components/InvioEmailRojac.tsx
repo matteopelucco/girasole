@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { FormConEsito, type EsitoAzione } from './FormConEsito';
 import { PulsanteInvio } from './PulsanteInvio';
+import { Avviso } from './ui/avviso';
 import { Finestra } from './ui/finestra';
+import { Pulsante } from './ui/pulsante';
 
 // Pulsante "Invia a Rojac" con anteprima e conferma (specs/61 -
 // email-pasti-rojac.md): mostra destinatario, copia, oggetto e corpo così
@@ -42,17 +44,17 @@ export function InvioEmailRojac({
 
   return (
     <div className="space-y-2">
-      <button
-        type="button"
+      <Pulsante
+        variante="primario"
+        misura="normale"
         onClick={() => {
           setInviato(false);
           setAvviso(null);
           setAperta(true);
         }}
-        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
       >
         Invia a Rojac
-      </button>
+      </Pulsante>
 
       {inviato && (
         <p role="status" className="text-sm font-medium text-emerald-800">
@@ -61,9 +63,9 @@ export function InvioEmailRojac({
       )}
 
       {inviato && avviso && (
-        <p role="alert" className="max-w-md rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
+        <Avviso tono="attenzione" role="alert" className="max-w-md p-2">
           {avviso}
-        </p>
+        </Avviso>
       )}
 
       {aperta && (
@@ -90,14 +92,10 @@ export function InvioEmailRojac({
           </dl>
           <FormConEsito action={azioneEInforma} className="mt-4 flex flex-wrap justify-end gap-2" titoloPopupErrore="Mail non inviata">
             <input type="hidden" name="mese" value={mese} />
-            <button
-              type="button"
-              onClick={() => setAperta(false)}
-              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
-            >
+            <Pulsante variante="secondario" misura="normale" onClick={() => setAperta(false)}>
               Annulla
-            </button>
-            <PulsanteInvio className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover">
+            </Pulsante>
+            <PulsanteInvio variante="primario" misura="normale">
               Conferma invio
             </PulsanteInvio>
           </FormConEsito>

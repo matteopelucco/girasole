@@ -16,6 +16,9 @@ import {
   ultimoGiornoMese,
 } from '@/lib/date';
 import { raggruppaPerSezione } from '@/lib/sezioni';
+import { Campo } from '@/components/ui/campo';
+import { Pulsante } from '@/components/ui/pulsante';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
@@ -50,7 +53,8 @@ function CampoImportoConEuro({
 }) {
   return (
     <div className="flex items-center justify-end gap-1">
-      <input
+      <Campo
+        misura="piccolo"
         type="number"
         min={min}
         step={0.01}
@@ -153,7 +157,9 @@ function RigaComunicazione({
             <PulsanteInvio
               mantieniTesto
               formAction={annullaComunicazioneRetta.bind(null, bambino.id, mese)}
-              className="rounded-lg border border-red-300 px-2 py-0.5 font-medium text-red-700 hover:bg-red-50"
+              variante="secondario"
+              misura="piccolo"
+              className="border-red-300 bg-transparent px-2 py-0.5 text-danger hover:bg-danger-soft"
             >
               Annulla invio
             </PulsanteInvio>
@@ -390,8 +396,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
       });
 
       const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
-      const classeCampoImporto =
-        'w-14 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500';
+      const classeCampoImporto = 'w-14 px-1.5 text-right';
 
       return (
         <TabellaRiga key={bambino.id}>
@@ -436,16 +441,17 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               defaultValue={0}
               name={`costi_extra_${bambino.id}`}
               ariaLabel={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-16 rounded-lg border border-stone-300 px-1.5 py-1 text-right text-sm outline-hidden focus:border-stone-500"
+              className="w-16 px-1.5 text-right"
             />
           </TabellaCella>
           <TabellaCella allinea="sinistra" className="px-2 py-1.5">
-            <input
+            <Campo
+              misura="piccolo"
               type="text"
               name={`note_extra_${bambino.id}`}
               placeholder="Nota (opzionale)"
               aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-32 rounded-lg border border-stone-300 px-1.5 py-1 text-sm outline-hidden focus:border-stone-500"
+              className="w-32 px-1.5"
             />
           </TabellaCella>
           <TabellaCella allinea="destra" className="px-2 py-1.5">
@@ -489,15 +495,15 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
-        Nessun bambino attivo.
-      </p>
+      <StatoVuoto allineamento="centro">Nessun bambino attivo.</StatoVuoto>
     );
 
     piePagina = (
       <PulsanteInvio
+        variante="primario"
+        misura="normale"
         confermaMessaggio="Sei sicuro di voler inviare le comunicazioni? Verrà inviata un'email a ogni bambino con email configurata non ancora comunicato questo mese."
-        className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover"
+        className="mt-4"
       >
         Invia comunicazioni
       </PulsanteInvio>
@@ -554,9 +560,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         ))}
       </div>
     ) : (
-      <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
-        Nessuna comunicazione inviata in questo mese.
-      </p>
+      <StatoVuoto allineamento="centro">Nessuna comunicazione inviata in questo mese.</StatoVuoto>
     );
   }
 
@@ -571,22 +575,18 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={`/admin/rette?mese=${mesePrecedente(meseVisualizzato)}`}
-                aria-label="Mese precedente"
-                className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
-              >
-                ←
-              </Link>
+              <Pulsante asChild variante="secondario" misura="normale" className="px-3 py-1.5">
+                <Link href={`/admin/rette?mese=${mesePrecedente(meseVisualizzato)}`} aria-label="Mese precedente">
+                  ←
+                </Link>
+              </Pulsante>
               <h1 className="text-lg font-medium">Rette — {formattaMeseItaliano(meseVisualizzato)}</h1>
               {!eMeseCorrente && (
-                <Link
-                  href={`/admin/rette?mese=${meseSuccessivo(meseVisualizzato)}`}
-                  aria-label="Mese successivo"
-                  className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100"
-                >
-                  →
-                </Link>
+                <Pulsante asChild variante="secondario" misura="normale" className="px-3 py-1.5">
+                  <Link href={`/admin/rette?mese=${meseSuccessivo(meseVisualizzato)}`} aria-label="Mese successivo">
+                    →
+                  </Link>
+                </Pulsante>
               )}
             </div>
             {sottotitolo}
