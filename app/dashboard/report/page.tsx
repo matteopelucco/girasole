@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
+import { Pulsante } from '@/components/ui/pulsante';
+import { Riquadro } from '@/components/ui/riquadro';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff } from '@/lib/auth';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
@@ -103,42 +105,38 @@ export default async function ReportPage(
 
         <div className="flex flex-wrap gap-2">
           {TIPI.map((t) => (
-            <Link
+            <Pulsante
               key={t.valore}
-              href={`/dashboard/report?tipo=${t.valore}`}
-              className={
-                t.valore === tipo
-                  ? 'rounded-lg bg-sky-700 px-3 py-2 text-sm font-medium text-white'
-                  : 'rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50'
-              }
+              asChild
+              variante={t.valore === tipo ? 'primario' : 'secondario'}
+              misura="normale"
+              className="px-3"
             >
-              {t.etichetta}
-            </Link>
+              <Link
+                href={`/dashboard/report?tipo=${t.valore}`}
+                aria-current={t.valore === tipo ? 'page' : undefined}
+              >
+                {t.etichetta}
+              </Link>
+            </Pulsante>
           ))}
-          <Link
-            href="/dashboard/report/anagrafica"
-            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
-          >
-            Anagrafica classi
-          </Link>
+          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+            <Link href="/dashboard/report/anagrafica">Anagrafica classi</Link>
+          </Pulsante>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <Link
-            href={`/dashboard/report?tipo=${tipo}&periodo=${periodoPrecedente}`}
-            aria-label="Periodo precedente"
-            className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-          >
-            ←
-          </Link>
+          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+            <Link href={`/dashboard/report?tipo=${tipo}&periodo=${periodoPrecedente}`} aria-label="Periodo precedente">
+              ←
+            </Link>
+          </Pulsante>
           <span className="text-sm font-medium capitalize text-amber-900">{etichettaPeriodo}</span>
-          <Link
-            href={`/dashboard/report?tipo=${tipo}&periodo=${periodoSuccessivo}`}
-            aria-label="Periodo successivo"
-            className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-          >
-            →
-          </Link>
+          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+            <Link href={`/dashboard/report?tipo=${tipo}&periodo=${periodoSuccessivo}`} aria-label="Periodo successivo">
+              →
+            </Link>
+          </Pulsante>
         </div>
 
         {!sezioni.length && <p className="text-sm text-stone-600">Nessuna classe assegnata.</p>}
@@ -146,7 +144,7 @@ export default async function ReportPage(
         {sezioni.map((sezione) => {
           const lista = bambiniPerSezione.get(sezione.id) ?? [];
           return (
-            <div key={sezione.id} className="rounded-lg border border-border bg-white p-3 shadow-xs">
+            <Riquadro key={sezione.id} className="rounded-lg p-3">
               <h2 className="text-sm font-semibold">{sezione.nome}</h2>
               {!lista.length && <p className="mt-2 text-sm text-stone-600">Nessun bambino in questa classe.</p>}
               {!!lista.length && (
@@ -192,7 +190,7 @@ export default async function ReportPage(
                   </TabellaCorpo>
                 </Tabella>
               )}
-            </div>
+            </Riquadro>
           );
         })}
 

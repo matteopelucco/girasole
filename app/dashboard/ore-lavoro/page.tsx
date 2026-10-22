@@ -4,6 +4,7 @@ import { SelettoreSettimanaOreLavoro } from '@/components/SelettoreSettimanaOreL
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Pulsante } from '@/components/ui/pulsante';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { RigaOreLavoro } from '@/components/RigaOreLavoro';
 import { classeCardOreLavoro, OrePreviste, TotaleOreErogate } from '@/components/CardOreLavoroParti';
@@ -284,22 +285,24 @@ export default async function OreLavoroPage(
         )}
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <Link
-            href={`/dashboard/ore-lavoro?settimana=${settimanaPrecedente}${suffissoUtente}`}
-            aria-label="Settimana precedente"
-            className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-          >
-            ←
-          </Link>
+          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+            <Link
+              href={`/dashboard/ore-lavoro?settimana=${settimanaPrecedente}${suffissoUtente}`}
+              aria-label="Settimana precedente"
+            >
+              ←
+            </Link>
+          </Pulsante>
           <span className="text-sm font-medium text-amber-900">{formattaIntervalloItaliano(lunedi, domenica)}</span>
           {puoAndareAvanti && (
-            <Link
-              href={`/dashboard/ore-lavoro?settimana=${settimanaSuccessiva}${suffissoUtente}`}
-              aria-label="Settimana successiva"
-              className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-            >
-              →
-            </Link>
+            <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+              <Link
+                href={`/dashboard/ore-lavoro?settimana=${settimanaSuccessiva}${suffissoUtente}`}
+                aria-label="Settimana successiva"
+              >
+                →
+              </Link>
+            </Pulsante>
           )}
           <div className="w-full">
             <SelettoreSettimanaOreLavoro
@@ -374,7 +377,7 @@ export default async function OreLavoroPage(
                 }}
               />
             ))}
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Salva modifiche
             </PulsanteInvio>
             {ultimoSalvataggio && (

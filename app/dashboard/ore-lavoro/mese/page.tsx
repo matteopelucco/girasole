@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { SelettoreVistaOreLavoro } from '@/components/SelettoreVistaOreLavoro';
+import { Pulsante } from '@/components/ui/pulsante';
+import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
 import { requireAdmin } from '@/lib/auth';
 import {
   formattaGiornoSettimana,
@@ -134,41 +136,40 @@ export default async function OreLavoroMesePage(
         />
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
-          <Link
-            href={`/dashboard/ore-lavoro/mese?mese=${mesePrecedente(mese)}&${suffissoUtente}`}
-            aria-label="Mese precedente"
-            className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-          >
-            ←
-          </Link>
+          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+            <Link
+              href={`/dashboard/ore-lavoro/mese?mese=${mesePrecedente(mese)}&${suffissoUtente}`}
+              aria-label="Mese precedente"
+            >
+              ←
+            </Link>
+          </Pulsante>
           <span className="text-sm font-medium capitalize text-amber-900">{formattaMeseItaliano(mese)}</span>
           {mese < meseCorrente && (
-            <Link
-              href={`/dashboard/ore-lavoro/mese?mese=${meseSuccessivo(mese)}&${suffissoUtente}`}
-              aria-label="Mese successivo"
-              className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100"
-            >
-              →
-            </Link>
+            <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+              <Link
+                href={`/dashboard/ore-lavoro/mese?mese=${meseSuccessivo(mese)}&${suffissoUtente}`}
+                aria-label="Mese successivo"
+              >
+                →
+              </Link>
+            </Pulsante>
           )}
           {/* PDF del solo dipendente per il mese mostrato (specs/18): stesso file
               del report del personale, scaricato direttamente. */}
-          <a
-            href={`/admin/ore-lavoro/pdf?mese=${mese}&${suffissoUtente}`}
-            className="ml-auto inline-flex h-11 items-center rounded-lg bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
-          >
-            Scarica PDF
-          </a>
+          <Pulsante asChild variante="primario" misura="normale" className="ml-auto min-h-11 sm:min-h-11">
+            <a href={`/admin/ore-lavoro/pdf?mese=${mese}&${suffissoUtente}`}>Scarica PDF</a>
+          </Pulsante>
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-3 text-sm text-stone-600 shadow-xs">
+        <Riquadro className="p-3 text-sm text-stone-600">
           <p>
             Ore previste: <strong>{riepilogo.orePreviste}h</strong>
           </p>
           <p>
             Differenza ore: <strong>{formattaOreConSegno(riepilogo.differenza)}h</strong>
           </p>
-        </div>
+        </Riquadro>
 
         <MonteOre
           saldo={saldoMonteOre(movimenti ?? [])}
@@ -182,7 +183,7 @@ export default async function OreLavoroMesePage(
 
         <CalcoloMensileMonteOre righe={calcoloMensile} />
 
-        <div className="rounded-xl border border-border bg-white p-3 text-sm shadow-xs">
+        <Riquadro className="p-3 text-sm">
           <h2 className="font-medium text-stone-800">Settimane del mese</h2>
           <ul className="mt-2 space-y-1">
             {settimane.map((lunedi) => {
@@ -202,14 +203,14 @@ export default async function OreLavoroMesePage(
               );
             })}
           </ul>
-        </div>
+        </Riquadro>
 
         <ul className="space-y-2" aria-label="Giorni del mese">
           {righe.map((r) => {
             const futuro = r.data > oggiData;
             const vacanza = isStatoNeutroOreLavoro(r.stato);
             return (
-              <li key={r.data} className="rounded-xl border border-border bg-white shadow-xs">
+              <li key={r.data} className={riquadroVariants()}>
                 <Link
                   href={hrefSettimana(lunediSettimana(r.data))}
                   className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 p-3"

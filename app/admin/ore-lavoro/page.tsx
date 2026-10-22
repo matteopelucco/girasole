@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { Pulsante } from '@/components/ui/pulsante';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
 import { oggi, lunediSettimana, formattaMeseItaliano } from '@/lib/date';
 import { mesiSelezionabiliPdf } from '@/lib/oreLavoroMese';
@@ -69,7 +72,7 @@ export default async function OreLavoroAdminPage() {
 
         <ul className="space-y-2">
           {personale.map((p) => (
-            <li key={p.id} className="rounded-xl border border-border bg-white p-3 shadow-xs">
+            <li key={p.id} className={riquadroVariants({ className: 'p-3' })}>
               <Link href={`/dashboard/ore-lavoro/mese?utente=${p.id}`} className="flex items-center justify-between gap-2">
                 <span>
                   <span className="font-medium">
@@ -96,28 +99,21 @@ export default async function OreLavoroAdminPage() {
         <form
           action="/admin/ore-lavoro/pdf"
           method="get"
-          className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-white p-3 shadow-xs"
+          className={riquadroVariants({ className: 'flex flex-wrap items-end gap-2 p-3' })}
         >
           <label className="text-sm font-medium text-stone-800">
             Mese
-            <select
-              name="mese"
-              defaultValue={mesiPdf[0]}
-              className="mt-1 block rounded-lg border border-stone-300 px-2 py-2 text-base capitalize outline-hidden focus:border-stone-500"
-            >
+            <Selezione name="mese" defaultValue={mesiPdf[0]} className="mt-1 block capitalize">
               {mesiPdf.map((mese) => (
                 <option key={mese} value={mese}>
                   {formattaMeseItaliano(mese)}
                 </option>
               ))}
-            </select>
+            </Selezione>
           </label>
-          <button
-            type="submit"
-            className="h-11 rounded-lg bg-primary px-4 text-sm font-medium text-white hover:bg-primary-hover"
-          >
+          <Pulsante type="submit" variante="primario" misura="normale" className="min-h-11 sm:min-h-11">
             Genera PDF mensile
-          </button>
+          </Pulsante>
           <p className="w-full text-xs text-stone-600">
             Scarica il report mensile delle ore del personale, lo stesso che il job notturno allega alla email.
           </p>

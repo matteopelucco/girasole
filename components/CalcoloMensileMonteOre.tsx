@@ -1,4 +1,5 @@
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
+import { Riquadro } from '@/components/ui/riquadro';
 import { formattaMeseItaliano } from '@/lib/date';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
 import { saldoMonteOreBreve } from '@/lib/monteOre';
@@ -12,7 +13,7 @@ import type { RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
 // mostrata). Server Component, nessuno stato.
 export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMonteOre[] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-white p-3 shadow-xs">
+    <Riquadro className="overflow-x-auto p-3">
       <h2 id="calcolo-mensile-titolo" className="mb-2 text-left font-medium text-stone-800">
         Calcolo mese per mese
       </h2>
@@ -54,6 +55,6 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
         </TabellaCorpo>
       </Tabella>
       )}
-    </div>
+    </Riquadro>
   );
 }
