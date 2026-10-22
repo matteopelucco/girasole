@@ -2,9 +2,14 @@ import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { Campo } from '@/components/ui/campo';
+import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, meseSuccessivo, oggi } from '@/lib/date';
+import { cn } from '@/lib/utils';
 import {
   aggiornaBambino,
   aggiornaCostiBambino,
@@ -60,61 +65,59 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
             {bambino.nome} {bambino.cognome}
           </h1>
           {!bambino.attiva && (
-            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
-              Disattivato
-            </span>
+            <EtichettaPillola className="font-normal">Disattivato</EtichettaPillola>
           )}
         </div>
 
         <FormConEsito
           action={aggiornaBambino}
-          className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
+          className={cn(riquadroVariants(), 'space-y-2 p-4')}
         >
           <input type="hidden" name="bambino_id" value={bambino.id} />
           <div className="flex gap-2">
-            <input
+            <Campo
               name="nome"
               required
               defaultValue={bambino.nome}
               placeholder="Nome"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             />
-            <input
+            <Campo
               name="cognome"
               required
               defaultValue={bambino.cognome}
               placeholder="Cognome"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             />
           </div>
           <div className="flex gap-2">
-            <input
+            <Campo
               name="data_nascita"
               type="date"
               required
               defaultValue={bambino.data_nascita ?? ''}
               aria-label="Data di nascita"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             />
-            <select
+            <Selezione
               name="sesso"
               required
               defaultValue={bambino.sesso ?? ''}
               aria-label="Sesso"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             >
               <option value="" disabled>
                 Sesso
               </option>
               <option value="F">Femmina</option>
               <option value="M">Maschio</option>
-            </select>
+            </Selezione>
           </div>
-          <select
+          <Selezione
             name="sezione_id"
             defaultValue={bambino.sezione_id ?? ''}
             aria-label="Sezione"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+            className="w-full"
           >
             <option value="">Nessuna sezione</option>
             {sezioni?.map((sezione) => (
@@ -122,20 +125,20 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 {sezione.nome}
               </option>
             ))}
-          </select>
-          <input
+          </Selezione>
+          <Campo
             name="note_allergie"
             defaultValue={bambino.note_allergie ?? ''}
             placeholder="Allergie o intolleranze (opzionale)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+            className="w-full"
           />
-          <input
+          <Campo
             name="altre_note"
             defaultValue={bambino.altre_note ?? ''}
             placeholder="Altre note (opzionale)"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+            className="w-full"
           />
-          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+          <PulsanteInvio variante="primario" misura="normale">
             Salva modifiche
           </PulsanteInvio>
           {bambino.updated_at && (
@@ -148,7 +151,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
         <FormConEsito action={toggleAttivaBambino}>
           <input type="hidden" name="bambino_id" value={bambino.id} />
           <input type="hidden" name="attiva_attuale" value={String(bambino.attiva)} />
-          <PulsanteInvio className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
+          <PulsanteInvio variante="secondario" misura="normale" className="border-red-300 bg-transparent text-danger hover:bg-danger-soft">
             {bambino.attiva ? 'Disattiva bambino' : 'Riattiva bambino'}
           </PulsanteInvio>
         </FormConEsito>
@@ -157,25 +160,25 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
           <h2 className="text-base font-medium">Costi</h2>
           <FormConEsito
             action={aggiornaCostiBambino}
-            className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
+            className={cn(riquadroVariants(), 'space-y-3 p-4')}
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
               <label className="flex-1 text-xs text-stone-600">
                 Prezzo retta mensile (€)
-                <input
+                <Campo
                   name="prezzo_mensile"
                   type="number"
                   min={0}
                   step={0.01}
                   defaultValue={costi?.prezzo_mensile ?? 0}
                   aria-label="Prezzo retta mensile (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 w-full"
                 />
               </label>
               <label className="flex-1 text-xs text-stone-600">
                 Prezzo buono pasto (€)
-                <input
+                <Campo
                   name="prezzo_buono_pasto"
                   type="number"
                   min={0}
@@ -185,12 +188,12 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   // senza ancora nessun costo salvato (specs/55).
                   defaultValue={costi?.prezzo_buono_pasto ?? 6}
                   aria-label="Prezzo buono pasto (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 w-full"
                 />
               </label>
               <label className="flex-1 text-xs text-stone-600">
                 Prezzo marca da bollo (€)
-                <input
+                <Campo
                   name="prezzo_marca_da_bollo"
                   type="number"
                   min={0}
@@ -200,7 +203,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   // senza ancora nessun costo salvato (specs/55).
                   defaultValue={costi?.prezzo_marca_da_bollo ?? 2}
                   aria-label="Prezzo marca da bollo (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 w-full"
                 />
               </label>
             </div>
@@ -218,14 +221,14 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 </label>
                 <label className="text-xs text-stone-600">
                   Prezzo (€)
-                  <input
+                  <Campo
                     name="prezzo_pre_asilo"
                     type="number"
                     min={0}
                     step={0.01}
                     defaultValue={costi?.prezzo_pre_asilo ?? 70}
                     aria-label="Prezzo pre-asilo (€)"
-                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                    className="mt-1 block w-28"
                   />
                 </label>
               </div>
@@ -241,14 +244,14 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 </label>
                 <label className="text-xs text-stone-600">
                   Prezzo (€)
-                  <input
+                  <Campo
                     name="prezzo_post_asilo"
                     type="number"
                     min={0}
                     step={0.01}
                     defaultValue={costi?.prezzo_post_asilo ?? 70}
                     aria-label="Prezzo post-asilo (€)"
-                    className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                    className="mt-1 block w-28"
                   />
                 </label>
               </div>
@@ -256,16 +259,16 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
             <label className="block text-xs text-stone-600">
               Email promemoria retta
-              <input
+              <Campo
                 name="email_promemoria"
                 defaultValue={costi?.email_promemoria ?? ''}
                 placeholder="genitore@esempio.it (opzionale, più indirizzi separati da ;)"
                 aria-label="Email promemoria retta"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="mt-1 w-full"
               />
             </label>
 
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Salva costi
             </PulsanteInvio>
             {costi?.updated_at && (
@@ -291,7 +294,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 return (
                   <li
                     key={voce.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-white p-3 text-sm shadow-xs"
+                    className={cn(riquadroVariants(), 'flex flex-wrap items-center justify-between gap-2 p-3 text-sm')}
                   >
                     <div>
                       <span className={eCredito ? 'font-medium text-emerald-700' : 'font-medium text-red-700'}>
@@ -313,7 +316,9 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                         <input type="hidden" name="bambino_id" value={bambino.id} />
                         <PulsanteInvio
                           confermaMessaggio="Eliminare questo credito/debito?"
-                          className="rounded-lg border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
+                          variante="secondario"
+                          misura="piccolo"
+                          className="border-red-300 bg-transparent text-danger hover:bg-danger-soft"
                         >
                           Elimina
                         </PulsanteInvio>
@@ -327,56 +332,56 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
           <FormConEsito
             action={aggiungiCreditoDebito}
-            className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs"
+            className={cn(riquadroVariants(), 'space-y-3 p-4')}
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
               <label className="text-xs text-stone-600">
                 Tipo
-                <select
+                <Selezione
                   name="tipo"
                   defaultValue="debito"
                   aria-label="Tipo"
-                  className="mt-1 block w-28 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 block w-28"
                 >
                   <option value="debito">Debito</option>
                   <option value="credito">Credito</option>
-                </select>
+                </Selezione>
               </label>
               <label className="flex-1 text-xs text-stone-600">
                 Importo (€)
-                <input
+                <Campo
                   name="importo"
                   type="number"
                   min={0.01}
                   step={0.01}
                   aria-label="Importo (€)"
-                  className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 w-full"
                 />
               </label>
               <label className="text-xs text-stone-600">
                 Mese di competenza
-                <input
+                <Campo
                   name="mese_competenza"
                   type="month"
                   min={meseMinimo}
                   defaultValue={meseSuggerito}
                   aria-label="Mese di competenza"
-                  className="mt-1 block rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                  className="mt-1 block"
                 />
               </label>
             </div>
             <label className="block text-xs text-stone-600">
               Nota (obbligatoria)
-              <input
+              <Campo
                 name="nota"
                 required
                 placeholder="Motivo del credito/debito"
                 aria-label="Nota"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="mt-1 w-full"
               />
             </label>
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Aggiungi credito/debito
             </PulsanteInvio>
           </FormConEsito>

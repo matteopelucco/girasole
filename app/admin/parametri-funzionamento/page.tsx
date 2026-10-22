@@ -1,6 +1,7 @@
 import { NavHeader } from '@/components/NavHeader';
 import { VariabiliAmbiente } from '@/components/VariabiliAmbiente';
 import { ParametriFunzionalita } from '@/components/ParametriFunzionalita';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { requireAdmin } from '@/lib/auth';
 import { nomiParametriPresenti } from '@/lib/parametriAmbiente';
 import { PARAMETRI_VISIBILI } from '@/lib/parametriVisibili';
@@ -45,9 +46,7 @@ export default async function ParametriFunzionamentoPage() {
             </p>
           </div>
           {nomi.length === 0 ? (
-            <p data-testid="nessuna-variabile" className="rounded-xl border border-border bg-white p-4 text-sm text-stone-600">
-              Nessuna variabile d&apos;ambiente da mostrare.
-            </p>
+            <StatoVuoto data-testid="nessuna-variabile">Nessuna variabile d&apos;ambiente da mostrare.</StatoVuoto>
           ) : (
             <VariabiliAmbiente nomi={nomi} rivela={rivelaValoriParametri} />
           )}

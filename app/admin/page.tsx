@@ -2,7 +2,13 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { Campo } from '@/components/ui/campo';
+import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
+import { cn } from '@/lib/utils';
 import {
   creaSezione,
   toggleAttivaSezione,
@@ -43,25 +49,27 @@ export default async function AdminPage() {
         <section>
           <h1 className="text-lg font-medium">Anni scolastici</h1>
           <FormConEsito action={creaAnnoScolastico} className="mt-3 flex gap-2">
-            <input
+            <Campo
               name="nome"
               required
               placeholder="Nome anno scolastico (es. 2026/2027)"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             />
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Crea
             </PulsanteInvio>
           </FormConEsito>
 
           <ul className="mt-4 space-y-1">
             {anniScolastici?.map((anno) => (
-              <li key={anno.id} className="rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs">
+              <li key={anno.id} className={cn(riquadroVariants(), 'rounded-lg px-3 py-2 text-sm')}>
                 {anno.nome}
               </li>
             ))}
             {!anniScolastici?.length && (
-              <li className="text-sm text-stone-600">Nessun anno scolastico ancora creato.</li>
+              <li>
+                <StatoVuoto>Nessun anno scolastico ancora creato.</StatoVuoto>
+              </li>
             )}
           </ul>
         </section>
@@ -69,17 +77,16 @@ export default async function AdminPage() {
         <section>
           <h1 className="text-lg font-medium">Sezioni</h1>
           <FormConEsito action={creaSezione} className="mt-3 flex flex-wrap gap-2">
-            <input
+            <Campo
               name="nome"
               required
               placeholder="Nome sezione (es. Girasoli)"
-              className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="flex-1"
             />
-            <select
+            <Selezione
               name="anno_scolastico_id"
               defaultValue=""
               aria-label="Anno scolastico"
-              className="rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
             >
               <option value="">Anno scolastico (opzionale)</option>
               {anniScolastici?.map((anno) => (
@@ -87,8 +94,8 @@ export default async function AdminPage() {
                   {anno.nome}
                 </option>
               ))}
-            </select>
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            </Selezione>
+            <PulsanteInvio variante="primario" misura="normale">
               Crea
             </PulsanteInvio>
           </FormConEsito>
@@ -97,14 +104,12 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => (
               <li
                 key={sezione.id}
-                className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2 text-sm shadow-xs"
+                className={cn(riquadroVariants(), 'rounded-lg flex items-center justify-between px-3 py-2 text-sm')}
               >
                 <span>
                   {sezione.nome}
                   {!sezione.attiva && (
-                    <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
-                      non attiva
-                    </span>
+                    <EtichettaPillola className="ml-2 font-normal">non attiva</EtichettaPillola>
                   )}
                 </span>
                 <FormConEsito action={toggleAttivaSezione}>
@@ -117,7 +122,9 @@ export default async function AdminPage() {
               </li>
             ))}
             {!sezioni?.length && (
-              <li className="text-sm text-stone-600">Nessuna sezione ancora creata.</li>
+              <li>
+                <StatoVuoto>Nessuna sezione ancora creata.</StatoVuoto>
+              </li>
             )}
           </ul>
         </section>
@@ -126,49 +133,49 @@ export default async function AdminPage() {
           <h1 className="text-lg font-medium">Bambini</h1>
           <FormConEsito
             action={creaBambino}
-            className="mt-3 space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
+            className={cn(riquadroVariants(), 'mt-3 space-y-2 p-4')}
           >
             <div className="flex gap-2">
-              <input
+              <Campo
                 name="nome"
                 required
                 placeholder="Nome"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="flex-1"
               />
-              <input
+              <Campo
                 name="cognome"
                 required
                 placeholder="Cognome"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="flex-1"
               />
             </div>
             <div className="flex gap-2">
-              <input
+              <Campo
                 name="data_nascita"
                 type="date"
                 required
                 aria-label="Data di nascita"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="flex-1"
               />
-              <select
+              <Selezione
                 name="sesso"
                 required
                 defaultValue=""
                 aria-label="Sesso"
-                className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="flex-1"
               >
                 <option value="" disabled>
                   Sesso
                 </option>
                 <option value="F">Femmina</option>
                 <option value="M">Maschio</option>
-              </select>
+              </Selezione>
             </div>
-            <select
+            <Selezione
               name="sezione_id"
               defaultValue=""
               aria-label="Sezione"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             >
               <option value="">Nessuna sezione (assegna dopo)</option>
               {sezioni?.map((sezione) => (
@@ -176,18 +183,18 @@ export default async function AdminPage() {
                   {sezione.nome}
                 </option>
               ))}
-            </select>
-            <input
+            </Selezione>
+            <Campo
               name="note_allergie"
               placeholder="Allergie o intolleranze (opzionale)"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             />
-            <input
+            <Campo
               name="altre_note"
               placeholder="Altre note (opzionale)"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+              className="w-full"
             />
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Aggiungi bambino
             </PulsanteInvio>
           </FormConEsito>
@@ -197,7 +204,7 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => {
               const lista = bambiniPerSezione.get(sezione.id) ?? [];
               return (
-                <div key={sezione.id} className="rounded-lg border border-border bg-white p-3 shadow-xs">
+                <Riquadro key={sezione.id} className="rounded-lg p-3">
                   <h3 className="text-sm font-semibold">{sezione.nome}</h3>
                   <ul className="mt-2 space-y-1">
                     {lista.map((bambino) => (
@@ -209,9 +216,9 @@ export default async function AdminPage() {
                           {bambino.nome} {bambino.cognome}
                         </Link>
                         {bambino.note_allergie && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                          <EtichettaPillola className="bg-amber-100 font-medium text-amber-800">
                             {bambino.note_allergie}
-                          </span>
+                          </EtichettaPillola>
                         )}
                       </li>
                     ))}
@@ -219,15 +226,15 @@ export default async function AdminPage() {
                       <li className="text-xs text-stone-600">Nessun bambino assegnato.</li>
                     )}
                   </ul>
-                </div>
+                </Riquadro>
               );
             })}
             {!sezioni?.length && (
-              <p className="text-sm text-stone-600">Nessuna sezione ancora creata.</p>
+              <StatoVuoto>Nessuna sezione ancora creata.</StatoVuoto>
             )}
           </div>
 
-          <div id="bambini-senza-classe" className="mt-6 rounded-lg border border-border bg-white p-3 shadow-xs">
+          <Riquadro id="bambini-senza-classe" className="mt-6 rounded-lg p-3">
             <h2 className="text-sm font-medium text-stone-700">Bambini senza classe o disattivati</h2>
             <ul className="mt-2 space-y-2">
               {bambiniSenzaClasseODisattivati.map((bambino) => (
@@ -237,19 +244,17 @@ export default async function AdminPage() {
                       {bambino.nome} {bambino.cognome}
                     </Link>
                     {!bambino.attiva && (
-                      <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-700">
-                        Disattivato
-                      </span>
+                      <EtichettaPillola className="font-normal">Disattivato</EtichettaPillola>
                     )}
                   </div>
                   <FormConEsito action={assegnaSezioneBambino} className="mt-2 flex items-center gap-2">
                     <input type="hidden" name="bambino_id" value={bambino.id} />
-                    <select
+                    <Selezione
                       name="sezione_id"
                       required
                       defaultValue=""
                       aria-label={`Sezione per ${bambino.nome} ${bambino.cognome}`}
-                      className="rounded-lg border border-stone-300 px-2 py-1 text-xs outline-hidden focus:border-stone-500"
+                      misura="piccolo"
                     >
                       <option value="" disabled>
                         Assegna a...
@@ -259,8 +264,8 @@ export default async function AdminPage() {
                           {sezione.nome}
                         </option>
                       ))}
-                    </select>
-                    <PulsanteInvio className="rounded-lg border border-sky-300 bg-white px-3 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50">
+                    </Selezione>
+                    <PulsanteInvio variante="secondario" misura="piccolo">
                       Assegna
                     </PulsanteInvio>
                   </FormConEsito>
@@ -270,7 +275,7 @@ export default async function AdminPage() {
                 <li className="text-xs text-stone-600">Nessuno.</li>
               )}
             </ul>
-          </div>
+          </Riquadro>
         </section>
       </main>
     </NavHeader>

@@ -1,6 +1,10 @@
 import { NavHeader } from '@/components/NavHeader';
 import { SelettoreData } from '@/components/SelettoreData';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
+import { Avviso } from '@/components/ui/avviso';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { Pulsante } from '@/components/ui/pulsante';
+import { Riquadro } from '@/components/ui/riquadro';
 import { requireAdmin } from '@/lib/auth';
 import { oggi, formattaDataItaliana, formattaDataOraItaliana } from '@/lib/date';
 import { resettaGiornata } from './actions';
@@ -43,26 +47,26 @@ export default async function ResetGiornataPage(props: { searchParams: Promise<{
 
         <SelettoreData basePath="/admin/reset-giornata" data={data} />
 
-        <div className="space-y-3 rounded-xl border border-border bg-white p-4 shadow-xs">
+        <Riquadro className="space-y-3 p-4">
           <h2 className="text-sm font-medium text-stone-700">
             Dati registrati per {formattaDataItaliana(data)}
           </h2>
           <div className="flex flex-wrap gap-3 text-sm">
-            <span className="rounded-lg bg-stone-100 px-3 py-1.5 font-medium text-stone-800">
+            <EtichettaPillola className="rounded-lg px-3 py-1.5 text-sm font-medium">
               {numPresenze ?? 0} presenze
-            </span>
-            <span className="rounded-lg bg-stone-100 px-3 py-1.5 font-medium text-stone-800">
+            </EtichettaPillola>
+            <EtichettaPillola className="rounded-lg px-3 py-1.5 text-sm font-medium">
               {numPasti ?? 0} pasti
-            </span>
+            </EtichettaPillola>
           </div>
 
           {comunicazionePasti && (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <Avviso tono="attenzione" className="p-3">
               ⚠️ I pasti di questa data sono già stati comunicati a Rojac il{' '}
               {formattaDataOraItaliana(comunicazionePasti.comunicato_at).replace('_', ' alle ')} da{' '}
               {comunicazionePasti.comunicato_da_nome} ({comunicazionePasti.numero_pasti} pasti totali): resettando,
               quella comunicazione resta invariata e non corrisponderà più ai dati azzerati.
-            </p>
+            </Avviso>
           )}
 
           {totaleRighe > 0 ? (
@@ -84,16 +88,16 @@ export default async function ResetGiornataPage(props: { searchParams: Promise<{
               }
             />
           ) : (
-            <button
-              type="button"
+            <Pulsante
+              variante="secondario"
+              misura="normale"
               disabled
               title="Nessuna presenza o pasto registrato per questa data"
-              className="cursor-not-allowed rounded-lg border border-border bg-stone-50 px-4 py-2 text-sm font-medium text-stone-400"
             >
               Resetta giornata
-            </button>
+            </Pulsante>
           )}
-        </div>
+        </Riquadro>
       </main>
     </NavHeader>
   );

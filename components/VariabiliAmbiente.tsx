@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from 'react';
 import { FormVerificaPassword } from './FormVerificaPassword';
+import { Pulsante } from '@/components/ui/pulsante';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { SEGNAPOSTO_VALORE, type Parametro } from '@/lib/parametriAmbiente';
 
@@ -59,15 +60,15 @@ export function VariabiliAmbiente({
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
+      <Pulsante
+        variante="secondario"
+        misura="normale"
         onClick={cambiaVisibilita}
         aria-expanded={valori ? undefined : verificaAperta}
         aria-controls={verificaAperta && !valori ? 'verifica-password-parametri' : undefined}
-        className="min-h-11 rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium hover:bg-stone-100"
       >
         {valori ? 'Nascondi valori' : 'Mostra valori'}
-      </button>
+      </Pulsante>
 
       {verificaAperta && !valori && (
         <FormVerificaPassword
