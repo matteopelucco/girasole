@@ -122,7 +122,7 @@ test.describe("15 — Avvisi, come assistente (stesso perimetro della maestra)",
 
     await page.getByRole('button', { name: 'Elimina avviso' }).click();
     await page.getByRole('button', { name: 'Sì' }).click();
-    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await page.waitForURL(/\/dashboard\?promemoria=eliminato/, { timeout: 20_000 });
     await expect(page.getByText('Avviso eliminato.')).toBeVisible();
     await expect(page.getByText(titoloModificato)).toHaveCount(0);
   });
@@ -337,7 +337,7 @@ test.describe('15 — Avvisi', () => {
     // "Sì" elimina davvero e torna alla lista con un messaggio.
     await page.getByRole('button', { name: 'Elimina avviso' }).click();
     await page.getByRole('button', { name: 'Sì' }).click();
-    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await page.waitForURL(/\/dashboard\?promemoria=eliminato/, { timeout: 20_000 });
     await expect(page.getByText('Avviso eliminato.')).toBeVisible();
     await expect(page.getByText(titolo)).toHaveCount(0);
   });
@@ -379,7 +379,7 @@ test.describe('15 — Avvisi', () => {
 
     // Pulizia, che è anche il caso staff di successo: conferma e ritorno alla lista.
     await eliminaAvvisoDalDettaglio(page);
-    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    await page.waitForURL(/\/dashboard\?promemoria=eliminato/, { timeout: 20_000 });
     await expect(page.getByText('Avviso eliminato.')).toBeVisible();
     await expect(page.getByText(titolo)).toHaveCount(0);
   });
@@ -399,7 +399,8 @@ test.describe('15 — Avvisi', () => {
     // Cancellazione vera: da qui l'avviso non esiste più.
     await page.goto(urlDettaglio);
     await eliminaAvvisoDalDettaglio(page);
-    await page.waitForURL(/\/dashboard/, { timeout: 20_000 });
+    // Il dettaglio è già sotto /dashboard: va atteso il redirect finale, non un URL che combacia subito.
+    await page.waitForURL(/\/dashboard\?promemoria=eliminato/, { timeout: 20_000 });
     await expect(page.getByText(titolo)).toHaveCount(0);
 
     for (const richiesta of [richiestaElimina, richiestaAggiorna]) {
