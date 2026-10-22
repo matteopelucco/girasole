@@ -16,8 +16,9 @@ test.describe('51 — Report', () => {
       await page.waitForURL(/\/dashboard\/report$/);
 
       await expect(page.getByRole('heading', { name: 'Report' })).toBeVisible();
-      // Bottone "Mensile" attivo di default.
-      await expect(page.getByRole('link', { name: 'Mensile' })).toHaveClass(/bg-sky-700/);
+      // Voce "Mensile" attiva di default, marcata con aria-current (non solo col colore).
+      await expect(page.getByRole('link', { name: 'Mensile' })).toHaveAttribute('aria-current', 'page');
+      await expect(page.getByRole('link', { name: 'Settimanale' })).not.toHaveAttribute('aria-current', 'page');
 
       await nessunaViolazioneA11yGrave(page);
     });
@@ -51,7 +52,7 @@ test.describe('51 — Report', () => {
       await page.getByRole('link', { name: 'Settimanale' }).click();
       await page.waitForURL(/tipo=settimanale/);
 
-      await expect(page.getByRole('link', { name: 'Settimanale' })).toHaveClass(/bg-sky-700/);
+      await expect(page.getByRole('link', { name: 'Settimanale' })).toHaveAttribute('aria-current', 'page');
       const periodoIniziale = await page.locator('span.text-amber-900').textContent();
       await expect(periodoIniziale).toMatch(/–/);
 
@@ -64,7 +65,7 @@ test.describe('51 — Report', () => {
       await page.getByRole('link', { name: 'Giornaliero' }).click();
       await page.waitForURL(/tipo=giornaliero/);
 
-      await expect(page.getByRole('link', { name: 'Giornaliero' })).toHaveClass(/bg-sky-700/);
+      await expect(page.getByRole('link', { name: 'Giornaliero' })).toHaveAttribute('aria-current', 'page');
 
       // Nessun link bambino cliccabile verso il drill-down: le righe
       // bambino sono semplice testo, non link.

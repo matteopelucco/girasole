@@ -77,6 +77,9 @@ e numero di telefono
   classi mostra invece tutte le classi, anche non attive, per dare
   visibilità completa su chi è assegnato dove.
 - La settimana va da lunedì a domenica.
+- La scelta del tipo di report (Mensile, Settimanale, Giornaliero) è un gruppo di
+  link; quello in uso è marcato con `aria-current="page"`, non solo dal colore
+  (vedi [01 - ux.md](01%20-%20ux.md)).
 - L'anagrafica classi richiede che una maestra o un'assistente possa
   vedere il profilo (nome/cognome/ruolo) di eventuali colleghi sulla
   stessa classe, e i dati dei genitori (nome, cognome, email, telefono)
