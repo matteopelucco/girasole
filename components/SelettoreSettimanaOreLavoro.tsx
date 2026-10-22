@@ -25,9 +25,17 @@ export function SelettoreSettimanaOreLavoro({
       <label htmlFor="selettore-settimana" className="text-sm text-amber-900">
         Vai alla settimana del
       </label>
-      <Campo id="selettore-settimana" type="date" name="settimana" defaultValue={lunedi} max={oggiData} required />
+      <Campo
+        id="selettore-settimana"
+        type="date"
+        name="settimana"
+        defaultValue={lunedi}
+        max={oggiData}
+        required
+        className="min-h-11 sm:min-h-11"
+      />
       {utenteId && <input type="hidden" name="utente" value={utenteId} />}
-      <Pulsante type="submit" variante="primario" misura="normale">
+      <Pulsante type="submit" variante="primario" misura="normale" className="min-h-11 sm:min-h-11">
         Vai
       </Pulsante>
     </form>

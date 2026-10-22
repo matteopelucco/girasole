@@ -157,7 +157,7 @@ export default async function OreLavoroMesePage(
           )}
           {/* PDF del solo dipendente per il mese mostrato (specs/18): stesso file
               del report del personale, scaricato direttamente. */}
-          <Pulsante asChild variante="primario" misura="normale" className="ml-auto">
+          <Pulsante asChild variante="primario" misura="normale" className="ml-auto min-h-11 sm:min-h-11">
             <a href={`/admin/ore-lavoro/pdf?mese=${mese}&${suffissoUtente}`}>Scarica PDF</a>
           </Pulsante>
         </div>

@@ -154,7 +154,7 @@ export function RigaOreLavoro({
                   onChange={(e) => setDifferenzaTesto(e.target.value)}
                   aria-label={`Differenza ore ${etichettaGiorno}`}
                   aria-invalid={problema ? true : undefined}
-                  className="mt-1 w-24 text-center"
+                  className="mt-1 w-24 min-h-11 sm:min-h-11 text-center"
                 />
                 <Pulsante
                   variante="secondario"
@@ -183,7 +183,7 @@ export function RigaOreLavoro({
                 onChange={(e) => setMotivo(e.target.value)}
                 aria-label={`Motivo ${etichettaGiorno}`}
                 placeholder="Perché hai fatto più o meno ore?"
-                className="mt-1"
+                className="mt-1 min-h-11 sm:min-h-11"
               />
             </label>
           )}

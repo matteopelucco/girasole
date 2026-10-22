@@ -111,7 +111,7 @@ export default async function OreLavoroAdminPage() {
               ))}
             </Selezione>
           </label>
-          <Pulsante type="submit" variante="primario" misura="normale">
+          <Pulsante type="submit" variante="primario" misura="normale" className="min-h-11 sm:min-h-11">
             Genera PDF mensile
           </Pulsante>
           <p className="w-full text-xs text-stone-600">
