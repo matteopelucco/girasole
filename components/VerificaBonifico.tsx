@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { useRef, useState, useTransition } from 'react';
 import { ESITO_INIZIALE, type EsitoAzione } from './FormConEsito';
+import { Avviso } from './ui/avviso';
+import { Campo } from './ui/campo';
 import { Finestra } from './ui/finestra';
+import { Pulsante } from './ui/pulsante';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana } from '@/lib/date';
 
@@ -111,20 +114,21 @@ export function VerificaBonifico({
             {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
           </p>
         )}
-        <button
-          type="button"
+        <Pulsante
+          variante="secondario"
+          misura="piccolo"
           disabled={pendingReset}
           aria-busy={pendingReset}
           onClick={() => confermaReset(stato)}
-          className="mt-1 rounded-lg border border-stone-300 px-2 py-0.5 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 bg-transparent px-2 py-0.5"
         >
           Annulla verifica
-        </button>
+        </Pulsante>
         {!esitoReset.ok && (
-          <div role="alert" className="mt-1 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+          <Avviso tono="errore" className="mt-1 p-2 text-xs">
             <p className="font-medium">{esitoReset.messaggio}</p>
-            {esitoReset.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoReset.dettaglio}</p>}
-          </div>
+            {esitoReset.dettaglio && <p className="mt-1 text-xs text-danger">{esitoReset.dettaglio}</p>}
+          </Avviso>
         )}
       </div>
     );
@@ -172,41 +176,43 @@ export function VerificaBonifico({
   return (
     <>
       {avvisaControlloConguagli && (
-        <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+        <Avviso tono="attenzione" className="mt-1 p-2 text-xs">
           Hai annullato una verifica &quot;importo diverso&quot;: ricontrolla i crediti/debiti di {bambinoNome}, non
           sono stati toccati automaticamente —{' '}
           <Link href={`/admin/bambini/${bambinoId}`} className="underline">
             vai alla scheda
           </Link>
-        </p>
+        </Avviso>
       )}
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <span className="text-stone-500">Bonifico da verificare</span>
-        <button
-          type="button"
+        <Pulsante
+          variante="secondario"
+          misura="piccolo"
           disabled={pendingCorretto}
           aria-busy={pendingCorretto}
           onClick={confermaBonificoCorretto}
-          className="rounded-lg border border-emerald-300 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="border-emerald-300 bg-transparent px-2 py-0.5 text-success hover:bg-success-soft"
         >
           Bonifico corretto
-        </button>
-        <button
-          type="button"
+        </Pulsante>
+        <Pulsante
+          variante="secondario"
+          misura="piccolo"
           onClick={() => {
             setEsitoModale(ESITO_INIZIALE);
             setApertoModale(true);
           }}
-          className="rounded-lg border border-amber-300 px-2 py-0.5 font-medium text-amber-700 hover:bg-amber-50"
+          className="border-amber-300 bg-transparent px-2 py-0.5 text-warning hover:bg-warning-soft"
         >
           Importo diverso
-        </button>
+        </Pulsante>
       </div>
       {!esitoCorretto.ok && (
-        <div role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+        <Avviso tono="errore" className="mt-2 p-2 text-xs">
           <p className="font-medium">{esitoCorretto.messaggio}</p>
-          {esitoCorretto.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoCorretto.dettaglio}</p>}
-        </div>
+          {esitoCorretto.dettaglio && <p className="mt-1 text-xs text-danger">{esitoCorretto.dettaglio}</p>}
+        </Avviso>
       )}
 
       {apertoModale && (
@@ -220,58 +226,54 @@ export function VerificaBonifico({
             <p className="text-xs text-stone-600">Importo atteso: {formattaImporto(totale)}</p>
             <label className="block text-xs text-stone-600">
               Importo ricevuto (€)
-              <input
+              <Campo
                 ref={importoRef}
                 type="number"
                 min={0}
                 step={0.01}
                 aria-label="Importo ricevuto (€)"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="mt-1 w-full"
               />
             </label>
             <label className="block text-xs text-stone-600">
               Nota (obbligatoria)
-              <input
+              <Campo
                 ref={notaRef}
                 placeholder="Motivo della differenza"
                 aria-label="Nota bonifico"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="mt-1 w-full"
               />
             </label>
             <label className="block text-xs text-stone-600">
               Mese su cui conteggiare la differenza
-              <input
+              <Campo
                 ref={meseRef}
                 type="month"
                 min={meseMinimo}
                 defaultValue={meseSuggerito}
                 aria-label="Mese su cui conteggiare la differenza"
-                className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+                className="mt-1 w-full"
               />
             </label>
             {!esitoModale.ok && (
-              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-800">
+              <Avviso tono="errore" className="p-2">
                 <p className="font-medium">{esitoModale.messaggio}</p>
-                {esitoModale.dettaglio && <p className="mt-1 text-xs text-red-600">{esitoModale.dettaglio}</p>}
-              </div>
+                {esitoModale.dettaglio && <p className="mt-1 text-xs text-danger">{esitoModale.dettaglio}</p>}
+              </Avviso>
             )}
             <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setApertoModale(false)}
-                className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm text-stone-700 hover:bg-stone-100"
-              >
+              <Pulsante variante="secondario" misura="normale" onClick={() => setApertoModale(false)}>
                 Annulla
-              </button>
-              <button
-                type="button"
+              </Pulsante>
+              <Pulsante
+                variante="primario"
+                misura="normale"
                 disabled={pendingModale}
                 aria-busy={pendingModale}
                 onClick={confermaImportoErrato}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pendingModale ? 'Attendere…' : 'Conferma'}
-              </button>
+              </Pulsante>
             </div>
           </div>
         </Finestra>

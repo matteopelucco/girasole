@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { Etichetta } from '@/components/ui/etichetta';
+import { Pulsante } from '@/components/ui/pulsante';
+import { Selezione } from '@/components/ui/selezione';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaPiede, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
@@ -18,9 +22,6 @@ export const dynamic = 'force-dynamic';
 
 const COLONNE_COMUNICAZIONE =
   'mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il';
-
-const CLASSE_FRECCIA =
-  'rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 hover:bg-stone-100';
 
 // specs/60 - pagamenti-bambino.md: vista di sola lettura, riservata
 // all'admin, degli importi richiesti a un bambino mese per mese lungo un
@@ -78,15 +79,8 @@ export default async function PagamentiBambinoPage(
 
         <form method="get" className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1">
-            <label htmlFor="bambino" className="text-sm font-medium text-stone-700">
-              Bambino
-            </label>
-            <select
-              id="bambino"
-              name="bambino"
-              defaultValue={bambino?.id ?? ''}
-              className="min-w-[16rem] rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm"
-            >
+            <Etichetta htmlFor="bambino">Bambino</Etichetta>
+            <Selezione id="bambino" name="bambino" defaultValue={bambino?.id ?? ''} className="min-w-[16rem] bg-white">
               <option value="">— Seleziona —</option>
               {(bambini ?? []).map((b) => (
                 <option key={b.id} value={b.id}>
@@ -94,20 +88,15 @@ export default async function PagamentiBambinoPage(
                   {b.attiva ? '' : ' (non attivo)'}
                 </option>
               ))}
-            </select>
+            </Selezione>
           </div>
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
-          >
+          <Pulsante type="submit" variante="primario" misura="normale">
             Mostra
-          </button>
+          </Pulsante>
         </form>
 
         {!bambino ? (
-          <p className="rounded-xl border border-border bg-white px-4 py-6 text-center text-sm text-stone-600 shadow-xs">
-            Scegli un bambino per vedere i suoi pagamenti.
-          </p>
+          <StatoVuoto allineamento="centro">Scegli un bambino per vedere i suoi pagamenti.</StatoVuoto>
         ) : (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -115,16 +104,20 @@ export default async function PagamentiBambinoPage(
                 {bambino.nome} {bambino.cognome}
               </h2>
               <div className="flex items-center gap-2">
-                <Link href={href(anno - 1)} aria-label="Anno scolastico precedente" className={CLASSE_FRECCIA}>
-                  ←
-                </Link>
+                <Pulsante asChild variante="secondario" misura="normale" className="px-3 py-1.5">
+                  <Link href={href(anno - 1)} aria-label="Anno scolastico precedente">
+                    ←
+                  </Link>
+                </Pulsante>
                 <span className="text-sm font-medium text-stone-700">
                   Anno scolastico {etichettaAnnoScolastico(anno)}
                 </span>
                 {anno < annoRiferimento && (
-                  <Link href={href(anno + 1)} aria-label="Anno scolastico successivo" className={CLASSE_FRECCIA}>
-                    →
-                  </Link>
+                  <Pulsante asChild variante="secondario" misura="normale" className="px-3 py-1.5">
+                    <Link href={href(anno + 1)} aria-label="Anno scolastico successivo">
+                      →
+                    </Link>
+                  </Pulsante>
                 )}
               </div>
             </div>
