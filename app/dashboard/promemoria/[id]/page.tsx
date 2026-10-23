@@ -4,6 +4,10 @@ import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { ConfermaAzione } from '@/components/ConfermaAzione';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
+import { Campo } from '@/components/ui/campo';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { TestoLungo } from '@/components/ui/testo-lungo';
+import { cn } from '@/lib/utils';
 import { requireProfilo } from '@/lib/auth';
 import { formattaDataOraItaliana } from '@/lib/date';
 import { sezioniAttiveVisibili, bambiniAttiviVisibili } from '@/lib/sezioni';
@@ -44,22 +48,16 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
 
         <h1 className="text-lg font-medium">Modifica avviso</h1>
 
-        <FormConEsito action={aggiornaPromemoria} className="space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs">
+        <FormConEsito action={aggiornaPromemoria} className={cn(riquadroVariants(), 'space-y-2 p-4')}>
           <input type="hidden" name="promemoria_id" value={promemoria.id} />
-          <input
-            name="titolo"
-            required
-            defaultValue={promemoria.titolo}
-            placeholder="Titolo"
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-          />
-          <textarea
+          <Campo name="titolo" required defaultValue={promemoria.titolo} placeholder="Titolo" className="w-full" />
+          <TestoLungo
             name="testo"
             required
             defaultValue={promemoria.testo}
             placeholder="Testo dell'avviso"
             rows={3}
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
+            className="w-full"
           />
           <SelettoreDestinatarioAvviso
             sezioni={sezioni}
@@ -68,7 +66,7 @@ export default async function PromemoriaDettaglioPage(props: { params: Promise<{
             defaultSezioneId={promemoria.sezione_id ?? ''}
             defaultBambinoId={promemoria.bambino_id ?? ''}
           />
-          <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+          <PulsanteInvio variante="primario" misura="normale">
             Salva modifiche
           </PulsanteInvio>
           {promemoria.updated_at && (

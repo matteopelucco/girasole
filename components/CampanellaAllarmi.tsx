@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { caricaAllarmiCorrenti } from '@/app/dashboard/allarmi/dati';
+import { Pulsante } from '@/components/ui/pulsante';
 import { testoNumeroAllarmi } from '@/lib/elencoAllarmi';
 
 const CLASSI_LINK = 'relative rounded-lg p-2 text-stone-600 hover:bg-stone-100 hover:text-stone-900';
@@ -33,18 +34,20 @@ export async function CampanellaAllarmi() {
 
   const numero = allarmi.length;
   return (
-    <Link href="/dashboard/allarmi" aria-label={numero > 0 ? testoNumeroAllarmi(numero) : 'Allarmi'} className={CLASSI_LINK}>
-      <IconaCampanella />
-      {numero > 0 && (
-        <span
-          aria-hidden="true"
-          data-testid="numero-allarmi"
-          className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-semibold text-white"
-        >
-          {numero}
-        </span>
-      )}
-    </Link>
+    <Pulsante asChild className={CLASSI_LINK}>
+      <Link href="/dashboard/allarmi" aria-label={numero > 0 ? testoNumeroAllarmi(numero) : 'Allarmi'}>
+        <IconaCampanella />
+        {numero > 0 && (
+          <span
+            aria-hidden="true"
+            data-testid="numero-allarmi"
+            className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-semibold text-white"
+          >
+            {numero}
+          </span>
+        )}
+      </Link>
+    </Pulsante>
   );
 }
 
@@ -52,8 +55,10 @@ export async function CampanellaAllarmi() {
 // (cliccabile), senza pallino.
 export function CampanellaAllarmiCaricamento() {
   return (
-    <Link href="/dashboard/allarmi" aria-label="Allarmi" className={CLASSI_LINK}>
-      <IconaCampanella />
-    </Link>
+    <Pulsante asChild className={CLASSI_LINK}>
+      <Link href="/dashboard/allarmi" aria-label="Allarmi">
+        <IconaCampanella />
+      </Link>
+    </Pulsante>
   );
 }

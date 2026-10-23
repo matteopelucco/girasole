@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Riquadro } from '@/components/ui/riquadro';
 
 // Card con titolo attorno agli specchietti riassuntivi (Presenze/Pasti,
 // sia aggregati su tutte le classi sia della singola classe — specs/12,
@@ -6,9 +7,9 @@ import type { ReactNode } from 'react';
 // sezioni del Report, app/dashboard/report/page.tsx).
 export function CardRiepilogo({ titolo, children }: { titolo: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-white p-3 shadow-xs">
+    <Riquadro className="p-3">
       <h2 className="mb-2 text-sm font-semibold text-stone-800 wrap-anywhere">{titolo}</h2>
       {children}
-    </div>
+    </Riquadro>
   );
 }

@@ -137,6 +137,27 @@ test.describe('01 — UX/UI', () => {
     });
   });
 
+  // specs/01 - ux.md, "Interazioni" (issue #349): le tessere "Presenze e pasti"
+  // e Report della dashboard si sollevano di 2 px (hover:-translate-y-0.5) e
+  // prendono un'ombra più marcata al passaggio del mouse.
+  test.describe('dashboard maestra (desktop): elevazione delle tessere', () => {
+    test.use({ viewport: { width: 1280, height: 800 }, storageState: statoAutenticazione('maestra') });
+
+    test('la tessera "Presenze e pasti" si solleva al passaggio del mouse', async ({ page }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+
+      await page.goto('/dashboard');
+      const tessera = linkApriGiornata(page);
+      await expect(tessera).toBeVisible();
+      await expect(tessera).toHaveCSS('translate', 'none');
+
+      await tessera.hover();
+
+      await expect.poll(() => tessera.evaluate((el) => getComputedStyle(el).translate)).toBe('0px -2px');
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
   test.describe('flusso "Presenze e pasti", sezione presenza (mobile)', () => {
     test.use({ viewport: MOBILE, storageState: statoAutenticazione('maestra') });
 

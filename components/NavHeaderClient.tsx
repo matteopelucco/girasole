@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Pulsante } from '@/components/ui/pulsante';
 import { logout } from '@/app/actions';
 import { eGruppoConStato, vociMenuConStato, type VoceMenuConStato } from '@/lib/navigazione';
 
@@ -118,8 +119,7 @@ export function NavHeaderClient({
       <div className="flex min-w-0 flex-1 flex-col lg:pl-64 [&>main]:w-full">
         <header className="sticky top-0 z-10 flex items-center border-b-2 border-amber-400 bg-white px-4 py-3 shadow-xs">
           <div className="flex items-center gap-3 lg:hidden">
-            <button
-              type="button"
+            <Pulsante
               aria-label="Apri il menu"
               aria-expanded={menuAperto}
               onClick={() => setMenuAperto(true)}
@@ -128,7 +128,7 @@ export function NavHeaderClient({
               <span aria-hidden className="text-lg">
                 ☰
               </span>
-            </button>
+            </Pulsante>
             <Logo />
           </div>
           <div className="ml-auto flex items-center gap-3">
