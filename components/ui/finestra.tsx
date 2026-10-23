@@ -136,7 +136,11 @@ export function Finestra({
         if (chiudiSuSfondo && evento.target === evento.currentTarget) dialogRef.current?.close();
       }}
       className={cn(
-        'm-auto max-h-[85vh] w-[calc(100%-2rem)] overflow-y-auto rounded-xl bg-popover p-0 text-left text-popover-foreground shadow-xl backdrop:bg-stone-900/50',
+        // `whitespace-normal`/`break-words`: il <dialog> sta nel DOM dove è
+        // scritto (es. dentro una cella con `whitespace-nowrap`) ed eredita
+        // le proprietà del testo anche se è mostrato a livello superiore;
+        // senza questo reset il testo non andrebbe a capo (issue #374).
+        'm-auto max-h-[85vh] w-[calc(100%-2rem)] overflow-y-auto whitespace-normal break-words rounded-xl bg-popover p-0 text-left text-popover-foreground shadow-xl backdrop:bg-stone-900/50',
         LARGHEZZE[larghezza],
         avviso && 'border-2 border-danger-border',
       )}
