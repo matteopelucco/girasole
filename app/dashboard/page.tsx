@@ -3,6 +3,12 @@ import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { SelettoreDestinatarioAvviso } from '@/components/SelettoreDestinatarioAvviso';
+import { Avviso } from '@/components/ui/avviso';
+import { Campo } from '@/components/ui/campo';
+import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { TestoLungo } from '@/components/ui/testo-lungo';
+import { cn } from '@/lib/utils';
 import { requireProfilo } from '@/lib/auth';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
 import { sezioniEBambiniVisibili } from '@/lib/sezioni';
@@ -34,9 +40,9 @@ export default async function DashboardPage(
         <main className="mx-auto max-w-2xl px-4 py-10">
           <h1 className="text-xl font-medium">Ciao {nomeVisualizzato}</h1>
           <p className="mt-1 text-sm text-stone-600">Ruolo: {ruolo ?? 'non impostato'}</p>
-          <div className="mt-8 rounded-xl border border-dashed border-stone-300 p-6 text-sm text-stone-600">
+          <StatoVuoto className="mt-8 bg-transparent p-6 text-stone-600">
             Il portale genitori è in arrivo in una fase successiva.
-          </div>
+          </StatoVuoto>
         </main>
       </NavHeader>
     );
@@ -86,7 +92,7 @@ export default async function DashboardPage(
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>
       <main className="mx-auto max-w-3xl space-y-10 px-4 py-8">
         {mostraAllarmePersonale && (
-          <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+          <Avviso tono="errore">
             <p className="font-semibold">⚠️ Presenze e/o pasti di oggi non risultano completati</p>
             <p className="mt-1">Sono le 10:00 passate. Ecco cosa manca:</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
@@ -105,11 +111,11 @@ export default async function DashboardPage(
                 </li>
               )}
             </ul>
-          </div>
+          </Avviso>
         )}
 
         {settimanaOreNonConfermata && (
-          <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <Avviso tono="attenzione" role="alert">
             <p className="font-semibold">⏰ Non hai confermato le ore della settimana</p>
             <p className="mt-1">
               Settimana {formattaIntervalloItaliano(settimanaOreNonConfermata.inizio, settimanaOreNonConfermata.fine)}.{' '}
@@ -117,15 +123,11 @@ export default async function DashboardPage(
                 Vai su Ore di lavoro per confermarla.
               </Link>
             </p>
-          </div>
+          </Avviso>
         )}
 
         {allarmiAdmin.map((allarme) => (
-          <div
-            key={allarme.id}
-            role="alert"
-            className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900"
-          >
+          <Avviso key={allarme.id} tono="errore">
             <p className="font-semibold">⚠️ {allarme.titolo}</p>
             <ul className="mt-2 list-disc space-y-1 pl-5">
               {allarme.voci.map((voce, indice) => (
@@ -140,11 +142,11 @@ export default async function DashboardPage(
                 </li>
               ))}
             </ul>
-          </div>
+          </Avviso>
         ))}
 
         {ruolo === 'admin' && allarmiStaff.length > 0 && (
-          <div className="rounded-xl border border-stone-300 bg-stone-50 p-4 text-sm text-stone-800">
+          <Riquadro className="border-stone-300 bg-stone-50 p-4 text-sm text-stone-800 shadow-none">
             <p className="font-semibold">Situazione del personale</p>
             <ul className="mt-2 space-y-1">
               {allarmiStaff.map((allarme) => (
@@ -168,7 +170,7 @@ export default async function DashboardPage(
                 </li>
               ))}
             </ul>
-          </div>
+          </Riquadro>
         )}
 
         <section className="space-y-4">
@@ -208,30 +210,19 @@ export default async function DashboardPage(
           <FormConEsito
             action={creaPromemoria}
             resetSuOk
-            className="mt-3 space-y-2 rounded-xl border border-border bg-white p-4 shadow-xs"
+            className={cn(riquadroVariants(), 'mt-3 space-y-2 p-4')}
           >
-            <input
-              name="titolo"
-              required
-              placeholder="Titolo"
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-            />
-            <textarea
-              name="testo"
-              required
-              placeholder="Testo dell'avviso"
-              rows={3}
-              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-hidden focus:border-stone-500"
-            />
+            <Campo name="titolo" required placeholder="Titolo" className="w-full" />
+            <TestoLungo name="testo" required placeholder="Testo dell'avviso" rows={3} className="w-full" />
             <SelettoreDestinatarioAvviso sezioni={sezioni} bambini={bambini} />
-            <PulsanteInvio className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover">
+            <PulsanteInvio variante="primario" misura="normale">
               Pubblica avviso
             </PulsanteInvio>
           </FormConEsito>
 
           <ul className="mt-4 space-y-2">
             {promemoria?.map((p) => (
-              <li key={p.id} className="rounded-lg border border-border bg-white p-3 text-sm shadow-xs">
+              <li key={p.id} className={cn(riquadroVariants(), 'p-3 text-sm')}>
                 <Link href={`/dashboard/promemoria/${p.id}`} className="font-medium hover:underline">
                   {p.titolo}
                 </Link>

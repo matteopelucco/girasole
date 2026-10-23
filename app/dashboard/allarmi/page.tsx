@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { avvisoVariants } from '@/components/ui/avviso';
 import { requireStaff } from '@/lib/auth';
 import { caricaAllarmiCorrenti } from './dati';
 import type { Allarme } from '@/lib/elencoAllarmi';
@@ -10,7 +11,7 @@ function ElencoAllarmi({ allarmi, etichetta }: { allarmi: Allarme[]; etichetta: 
   return (
     <ul aria-label={etichetta} className="space-y-3">
       {allarmi.map((allarme) => (
-        <li key={allarme.id} className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">
+        <li key={allarme.id} className={avvisoVariants({ tono: 'errore' })}>
           <h3 className="font-semibold">{allarme.titolo}</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             {allarme.voci.map((voce, indice) => (

@@ -2,6 +2,9 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { prossimiEventiDashboard, PROSSIMI_EVENTI_DASHBOARD, type EventoRiga } from '@/lib/calendarioEventiVista';
+import { riquadroVariants } from '@/components/ui/riquadro';
+import { StatoVuoto } from '@/components/ui/stato-vuoto';
+import { cn } from '@/lib/utils';
 import { EtichetteEvento, TesseraGiorno } from './calendario/ElencoEventi';
 
 // Riquadro "Prossimi eventi" della dashboard (specs/64 - calendario-eventi.md,
@@ -57,12 +60,9 @@ async function ElencoProssimiEventi({ oggi }: { oggi: string }) {
 
   if (eventi.length === 0) {
     return (
-      <p
-        data-testid="nessun-prossimo-evento"
-        className="rounded-lg border border-dashed border-stone-300 bg-white px-4 py-5 text-center text-sm text-stone-700"
-      >
+      <StatoVuoto data-testid="nessun-prossimo-evento" allineamento="centro">
         Non ci sono eventi in programma.
-      </p>
+      </StatoVuoto>
     );
   }
 
@@ -72,7 +72,7 @@ async function ElencoProssimiEventi({ oggi }: { oggi: string }) {
         <li
           key={evento.id}
           data-testid="prossimo-evento"
-          className="flex items-start gap-3 rounded-lg border border-border bg-white p-3 shadow-xs"
+          className={cn(riquadroVariants(), 'flex items-start gap-3 p-3')}
         >
           <TesseraGiorno
             data={evento.data}
