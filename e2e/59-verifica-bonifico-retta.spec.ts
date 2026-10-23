@@ -112,6 +112,27 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     await expect(page.getByText('Bonifico incompleto, il resto arriverà il mese prossimo', { exact: false })).toBeVisible();
   });
 
+  test('la finestra "Importo diverso" è leggibile su telefono (360 px) + accessibilità', async ({ page }) => {
+    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+
+    await page.setViewportSize({ width: 360, height: 740 });
+    const { popup } = await apriImportoDiverso(page, '165');
+
+    // Il testo va a capo (non eredita `whitespace-nowrap` dalla cella
+    // "Inviata il") e il contenuto sta dentro la finestra: nessuno scorrimento
+    // orizzontale della finestra.
+    await expect(popup).toHaveCSS('white-space', 'normal');
+    const scorrimentoOrizzontale = await popup.evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(scorrimentoOrizzontale).toBe(false);
+
+    const riquadroFinestra = (await popup.boundingBox())!;
+    const campoMese = (await popup.getByLabel('Mese su cui conteggiare la differenza').boundingBox())!;
+    expect(campoMese.x + campoMese.width).toBeLessThanOrEqual(riquadroFinestra.x + riquadroFinestra.width);
+    await expect(popup.getByText(/^Importo atteso:/)).toBeVisible();
+
+    await nessunaViolazioneA11yGrave(page);
+  });
+
   test('la nota è obbligatoria per un importo diverso', async ({ page }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 
