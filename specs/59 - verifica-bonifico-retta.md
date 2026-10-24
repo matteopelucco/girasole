@@ -62,6 +62,15 @@ Dato che ho aperto la finestra con il pulsante "Importo diverso"
 Quando la chiudo con "Annulla" oppure con Esc
 Allora il focus torna sul pulsante "Importo diverso"
 
+## Scenario: la finestra "Importo diverso" è leggibile su telefono
+Dato che ho aperto la finestra con "Importo diverso" su uno schermo
+largo 360 px
+Quando guardo il suo contenuto
+Allora titolo, etichette e "Importo atteso" vanno a capo e si leggono
+per intero, i campi restano dentro il bordo della finestra e non c'è
+nessuno scorrimento orizzontale (la finestra non eredita il testo "su
+una riga sola" della cella "Inviata il" in cui è scritta)
+
 ## Scenario: la nota è obbligatoria per un importo diverso
 Dato che sto marcando un bonifico con importo diverso da quello atteso
 Quando provo a confermare senza aver scritto una nota
