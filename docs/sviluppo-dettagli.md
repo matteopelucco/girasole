@@ -289,6 +289,22 @@ finché non risulta tutto verde.
   `lib/playwright-skip-riepilogo.ts`). Lo step è informativo e non fa mai
   fallire il job. Il motivo è la descrizione di `test.skip(cond, 'motivo')`:
   scrivila sempre, o comparirà "motivo non indicato".
+- **Invio email simulato (`EMAIL_DRY_RUN`, issue #387)**: in CI non c'è
+  `RESEND_API_KEY`, ma lo step «Test end-to-end» imposta `EMAIL_DRY_RUN=1`:
+  `inviaEmail` (`lib/email.ts`) ritorna con successo senza chiamare Resend e
+  senza scrivere nei log destinatario, oggetto o testo (solo "Invio email
+  simulato"). Così i test che inviano mail (e2e 07, 52, 56, 59, 61, 62, 63,
+  64) girano davvero. Un test che ha bisogno dell'invio si salta con
+  `test.skip(!emailDisponibile(), 'motivo')` (`e2e/helpers.ts`: vero se c'è la
+  chiave o l'invio simulato): non scrivere `process.env.RESEND_API_KEY` nei
+  file. I test che provano l'**errore** dell'invio si saltano invece quando
+  `emailDisponibile()` è vero. In produzione (`VERCEL_ENV=production`) la
+  variabile si ignora, con un avviso nei log (logica pura:
+  `modalitaInvioEmail`, test in `lib/email.test.ts`): non va mai impostata su
+  Vercel. Resta fuori dalla pagina «Variabili d'ambiente» (specs/62). Un test
+  che richiedesse una chiave vera dovrebbe controllare `RESEND_API_KEY`
+  direttamente (oggi nessuno lo fa). I test dei cron richiedono anche
+  `CRON_SECRET`, che la CI non imposta: restano saltati.
 - Ogni salvataggio seguito da `reload`/`goto`/lettura di un valore
   calcolato dal server deve usare `clickEAttendiAzione`
   (`e2e/helpers.ts`); i valori calcolati dal server si leggono con

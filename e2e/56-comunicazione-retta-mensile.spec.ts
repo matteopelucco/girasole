@@ -3,12 +3,14 @@
 // ATTENZIONE: questi test creano davvero bambini sul progetto Supabase
 // di test (stesso pattern di 55-costi-bambino.spec.ts). Il test "inviare
 // le comunicazioni con un click" invia davvero un'email via Resend
-// (solo se RESEND_API_KEY è configurata, come già in
-// 52-report-email-automatico.spec.ts) e scrive un record immutabile in
+// (solo se RESEND_API_KEY è configurata) oppure la simula (EMAIL_DRY_RUN,
+// come nella CI: nessuna mail parte, `emailDisponibile()` in ./helpers) e scrive un record immutabile in
 // comunicazioni_retta: usa un indirizzo di dominio "example.com", mai
 // un indirizzo reale.
 import { test, expect } from '@playwright/test';
+import { modalitaInvioEmail } from '../lib/email';
 import {
+  emailDisponibile,
   formCreaBambino,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
@@ -295,7 +297,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   });
 
   test('inviare le comunicazioni con un click registra il log e mostra "Inviata"', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-invio-${Date.now()}@example.com`,
@@ -427,7 +429,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   });
 
   test("confermare l'anteprima invia la comunicazione al solo bambino scelto", async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognomeA = await creaBambinoConCosti(page, {
       email: `e2e-retta-singolo-a-${Date.now()}@example.com`,
@@ -458,8 +460,10 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(rigaBAncoraDaInviare.getByRole('button', { name: 'Invia comunicazione' })).toBeVisible();
   });
 
-  // Senza RESEND_API_KEY (CI) un invio vero fallirebbe e la riga resterebbe
-  // "da inviare": vederla "Inviata" prova che la posta non è stata chiamata.
+  // Questo percorso non passa dall'invio: la riga risulta "Inviata" anche
+  // quando la posta non è raggiungibile. Con l'invio simulato (CI) il test
+  // passa comunque, quindi non distingue le due strade: che qui non si chiami
+  // la posta lo garantisce il codice dell'azione, non questo test.
   test('"Conferma senza inviare" registra la comunicazione senza spedire email', async ({ page }) => {
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-senza-invio-${Date.now()}@example.com`,
@@ -486,7 +490,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
   // reply_to vada a buon fine (Resend rifiuta un payload non valido).
   test("una risposta dei genitori arriva all'asilo, non al mittente tecnico (Reply-To)", async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-replyto-${Date.now()}@example.com`,
@@ -504,8 +508,42 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(page.locator('tr', { hasText: cognome }).getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
   });
 
+  // Specs/56, "invio email simulato nei test": con EMAIL_DRY_RUN (la CI) e
+  // senza chiave Resend l'invio riesce senza posta. Il fatto che non parta
+  // nessuna richiesta e che i log non riportino dati personali non si vede da
+  // Playwright: è coperto da lib/email.test.ts (modalitaInvioEmail).
+  test("l'invio simulato (EMAIL_DRY_RUN) registra la comunicazione come inviata, senza chiave Resend", async ({ page }) => {
+    test.skip(!modalitaInvioEmail(process.env).simulato, 'richiede EMAIL_DRY_RUN attiva');
+    test.skip(!!process.env.RESEND_API_KEY, "con RESEND_API_KEY l'invio sarebbe vero, non simulato");
+
+    const cognome = await creaBambinoConCosti(page, {
+      email: `e2e-retta-simulato-${Date.now()}@example.com`,
+      prezzoMensile: '110',
+      prezzoBuonoPasto: '0',
+    });
+
+    await page.goto('/admin/rette');
+    const riga = page.locator('tr', { hasText: cognome });
+    await riga.getByRole('button', { name: 'Invia comunicazione' }).click();
+    const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${cognome}`) });
+    await clickEAttendiAzione(page, popup.getByRole('button', { name: 'Conferma invio' }));
+    await page.reload();
+
+    const rigaInviata = page.locator('tr', { hasText: cognome });
+    await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+    // 110 retta + 2 marca da bollo (default), 0 pasti/extra.
+    await expect(rigaInviata).toContainText('112,00');
+  });
+
+  // Non riproducibile da e2e: la produzione (VERCEL_ENV=production) non si
+  // simula contro il server di test. La scelta è pura e coperta da
+  // lib/email.test.ts (modalitaInvioEmail).
+  test("l'invio simulato è ignorato in produzione (coperto da unit)", async () => {
+    test.skip(true, 'coperto da lib/email.test.ts (modalitaInvioEmail)');
+  });
+
   test("modificare una voce di costo prima dell'invio usa il valore modificato", async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-modifica-${Date.now()}@example.com`,
@@ -574,7 +612,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-annulla-${Date.now()}@example.com`,
@@ -609,7 +647,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   test("il popup di conferma è necessario per l'invio massivo: annullandolo nessuna email parte", async ({
     page,
   }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-annulla-popup-${Date.now()}@example.com`,
@@ -630,7 +668,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
   });
 
   test('un bambino già comunicato questo mese non viene reinviato', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const cognome = await creaBambinoConCosti(page, {
       email: `e2e-retta-doppio-${Date.now()}@example.com`,

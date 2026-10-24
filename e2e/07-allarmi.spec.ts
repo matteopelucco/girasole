@@ -19,7 +19,7 @@ import { mergeTests, type Locator, type Page } from '@playwright/test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { test as testUtente, expect } from './fixture-utente';
 import { test as testBambino, type BambinoFixture } from './fixture-bambino';
-import { dataOggiRoma, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { dataOggiRoma, emailDisponibile, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 import {
   descrizioneMeseRojac,
   hrefReportRojac,
@@ -991,8 +991,8 @@ test.describe('07 — Allarmi', () => {
 
     async function chiamaCron(request: import('@playwright/test').APIRequestContext): Promise<EsitoCron> {
       test.skip(
-        !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-        'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+        !process.env.CRON_SECRET || !emailDisponibile(),
+        'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
       );
       const risposta = await request.get('/api/cron/allarmi', {
         headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },

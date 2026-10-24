@@ -1,14 +1,16 @@
 // Requisito: specs/59 - verifica-bonifico-retta.md
 //
 // ATTENZIONE: questi test creano davvero un bambino, inviano davvero
-// un'email via Resend (solo se RESEND_API_KEY è configurata — stesso
-// pattern di 56-comunicazione-retta-mensile.spec.ts) e scrivono record
+// un'email via Resend (solo se RESEND_API_KEY è configurata, oppure
+// simulata con EMAIL_DRY_RUN come nella CI — stesso pattern di
+// 56-comunicazione-retta-mensile.spec.ts) e scrivono record
 // reali in comunicazioni_retta/crediti_debiti_bambini sul progetto
 // Supabase di test.
 import { test, expect } from '@playwright/test';
 import { accediComeAdminDb, creaBambinoFixture, eliminaBambinoFixture } from './fixture-bambino';
 import {
   clickEAttendiAzione,
+  emailDisponibile,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
@@ -63,7 +65,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   }
 
   test('una comunicazione appena inviata è in attesa di verifica + accessibilità', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '100');
     await expect(rigaInviata.getByText('Bonifico da verificare')).toBeVisible();
@@ -73,7 +75,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   });
 
   test('marcare un bonifico come corretto', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '120');
     page.once('dialog', (dialog) => dialog.accept());
@@ -86,7 +88,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   });
 
   test('marcare un bonifico con importo diverso genera un credito/debito', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, '130');
     // 130 retta + 2 marca da bollo (default) = 132 atteso.
@@ -114,7 +116,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   });
 
   test('la nota è obbligatoria per un importo diverso', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, '140');
     await rigaInviata.getByRole('button', { name: 'Importo diverso' }).click();
@@ -140,7 +142,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   }
 
   test('Esc chiude la finestra "Importo diverso" senza registrare nulla', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { rigaInviata, popup } = await apriImportoDiverso(page, '150');
     await page.keyboard.press('Escape');
@@ -149,14 +151,14 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   });
 
   test('la finestra "Importo diverso" trattiene il focus', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { popup } = await apriImportoDiverso(page, '160');
     await verificaFocusTrattenuto(page, popup);
   });
 
   test('chiudendo la finestra "Importo diverso" il focus torna al pulsante', async ({ page }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { apri, popup } = await apriImportoDiverso(page, '170');
     await popup.getByRole('button', { name: 'Annulla' }).click();
@@ -173,7 +175,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   test('un bonifico già verificato mostra solo lo stato, "Annulla verifica" e nasconde "Annulla invio"', async ({
     page,
   }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '150');
     page.once('dialog', (dialog) => dialog.accept());
@@ -190,7 +192,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   test('annullare la verifica di un bonifico corretto torna "da verificare", senza altri avvisi', async ({
     page,
   }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { rigaInviata } = await creaBambinoEInviaComunicazione(page, '160');
     page.once('dialog', (dialog) => dialog.accept());
@@ -209,7 +211,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   test('annullare la verifica di un bonifico con importo diverso avvisa di ricontrollare i crediti/debiti', async ({
     page,
   }) => {
-    test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
+    test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, '170');
     await rigaInviata.getByRole('button', { name: 'Importo diverso' }).click();
@@ -231,10 +233,10 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   });
 });
 
-// Fuori dal blocco seriale qui sopra: nella CI i test di quel blocco sono tutti
-// saltati (servono email vere via Resend) e in modalità seriale il test
-// seguente resterebbe saltato con loro. Questo prepara da sé i suoi dati nel DB
-// di test, senza email, e deve girare sempre.
+// Fuori dal blocco seriale qui sopra: prepara da sé i suoi dati nel DB di test,
+// senza email, e deve girare sempre, anche dove i test di quel blocco si
+// saltano (senza RESEND_API_KEY né EMAIL_DRY_RUN) o se uno di loro fallisce
+// (in modalità seriale i test seguenti non partono).
 test.describe('59 — Verifica del bonifico di una retta (telefono)', () => {
   test.use({ storageState: statoAutenticazione('admin') });
 
@@ -248,7 +250,7 @@ test.describe('59 — Verifica del bonifico di una retta (telefono)', () => {
     // RLS come l'app; sparisce con il bambino, ON DELETE CASCADE). Il mese
     // passato mostra la stessa riga con la cella "Inviata il" e la verifica
     // del bonifico (specs/59, "verificare il bonifico anche su un mese
-    // passato"), quindi il test gira anche in CI, dove RESEND_API_KEY non c'è.
+    // passato"), quindi il test gira sempre, anche senza email.
     const db = await accediComeAdminDb();
     test.skip(db === null, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
     const bambino = await creaBambinoFixture(db!);

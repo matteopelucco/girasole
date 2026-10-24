@@ -263,6 +263,29 @@ Rojac, specs/61): le mail
 interne (report notturno specs/52, allarmi specs/07, notifiche
 all'asilo) non lo impostano
 
+## Scenario: invio email simulato nei test (`EMAIL_DRY_RUN`)
+Dato che l'ambiente ha `EMAIL_DRY_RUN` attiva (`1`, `true`, `yes`, `on`;
+nella CI e2e, mai in produzione) e non ha `RESEND_API_KEY`
+Quando l'admin invia una comunicazione di retta (massiva o singola)
+Allora l'invio ha esito positivo e la riga risulta "Inviata il ..." come
+con una mail vera
+E nessuna richiesta parte verso Resend
+E i log non riportano indirizzo, oggetto né testo della mail (solo una
+riga generica "invio email simulato")
+E vale per ogni mail dell'app (report notturno specs/52, allarmi
+specs/07, Rojac specs/61), perché passa tutta da `inviaEmail`
+(`lib/email.ts`)
+
+## Scenario: l'invio simulato è ignorato in produzione
+Dato che l'ambiente è la produzione (`VERCEL_ENV=production`)
+E per errore `EMAIL_DRY_RUN` è attiva
+Quando l'app invia una mail
+Allora la variabile viene ignorata e la mail parte davvero, se c'è la chiave
+E nei log compare un avviso che la variabile è stata ignorata, così le
+mail vere non si bloccano per errore
+(la scelta è logica pura in `lib/email.ts`, coperta dai test unit di
+`lib/email.test.ts`)
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)

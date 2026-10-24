@@ -1,7 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { costruisciPayloadEmail } from './email';
+import { costruisciPayloadEmail, modalitaInvioEmail } from './email';
 
 const base = { mittente: 'Girasole <girasole@example.org>', oggetto: 'Oggetto', html: '<p>Ciao</p>' };
+
+// Specs/56 - comunicazione-retta-mensile.md, "invio email simulato nei test"
+// e "l'invio simulato è ignorato in produzione": funzione pura sull'ambiente.
+describe('modalitaInvioEmail', () => {
+  it("senza EMAIL_DRY_RUN l'invio è vero e nessun avviso", () => {
+    expect(modalitaInvioEmail({})).toEqual({ simulato: false, avviso: null });
+    expect(modalitaInvioEmail({ VERCEL_ENV: 'preview' })).toEqual({ simulato: false, avviso: null });
+  });
+
+  it.each(['1', 'true', 'TRUE', 'yes', 'on', ' 1 '])('con EMAIL_DRY_RUN="%s" l\'invio è simulato', (valore) => {
+    expect(modalitaInvioEmail({ EMAIL_DRY_RUN: valore })).toEqual({ simulato: true, avviso: null });
+    expect(modalitaInvioEmail({ EMAIL_DRY_RUN: valore, VERCEL_ENV: 'preview' }).simulato).toBe(true);
+  });
+
+  it.each(['', '0', 'false', 'no', 'off', 'boh'])('con EMAIL_DRY_RUN="%s" l\'invio resta vero', (valore) => {
+    expect(modalitaInvioEmail({ EMAIL_DRY_RUN: valore })).toEqual({ simulato: false, avviso: null });
+  });
+
+  it('in produzione (VERCEL_ENV=production) EMAIL_DRY_RUN è ignorata, con un avviso', () => {
+    const modalita = modalitaInvioEmail({ EMAIL_DRY_RUN: '1', VERCEL_ENV: 'production' });
+    expect(modalita.simulato).toBe(false);
+    expect(modalita.avviso).toContain('EMAIL_DRY_RUN');
+    expect(modalita.avviso).toContain('ignorata');
+  });
+
+  it("in produzione senza EMAIL_DRY_RUN attiva non c'è nessun avviso", () => {
+    expect(modalitaInvioEmail({ VERCEL_ENV: 'production' })).toEqual({ simulato: false, avviso: null });
+    expect(modalitaInvioEmail({ EMAIL_DRY_RUN: '0', VERCEL_ENV: 'production' })).toEqual({ simulato: false, avviso: null });
+  });
+});
 
 // Specs/56 - comunicazione-retta-mensile.md, "una risposta dei genitori
 // arriva all'asilo": funzione pura, nessun invio reale.

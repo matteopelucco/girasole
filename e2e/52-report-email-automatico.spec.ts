@@ -1,7 +1,8 @@
 // Requisito: specs/52 - report-email-automatico.md
 //
 // ATTENZIONE: questi test invocano davvero la route del cron, che (se
-// RESEND_API_KEY è configurata) invia email reali via Resend e scrive
+// RESEND_API_KEY è configurata) invia email reali via Resend (con
+// EMAIL_DRY_RUN l'invio è simulato, nessuna mail parte) e scrive
 // nelle tabelle report_giornalieri_inviati/report_periodici_inviati sul
 // progetto Supabase puntato da NEXT_PUBLIC_SUPABASE_URL — mai contro un
 // progetto di produzione.
@@ -19,6 +20,7 @@
 // sottostanti. Il calcolo delle ore/monte ore in sé è coperto da unit
 // test puri (lib/monteOre.test.ts, lib/oreLavoro.test.ts).
 import { test, expect } from '@playwright/test';
+import { emailDisponibile } from './helpers';
 
 test.describe('52 — Report email automatico', () => {
   test('senza il secret corretto la route rifiuta la richiesta', async ({ request }) => {
@@ -34,8 +36,8 @@ test.describe('52 — Report email automatico', () => {
     request,
   }) => {
     test.skip(
-      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      !process.env.CRON_SECRET || !emailDisponibile(),
+      'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
     );
 
     const intestazioni = { Authorization: `Bearer ${process.env.CRON_SECRET}` };
@@ -73,8 +75,8 @@ test.describe('52 — Report email automatico', () => {
     request,
   }) => {
     test.skip(
-      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      !process.env.CRON_SECRET || !emailDisponibile(),
+      'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
     );
     const risposta = await request.get('/api/cron/report-presenze', {
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -93,8 +95,8 @@ test.describe('52 — Report email automatico', () => {
     request,
   }) => {
     test.skip(
-      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      !process.env.CRON_SECRET || !emailDisponibile(),
+      'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
     );
     const risposta = await request.get('/api/cron/report-presenze', {
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -107,8 +109,8 @@ test.describe('52 — Report email automatico', () => {
 
   test('anomalie nei dati: nessun nome di bambino nella risposta del job (solo il conteggio)', async ({ request }) => {
     test.skip(
-      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      !process.env.CRON_SECRET || !emailDisponibile(),
+      'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
     );
     const risposta = await request.get('/api/cron/report-presenze', {
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -123,8 +125,8 @@ test.describe('52 — Report email automatico', () => {
     request,
   }) => {
     test.skip(
-      !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-      'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+      !process.env.CRON_SECRET || !emailDisponibile(),
+      'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
     );
     const risposta = await request.get('/api/cron/report-presenze', {
       headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` },
