@@ -752,8 +752,8 @@ stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
   `components/ui/`. Se manca una variante, si aggiunge al componente (con
   `class-variance-authority`), non si copia una stringa nella pagina. Le
   schermate non ancora migrate restano come sono finché non le riprende la
-  loro issue; `lib/classiStato.ts` e i pulsanti di stato si toccano solo nella
-  #350.
+  loro issue. I pulsanti di stato Presente/Assente/Sì/No hanno il loro
+  componente (`pulsante-stato.tsx`, issue #350).
 - **Colori e misure**: solo i token di significato (`bg-primary`, `text-danger`,
   `rounded-base`...), mai le tinte della palette. Non si ridefiniscono
   `--radius-sm/md/lg/xl`.
