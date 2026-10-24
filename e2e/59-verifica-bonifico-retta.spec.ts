@@ -113,58 +113,6 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     await expect(page.getByText('Bonifico incompleto, il resto arriverà il mese prossimo', { exact: false })).toBeVisible();
   });
 
-  test('la finestra "Importo diverso" è leggibile su telefono (360 px) + accessibilità', async ({ page }) => {
-    // Nessuna email: la comunicazione già inviata di un mese passato viene
-    // inserita direttamente nel DB di test (login admin con la chiave anon,
-    // RLS come l'app; sparisce con il bambino, ON DELETE CASCADE). Il mese
-    // passato mostra la stessa riga con la cella "Inviata il" e la verifica
-    // del bonifico (specs/59, "verificare il bonifico anche su un mese
-    // passato"), quindi il test gira anche in CI, dove RESEND_API_KEY non c'è.
-    const db = await accediComeAdminDb();
-    test.skip(db === null, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
-    const bambino = await creaBambinoFixture(db!);
-    try {
-      const mese = '2019-11';
-      const { error } = await db!.from('comunicazioni_retta').insert({
-        bambino_id: bambino.id,
-        mese,
-        retta_mensile: 100,
-        costo_pasti: 0,
-        conguaglio_pasti: 0,
-        costo_pre_asilo: 0,
-        costo_post_asilo: 0,
-        costi_extra: 0,
-        totale: 100,
-        email_destinatario: 'e2e-finestra-bonifico@example.com',
-        inviata_da_nome: 'E2E',
-      });
-      if (error) throw new Error(`Inserimento della comunicazione di prova non riuscito: ${error.message}`);
-
-      await page.setViewportSize({ width: 360, height: 740 });
-      await page.goto(`/admin/rette?mese=${mese}`);
-      const riga = page.locator('tr', { hasText: bambino.cognome });
-      await riga.getByRole('button', { name: 'Importo diverso' }).click();
-      const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${bambino.cognome}`) });
-      await expect(popup).toBeVisible();
-
-      // Il testo va a capo (non eredita `whitespace-nowrap` dalla cella
-      // "Inviata il") e il contenuto sta dentro la finestra: nessuno scorrimento
-      // orizzontale della finestra.
-      await expect(popup).toHaveCSS('white-space', 'normal');
-      const scorrimentoOrizzontale = await popup.evaluate((el) => el.scrollWidth > el.clientWidth);
-      expect(scorrimentoOrizzontale).toBe(false);
-
-      const riquadroFinestra = (await popup.boundingBox())!;
-      const campoMese = (await popup.getByLabel('Mese su cui conteggiare la differenza').boundingBox())!;
-      expect(campoMese.x + campoMese.width).toBeLessThanOrEqual(riquadroFinestra.x + riquadroFinestra.width);
-      await expect(popup.getByText(/^Importo atteso:/)).toBeVisible();
-
-      await nessunaViolazioneA11yGrave(page);
-    } finally {
-      await eliminaBambinoFixture(db!, bambino.id);
-    }
-  });
-
   test('la nota è obbligatoria per un importo diverso', async ({ page }) => {
     test.skip(!process.env.RESEND_API_KEY, "richiede RESEND_API_KEY configurata per inviare davvero l'email");
 
@@ -280,5 +228,69 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     await avviso.getByRole('link', { name: 'vai alla scheda' }).click();
     await page.waitForURL(/\/admin\/bambini\/.+/);
     await expect(page.getByRole('heading', { name: new RegExp(cognome) })).toBeVisible();
+  });
+});
+
+// Fuori dal blocco seriale qui sopra: nella CI i test di quel blocco sono tutti
+// saltati (servono email vere via Resend) e in modalità seriale il test
+// seguente resterebbe saltato con loro. Questo prepara da sé i suoi dati nel DB
+// di test, senza email, e deve girare sempre.
+test.describe('59 — Verifica del bonifico di una retta (telefono)', () => {
+  test.use({ storageState: statoAutenticazione('admin') });
+
+  test.beforeEach(async () => {
+    test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+  });
+
+  test('la finestra "Importo diverso" è leggibile su telefono (360 px) + accessibilità', async ({ page }) => {
+    // Nessuna email: la comunicazione già inviata di un mese passato viene
+    // inserita direttamente nel DB di test (login admin con la chiave anon,
+    // RLS come l'app; sparisce con il bambino, ON DELETE CASCADE). Il mese
+    // passato mostra la stessa riga con la cella "Inviata il" e la verifica
+    // del bonifico (specs/59, "verificare il bonifico anche su un mese
+    // passato"), quindi il test gira anche in CI, dove RESEND_API_KEY non c'è.
+    const db = await accediComeAdminDb();
+    test.skip(db === null, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
+    const bambino = await creaBambinoFixture(db!);
+    try {
+      const mese = '2019-11';
+      const { error } = await db!.from('comunicazioni_retta').insert({
+        bambino_id: bambino.id,
+        mese,
+        retta_mensile: 100,
+        costo_pasti: 0,
+        conguaglio_pasti: 0,
+        costo_pre_asilo: 0,
+        costo_post_asilo: 0,
+        costi_extra: 0,
+        totale: 100,
+        email_destinatario: 'e2e-finestra-bonifico@example.com',
+        inviata_da_nome: 'E2E',
+      });
+      if (error) throw new Error(`Inserimento della comunicazione di prova non riuscito: ${error.message}`);
+
+      await page.setViewportSize({ width: 360, height: 740 });
+      await page.goto(`/admin/rette?mese=${mese}`);
+      const riga = page.locator('tr', { hasText: bambino.cognome });
+      await riga.getByRole('button', { name: 'Importo diverso' }).click();
+      const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${bambino.cognome}`) });
+      await expect(popup).toBeVisible();
+
+      // Il testo va a capo (non eredita `whitespace-nowrap` dalla cella
+      // "Inviata il") e il contenuto sta dentro la finestra: nessuno scorrimento
+      // orizzontale della finestra.
+      await expect(popup).toHaveCSS('white-space', 'normal');
+      const scorrimentoOrizzontale = await popup.evaluate((el) => el.scrollWidth > el.clientWidth);
+      expect(scorrimentoOrizzontale).toBe(false);
+
+      const riquadroFinestra = (await popup.boundingBox())!;
+      const campoMese = (await popup.getByLabel('Mese su cui conteggiare la differenza').boundingBox())!;
+      expect(campoMese.x + campoMese.width).toBeLessThanOrEqual(riquadroFinestra.x + riquadroFinestra.width);
+      await expect(popup.getByText(/^Importo atteso:/)).toBeVisible();
+
+      await nessunaViolazioneA11yGrave(page);
+    } finally {
+      await eliminaBambinoFixture(db!, bambino.id);
+    }
   });
 });
