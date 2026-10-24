@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { pulsanteStatoVariants } from '@/components/ui/pulsante-stato';
+import type { TonoPulsanteStato } from '@/lib/classiStato';
 import { IconaNota } from '@/components/icone';
 
 // Elementi condivisi dalle sezioni "Presenza", "Pasto" e "Nota" della
@@ -27,23 +29,24 @@ export function IntestazioneSezione({ id, icona, children }: { id: string; icona
   );
 }
 
-// Pulsante di stato grande (classi da lib/classiStato.ts): quando è
+// Pulsante di stato grande (aspetto da components/ui/pulsante-stato.tsx, tono
+// scelto da lib/classiStato.ts): quando è
 // selezionato mostra il segno ✓ (decorativo, fuori dal nome accessibile)
 // ed espone aria-pressed, così lo stato corrente arriva anche alle
 // tecnologie assistive e non solo tramite il colore (specs/10).
 export function PulsanteStato({
   formAction,
   selezionato,
-  className,
+  tono,
   children,
 }: {
   formAction: (formData: FormData) => void | Promise<void>;
   selezionato: boolean;
-  className: string;
+  tono: TonoPulsanteStato;
   children: ReactNode;
 }) {
   return (
-    <PulsanteInvio mantieniTesto formAction={formAction} aria-pressed={selezionato} className={className}>
+    <PulsanteInvio mantieniTesto formAction={formAction} aria-pressed={selezionato} className={pulsanteStatoVariants({ tono })}>
       {selezionato && <span aria-hidden="true">✓</span>}
       {children}
     </PulsanteInvio>

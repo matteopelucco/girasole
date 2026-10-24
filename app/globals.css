@@ -2,7 +2,7 @@
 @import 'tw-animate-css';
 
 /* Tailwind 4 scansiona da solo i sorgenti (app/, components/, lib/): lib/
-   conta, perché alcuni moduli (es. lib/classiStato.ts) contengono classi
+   conta, perché alcuni moduli (es. lib/dashboardSezioni.ts) contengono classi
    letterali usate solo lì (un bug reale: il pulsante "Assente" invisibile
    perché bg-stone-600 non veniva generato). Non aggiungere esclusioni
    (@source not / .gitignore) che tocchino lib/. */
@@ -157,7 +157,7 @@
   /* Token di significato (issue #335, specs/01 - ux.md, "Sistema grafico"):
      nel codice si usa il token, non la tinta della palette. Unico punto in
      cui si cambia il significato di un colore. Per "rose" vedi la spec: non
-     è un token (resta nel tema solo per i colori di stato, issue #350). */
+     è un token (resta nel tema solo per i colori di stato: Malattia/No, issue #350). */
   --color-primary: var(--color-emerald-700);
   --color-primary-hover: var(--color-emerald-800);
 
