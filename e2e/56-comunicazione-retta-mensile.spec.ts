@@ -683,8 +683,11 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const riga = page.locator('tr', { hasText: cognome });
     await expect(riga.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
-    // Nessun campo "Costi extra" modificabile per un bambino già comunicato.
-    await expect(riga.locator('input')).toHaveCount(0);
+    // Nessun campo modificabile (né «Costi extra» né la nota) per un bambino già
+    // comunicato. Si contano i campi che l'utente può usare: gli eventuali <input
+    // type="hidden"> che React aggiunge ai pulsanti con una Server Action
+    // (qui «Annulla invio») non sono campi.
+    await expect(riga.locator('input:not([type="hidden"])')).toHaveCount(0);
   });
 
   test('configurare il template della mail', async ({ page }) => {

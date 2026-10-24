@@ -23,6 +23,14 @@ process.env.CALENDARIO_ICAL_PROVA_ORIGINE ||= 'http://127.0.0.1:4318';
 const FILE_STATO_CONDIVISO =
   /(06-controllo-consistenza|13-segna-presenza|16-comunicazione-pasti-rojac)\.spec\.ts/;
 
+// File e2e che premono «Invia comunicazioni» (invio massivo delle rette, specs/56
+// e 59): quel pulsante agisce su TUTTI i bambini «da inviare» del mese, quindi
+// due file in parallelo si «rubano» i bambini (la comunicazione parte con i
+// costi extra ancora a zero, o prima che il test li compili). Con l'invio
+// simulato (EMAIL_DRY_RUN, issue #387) questi test girano in CI: per questo
+// vanno in un solo worker, in sequenza (vedi il progetto 'chromium-rette').
+const FILE_INVIO_RETTE = /(56-comunicazione-retta-mensile|59-verifica-bonifico-retta)\.spec\.ts/;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000, // le chiamate reali a Supabase Auth possono richiedere diversi secondi
@@ -73,7 +81,7 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
-      testIgnore: FILE_STATO_CONDIVISO,
+      testIgnore: [FILE_STATO_CONDIVISO, FILE_INVIO_RETTE],
     },
     {
       // Restano solo i file di presenze e pasti di oggi. 16 legge lo stato
@@ -94,6 +102,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       testMatch: FILE_STATO_CONDIVISO,
+      fullyParallel: false,
+      workers: 1,
+    },
+    {
+      // Solo i file dell'invio massivo delle rette, in sequenza (vedi
+      // FILE_INVIO_RETTE). Al loro interno restano seriali come prima.
+      name: 'chromium-rette',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testMatch: FILE_INVIO_RETTE,
       fullyParallel: false,
       workers: 1,
     },

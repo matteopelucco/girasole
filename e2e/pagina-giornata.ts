@@ -35,7 +35,7 @@ export const NOME_PAGINA_GIORNATA = 'Presenze e pasti';
 // Malattia/No resta `bg-rose-600` perché `rose` non è un token (`danger` è
 // red-700). I confini `(^|\s)...(\s|$)` evitano che `bg-success` combaci con
 // una futura `bg-success-soft`.
-const classe = (nome: string) => new RegExp(`(^|\s)${nome}(\s|$)`);
+const classe = (nome: string) => new RegExp(String.raw`(^|\s)${nome}(\s|$)`);
 export const CLASSE_ATTIVO = {
   presente: classe('bg-success'),
   assente: classe('bg-neutral'),
