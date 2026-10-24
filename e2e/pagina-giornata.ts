@@ -27,17 +27,23 @@ export const PERCORSO_GIORNATA = '/dashboard/giornata';
 
 export const NOME_PAGINA_GIORNATA = 'Presenze e pasti';
 
-// Classi Tailwind dei pulsanti "attivi" (lib/classiStato.ts): il test
-// verifica lo stato selezionato da qui, così un cambio di colore si corregge
-// in un punto solo.
+// Classi Tailwind dei pulsanti "attivi" (components/ui/pulsante-stato.tsx):
+// il test verifica lo stato selezionato da qui, così un cambio di colore si
+// corregge in un punto solo. Dalla issue #350 i colori che coincidono con un
+// token di significato usano il token (`bg-success` = emerald-700, `bg-neutral`
+// = stone-600, `bg-info` = sky-700: stessi colori di prima); il rosso di
+// Malattia/No resta `bg-rose-600` perché `rose` non è un token (`danger` è
+// red-700). I confini `(^|\s)...(\s|$)` evitano che `bg-success` combaci con
+// una futura `bg-success-soft`.
+const classe = (nome: string) => new RegExp(String.raw`(^|\s)${nome}(\s|$)`);
 export const CLASSE_ATTIVO = {
-  presente: /bg-emerald-700/,
-  assente: /bg-stone-600/,
-  malattia: /bg-rose-600/,
-  preAsilo: /bg-sky-700/,
-  postAsilo: /bg-sky-700/,
-  pastoSi: /bg-emerald-700/,
-  pastoNo: /bg-rose-600/,
+  presente: classe('bg-success'),
+  assente: classe('bg-neutral'),
+  malattia: classe('bg-rose-600'),
+  preAsilo: classe('bg-info'),
+  postAsilo: classe('bg-info'),
+  pastoSi: classe('bg-success'),
+  pastoNo: classe('bg-rose-600'),
 } as const;
 
 export type StatoPresenza = 'Presente' | 'Assente' | 'Malattia' | 'Pre-asilo' | 'Post-asilo';
@@ -133,7 +139,7 @@ export function etichettaPastoMalattia(contenitore: Page | Locator): Locator {
 // il pulsante con la classe di stato attivo (stesso colore di
 // CLASSE_ATTIVO.pastoSi, qui in forma di selettore CSS).
 export function bottonePastoSiSelezionato(contenitore: Page | Locator): Locator {
-  return colonnaPasto(contenitore).locator('button.bg-emerald-700');
+  return colonnaPasto(contenitore).locator('button.bg-success');
 }
 
 // Avviso "Conferma azzeramento" che Assente/Malattia mostrano se c'è un pasto

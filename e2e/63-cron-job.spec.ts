@@ -5,15 +5,15 @@
 // cui un KO con messaggio e uno senza esito, più un lancio a mano), ricaricati
 // dal reset del DB di test a ogni CI. Due test scrivono nel registro: il
 // lancio a mano del riepilogo allarmi (Server Action dell'admin, nessun
-// secret necessario: in CI manca RESEND_API_KEY, quindi nessuna email parte e
-// il lancio può finire KO, che va bene) e quello che chiama davvero la route
-// del cron degli allarmi (solo con CRON_SECRET e RESEND_API_KEY, come e2e/07
-// ed e2e/52). Un lancio reale, più recente, compare in cima al suo blocco,
+// secret necessario: in CI l'invio è simulato (EMAIL_DRY_RUN) e nessuna email
+// parte; il lancio può finire OK o KO, vanno bene entrambi) e quello che
+// chiama davvero la route del cron degli allarmi (solo con CRON_SECRET e
+// RESEND_API_KEY o EMAIL_DRY_RUN, come e2e/07 ed e2e/52). Un lancio reale, più recente, compare in cima al suo blocco,
 // quindi i controlli non contano le righe "esatte" ma i limiti. I test
 // dell'admin girano in ordine, uno alla volta (`mode: 'default'`): un lancio
 // in corso farebbe rifiutare il lancio a mano di un altro test.
 import { test, expect } from '@playwright/test';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { emailDisponibile, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
 import {
   MESSAGGIO_AZIONI_VUOTE,
   PERCORSO_CRON_JOB,
@@ -306,8 +306,8 @@ test.describe('63 — Azioni (e Cron Job)', () => {
 
     test('ogni lancio di un job viene registrato senza toccare il lavoro del job', async ({ page, request }) => {
       test.skip(
-        !process.env.CRON_SECRET || !process.env.RESEND_API_KEY,
-        'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron'
+        !process.env.CRON_SECRET || !emailDisponibile(),
+        'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron'
       );
 
       // Senza il secret corretto la route rifiuta la chiamata prima di registrarla.

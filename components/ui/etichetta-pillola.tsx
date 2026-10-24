@@ -8,8 +8,9 @@ import { cn } from '@/lib/utils';
 //
 // - `tono="neutro"`: indicatore non legato a un esito (token `neutral`).
 // - `assente`, `malattia`, `inconsistenza`: tinte di oggi (`stone`, `rose`,
-//   `orange`), fuori dai token di proposito: i colori di stato li riprende la
-//   issue #350 (vedi `lib/classiStato.ts`), non vanno cambiati qui.
+//   `orange`), fuori dai token di proposito: la issue #350 ha portato i
+//   pulsanti di stato su `pulsante-stato.tsx` senza cambiarne i colori e ha
+//   lasciato queste etichette com'erano.
 //
 // Niente 'use client': è solo markup e classi.
 const etichettaPillolaVariants = cva('rounded-full px-2 py-0.5 text-xs font-semibold', {

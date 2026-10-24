@@ -1,5 +1,7 @@
 import { IconaPersona } from '@/components/icone';
-import { classePulsanteStato, classePulsanteToggle } from '@/lib/classiStato';
+import { Pulsante } from '@/components/ui/pulsante';
+import { pulsanteStatoVariants } from '@/components/ui/pulsante-stato';
+import { tonoPulsanteStato, tonoPulsanteToggle } from '@/lib/classiStato';
 import type { RigaPresenza, StatoPresenza } from '@/lib/presenza';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo } from '../presenze/actions';
 import { ETICHETTE_PRESENZA, IntestazioneSezione, PulsanteStato } from './comune';
@@ -63,7 +65,7 @@ export function ColonnaPresenza({
             <PulsanteStato
               formAction={segnaPresenza.bind(null, bambinoId, 'presente', data)}
               selezionato={presenza?.stato === 'presente'}
-              className={classePulsanteStato('presente', presenza?.stato === 'presente')}
+              tono={tonoPulsanteStato('presente', presenza?.stato === 'presente')}
             >
               {ETICHETTE_PRESENZA.presente}
             </PulsanteStato>
@@ -79,21 +81,20 @@ export function ColonnaPresenza({
             ) : (
               (['assente', 'malattia'] as const).map((stato) =>
                 assenzaBloccata ? (
-                  <button
+                  <Pulsante
                     key={stato}
-                    type="button"
                     disabled
                     aria-describedby={idBlocco}
-                    className={`${classePulsanteStato(stato, false)} cursor-not-allowed opacity-60`}
+                    className={pulsanteStatoVariants({ tono: 'spento' })}
                   >
                     {ETICHETTE_PRESENZA[stato]}
-                  </button>
+                  </Pulsante>
                 ) : (
                   <PulsanteStato
                     key={stato}
                     formAction={segnaPresenza.bind(null, bambinoId, stato, data)}
                     selezionato={presenza?.stato === stato}
-                    className={classePulsanteStato(stato, presenza?.stato === stato)}
+                    tono={tonoPulsanteStato(stato, presenza?.stato === stato)}
                   >
                     {ETICHETTE_PRESENZA[stato]}
                   </PulsanteStato>
@@ -111,14 +112,14 @@ export function ColonnaPresenza({
             <PulsanteStato
               formAction={segnaPreAsilo.bind(null, bambinoId, rigaAttuale, data)}
               selezionato={preAsilo}
-              className={classePulsanteToggle(preAsilo)}
+              tono={tonoPulsanteToggle(preAsilo)}
             >
               Pre-asilo
             </PulsanteStato>
             <PulsanteStato
               formAction={segnaPostAsilo.bind(null, bambinoId, rigaAttuale, data)}
               selezionato={postAsilo}
-              className={classePulsanteToggle(postAsilo)}
+              tono={tonoPulsanteToggle(postAsilo)}
             >
               Post-asilo
             </PulsanteStato>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
-import { classePulsanteStato } from '@/lib/classiStato';
+import { Pulsante } from '@/components/ui/pulsante';
+import { pulsanteStatoVariants } from '@/components/ui/pulsante-stato';
 import { ETICHETTE_PRESENZA } from './comune';
 
 type StatoAssenza = 'assente' | 'malattia';
@@ -33,17 +34,16 @@ export function PulsantiAssenzaConAvviso({
   return (
     <>
       {(['assente', 'malattia'] as const).map((stato) => (
-        <button
+        <Pulsante
           key={stato}
-          type="button"
           aria-pressed={false}
           aria-expanded={scelta === stato}
           aria-controls={scelta === stato ? idAvviso : undefined}
           onClick={() => setScelta(stato)}
-          className={classePulsanteStato(stato, false)}
+          className={pulsanteStatoVariants({ tono: 'spento' })}
         >
           {ETICHETTE_PRESENZA[stato]}
-        </button>
+        </Pulsante>
       ))}
       {scelta && (
         <div

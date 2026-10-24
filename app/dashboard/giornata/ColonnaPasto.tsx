@@ -1,7 +1,7 @@
 import { EtichettaAssente } from '@/components/EtichettaAssente';
 import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { IconaPosate } from '@/components/icone';
-import { classePulsanteStato } from '@/lib/classiStato';
+import { tonoPulsanteStato } from '@/lib/classiStato';
 import { segnaPasto } from '../pasti/actions';
 import { ETICHETTE_PASTO, IntestazioneSezione, PulsanteStato } from './comune';
 
@@ -48,7 +48,7 @@ export function ColonnaPasto({
             key={mangiato}
             formAction={segnaPasto.bind(null, bambinoId, mangiato, data)}
             selezionato={pasto?.mangiato === mangiato}
-            className={classePulsanteStato(mangiato, pasto?.mangiato === mangiato)}
+            tono={tonoPulsanteStato(mangiato, pasto?.mangiato === mangiato)}
           >
             {ETICHETTE_PASTO[mangiato]}
           </PulsanteStato>

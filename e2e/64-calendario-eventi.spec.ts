@@ -9,7 +9,7 @@
 // Le impostazioni e gli eventi sono uno solo per tutto l'asilo: i test girano
 // in sequenza (un solo worker per questo file) e alla fine rimettono tutto a
 // posto (indirizzo svuotato, nessun evento di prova). I test che lanciano il
-// cron (come e2e/52) richiedono CRON_SECRET e RESEND_API_KEY; verificano gli
+// cron (come e2e/52) richiedono CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN); verificano gli
 // effetti sul totale degli eventi, perché un altro lancio del cron in parallelo
 // (e2e/52) potrebbe già aver sincronizzato lo stesso feed.
 //
@@ -34,6 +34,7 @@ import {
   dataFraGiorni,
   dataOggiRoma,
   dataProssimoGiornoFeriale,
+  emailDisponibile,
   hasCredenziali,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
@@ -134,8 +135,8 @@ import {
   verificaPassword,
 } from './pagina-calendario';
 
-const RICHIEDE_CRON = !process.env.CRON_SECRET || !process.env.RESEND_API_KEY;
-const MOTIVO_CRON = 'richiede CRON_SECRET e RESEND_API_KEY configurate per invocare davvero la route del cron';
+const RICHIEDE_CRON = !process.env.CRON_SECRET || !emailDisponibile();
+const MOTIVO_CRON = 'richiede CRON_SECRET e RESEND_API_KEY (o EMAIL_DRY_RUN) configurate per invocare davvero la route del cron';
 
 // Vero dopo che i test della pagina hanno messo eventi di prova nel database:
 // serve a ripulirli alla fine anche dove il cron completo non è eseguibile.

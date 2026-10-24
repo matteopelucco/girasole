@@ -70,8 +70,8 @@ La guida pratica (elenco, quando usarli, come aggiungerne uno) è in
   esempio `lucide-react`) va adattato oppure serve una nuova approvazione.
 - **Migrazione graduale**: i componenti arrivano con le issue successive della
   serie. Finché una schermata non è migrata, le sue classi restano dove sono;
-  solo il codice nuovo segue la regola. `lib/classiStato.ts` e i pulsanti di
-  stato Presente/Assente/Sì/No si toccano solo nella issue #350.
+  solo il codice nuovo segue la regola. I pulsanti di stato Presente/Assente/Sì/No
+  sono migrati nella issue #350 (`components/ui/pulsante-stato.tsx`).
 - **Nome accessibile, ruolo, `data-testid` e struttura dei contenitori** delle
   schermate non cambiano migrando (le e2e usano `getByRole`, `getByLabel` e
   `locator('..')`).

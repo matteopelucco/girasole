@@ -3,6 +3,8 @@
 // nuove dipendenze senza chiederlo prima). RESEND_API_KEY va impostata
 // come variabile d'ambiente (locale: .env.local; produzione: Vercel),
 // mai committata — vedi docs/tasks-archivio.md per la procedura di attivazione.
+// EMAIL_DRY_RUN (solo test, nella CI e2e): invio simulato, vedi
+// `modalitaInvioEmail` più sotto.
 export type AllegatoEmail = {
   filename: string;
   content: Uint8Array;
@@ -63,7 +65,42 @@ export function costruisciPayloadEmail({
   };
 }
 
+// Valori di EMAIL_DRY_RUN che attivano l'invio simulato (senza distinguere
+// maiuscole e spazi attorno).
+const VALORI_DRY_RUN_ATTIVI = ['1', 'true', 'yes', 'on'];
+
+export type ModalitaInvioEmail = {
+  simulato: boolean;
+  // Messaggio da scrivere nei log, senza dati personali; null se non serve.
+  avviso: string | null;
+};
+
+// Invio simulato (specs/56, "invio email simulato nei test"): con
+// EMAIL_DRY_RUN attiva `inviaEmail` non chiama Resend e termina con
+// successo, così i test e2e dell'invio girano anche senza chiave. In
+// produzione (VERCEL_ENV=production) la variabile è ignorata, con un avviso:
+// non deve poter bloccare per errore le mail vere. Pura, senza I/O.
+export function modalitaInvioEmail(env: Record<string, string | undefined>): ModalitaInvioEmail {
+  const attiva = VALORI_DRY_RUN_ATTIVI.includes((env.EMAIL_DRY_RUN ?? '').trim().toLowerCase());
+  if (!attiva) return { simulato: false, avviso: null };
+  if (env.VERCEL_ENV === 'production') {
+    return {
+      simulato: false,
+      avviso: 'EMAIL_DRY_RUN è attiva in produzione: ignorata, le email partono davvero. Rimuovere la variabile.',
+    };
+  }
+  return { simulato: true, avviso: null };
+}
+
 export async function inviaEmail(parametri: ParametriEmail): Promise<void> {
+  const modalita = modalitaInvioEmail(process.env);
+  if (modalita.avviso) console.warn(modalita.avviso);
+  if (modalita.simulato) {
+    // Niente destinatario, oggetto o testo nei log (dati personali).
+    console.info('Invio email simulato (EMAIL_DRY_RUN).');
+    return;
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('RESEND_API_KEY non configurata.');
 

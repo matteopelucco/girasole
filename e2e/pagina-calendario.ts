@@ -80,7 +80,7 @@ export async function lanciaCronNotturno(
 
 // Lancia il cron notturno solo per far sincronizzare gli eventi (pagina
 // "Calendario", specs/64): a differenza di lanciaCronNotturno non pretende che
-// anche il report vada a buon fine. Senza RESEND_API_KEY (come nella CI) il
+// anche il report vada a buon fine. Senza RESEND_API_KEY né EMAIL_DRY_RUN il
 // report non parte e la route può rispondere con un errore, ma la
 // sincronizzazione è già stata fatta. Una chiamata rifiutata (401) invece è un
 // errore del test.

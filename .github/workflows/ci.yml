@@ -324,6 +324,10 @@ jobs:
           # Indirizzo fittizio, non segreto (specs/61): abilita le anteprime
           # della mail a Rojac; RESEND_API_KEY non c'è, nessuna mail parte.
           ROJAC_EMAIL_DESTINATARIO: rojac-e2e@example.com
+          # Invio email simulato (issue #387, lib/email.ts): nessuna mail
+          # parte e non serve nessuna chiave; i test che inviano email girano
+          # invece di saltarsi. Ignorata in produzione. Nessun secret nuovo.
+          EMAIL_DRY_RUN: '1'
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}

@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { expect, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { modalitaInvioEmail } from '../lib/email';
 
 export type Ruolo = 'admin' | 'maestra' | 'assistente' | 'genitore';
 
@@ -197,6 +198,14 @@ export function credenziali(ruolo: Ruolo): { email: string; password: string } |
 // finché gli account di test non sono stati creati e collegati.
 export function hasCredenziali(ruolo: Ruolo): boolean {
   return credenziali(ruolo) !== null;
+}
+
+// Vero se l'app può "inviare" email: o c'è la chiave Resend (invio vero) o è
+// attivo l'invio simulato EMAIL_DRY_RUN (lib/email.ts, specs/56; la CI lo
+// imposta, nessuna mail parte). Un solo punto per tutti i test che si
+// saltano senza email: non ricopiare `process.env.RESEND_API_KEY` nei file.
+export function emailDisponibile(): boolean {
+  return !!process.env.RESEND_API_KEY || modalitaInvioEmail(process.env).simulato;
 }
 
 // Cartella dove il progetto "setup" (e2e/auth.setup.ts) salva la sessione

@@ -5,17 +5,19 @@
 // bambini, 23 giorni di scuola, 2 × 23 = 46 pasti insegnanti, totale 46.
 //
 // In CI ROJAC_EMAIL_DESTINATARIO è un indirizzo fittizio @example.com
-// (.github/workflows/ci.yml) e RESEND_API_KEY non c'è: l'anteprima si
-// vede, l'invio reale no (lo scenario "errore nell'invio" lo copre). Il
-// test dell'invio riuscito gira solo con RESEND_API_KEY, come
-// 56-comunicazione-retta-mensile.spec.ts; usa solo indirizzi @example.com
-// per Rojac (mai un indirizzo reale).
+// (.github/workflows/ci.yml) e RESEND_API_KEY non c'è, ma EMAIL_DRY_RUN sì:
+// l'invio è simulato e riesce. I test dell'invio riuscito girano con
+// RESEND_API_KEY o EMAIL_DRY_RUN (`emailDisponibile()`), come
+// 56-comunicazione-retta-mensile.spec.ts; quelli dell'"errore nell'invio"
+// solo senza nessuno dei due (in CI si saltano). Si usano solo indirizzi
+// @example.com per Rojac (mai un indirizzo reale).
 import { test, expect } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { accediComeAdminDb } from './fixture-bambino';
 import {
   chiudiPopupErrore,
   credenziali,
+  emailDisponibile,
   hasCredenziali,
   meseSuccessivoRoma,
   nessunaViolazioneA11yGrave,
@@ -28,7 +30,7 @@ import {
 const MESE_NOTO = '/dashboard/report?tipo=mensile&periodo=2020-01';
 // Mesi per il registro degli invii: 2019-03 riceve righe inserite dal test
 // (due invii, vince il più recente); 2019-02 non ne riceve mai. 2020-01
-// riceve una riga solo se un test invia davvero la mail (RESEND_API_KEY).
+// riceve una riga solo se un test invia la mail (RESEND_API_KEY o EMAIL_DRY_RUN).
 const MESE_CON_INVII = '/dashboard/report?tipo=mensile&periodo=2019-03';
 const MESE_SENZA_INVII = '/dashboard/report?tipo=mensile&periodo=2019-02';
 const ROJAC = process.env.ROJAC_EMAIL_DESTINATARIO;
@@ -181,7 +183,7 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
 
     test('un errore del servizio email mostra un messaggio chiaro e non conta come inviato', async ({ page }) => {
       test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
-      test.skip(!!process.env.RESEND_API_KEY, 'con RESEND_API_KEY l\'invio riesce davvero');
+      test.skip(emailDisponibile(), 'con RESEND_API_KEY o EMAIL_DRY_RUN l\'invio riesce davvero');
       await page.goto(MESE_NOTO);
       await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
       await page
@@ -196,7 +198,7 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
     });
 
     test('confermare l\'invio manda la mail e mostra la conferma', async ({ page }) => {
-      test.skip(!ROJAC || !process.env.RESEND_API_KEY, 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY');
+      test.skip(!ROJAC || !emailDisponibile(), 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY (o EMAIL_DRY_RUN)');
       await page.goto(MESE_NOTO);
       await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
       await page
@@ -207,7 +209,7 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
     });
 
     test('un invio riuscito viene registrato e compare come ultimo invio', async ({ page }) => {
-      test.skip(!ROJAC || !process.env.RESEND_API_KEY, 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY');
+      test.skip(!ROJAC || !emailDisponibile(), 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY (o EMAIL_DRY_RUN)');
       await confermaInvio(page);
       await expect(page.getByText('Riepilogo inviato a Rojac')).toBeVisible({ timeout: 20_000 });
       const db = await accediComeAdminDb();
@@ -219,7 +221,7 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
 
     test('un invio fallito non registra nulla', async ({ page }) => {
       test.skip(!ROJAC, 'richiede ROJAC_EMAIL_DESTINATARIO');
-      test.skip(!!process.env.RESEND_API_KEY, "con RESEND_API_KEY l'invio riesce davvero");
+      test.skip(emailDisponibile(), "con RESEND_API_KEY o EMAIL_DRY_RUN l'invio riesce davvero");
       await confermaInvio(page);
       const errore = popupErrore(page, 'Mail non inviata');
       await expect(errore).toBeVisible({ timeout: 20_000 });
@@ -267,7 +269,7 @@ test.describe('61 — Mail mensile dei pasti a Rojac', () => {
     // dal test unit lib/email.test.ts. Qui si controlla solo che l'invio con
     // reply_to vada a buon fine (Resend rifiuta un payload non valido).
     test("una risposta di Rojac arriva all'asilo, non al mittente tecnico (Reply-To)", async ({ page }) => {
-      test.skip(!ROJAC || !process.env.RESEND_API_KEY, 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY');
+      test.skip(!ROJAC || !emailDisponibile(), 'richiede ROJAC_EMAIL_DESTINATARIO e RESEND_API_KEY (o EMAIL_DRY_RUN)');
       await page.goto(MESE_NOTO);
       await riquadro(page).getByRole('button', { name: 'Invia a Rojac' }).click();
       await page

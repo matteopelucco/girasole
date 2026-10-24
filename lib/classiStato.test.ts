@@ -1,28 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { classePulsanteStato, classePulsanteToggle } from './classiStato';
+import { tonoPulsanteStato, tonoPulsanteToggle } from './classiStato';
 
-describe('classePulsanteStato', () => {
-  it('restituisce una classe non selezionata quando selezionato è false', () => {
-    expect(classePulsanteStato('presente', false)).toContain('border-stone-300');
+describe('tonoPulsanteStato', () => {
+  it.each(['presente', 'si', 'assente', 'no', 'malattia'])('stato "%s" non selezionato è "spento"', (stato) => {
+    expect(tonoPulsanteStato(stato, false)).toBe('spento');
   });
 
   it.each([
-    ['presente', 'bg-emerald-700'],
-    ['si', 'bg-emerald-700'],
-    ['assente', 'bg-stone-600'],
-    ['no', 'bg-rose-600'],
-    ['malattia', 'bg-rose-600'],
-  ])('stato "%s" selezionato usa il colore %s', (stato, colore) => {
-    expect(classePulsanteStato(stato, true)).toContain(colore);
+    ['presente', 'successo'],
+    ['si', 'successo'],
+    ['assente', 'neutro'],
+    ['no', 'negativo'],
+    ['malattia', 'negativo'],
+  ])('stato "%s" selezionato ha il tono %s', (stato, tono) => {
+    expect(tonoPulsanteStato(stato, true)).toBe(tono);
+  });
+
+  it('uno stato sconosciuto selezionato ricade su "spento"', () => {
+    expect(tonoPulsanteStato('altro', true)).toBe('spento');
   });
 });
 
-describe('classePulsanteToggle', () => {
-  it('restituisce una classe non selezionata quando selezionato è false', () => {
-    expect(classePulsanteToggle(false)).toContain('border-stone-300');
+describe('tonoPulsanteToggle', () => {
+  it('non selezionato è "spento"', () => {
+    expect(tonoPulsanteToggle(false)).toBe('spento');
   });
 
-  it('restituisce il colore sky quando selezionato è true', () => {
-    expect(classePulsanteToggle(true)).toContain('bg-sky-700');
+  it('selezionato ha il tono "info" (azzurro, distinto dal verde di Presente)', () => {
+    expect(tonoPulsanteToggle(true)).toBe('info');
   });
 });
