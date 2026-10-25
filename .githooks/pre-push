@@ -1,7 +1,8 @@
 #!/bin/sh
-# Analisi statica prima di ogni push: type-check, ESLint, unit test
-# (Vitest), codice duplicato (jscpd), build di produzione (next build,
-# A15). Attivato in automatico da "npm install" (script "prepare" in
+# Analisi statica prima di ogni push: type-check, ESLint, controllo dei
+# pulsanti/campi copiati fuori da components/ui/ (check:ui, issue #351),
+# unit test (Vitest), codice duplicato (jscpd), build di produzione
+# (next build, A15). Attivato in automatico da "npm install" (script "prepare" in
 # package.json, che imposta core.hooksPath su questa cartella — vedi
 # CLAUDE.md). Volutamente non lancia la suite e2e (richiede un server
 # dev attivo, credenziali reali e minuti, non secondi: resta un passo
@@ -21,6 +22,9 @@ npx eslint .
 
 echo "── Service-role-check (createAdminClient) ────────"
 npm run --silent check:service-role
+
+echo "── Pulsanti e campi copiati (check:ui) ───────────"
+npm run --silent check:ui
 
 echo "── Unit test (Vitest) ────────────────────────────"
 npx vitest run
