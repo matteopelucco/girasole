@@ -178,7 +178,7 @@ Contesto operativo per Claude Code su questo progetto.
   codice ma una macchina locale non configurata, e la build reale gira
   comunque in CI prima del merge.
 - Lanciabile a mano in qualsiasi momento con `npm run analyze` (lint +
-  unit test + duplicati; per il type-check separato, `npx next typegen`
+  unit test + duplicati + click e2e + pulsanti/campi copiati, `check:ui`; per il type-check separato, `npx next typegen`
   e poi `npx tsc --noEmit`; per la build, `npm run build`).
 - `next-env.d.ts` non è versionato (è in `.gitignore`): Next lo riscrive
   a ogni build e sporcava le PR. Lo crea, insieme ai tipi delle rotte in
@@ -770,6 +770,17 @@ stilati con i token di `app/globals.css` (sezione "Sistema grafico" di
   schermate non ancora migrate restano come sono finché non le riprende la
   loro issue. I pulsanti di stato Presente/Assente/Sì/No hanno il loro
   componente (`pulsante-stato.tsx`, issue #350).
+- **Controllo automatico** (issue #351): `npm run check:ui`
+  (`scripts/controlla-ui.mts`, logica pura in `lib/controlloUi.ts`) fallisce,
+  con file e riga, se in `app/`, `components/` o `lib/` (fuori da
+  `components/ui/`) compare la combinazione tipica di un pulsante (tinta piena
+  con `px-*` `py-*`, o bordo grigio e `bg-white` con padding) o di un campo
+  (`border-stone-300` con `focus:border-*`). È in `npm run analyze` e nel
+  pre-push; nessun DB, rete o secret. Le schermate non ancora migrate sono
+  nell'elenco `ECCEZIONI` di `lib/controlloUi.ts`, ognuna con il motivo: per
+  toglierne una si sostituiscono le classi con `Pulsante`/`Campo`, e il
+  controllo stesso avvisa quando una voce non serve più. Una voce nuova è una
+  decisione da review umana, non una scorciatoia.
 - **Colori e misure**: solo i token di significato (`bg-primary`, `text-danger`,
   `rounded-base`...), mai le tinte della palette. Non si ridefiniscono
   `--radius-sm/md/lg/xl`.
