@@ -59,6 +59,29 @@ Contesto operativo per Claude Code su questo progetto.
   query deve rispettare i confini di ruolo (admin / maestra / genitore)
   descritti in `specs/`. Se una feature richiede una nuova policy, scrivila
   nella migration insieme alla tabella.
+- **GRANT espliciti (issue #359)**: dal 30 ottobre 2026 Supabase non concede
+  più da solo privilegi alle tabelle nuove di `public`: senza `GRANT`
+  esplicito supabase-js/PostgREST rispondono «permission denied», anche su un
+  `supabase db reset` o su un branch di anteprima. Regola: **ogni tabella nuova
+  nasce col suo `GRANT` nella stessa migration, insieme alla policy RLS**, solo
+  per i ruoli e i privilegi che l'app usa davvero:
+  - `authenticated` per le query con la sessione dell'utente;
+  - `service_role` per cron e codice che usa `createAdminClient()` (bypassa la
+    RLS ma **non** i privilegi di tabella);
+  - `anon` solo se serve davvero (oggi nessuna tabella: la sola chiamata anonima
+    è la funzione `puo_richiedere_reset_password`);
+  - mai `grant all`, mai `all tables in schema`; per le tabelle riservate,
+    `revoke all ... from public, anon, authenticated, service_role` e poi i
+    soli `grant` necessari (esempio: `0062_registro_invii_rojac.sql`).
+
+  Se per una tabella già esistente cambia l'uso del codice (nuovo ruolo o
+  nuovo privilegio), il `GRANT` va in una migration nuova (modello:
+  `0066_grant_select_invii_rojac_service_role.sql`). Sequenze: non servono (le
+  chiavi sono `uuid`). Funzioni: i privilegi `execute` restano quelli già
+  decisi caso per caso (`revoke ... from public, anon` + `grant` mirato).
+  Controllo automatico: `npm run check:grant-migrazioni` (parte di
+  `npm run lint`, quindi pre-push e CI statica; vedi «Grant-migrazioni-check»
+  più avanti).
 
 ## Workflow
 - Trunk-based development, commit atomici. Messaggi **in inglese**, formato
@@ -494,6 +517,26 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   sessione utente. Se non estrae nessuna richiesta, esce con
   codice 2 (parser rotto). Localmente: stesso comando con le due
   variabili impostate sul progetto di test.
+- **Grant-migrazioni-check (issue #359)**: complemento statico del
+  grant-check, senza DB né secret. Il grant-check legge il DB di test, dove i
+  privilegi di default di Supabase possono nascondere un `GRANT` mai scritto
+  nelle migration (dopo il 30 ottobre 2026 il default non c'è più e un
+  `supabase db reset` si romperebbe). `scripts/grant-migrazioni-check.mts`
+  (logica pura in `lib/grantMigrazioni.ts`, test in
+  `lib/grantMigrazioni.test.ts`) ricostruisce dai file SQL i `GRANT` espliciti
+  per tabella e ruolo (applicando `drop`, `rename` e `revoke` in ordine) e
+  fallisce se (1) una tabella di `public` non ha nessun `GRANT` a
+  `authenticated`/`service_role`, salvo `TABELLE_SENZA_GRANT_AMMESSE` (oggi solo
+  `tentativi_reset_password`, accessibile solo dalla funzione security
+  definer), oppure (2) il codice (stessa estrazione del grant-check, quindi
+  stesse annotazioni `// grant-check:`) usa una tabella con un ruolo/privilegio
+  non concesso nelle migration. Limiti: euristica sul testo SQL, non copre
+  `anon`, i `GRANT` fuori dalle migration (vietati) né la RLS; un `GRANT` di
+  colonna conta come privilegio di tabella. È agganciato a `npm run lint`.
+  **Cosa non simula**: la CI non può togliere i privilegi di default del
+  progetto di test condiviso senza modificarne la configurazione; la garanzia
+  che il `db reset` regga senza default è questo controllo statico, più il
+  grant-check e le e2e reali dopo il reset.
 - **RLS-check (issue #131)**: passo 6c del job `e2e`, subito dopo il
   grant-check, stessa Management API e stessi secret (nessuno nuovo, ref solo
   da `SUPABASE_TEST_PROJECT_REF`, mai la produzione, sola SELECT).

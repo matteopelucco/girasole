@@ -30,6 +30,9 @@ sia su Vercel sia su Supabase (da ottobre 2026, prima free tier).
 - RLS: difesa primaria; ogni query rispetta i confini di ruolo (admin /
   maestra / genitore) di `specs/`. Policy nuova → migration insieme alla
   tabella.
+- GRANT: dal 30/10/2026 Supabase non dà più privilegi di default; ogni
+  tabella nuova nasce col suo `GRANT` (ruoli e privilegi minimi) nella stessa
+  migration, insieme alla policy RLS. Controllo: `npm run check:grant-migrazioni`.
 
 ## Specs: leggi solo il pertinente
 Per ogni task, leggere **solo** il file `specs/` della feature in corso;
