@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { Pulsante } from '@/components/ui/pulsante';
+import { SelettorePillole } from '@/components/ui/selettore-pillole';
 import { Riquadro } from '@/components/ui/riquadro';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaTitolo } from '@/components/ui/tabella';
 import { requireStaff } from '@/lib/auth';
@@ -103,27 +104,14 @@ export default async function ReportPage(
           <h1 className="mt-2 text-lg font-medium">Report</h1>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {TIPI.map((t) => (
-            <Pulsante
-              key={t.valore}
-              asChild
-              variante={t.valore === tipo ? 'primario' : 'secondario'}
-              misura="normale"
-              className="px-3"
-            >
-              <Link
-                href={`/dashboard/report?tipo=${t.valore}`}
-                aria-current={t.valore === tipo ? 'page' : undefined}
-              >
-                {t.etichetta}
-              </Link>
-            </Pulsante>
-          ))}
-          <Pulsante asChild variante="secondario" misura="normale" className="px-3">
+        <SelettorePillole
+          voci={TIPI.map((t) => ({ id: t.valore, etichetta: t.etichetta, href: `/dashboard/report?tipo=${t.valore}` }))}
+          attiva={tipo}
+        >
+          <Pulsante asChild variante="secondario" misura="normale">
             <Link href="/dashboard/report/anagrafica">Anagrafica classi</Link>
           </Pulsante>
-        </div>
+        </SelettorePillole>
 
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
           <Pulsante asChild variante="secondario" misura="normale" className="px-3">

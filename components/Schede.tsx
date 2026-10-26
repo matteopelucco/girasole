@@ -10,7 +10,9 @@ import { ID_PANNELLO_SCHEDE, idTabScheda, indiceDaTasto, type Scheda } from '@/l
 // scheda attiva sta nell'indirizzo, la pagina si disegna sul server): il
 // JavaScript serve solo per le frecce sinistra/destra, Home e Fine della
 // tastiera, che spostano il focus e aprono la scheda (schema WAI-ARIA "tabs"
-// con attivazione automatica). Il pannello (`role="tabpanel"`, id
+// con attivazione automatica). Colore della scheda attiva (`primary`) e
+// indicatore di focus (`ring`) vengono dai token di `app/globals.css`, gli stessi
+// del Selettore a pillole (issue #352, `components/ui/selettore-pillole.tsx`). Il pannello (`role="tabpanel"`, id
 // `ID_PANNELLO_SCHEDE`) lo disegna la pagina.
 export function Schede({ schede, attiva }: { schede: readonly Scheda[]; attiva: string }) {
   const router = useRouter();
@@ -42,10 +44,10 @@ export function Schede({ schede, attiva }: { schede: readonly Scheda[]; attiva: 
             aria-controls={selezionata ? ID_PANNELLO_SCHEDE : undefined}
             tabIndex={selezionata ? 0 : -1}
             onKeyDown={(evento) => suTasto(evento, indice)}
-            className={`-mb-px inline-flex min-h-11 flex-1 items-center justify-center border-b-2 px-4 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-stone-900 sm:flex-none ${
+            className={`-mb-px inline-flex min-h-11 flex-1 items-center justify-center border-b-2 px-4 text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:flex-none ${
               selezionata
-                ? 'border-stone-900 font-semibold text-stone-900'
-                : 'border-transparent text-stone-600 hover:border-stone-300 hover:text-stone-900'
+                ? 'border-primary font-semibold text-primary'
+                : 'border-transparent text-neutral hover:border-input hover:text-foreground'
             }`}
           >
             {scheda.etichetta}

@@ -47,7 +47,7 @@ export default async function CalendarioPage(props: {
           id={ID_PANNELLO_SCHEDE}
           aria-labelledby={idTabScheda(scheda)}
           tabIndex={0}
-          className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900"
+          className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           {scheda === 'chiusure' ? (
             <section aria-labelledby="titolo-chiusure" className="space-y-3">
