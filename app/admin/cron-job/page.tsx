@@ -68,7 +68,7 @@ export default async function CronJobPage(props: {
           id={ID_PANNELLO_SCHEDE}
           aria-labelledby={idTabScheda(scheda)}
           tabIndex={0}
-          className="space-y-6 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-stone-900"
+          className="space-y-6 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         >
           {scheda === 'cron-job' ? (
             <SchedaCronJob supabase={supabase} parametri={parametri} />

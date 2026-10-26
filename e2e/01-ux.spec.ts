@@ -386,4 +386,38 @@ test.describe('01 — UX/UI', () => {
       });
     });
   });
+
+  // Issue #352: schede e selettore a pillole prendono dai token lo stesso
+  // colore attivo (`primary` = emerald-700 = rgb(4, 120, 87)) e lo stesso
+  // colore di focus (`ring`, stesso verde). Le pillole restano alte almeno
+  // 44 px su telefono.
+  test.describe('schede e selettore a pillole', () => {
+    test.use({ viewport: MOBILE, storageState: statoAutenticazione('admin') });
+
+    const VERDE = 'rgb(4, 120, 87)';
+
+    test('scheda attiva e pillola attiva hanno lo stesso colore, e il focus è dello stesso colore', async ({ page }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+
+      await page.goto('/admin/cron-job');
+      const scheda = page.getByRole('tablist').getByRole('tab', { selected: true });
+      await expect(scheda).toHaveCSS('border-bottom-color', VERDE);
+      await scheda.focus();
+      await expect(scheda).toHaveCSS('outline-color', VERDE);
+
+      await page.goto('/dashboard/report?tipo=mensile');
+      const pillola = page.getByRole('link', { name: 'Mensile' });
+      await expect(pillola).toHaveCSS('background-color', VERDE);
+      await pillola.focus();
+      await expect(pillola).toHaveCSS('box-shadow', /rgb\(4, 120, 87\)/);
+      expect((await pillola.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+      const altra = page.getByRole('link', { name: 'Settimanale' });
+      await expect(altra).not.toHaveAttribute('aria-current', 'page');
+      await expect(altra).not.toHaveCSS('background-color', VERDE);
+      expect(await nessunOverflowOrizzontale(page)).toBe(false);
+
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
 });
