@@ -1,6 +1,11 @@
 import { descrizioneMeseRojac } from './allarmeRojac';
 import { descrizioneBambinoRetta, GIORNO_ALLARME_RETTE, type BambinoRetta } from './allarmeRette';
-import type { StatoOperativoGiorno, UtenteSettimanaNonConfermata } from './allarmi';
+import {
+  testoConfermaSettimanaNonRichiesta,
+  type StatoOperativoGiorno,
+  type UtenteConfermaNonRichiesta,
+  type UtenteSettimanaNonConfermata,
+} from './allarmi';
 import { formattaDataItaliana } from './date';
 import { escapeHtml } from './htmlEscape';
 
@@ -46,7 +51,15 @@ export type InputRiepilogo = {
   // chiuso o prima delle 10:00).
   giornata: { ora: Date; stato: StatoOperativoGiorno } | null;
   rette: { ora: Date; mancanti: BambinoRetta[] };
-  ore: { ora: Date; intervallo: string; utenti: UtenteSettimanaNonConfermata[] };
+  // `utenti`: chi deve ancora confermare (solo con la conferma richiesta);
+  // `nonRichiesta`: chi è abilitato ma ha la conferma non richiesta, saltato
+  // dal controllo e dichiarato nel riepilogo (specs/07).
+  ore: {
+    ora: Date;
+    intervallo: string;
+    utenti: UtenteSettimanaNonConfermata[];
+    nonRichiesta: UtenteConfermaNonRichiesta[];
+  };
   // Mail mensile a Rojac (specs/07): i mesi conclusi senza invio registrato
   // ("YYYY-MM", dal più vecchio) e, tra questi, quelli per cui l'email non è
   // ancora partita (`daAvvisare`).
@@ -148,16 +161,25 @@ function controlloRette(input: InputRiepilogo): ControlloRiepilogo {
 
 function controlloOre(input: InputRiepilogo): ControlloRiepilogo {
   const nome = 'Ore di lavoro';
-  const { ora, intervallo, utenti } = input.ore;
+  const { ora, intervallo, utenti, nonRichiesta } = input.ore;
+  // Le righe dei controlli saltati ci sono sempre, anche a controllo "ok",
+  // perché il salto non passi inosservato.
+  const saltati = nonRichiesta.map(testoConfermaSettimanaNonRichiesta);
   if (!utenti.length) {
     return controlloBase('ore-lavoro', nome, ora, 'ok', {
-      dettaglio: [`Settimana ${intervallo} confermata da tutti.`],
+      dettaglio: [
+        nonRichiesta.length
+          ? `Settimana ${intervallo} confermata da tutti quelli per cui è richiesta.`
+          : `Settimana ${intervallo} confermata da tutti.`,
+        ...saltati,
+      ],
     });
   }
   return controlloBase('ore-lavoro', nome, ora, 'da_sistemare', {
     dettaglio: [
       `Settimana ${intervallo} non ancora confermata da:`,
       ...utenti.map((u) => `${u.nome} ${u.cognome} (${u.email})`),
+      ...saltati,
     ],
     azione: AZIONE_ORE,
   });

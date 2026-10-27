@@ -29,6 +29,9 @@ export type Profilo = {
   cognome: string;
   ruolo: string;
   abilitato_ore_lavoro: boolean;
+  // Se falsa, gli allarmi saltano la conferma settimana ore dell'utente
+  // (specs/03, specs/07).
+  richiedi_conferma_settimana: boolean;
   profilo_orario_id: string | null;
 };
 
@@ -57,7 +60,7 @@ export const requireProfilo = cache(async () => {
 
   const { data: profilo, error } = await supabase
     .from('profili')
-    .select('nome, cognome, ruolo, abilitato_ore_lavoro, profilo_orario_id')
+    .select('nome, cognome, ruolo, abilitato_ore_lavoro, richiedi_conferma_settimana, profilo_orario_id')
     .eq('id', user.id)
     .single();
 

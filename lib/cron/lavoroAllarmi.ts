@@ -10,6 +10,7 @@ import {
   dopoOrarioAllarmePresenzePasti,
   calcolaStatoOperativoGiorno,
   settimanaDiRiferimentoOre,
+  utentiConfermaSettimanaNonRichiesta,
   utentiConSettimanaNonConfermata,
 } from '@/lib/allarmi';
 import {
@@ -44,6 +45,9 @@ export type RispostaRiepilogoAllarmi = {
   data: string;
   riepilogo: 'tutto_ok' | 'inviato' | 'gia_inviato' | 'errore_registro';
   controlli: Record<string, string>;
+  // Quanti utenti hanno la conferma settimana non richiesta (controllo
+  // saltato, dichiarato nel riepilogo, specs/07).
+  confermaSettimanaNonRichiesta: number;
   // Mesi ("YYYY-MM") della mail a Rojac segnati come avvisati in questo giro
   // (vuoto nel lancio a mano, che non scrive il registro).
   mesiRojacAvvisati: string[];
@@ -97,11 +101,17 @@ export async function lavoroRiepilogoAllarmi(
   // Ore di lavoro: settimana di riferimento (la precedente fino a venerdì
   // 18:00, poi la corrente).
   const { inizio: settimanaInizio, fine: settimanaFine } = settimanaDiRiferimentoOre(adesso, dataOggi);
-  const utenti = await utentiConSettimanaNonConfermata(supabase, settimanaInizio);
+  // Chi ha la conferma settimana non richiesta (specs/03) non si controlla,
+  // ma il riepilogo lo dichiara.
+  const [utenti, nonRichiesta] = await Promise.all([
+    utentiConSettimanaNonConfermata(supabase, settimanaInizio),
+    utentiConfermaSettimanaNonRichiesta(supabase),
+  ]);
   const ore = {
     ora: new Date(),
     intervallo: formattaIntervalloItaliano(settimanaInizio, settimanaFine),
     utenti,
+    nonRichiesta,
   };
 
   // Mail mensile a Rojac (specs/07): mesi conclusi senza invio registrato e,
@@ -134,6 +144,7 @@ export async function lavoroRiepilogoAllarmi(
     data: dataOggi,
     riepilogo,
     controlli: stati,
+    confermaSettimanaNonRichiesta: nonRichiesta.length,
     mesiRojacAvvisati,
   });
 

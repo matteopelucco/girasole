@@ -7,6 +7,8 @@ import {
   sezioniIncompleteDa,
   statoPersonaleDa,
   allarmiDipendentiDa,
+  oreDaConfermare,
+  testoConfermaSettimanaNonRichiesta,
   type DatiPersonale,
   type PresenzeOggi,
   type StatoPersonaleGiorno,
@@ -199,8 +201,22 @@ const SETTIMANA = { inizio: '2026-01-12', fine: '2026-01-18' };
 function datiPersonale(sovrascrizioni: Partial<DatiPersonale> = {}): DatiPersonale {
   return {
     dipendenti: [
-      { id: 'm1', nome: 'Anna', cognome: 'Rossi', ruolo: 'maestra', abilitato_ore_lavoro: true },
-      { id: 'a1', nome: 'Bea', cognome: 'Verdi', ruolo: 'assistente', abilitato_ore_lavoro: false },
+      {
+        id: 'm1',
+        nome: 'Anna',
+        cognome: 'Rossi',
+        ruolo: 'maestra',
+        abilitato_ore_lavoro: true,
+        richiedi_conferma_settimana: true,
+      },
+      {
+        id: 'a1',
+        nome: 'Bea',
+        cognome: 'Verdi',
+        ruolo: 'assistente',
+        abilitato_ore_lavoro: false,
+        richiedi_conferma_settimana: true,
+      },
     ],
     assegnazioni: [
       { maestraId: 'm1', sezione: { ...SEZIONE_GIRASOLI, attiva: true } },
@@ -241,7 +257,14 @@ describe('allarmiDipendentiDa', () => {
     const dati = datiPersonale({
       dipendenti: [
         ...datiPersonale().dipendenti,
-        { id: 'm2', nome: 'Carla', cognome: 'Bianchi', ruolo: 'maestra', abilitato_ore_lavoro: false },
+        {
+          id: 'm2',
+          nome: 'Carla',
+          cognome: 'Bianchi',
+          ruolo: 'maestra',
+          abilitato_ore_lavoro: false,
+          richiedi_conferma_settimana: true,
+        },
       ],
     });
     expect(allarmiDipendentiDa(dati, presenzeOggi({ pastiNonConfermati: true }), SETTIMANA)).toEqual([
@@ -256,6 +279,23 @@ describe('allarmiDipendentiDa', () => {
     ]);
   });
 
+  it('chi ha la conferma settimana non richiesta non è in allarme per la settimana ore (specs/07)', () => {
+    const dati = datiPersonale({
+      dipendenti: [
+        {
+          id: 'm1',
+          nome: 'Anna',
+          cognome: 'Rossi',
+          ruolo: 'maestra',
+          abilitato_ore_lavoro: true,
+          richiedi_conferma_settimana: false,
+        },
+      ],
+      idSettimanaConfermata: new Set(),
+    });
+    expect(allarmiDipendentiDa(dati, null, SETTIMANA)).toEqual([]);
+  });
+
   it('senza dati di presenze (prima delle 10:00 o giorno chiuso) conta solo la settimana ore', () => {
     const dati = datiPersonale({ idSettimanaConfermata: new Set() });
     expect(allarmiDipendentiDa(dati, null, SETTIMANA)).toEqual([
@@ -268,5 +308,30 @@ describe('allarmiDipendentiDa', () => {
         settimanaOreNonConfermata: SETTIMANA,
       },
     ]);
+  });
+});
+
+describe('oreDaConfermare', () => {
+  it('vero solo se abilitato al report ore e con la conferma settimana richiesta', () => {
+    expect(oreDaConfermare({ abilitato_ore_lavoro: true, richiedi_conferma_settimana: true })).toBe(true);
+    expect(oreDaConfermare({ abilitato_ore_lavoro: true, richiedi_conferma_settimana: false })).toBe(false);
+  });
+
+  it('falso se non abilitato, qualunque sia il valore dell\'opzione (che non si perde)', () => {
+    expect(oreDaConfermare({ abilitato_ore_lavoro: false, richiedi_conferma_settimana: true })).toBe(false);
+    expect(oreDaConfermare({ abilitato_ore_lavoro: false, richiedi_conferma_settimana: false })).toBe(false);
+  });
+
+  it('falso senza profilo', () => {
+    expect(oreDaConfermare(null)).toBe(false);
+    expect(oreDaConfermare(undefined)).toBe(false);
+  });
+});
+
+describe('testoConfermaSettimanaNonRichiesta', () => {
+  it('riporta nome e cognome e dice che il controllo è saltato', () => {
+    expect(testoConfermaSettimanaNonRichiesta({ nome: 'Lucia', cognome: 'Gialli' })).toBe(
+      'Conferma settimana non richiesta per Lucia Gialli: controllo saltato'
+    );
   });
 });

@@ -7,6 +7,7 @@ import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Campo } from '@/components/ui/campo';
 import { Selezione } from '@/components/ui/selezione';
 import { CampiPasswordConferma } from '@/components/CampiPasswordConferma';
+import { OpzioniOreLavoro } from '@/components/OpzioniOreLavoro';
 import { REGOLA_PASSWORD } from '@/lib/password';
 import { requireAdmin } from '@/lib/auth';
 import { formattaDataOraItaliana } from '@/lib/date';
@@ -36,7 +37,7 @@ export default async function MaestrePage() {
     supabase
       .from('profili')
       .select(
-        'id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro, profilo_orario_id, updated_at'
+        'id, nome, cognome, email, telefono, ruolo, indirizzo_residenza, note, abilitato_ore_lavoro, richiedi_conferma_settimana, profilo_orario_id, updated_at'
       )
       .order('cognome'),
     supabase.from('sezioni').select('id, nome').order('nome'),
@@ -116,10 +117,13 @@ export default async function MaestrePage() {
                 placeholder="Note (opzionale)"
                 className="sm:col-span-2"
               />
-              <label className="flex items-center gap-2 text-sm text-stone-700 sm:col-span-2">
-                <input type="checkbox" name="abilitato_ore_lavoro" className="h-4 w-4" />
-                Abilita al report ore di lavoro
-              </label>
+              <OpzioniOreLavoro
+                idBase="nuovo-utente"
+                etichettaOre="Abilita al report ore di lavoro"
+                abilitatoIniziale={false}
+                richiediConfermaIniziale
+                className="sm:col-span-2"
+              />
               <label className="flex flex-col text-sm text-stone-700 sm:col-span-2">
                 Profilo orario (opzionale)
                 <Selezione
@@ -198,15 +202,13 @@ export default async function MaestrePage() {
                       </option>
                     ))}
                   </Selezione>
-                  <label className="flex items-center gap-1 text-xs text-stone-700">
-                    <input
-                      type="checkbox"
-                      name="abilitato_ore_lavoro"
-                      defaultChecked={p.abilitato_ore_lavoro}
-                      className="h-3.5 w-3.5"
-                    />
-                    Ore di lavoro
-                  </label>
+                  <OpzioniOreLavoro
+                    idBase={`utente-${p.id}`}
+                    etichettaOre="Ore di lavoro"
+                    abilitatoIniziale={p.abilitato_ore_lavoro}
+                    richiediConfermaIniziale={p.richiedi_conferma_settimana}
+                    compatta
+                  />
                   <Selezione
                     name="profilo_orario_id"
                     defaultValue={p.profilo_orario_id ?? ''}

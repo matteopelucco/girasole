@@ -4,9 +4,11 @@ import {
   dopoOrarioAllarmePresenzePasti,
   leggiDatiPersonale,
   leggiPresenzeOggi,
+  oreDaConfermare,
   settimanaConfermata,
   settimanaDiRiferimentoOre,
   statoPersonaleDa,
+  utentiConfermaSettimanaNonRichiesta,
   type StatoPersonaleGiorno,
 } from '@/lib/allarmi';
 import { calcolaMesiRojacMancanti } from '@/lib/allarmeRojac';
@@ -33,7 +35,7 @@ const STATO_VUOTO: StatoPersonaleGiorno = { sezioniPresenzeIncomplete: [], pasti
 export async function calcolaDatiAllarmiUtente(
   supabase: SupabaseClient,
   userId: string,
-  profilo: { ruolo: string; abilitato_ore_lavoro: boolean } | null
+  profilo: { ruolo: string; abilitato_ore_lavoro: boolean; richiedi_conferma_settimana: boolean } | null
 ): Promise<InputElencoAllarmi | null> {
   const ruolo = profilo?.ruolo ?? null;
   if (ruolo !== 'admin' && ruolo !== 'maestra' && ruolo !== 'assistente') return null;
@@ -56,7 +58,7 @@ export async function calcolaDatiAllarmiUtente(
 
   const settimanaRiferimento = settimanaDiRiferimentoOre(adesso, dataOggi);
   const settimanaOre = async () =>
-    profilo?.abilitato_ore_lavoro && !(await settimanaConfermata(supabase, userId, settimanaRiferimento.inizio))
+    oreDaConfermare(profilo) && !(await settimanaConfermata(supabase, userId, settimanaRiferimento.inizio))
       ? settimanaRiferimento
       : null;
 
@@ -73,15 +75,24 @@ export async function calcolaDatiAllarmiUtente(
       return [];
     }
   };
-  const [chiusuraOggi, presenzeLette, settimanaOreNonConfermata, datiPersonale, retteNonComunicate, mailRojacNonInviata] =
-    await Promise.all([
-      weekend ? null : chiusuraPerData(supabase, dataOggi),
-      presenzeOggi(),
-      settimanaOre(),
-      ruolo === 'admin' ? leggiDatiPersonale(supabase, userId, settimanaRiferimento.inizio) : null,
-      ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
-      ruolo === 'admin' ? mailRojac() : [],
-    ]);
+  const [
+    chiusuraOggi,
+    presenzeLette,
+    settimanaOreNonConfermata,
+    datiPersonale,
+    retteNonComunicate,
+    mailRojacNonInviata,
+    confermaSettimanaNonRichiesta,
+  ] = await Promise.all([
+    weekend ? null : chiusuraPerData(supabase, dataOggi),
+    presenzeOggi(),
+    settimanaOre(),
+    ruolo === 'admin' ? leggiDatiPersonale(supabase, userId, settimanaRiferimento.inizio) : null,
+    ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
+    ruolo === 'admin' ? mailRojac() : [],
+    // Solo l'admin vede i controlli saltati (specs/07).
+    ruolo === 'admin' ? utentiConfermaSettimanaNonRichiesta(supabase) : [],
+  ]);
 
   const giornoAttivo = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
   const presenze = giornoAttivo ? presenzeLette : null;
@@ -95,5 +106,6 @@ export async function calcolaDatiAllarmiUtente(
     personale: datiPersonale ? allarmiDipendentiDa(datiPersonale, presenze, settimanaRiferimento) : [],
     retteNonComunicate,
     mailRojacNonInviata,
+    confermaSettimanaNonRichiesta,
   };
 }

@@ -1,6 +1,11 @@
 import { descrizioneMeseRojac, hrefReportRojac, ID_ALLARME_ROJAC } from './allarmeRojac';
 import { descrizioneBambinoRetta, type BambinoRetta } from './allarmeRette';
-import { allarmePersonalePresenzePastiAttivo, type AllarmeDipendente, type StatoPersonaleGiorno } from './allarmi';
+import {
+  allarmePersonalePresenzePastiAttivo,
+  type AllarmeDipendente,
+  type StatoPersonaleGiorno,
+  type UtenteConfermaNonRichiesta,
+} from './allarmi';
 import { formattaIntervalloItaliano } from './date';
 import { percorsoGiornata } from './giornata';
 
@@ -47,6 +52,10 @@ export type InputElencoAllarmi = {
   // Mesi conclusi la cui mail a Rojac non risulta inviata ("YYYY-MM", dal
   // più vecchio, specs/07): solo per l'admin; vuoto per gli altri.
   mailRojacNonInviata: string[];
+  // Utenti abilitati al report ore con "Richiedi conferma settimana"
+  // disattivata (specs/07): non sono allarmi, la pagina Allarmi li segnala
+  // a parte. Solo per l'admin; vuoto per gli altri.
+  confermaSettimanaNonRichiesta: UtenteConfermaNonRichiesta[];
 };
 
 function vociPersonale(allarme: AllarmeDipendente): VoceAllarme[] {

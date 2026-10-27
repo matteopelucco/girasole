@@ -27,7 +27,7 @@ function input(parziale: Partial<InputRiepilogo> = {}): InputRiepilogo {
       stato: { nessunDatoAtteso: false, presenzeIncomplete: false, pastiNonConfermati: false },
     },
     rette: { ora: ORA_11_45, mancanti: [] },
-    ore: { ora: ORA_11_45, intervallo: 'dal 05/10 al 11/10', utenti: [] },
+    ore: { ora: ORA_11_45, intervallo: 'dal 05/10 al 11/10', utenti: [], nonRichiesta: [] },
     rojac: { ora: ORA_11_45, mancanti: [], daAvvisare: [] },
     ...parziale,
   };
@@ -236,6 +236,7 @@ describe('costruisciControlliRiepilogo', () => {
             { utenteId: 'u1', nome: 'Maria', cognome: 'Verdi', email: 'maria@example.test' },
             { utenteId: 'u2', nome: 'Sara', cognome: 'Neri', email: 'sara@example.test' },
           ],
+          nonRichiesta: [],
         },
       })
     );
@@ -245,6 +246,60 @@ describe('costruisciControlliRiepilogo', () => {
     expect(ore.dettaglio.join(' ')).toContain('Sara Neri');
     expect(ore.dettaglio.join(' ')).toContain('dal 05/10 al 11/10');
     expect(ore.azione).toMatch(/Ore di lavoro/);
+  });
+});
+
+describe('ore di lavoro con la conferma settimana non richiesta', () => {
+  const SALTATO = { nome: 'Lucia', cognome: 'Gialli' };
+
+  it('se gli altri sono a posto il controllo è ok e dichiara il salto', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({ ore: { ora: ORA_11_45, intervallo: 'dal 05/10 al 11/10', utenti: [], nonRichiesta: [SALTATO] } })
+    );
+    const ore = controllo(controlli, 'ore-lavoro');
+    expect(ore.stato).toBe('ok');
+    expect(ore.dettaglio).toContain('Conferma settimana non richiesta per Lucia Gialli: controllo saltato');
+    // La sola riga di salto non è un controllo da sistemare: niente email.
+    expect(riepilogoDaSistemare(controlli)).toBe(false);
+  });
+
+  it('il salto compare anche quando altri utenti sono da sistemare', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({
+        ore: {
+          ora: ORA_11_45,
+          intervallo: 'dal 05/10 al 11/10',
+          utenti: [{ utenteId: 'u1', nome: 'Maria', cognome: 'Verdi', email: 'maria@example.test' }],
+          nonRichiesta: [SALTATO],
+        },
+      })
+    );
+    const ore = controllo(controlli, 'ore-lavoro');
+    expect(ore.stato).toBe('da_sistemare');
+    expect(ore.dettaglio.join(' ')).toContain('Maria Verdi');
+    expect(ore.dettaglio).toContain('Conferma settimana non richiesta per Lucia Gialli: controllo saltato');
+  });
+
+  it("senza utenti saltati nessuna riga di salto e il testo di prima", () => {
+    const ore = controllo(costruisciControlliRiepilogo(input()), 'ore-lavoro');
+    expect(ore.dettaglio.join(' ')).toContain('confermata da tutti.');
+    expect(ore.dettaglio.join(' ')).not.toContain('non richiesta');
+  });
+
+  it("la riga di salto finisce nel corpo dell'email, con l'escape", () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({
+        ore: {
+          ora: ORA_11_45,
+          intervallo: 'dal 05/10 al 11/10',
+          utenti: [],
+          nonRichiesta: [{ nome: '<b>Lucia</b>', cognome: 'Gialli' }],
+        },
+      })
+    );
+    const html = htmlRiepilogoAllarmi(controlli, '2026-10-12');
+    expect(html).toContain('Conferma settimana non richiesta per &lt;b&gt;Lucia&lt;/b&gt; Gialli: controllo saltato');
+    expect(html).not.toContain('<b>Lucia</b>');
   });
 });
 
@@ -327,6 +382,7 @@ describe('htmlRiepilogoAllarmi', () => {
           ora: ORA_11_45,
           intervallo: 'dal 05/10 al 11/10',
           utenti: [{ utenteId: 'u1', nome: '<script>', cognome: 'Verdi', email: 'a&b@example.test' }],
+          nonRichiesta: [],
         },
       })
     );

@@ -8,6 +8,17 @@ import type { EsitoAzione } from '@/components/FormConEsito';
 
 const RUOLI_VALIDI = ['admin', 'maestra', 'assistente', 'genitore'] as const;
 
+// Colonne di `profili` legate a "Ore di lavoro". L'opzione "Richiedi conferma
+// settimana" si scrive solo con "Ore di lavoro" attivo: da spento il campo
+// è nascosto e il valore salvato resta com'è, così alla riabilitazione torna
+// quello di prima (specs/03).
+function campiOreLavoro(campi: { abilitatoOreLavoro: boolean; richiediConfermaSettimana: boolean }) {
+  return {
+    abilitato_ore_lavoro: campi.abilitatoOreLavoro,
+    ...(campi.abilitatoOreLavoro ? { richiedi_conferma_settimana: campi.richiediConfermaSettimana } : {}),
+  };
+}
+
 // Campi condivisi da creazione e modifica di un utente (specs/03,
 // specs/17 - ore-di-lavoro.md per abilitatoOreLavoro, specs/54 -
 // profili-orari.md per profiloOrarioId).
@@ -22,6 +33,9 @@ function campiUtente(formData: FormData) {
     indirizzoResidenza: ((formData.get('indirizzo_residenza') as string) || '').trim(),
     note: ((formData.get('note') as string) || '').trim(),
     abilitatoOreLavoro: formData.get('abilitato_ore_lavoro') === 'on',
+    // Opzione "Richiedi conferma settimana" (specs/03, specs/07): conta solo
+    // con "Ore di lavoro" attivo (vedi `campiOreLavoro`).
+    richiediConfermaSettimana: formData.get('richiedi_conferma_settimana') === 'on',
     // Stringa vuota ("Nessun profilo orario") diventa null, non una FK
     // verso una riga inesistente.
     profiloOrarioId: profiloOrarioId || null,
@@ -40,8 +54,8 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
   const email = ((formData.get('email') as string) || '').trim().toLowerCase();
   const password = (formData.get('password') as string) || '';
   const confermaPassword = (formData.get('conferma_password') as string) || '';
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro, profiloOrarioId } =
-    campiUtente(formData);
+  const campi = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro, profiloOrarioId } = campi;
 
   if (
     !email ||
@@ -82,7 +96,7 @@ export async function creaUtente(_stato: EsitoAzione, formData: FormData): Promi
       .update({
         indirizzo_residenza: indirizzoResidenza,
         note,
-        abilitato_ore_lavoro: abilitatoOreLavoro,
+        ...campiOreLavoro(campi),
         profilo_orario_id: profiloOrarioId,
       })
       .eq('id', data.user!.id);
@@ -98,8 +112,8 @@ export async function aggiornaUtente(
 ): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
   const profiloId = formData.get('profilo_id') as string;
-  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, abilitatoOreLavoro, profiloOrarioId } =
-    campiUtente(formData);
+  const campi = campiUtente(formData);
+  const { nome, cognome, telefono, ruolo, indirizzoResidenza, note, profiloOrarioId } = campi;
 
   if (!profiloId || !RUOLI_VALIDI.includes(ruolo as (typeof RUOLI_VALIDI)[number])) {
     return { ok: false, messaggio: 'Dati utente non validi.' };
@@ -114,7 +128,7 @@ export async function aggiornaUtente(
       ruolo,
       indirizzo_residenza: indirizzoResidenza,
       note,
-      abilitato_ore_lavoro: abilitatoOreLavoro,
+      ...campiOreLavoro(campi),
       profilo_orario_id: profiloOrarioId,
       // Effetto visibile della conferma (specs/05 - feedback.md): "Ultimo
       // salvataggio" sotto "Aggiorna", l'unico modo di accorgersi del

@@ -213,10 +213,41 @@ export async function settimanaConfermata(
 
 export type UtenteSettimanaNonConfermata = { utenteId: string; nome: string; cognome: string; email: string };
 
-// Tutti gli utenti abilitati al report ore la cui settimana
-// `settimanaInizio` non risulta confermata (fa I/O) — usata dal cron
-// (specs/07, con la service_role key) e dal riepilogo dell'admin in
-// dashboard (con la sua sessione normale, che vede già tutti via RLS).
+// Utente abilitato al report ore per cui la conferma della settimana NON è
+// richiesta (profili.richiedi_conferma_settimana = false, specs/03 e 07):
+// i controlli lo saltano e lo dichiarano.
+export type UtenteConfermaNonRichiesta = { nome: string; cognome: string };
+
+// Riga del controllo saltato, per l'email di riepilogo e la pagina Allarmi
+// (specs/07). Funzione pura.
+export function testoConfermaSettimanaNonRichiesta(utente: UtenteConfermaNonRichiesta): string {
+  return `Conferma settimana non richiesta per ${utente.nome} ${utente.cognome}: controllo saltato`;
+}
+
+// Gli utenti abilitati al report ore con la conferma settimana non
+// richiesta (fa I/O), in ordine di cognome. Cron (service_role) e admin
+// (la sua sessione normale vede già tutti via RLS). Un utente non
+// abilitato non conta, anche se la sua opzione è falsa: l'opzione conta
+// solo con "Ore di lavoro" attivo.
+// grant-check: service_role
+export async function utentiConfermaSettimanaNonRichiesta(
+  supabase: SupabaseClient
+): Promise<UtenteConfermaNonRichiesta[]> {
+  const { data } = await supabase
+    .from('profili')
+    .select('nome, cognome')
+    .eq('abilitato_ore_lavoro', true)
+    .eq('richiedi_conferma_settimana', false)
+    .order('cognome')
+    .order('nome');
+  return (data ?? []) as UtenteConfermaNonRichiesta[];
+}
+
+// Tutti gli utenti abilitati al report ore, e per cui la conferma è
+// richiesta, la cui settimana `settimanaInizio` non risulta confermata
+// (fa I/O) — usata dal cron (specs/07, con la service_role key) e dal
+// riepilogo dell'admin in dashboard (con la sua sessione normale, che
+// vede già tutti via RLS).
 export async function utentiConSettimanaNonConfermata(
   supabase: SupabaseClient,
   settimanaInizio: string
@@ -224,7 +255,8 @@ export async function utentiConSettimanaNonConfermata(
   const { data: abilitati } = await supabase
     .from('profili')
     .select('id, nome, cognome, email')
-    .eq('abilitato_ore_lavoro', true);
+    .eq('abilitato_ore_lavoro', true)
+    .eq('richiedi_conferma_settimana', true);
   if (!abilitati?.length) return [];
 
   const idUtenti = abilitati.map((u) => u.id);
@@ -259,7 +291,17 @@ export type DipendenteBase = {
   cognome: string;
   ruolo: string;
   abilitato_ore_lavoro: boolean;
+  richiedi_conferma_settimana: boolean;
 };
+
+// Vero se per l'utente la conferma della settimana ore va controllata:
+// abilitato al report ore e con "Richiedi conferma settimana" attiva
+// (specs/03, specs/07). Funzione pura.
+export function oreDaConfermare(
+  profilo: { abilitato_ore_lavoro: boolean; richiedi_conferma_settimana: boolean } | null | undefined
+): boolean {
+  return !!profilo?.abilitato_ore_lavoro && !!profilo.richiedi_conferma_settimana;
+}
 
 export type DatiPersonale = {
   dipendenti: DipendenteBase[];
@@ -280,13 +322,13 @@ export async function leggiDatiPersonale(
 ): Promise<DatiPersonale> {
   const { data: profili } = await supabase
     .from('profili')
-    .select('id, nome, cognome, ruolo, abilitato_ore_lavoro')
+    .select('id, nome, cognome, ruolo, abilitato_ore_lavoro, richiedi_conferma_settimana')
     .in('ruolo', ['maestra', 'assistente'])
     .neq('id', utenteCorrenteId);
   const dipendenti = (profili ?? []) as DipendenteBase[];
   if (!dipendenti.length) return { dipendenti, assegnazioni: [], idSettimanaConfermata: new Set() };
 
-  const idAbilitati = dipendenti.filter((d) => d.abilitato_ore_lavoro).map((d) => d.id);
+  const idAbilitati = dipendenti.filter(oreDaConfermare).map((d) => d.id);
   const [{ data: assegnazioni }, confermate] = await Promise.all([
     supabase
       .from('maestre_sezioni')
@@ -341,7 +383,7 @@ export function allarmiDipendentiDa(
     const proprieSezioni = sezioniPerUtente.get(dipendente.id) ?? [];
     const sezioniProblematiche = proprieSezioni.filter((s) => idSezioniIncomplete.has(s.id)).map((s) => s.nome);
     const pastiProblema = dipendente.ruolo !== 'assistente' && pastiNonConfermatiOggi && proprieSezioni.length > 0;
-    const settimanaProblema = dipendente.abilitato_ore_lavoro && !personale.idSettimanaConfermata.has(dipendente.id);
+    const settimanaProblema = oreDaConfermare(dipendente) && !personale.idSettimanaConfermata.has(dipendente.id);
 
     if (!sezioniProblematiche.length && !pastiProblema && !settimanaProblema) continue;
 

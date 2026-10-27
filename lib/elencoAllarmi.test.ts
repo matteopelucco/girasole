@@ -17,6 +17,7 @@ const base: InputElencoAllarmi = {
   personale: [],
   retteNonComunicate: [],
   mailRojacNonInviata: [],
+  confermaSettimanaNonRichiesta: [],
 };
 
 const SETTIMANA = { inizio: '2026-01-05', fine: '2026-01-11' };
@@ -71,6 +72,14 @@ describe('componiAllarmi', () => {
     expect(elenco[0].voci).toHaveLength(1);
     expect(elenco[0].voci[0].href).toBe('/dashboard/ore-lavoro?settimana=2026-01-05');
     expect(elenco[0].voci[0].testo).toContain('Settimana');
+  });
+
+  it('gli utenti con la conferma settimana non richiesta non generano allarmi (specs/07)', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      confermaSettimanaNonRichiesta: [{ nome: 'Maria', cognome: 'Verdi' }],
+    });
+    expect(elenco).toEqual([]);
   });
 
   it('una voce per ogni membro del personale in allarme, senza link', () => {
