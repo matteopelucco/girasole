@@ -80,7 +80,7 @@ Contesto operativo per Claude Code su questo progetto.
   chiavi sono `uuid`). Funzioni: i privilegi `execute` restano quelli già
   decisi caso per caso (`revoke ... from public, anon` + `grant` mirato).
   Controllo automatico: `npm run check:grant-migrazioni` (parte di
-  `npm run lint`, quindi pre-push e CI statica; vedi «Grant-migrazioni-check»
+  `npm run lint`, quindi nella CI statica (non nel pre-push); vedi «Grant-migrazioni-check»
   più avanti).
 
 ## Workflow

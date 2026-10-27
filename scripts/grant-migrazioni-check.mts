@@ -13,7 +13,7 @@
 // nascondere un GRANT mancante) qui conta solo ciò che è scritto nelle
 // migration. Non è testato unitariamente (I/O); la logica pura lo è, in
 // lib/grantMigrazioni.test.ts. Agganciato a `npm run lint` (quindi alla CI
-// statica e all'hook pre-push) tramite `npm run check:grant-migrazioni`.
+// statica, non nel hook pre-push) tramite `npm run check:grant-migrazioni`.
 //
 // Uso:
 //   node --no-warnings --experimental-strip-types scripts/grant-migrazioni-check.mts
