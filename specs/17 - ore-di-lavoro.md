@@ -41,6 +41,11 @@ E se provo ad aprire direttamente `/dashboard/ore-lavoro`, vengo
 reindirizzata alla dashboard invece di vedere il contenuto della sezione
 
 ## Regole
+- Per gli utenti abilitati l'admin può anche disattivare "Richiedi conferma
+  settimana" (`profili.richiedi_conferma_settimana`, vera di default, vedi
+  [03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)): cambia solo gli
+  allarmi (vedi [07 - allarmi.md](07%20-%20allarmi.md)); l'utente inserisce
+  e conferma le ore come sempre.
 - Nuovo campo `profili.abilitato_ore_lavoro` (booleano, default falso):
   decide da solo la visibilità della sezione e l'accesso alla pagina,
   indipendentemente dal ruolo — anche l'admin non la vede finché non

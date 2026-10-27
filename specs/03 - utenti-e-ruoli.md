@@ -34,6 +34,13 @@ utenti da `/admin/maestre`.
 - **abilitazione al report ore di lavoro** — checkbox, falsa di default;
   decide se l'utente vede la sezione "Ore di lavoro" in dashboard (vedi
   [17 - ore-di-lavoro.md](17%20-%20ore-di-lavoro.md))
+- **richiedi conferma settimana** — casella, vera di default (anche per
+  gli utenti già presenti), visibile e modificabile solo per gli utenti
+  con "Ore di lavoro" abilitato; se falsa, i controlli degli allarmi
+  saltano la conferma settimanale di quell'utente (vedi
+  [07 - allarmi.md](07%20-%20allarmi.md)); non cambia nient'altro
+  (l'utente può comunque inserire e confermare le ore, il report mensile
+  resta com'è). Solo l'admin la modifica (RLS già esistente su `profili`)
 - **profilo orario** — menu a tendina opzionale, tra i profili definiti
   dall'admin (vedi [54 - profili-orari.md](54%20-%20profili-orari.md)),
   indipendente dall'abilitazione al report ore
@@ -143,6 +150,32 @@ Dato che un utente esiste già
 Quando su `/admin/maestre` modifico nome, cognome, telefono e/o ruolo di
 quell'utente e confermo
 Allora i nuovi dati sono salvati e visibili nell'elenco
+
+## Scenario: l'opzione "Richiedi conferma settimana" compare solo con "Ore di lavoro" abilitato ed è attiva di partenza
+Dato che sono autenticato come admin
+Quando su `/admin/maestre` guardo la riga di un utente senza "Ore di lavoro"
+Allora non vedo l'opzione "Richiedi conferma settimana"
+Quando spunto "Ore di lavoro" per quell'utente
+Allora compare l'opzione "Richiedi conferma settimana", già spuntata, con
+un testo di aiuto che spiega che, se la tolgo, l'utente non genera
+allarmi per la settimana non confermata
+E lo stesso vale nel form di creazione utente
+E un utente già presente prima di questa opzione la ha attiva, così
+nessun comportamento cambia
+
+## Scenario: admin disattiva "Richiedi conferma settimana" per un utente
+Dato che un utente ha "Ore di lavoro" abilitato
+Quando su `/admin/maestre` tolgo la spunta a "Richiedi conferma
+settimana" e premo "Aggiorna"
+Allora il valore è salvato: ricaricando la pagina l'opzione risulta
+disattivata per quell'utente e invariata per gli altri
+
+## Scenario: disabilitare "Ore di lavoro" non cancella l'opzione
+Dato che un utente ha "Ore di lavoro" abilitato e "Richiedi conferma
+settimana" disattivata
+Quando su `/admin/maestre` tolgo "Ore di lavoro" e premo "Aggiorna", poi
+lo riabilito e premo "Aggiorna"
+Allora "Richiedi conferma settimana" è ancora disattivata, come prima
 
 ## Scenario: admin imposta una nuova password per un utente esistente
 Dato che un utente esiste già

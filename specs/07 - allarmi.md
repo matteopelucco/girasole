@@ -119,6 +119,57 @@ quale utente e quale settimana, chiedendo di confermarla in "Ore di
 lavoro"
 E se tutti l'hanno confermata il controllo è "ok"
 
+## Scenario: email di riepilogo — conferma settimana non richiesta per un utente
+Dato che un utente abilitato al report ore ha l'opzione "Richiedi conferma
+settimana" disattivata (vedi
+[03 - utenti-e-ruoli.md](03%20-%20utenti-e-ruoli.md)) e non ha confermato
+la settimana di riferimento
+Quando il job gira
+Allora quell'utente non compare tra quelli "da sistemare" nel controllo
+"ore di lavoro"
+E se gli altri utenti abilitati hanno confermato, il controllo è "ok"
+E l'email (quando parte per altri motivi) riporta nel controllo "ore di
+lavoro" una riga "Conferma settimana non richiesta per <nome cognome>:
+controllo saltato", anche se il controllo è "ok", così il salto non passa
+inosservato
+E il solo utente saltato non fa partire l'email: la riga non è un
+controllo da sistemare
+E con l'opzione attiva (il valore di partenza di tutti) il controllo si
+comporta come descritto sopra
+
+## Scenario: la pagina Allarmi segnala i controlli saltati
+Dato che sono autenticato come admin
+E almeno un utente abilitato al report ore ha l'opzione "Richiedi
+conferma settimana" disattivata
+Quando apro la pagina "Allarmi"
+Allora vedo, in una sezione a parte, una riga "Conferma settimana non
+richiesta per <nome cognome>: controllo saltato" per ciascuno di loro
+E queste righe non sono allarmi: non contano nel numero della campanella
+e non appaiono tra gli allarmi attivi (la frase "Non ci sono allarmi
+attivi" resta se non c'è altro)
+E maestra e assistente non le vedono
+
+## Scenario: la mia settimana non si controlla se la conferma non è richiesta — nessun banner personale
+Dato che sono abilitata al report ore con l'opzione "Richiedi conferma
+settimana" disattivata
+E la settimana di riferimento non risulta confermata
+Quando apro la dashboard
+Allora non vedo il banner "settimana non confermata"
+E la campanella non conta quell'allarme e la pagina "Allarmi" non lo
+elenca
+E nel riepilogo del personale dell'admin non compaio per la settimana
+non confermata
+
+## Scenario: con la conferma non richiesta posso comunque confermare la settimana
+Dato che sono abilitata al report ore con l'opzione "Richiedi conferma
+settimana" disattivata
+Quando apro "Ore di lavoro" e confermo la settimana
+Allora la settimana risulta confermata, come per chiunque
+E il report mensile delle ore (vedi
+[52 - report-email-automatico.md](52%20-%20report-email-automatico.md))
+continua a segnare "da confermare" le mie settimane non confermate: l'opzione
+cambia solo gli allarmi
+
 ## Scenario: email di riepilogo — la mail mensile dei pasti a Rojac
 Quando il job gira
 Allora l'email contiene sempre anche la voce "mail mensile dei pasti a
@@ -457,7 +508,12 @@ non lo vedono mai
      mensile a Rojac non inviata". Fa scattare l'email solo per i mesi
      non ancora avvisati.
   5. **Ore di lavoro**: la settimana di riferimento è confermata da ogni
-     utente abilitato (una riga per utente da sistemare).
+     utente abilitato per cui la conferma è richiesta (una riga per utente
+     da sistemare). Gli utenti con "Richiedi conferma settimana"
+     disattivata (`profili.richiedi_conferma_settimana`, vedi specs/03) si
+     saltano e il controllo lo dichiara con una riga "Conferma settimana
+     non richiesta per <nome cognome>: controllo saltato"; stessa regola
+     per il banner personale e per la pagina Allarmi.
   Gli stati sono: "ok", "da sistemare", "non applicabile oggi" (con il
   motivo: prima delle 10:00, giorno di chiusura, nessun bambino attivo,
   prima del giorno 3) e "non ancora controllato". L'email parte solo se
