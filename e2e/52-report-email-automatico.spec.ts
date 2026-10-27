@@ -118,7 +118,10 @@ test.describe('52 — Report email automatico', () => {
     const corpo = await risposta.json();
     // Le anomalie con i nomi vanno solo nella mail allo staff, non in una risposta HTTP.
     expect(typeof corpo.anomalie).toBe('number');
-    expect(Object.keys(corpo).sort()).toEqual(['allegati', 'anomalie', 'data', 'ok', 'risultati']);
+    // `calendario` è l'esito della sincronizzazione iCal (specs/64): solo stato e
+    // conteggi, nessun titolo né indirizzo (lib/calendarioIcal.ts).
+    expect(Object.keys(corpo).sort()).toEqual(['allegati', 'anomalie', 'calendario', 'data', 'ok', 'risultati']);
+    expect(['disattivata', 'ok', 'errore']).toContain(corpo.calendario.stato);
   });
 
   test('anomalia nella produzione di un report: in condizioni normali nessun report risulta in errore', async ({
