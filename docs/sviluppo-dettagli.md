@@ -327,7 +327,8 @@ finché non risulta tutto verde.
   Vercel. Resta fuori dalla pagina «Variabili d'ambiente» (specs/62). Un test
   che richiedesse una chiave vera dovrebbe controllare `RESEND_API_KEY`
   direttamente (oggi nessuno lo fa). I test dei cron richiedono anche
-  `CRON_SECRET`, che la CI non imposta: restano saltati.
+  `CRON_SECRET`: la CI imposta un valore finto nel passo Playwright (il server
+  di prova gira solo sul runner, nessun Repository secret); quello vero sta solo su Vercel.
 - Ogni salvataggio seguito da `reload`/`goto`/lettura di un valore
   calcolato dal server deve usare `clickEAttendiAzione`
   (`e2e/helpers.ts`); i valori calcolati dal server si leggono con

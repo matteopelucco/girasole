@@ -328,6 +328,10 @@ jobs:
           # parte e non serve nessuna chiave; i test che inviano email girano
           # invece di saltarsi. Ignorata in produzione. Nessun secret nuovo.
           EMAIL_DRY_RUN: '1'
+          # Valore finto per i test dei cron (e2e 07, 52, 63, 64): il server di
+          # prova gira solo sul runner e non è raggiungibile da fuori, quindi non
+          # serve un Repository secret. Il CRON_SECRET vero sta solo su Vercel.
+          CRON_SECRET: ci-e2e-cron-secret
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
