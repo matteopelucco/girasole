@@ -4,7 +4,16 @@
 // (auth.users + profili) sul progetto Supabase di test — vedi la nota in
 // 50-amministrazione_base.spec.ts. Ogni utente creato viene eliminato
 // dallo stesso test per non accumulare account fittizi nel progetto.
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixture-utente';
+import {
+  PERCORSO_UTENTI,
+  formCreazioneUtente,
+  impostaOreLavoro,
+  impostaRichiediConfermaSettimana,
+  rigaUtente,
+  spuntaOreLavoro,
+  spuntaRichiediConfermaSettimana,
+} from './pagina-personale';
 import {
   clickEAttendiAzione,
   eliminaUtenteDaScheda,
@@ -462,6 +471,76 @@ test.describe('03 — Utenti e ruoli', () => {
       timeout: 20_000,
     });
     await expect(rigaPropria).toBeVisible();
+  });
+
+  // Opzione "Richiedi conferma settimana" (issue #383): gli utenti sono
+  // creati e poi eliminati dalla fixture `creaUtente`, mai gli account condivisi.
+  test.describe('opzione "Richiedi conferma settimana"', () => {
+    test('compare solo con "Ore di lavoro" abilitato ed è attiva di partenza', async ({ page, creaUtente }) => {
+      const senza = await creaUtente({ ruolo: 'maestra', abilitato: false });
+      const con = await creaUtente({ ruolo: 'maestra', abilitato: true });
+
+      await page.goto(PERCORSO_UTENTI);
+
+      // Senza "Ore di lavoro" l'opzione non si vede...
+      const rigaSenza = rigaUtente(page, senza.email);
+      await expect(spuntaRichiediConfermaSettimana(rigaSenza)).toBeHidden();
+      // ...e compare, già attiva e con il testo di aiuto, appena la si spunta.
+      await spuntaOreLavoro(rigaSenza).check();
+      const opzione = spuntaRichiediConfermaSettimana(rigaSenza);
+      await expect(opzione).toBeVisible();
+      await expect(opzione).toBeChecked();
+      await expect(rigaSenza.getByText('non genera allarmi', { exact: false })).toBeVisible();
+
+      // Un utente creato con "Ore di lavoro" la ha attiva (valore di partenza).
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, con.email))).toBeChecked();
+
+      // Lo stesso nel form di creazione.
+      const form = formCreazioneUtente(page);
+      await expect(spuntaRichiediConfermaSettimana(form)).toBeHidden();
+      await form.getByLabel('Ore di lavoro').check();
+      await expect(spuntaRichiediConfermaSettimana(form)).toBeVisible();
+      await expect(spuntaRichiediConfermaSettimana(form)).toBeChecked();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('admin la disattiva per un utente e il valore resta salvato', async ({ page, creaUtente }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const altro = await creaUtente({ ruolo: 'maestra', abilitato: true });
+
+      await page.goto(PERCORSO_UTENTI);
+      await impostaRichiediConfermaSettimana(page, utente.email, false);
+
+      await page.reload();
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, utente.email))).not.toBeChecked();
+      // Gli altri utenti non cambiano.
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, altro.email))).toBeChecked();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test("un utente creato con l'opzione disattivata la ha disattivata", async ({ page, creaUtente }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true, richiediConfermaSettimana: false });
+
+      await page.goto(PERCORSO_UTENTI);
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, utente.email))).not.toBeChecked();
+    });
+
+    test("disabilitare 'Ore di lavoro' non cancella il valore dell'opzione", async ({ page, creaUtente }) => {
+      const utente = await creaUtente({ ruolo: 'maestra', abilitato: true });
+
+      await page.goto(PERCORSO_UTENTI);
+      await impostaRichiediConfermaSettimana(page, utente.email, false);
+
+      // Spengo "Ore di lavoro" e salvo: l'opzione sparisce dalla vista.
+      await impostaOreLavoro(page, utente.email, false);
+      await page.reload();
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, utente.email))).toBeHidden();
+
+      // Lo riabilito e salvo: l'opzione torna disattivata, come prima.
+      await impostaOreLavoro(page, utente.email, true);
+      await page.reload();
+      await expect(spuntaRichiediConfermaSettimana(rigaUtente(page, utente.email))).not.toBeChecked();
+    });
   });
 
   test('maestra, assistente e genitore non possono aprire /admin/maestre', async ({ browser }) => {

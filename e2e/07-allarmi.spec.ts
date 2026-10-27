@@ -19,7 +19,15 @@ import { mergeTests, type Locator, type Page } from '@playwright/test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { test as testUtente, expect } from './fixture-utente';
 import { test as testBambino, type BambinoFixture } from './fixture-bambino';
-import { dataOggiRoma, emailDisponibile, hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import {
+  clickEAttendiAzione,
+  dataOggiRoma,
+  emailDisponibile,
+  hasCredenziali,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+} from './helpers';
+import { apriOreDipendente, bottoneConfermaSettimana, avvisoSettimanaConfermata } from './pagina-personale';
 import {
   descrizioneMeseRojac,
   hrefReportRojac,
@@ -306,6 +314,51 @@ test.describe('07 — Allarmi', () => {
         const settimana = new URL(href!, 'http://localhost').searchParams.get('settimana')!;
         expect(settimana).toBe(lunediSettimanaPrecedenteRoma());
       });
+
+      // Opzione "Richiedi conferma settimana" disattivata (specs/03, issue
+      // #383): la settimana non confermata non genera banner né allarme.
+      test('con la conferma settimana non richiesta, nessun banner e nessun allarme personale', async ({
+        creaUtente,
+        apriComeUtente,
+      }) => {
+        const utente = await creaUtente({ ruolo: 'maestra', abilitato: true, richiediConfermaSettimana: false });
+        const page = await apriComeUtente(utente);
+
+        await page.goto('/dashboard');
+        await expect(page.getByText(TESTO_BANNER_SETTIMANA_ORE, { exact: false })).toHaveCount(0);
+        await expect(page.getByTestId('numero-allarmi')).toHaveCount(0);
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByText('Non ci sono allarmi attivi.')).toBeVisible();
+        await expect(page.locator(ELENCO_ALLARMI)).toHaveCount(0);
+        // Le righe dei controlli saltati le vede solo l'admin.
+        await expect(page.getByRole('heading', { name: 'Controlli saltati' })).toHaveCount(0);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test('con la conferma settimana non richiesta posso comunque confermare la settimana, e il report mensile si produce', async ({
+        page,
+        creaUtente,
+        apriComeUtente,
+      }) => {
+        const utente = await creaUtente({ ruolo: 'maestra', abilitato: true, richiediConfermaSettimana: false });
+        const paginaUtente = await apriComeUtente(utente);
+
+        // La settimana precedente è chiusa e non confermata: la confermo a mano.
+        await paginaUtente.goto(`/dashboard/ore-lavoro?settimana=${lunediSettimanaPrecedenteRoma()}`);
+        await bottoneConfermaSettimana(paginaUtente).click();
+        await clickEAttendiAzione(paginaUtente, paginaUtente.getByRole('button', { name: 'Sì', exact: true }));
+        await expect(avvisoSettimanaConfermata(paginaUtente)).toBeVisible({ timeout: 20_000 });
+        await nessunaViolazioneA11yGrave(paginaUtente);
+
+        // Il report mensile (PDF dell'admin) non dipende dall'opzione: si
+        // produce come per chiunque. Che le settimane non confermate vi
+        // compaiano come "da confermare" è coperto da lib/pdfOreLavoroDati.test.ts.
+        const utenteId = await apriOreDipendente(page, utente.email);
+        const pdf = await page.request.get(`/admin/ore-lavoro/pdf?utente=${utenteId}`);
+        expect(pdf.status()).toBe(200);
+        expect((await pdf.body()).subarray(0, 5).toString('latin1')).toBe('%PDF-');
+      });
     });
   });
 
@@ -443,6 +496,7 @@ test.describe('07 — Allarmi', () => {
         await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
         await expect(page.getByRole('heading', { name: TESTO_RIEPILOGO_STAFF })).toHaveCount(0);
         await expect(page.getByRole('list', { name: 'Allarmi del personale' })).toHaveCount(0);
+        await expect(page.getByRole('heading', { name: 'Controlli saltati' })).toHaveCount(0);
 
         // Il numero della campanella coincide con l'elenco (qualunque sia
         // lo stato di presenze e ore in questo momento).
@@ -469,6 +523,29 @@ test.describe('07 — Allarmi', () => {
         await expect(riga).toContainText('non confermata');
         await expect(riga.getByRole('link')).toHaveCount(0);
 
+        await campanellaCoincideConElenco(page);
+        await nessunaViolazioneA11yGrave(page);
+      });
+
+      test('la pagina Allarmi segnala i controlli saltati, senza contarli come allarmi', async ({
+        page,
+        creaUtente,
+      }) => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+        // Cognome unico: nel DB di test altri test creano in parallelo utenti "Fixture Utente".
+        const cognome = `Saltato${Date.now().toString(36)}`;
+        await creaUtente({ ruolo: 'maestra', abilitato: true, richiediConfermaSettimana: false, cognome });
+
+        await page.goto('/dashboard/allarmi');
+        await expect(page.getByRole('heading', { name: 'Controlli saltati' })).toBeVisible();
+        await expect(page.getByRole('list', { name: 'Controlli saltati' }).getByRole('listitem')).toContainText([
+          `Conferma settimana non richiesta per Fixture ${cognome}: controllo saltato`,
+        ]);
+
+        // Non è un allarme: non è tra quelli del personale e non conta nella campanella.
+        await expect(
+          page.getByRole('list', { name: 'Allarmi del personale' }).filter({ hasText: cognome })
+        ).toHaveCount(0);
         await campanellaCoincideConElenco(page);
         await nessunaViolazioneA11yGrave(page);
       });
@@ -986,6 +1063,7 @@ test.describe('07 — Allarmi', () => {
     type EsitoCron = {
       riepilogo: 'tutto_ok' | 'inviato' | 'gia_inviato' | 'errore_registro';
       controlli: Record<string, 'ok' | 'da_sistemare' | 'non_applicabile' | 'non_controllato'>;
+      confermaSettimanaNonRichiesta: number;
       mesiRojacAvvisati: string[];
     };
 
@@ -1089,6 +1167,20 @@ test.describe('07 — Allarmi', () => {
       const esito = await chiamaCron(request);
       expect(esito.controlli['ore-lavoro']).toBe('da_sistemare');
       expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
+
+    // Con la conferma settimana non richiesta (issue #383) l'utente non è "da
+    // sistemare" e il riepilogo lo dichiara. Il testo della riga e lo stato "ok"
+    // quando gli altri sono a posto sono coperti da lib/riepilogoAllarmi.test.ts
+    // (nel DB di test condiviso altri utenti possono essere da sistemare).
+    test('email di riepilogo — conferma settimana non richiesta: il controllo è saltato e dichiarato', async ({
+      request,
+      creaUtente,
+    }) => {
+      await creaUtente({ ruolo: 'maestra', abilitato: true, richiediConfermaSettimana: false });
+      const esito = await chiamaCron(request);
+      expect(esito.confermaSettimanaNonRichiesta).toBeGreaterThanOrEqual(1);
+      expect(['ok', 'da_sistemare']).toContain(esito.controlli['ore-lavoro']);
     });
 
     test('email di riepilogo — la mail mensile dei pasti a Rojac', async ({ request }) => {

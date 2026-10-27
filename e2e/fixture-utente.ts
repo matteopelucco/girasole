@@ -52,6 +52,14 @@ export type RuoloStaffFixture = 'admin' | 'maestra' | 'assistente';
 export type OpzioniUtenteFixture = {
   ruolo?: RuoloStaffFixture;
   abilitato?: boolean;
+  // false: l'utente (abilitato) ha "Richiedi conferma settimana" disattivata,
+  // quindi gli allarmi saltano la sua settimana ore (specs/03, specs/07).
+  // Di partenza true, come per tutti gli utenti.
+  richiediConfermaSettimana?: boolean;
+  // Cognome dell'utente (di partenza "Utente"). Un cognome unico permette di
+  // riconoscerlo nelle liste dell'admin senza confonderlo con gli utenti
+  // creati in parallelo da altri test.
+  cognome?: string;
 };
 
 export type UtenteFixture = {
@@ -69,11 +77,12 @@ async function creaUtenteDaAdmin(page: Page, opzioni: Required<OpzioniUtenteFixt
   const email = emailUnica();
   await creaUtenteDaForm(page, {
     nome: 'Fixture',
-    cognome: 'Utente',
+    cognome: opzioni.cognome,
     email,
     password: PASSWORD_UTENTE_FIXTURE,
     ruolo: opzioni.ruolo,
     oreLavoro: opzioni.abilitato,
+    richiediConfermaSettimana: opzioni.richiediConfermaSettimana,
   });
   return { email, password: PASSWORD_UTENTE_FIXTURE, ruolo: opzioni.ruolo };
 }
@@ -98,6 +107,8 @@ export const test = base.extend<{
           const utente = await creaUtenteDaAdmin(pagina, {
             ruolo: opzioni.ruolo ?? 'maestra',
             abilitato: opzioni.abilitato ?? false,
+            richiediConfermaSettimana: opzioni.richiediConfermaSettimana ?? true,
+            cognome: opzioni.cognome ?? 'Utente',
           });
           creati.push(utente);
           return utente;

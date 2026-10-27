@@ -41,6 +41,9 @@ export type DatiNuovoUtente = {
   // Ruolo staff da scegliere; se assente resta il predefinito (genitore).
   ruolo?: 'admin' | 'maestra' | 'assistente';
   oreLavoro?: boolean;
+  // false: toglie la spunta a "Richiedi conferma settimana" (di partenza
+  // attiva, visibile solo con "Ore di lavoro" abilitato, specs/03).
+  richiediConfermaSettimana?: boolean;
   // Nome (etichetta) del profilo orario da assegnare alla creazione.
   profiloOrario?: string;
 };
@@ -62,6 +65,9 @@ export async function creaUtenteDaForm(page: Page, dati: DatiNuovoUtente): Promi
   await page.getByLabel('Conferma password').fill(dati.password);
   if (dati.ruolo) await form.getByLabel('Ruolo').selectOption(dati.ruolo);
   if (dati.oreLavoro) await form.getByLabel('Ore di lavoro').check();
+  if (dati.oreLavoro && dati.richiediConfermaSettimana === false) {
+    await spuntaRichiediConfermaSettimana(form).uncheck();
+  }
   if (dati.profiloOrario) await form.getByLabel('Profilo orario').selectOption({ label: dati.profiloOrario });
   await page.getByRole('button', { name: 'Crea utente' }).click();
   await expect(page.getByText(dati.email, { exact: false })).toBeVisible({ timeout: 20_000 });
@@ -80,6 +86,12 @@ export function schedaUtente(page: Page, email: string): Locator {
 
 export function spuntaOreLavoro(riga: Locator): Locator {
   return riga.getByLabel('Ore di lavoro');
+}
+
+// Opzione "Richiedi conferma settimana" (specs/03): nascosta finché "Ore di
+// lavoro" non è spuntato. Accetta la riga dell'utente o il form di creazione.
+export function spuntaRichiediConfermaSettimana(contenitore: Locator): Locator {
+  return contenitore.getByLabel('Richiedi conferma settimana');
 }
 
 export function selectProfiloOrario(riga: Locator): Locator {
@@ -102,6 +114,19 @@ export async function impostaOreLavoro(page: Page, email: string, abilitato: boo
   const riga = rigaUtente(page, email);
   if (abilitato) await spuntaOreLavoro(riga).check();
   else await spuntaOreLavoro(riga).uncheck();
+  await aggiornaRigaUtente(page, riga);
+}
+
+// Attiva/disattiva "Richiedi conferma settimana" dell'utente (che deve avere
+// "Ore di lavoro" abilitato) e salva. Si aspetta di essere già su /admin/maestre.
+export async function impostaRichiediConfermaSettimana(
+  page: Page,
+  email: string,
+  richiesta: boolean
+): Promise<void> {
+  const riga = rigaUtente(page, email);
+  if (richiesta) await spuntaRichiediConfermaSettimana(riga).check();
+  else await spuntaRichiediConfermaSettimana(riga).uncheck();
   await aggiornaRigaUtente(page, riga);
 }
 
