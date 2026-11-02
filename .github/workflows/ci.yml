@@ -274,9 +274,10 @@ jobs:
       # supabase/tests/database/, ognuno in `begin; ... rollback;` (nessun
       # dato resta nel DB di test). Un test rosso fa fallire il job.
       # `--linked --project-ref` come il reset qui sopra: stesso progetto di
-      # TEST, mai la produzione.
+      # TEST, mai la produzione. `--yes`: il CLI, senza terminale, chiede una
+      # conferma esplicita e senza si ferma (come per il reset).
       - name: 6a. Test pgTAP sulle policy RLS (issue #180)
-        run: supabase test db --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }}
+        run: supabase test db --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
