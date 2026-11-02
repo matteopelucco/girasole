@@ -12,7 +12,7 @@ test.describe('51 — Report', () => {
 
     test('aprire il report dalla dashboard mostra il mese corrente', async ({ page }) => {
       await page.goto('/dashboard');
-      await page.getByRole('link', { name: 'Report' }).click();
+      await page.getByRole('link', { name: 'Report', exact: true }).click();
       await page.waitForURL(/\/dashboard\/report$/);
 
       await expect(page.getByRole('heading', { name: 'Report' })).toBeVisible();
