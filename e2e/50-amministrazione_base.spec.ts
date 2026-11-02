@@ -468,19 +468,12 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
     }
   });
 
-  test.fixme(
-    'AMM-05: se i costi iniziali non si possono scrivere, il bambino non viene creato',
-    async () => {
-      // NON TESTABILE COSÌ COM'È (segnalato all'analista, issue #396): per far
-      // fallire la scrittura dei costi con un database di test condiviso servirebbe
-      // rompere lo schema (trigger, vincolo, privilegio) o simulare l'errore del
-      // database, e un e2e non può farlo senza toccare il DB condiviso. Il caso si
-      // copre a livello di funzione del database con pgTAP, se la creazione è
-      // un'unica funzione `security invoker` (atomica per costruzione) o con un
-      // test sul codice dell'azione (con client simulato) se si accetta
-      // un'eccezione alla regola "unit solo logica pura in lib/".
-    }
-  );
+  // AMM-05: se i costi iniziali non si possono scrivere, il bambino non viene
+  // creato. NON TESTABILE IN E2E (per farlo fallire bisognerebbe rompere lo schema
+  // del database di test condiviso): è coperto a livello di funzione del database
+  // dal test pgTAP `supabase/tests/database/crea_bambino_con_costi.test.sql`
+  // (sezione "AMM-05"), perché la creazione è un'unica funzione
+  // `crea_bambino_con_costi` (una sola transazione).
 
   test('AMM-06: spostare un bambino in un\'altra sezione non tocca i suoi costi', async ({ page }) => {
     const destinazione = await creaSezioneConTipo(db!, 'primavera');
