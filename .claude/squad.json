@@ -1,0 +1,6 @@
+{
+  "writeScopes": {
+    "product-analyst": ["specs/"],
+    "test-engineer": ["e2e/", "supabase/tests/"]
+  }
+}

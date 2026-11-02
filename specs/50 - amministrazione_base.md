@@ -13,6 +13,29 @@ Quando su `/admin` inserisco un nome sezione (es. "Girasoli") e confermo
 Allora la sezione compare nell'elenco sezioni, subito disponibile per
 assegnare bambini e maestre
 
+## Scenario: creare una sezione scegliendo il tipo
+**ID AMM-01**
+Dato che sono autenticato come admin
+Quando su `/admin` inserisco un nome sezione e scelgo nel campo "Tipo"
+una delle opzioni "Materna" o "Primavera" (oltre a "Nessuno", valore
+iniziale), e confermo
+Allora la sezione compare nell'elenco con il suo tipo accanto al nome
+(nessuna indicazione se il tipo è "Nessuno")
+E il tipo è facoltativo: una sezione senza tipo si crea comunque
+
+## Scenario: modificare il tipo di una sezione
+**ID AMM-02**
+Dato che esiste una sezione (anche senza tipo, come le sezioni create prima
+di questa funzione)
+Quando come admin ne modifico il tipo (Materna, Primavera o Nessuno) e
+confermo
+Allora l'elenco sezioni mostra il tipo nuovo
+E i bambini già presenti nella sezione, con o senza costi, non vengono
+modificati (la retta dei bambini con costi salvati resta com'è: COS-03 in
+specs/55)
+E il tipo vale da quel momento per i bambini creati dopo in quella sezione
+e per la retta proposta ai bambini che non hanno ancora i costi salvati
+
 ## Scenario: creare un bambino
 Quando su `/admin` compilo nome, cognome, data di nascita, sesso,
 (opzionalmente) una sezione e delle note allergie/intolleranze, e
@@ -21,6 +44,45 @@ Allora il bambino compare nell'elenco bambini della sezione scelta (o
 nell'elenco "senza sezione", se non ne ho scelta una)
 E se ha note allergie, sono mostrate in evidenza accanto al suo nome
 (vedi anche [14 - segna-pasto.md](14%20-%20segna-pasto.md))
+
+## Scenario: creare un bambino in una sezione con tipo: i costi nascono subito
+**ID AMM-03**
+Dato che in "Parametri di funzionamento > Prezzi" (specs/62) sono
+impostati i prezzi e che la sezione "Girasoli" ha tipo Materna o Primavera
+Quando l'admin crea un bambino scegliendo la sezione "Girasoli"
+Allora il bambino e la sua riga di costi vengono creati insieme, in
+un'unica operazione
+E la riga di costi contiene la retta del tipo della sezione, il buono pasto,
+la marca da bollo e i prezzi dell'abbonamento pre-asilo e post-asilo
+dei "Prezzi"; pre-asilo e post-asilo non sono richiesti; i gettoni non
+vengono copiati (PRZ-07)
+E aprendo la scheda del bambino, la sezione "Costi" mostra già questi valori
+come salvati
+
+## Scenario: creare un bambino senza sezione o in una sezione senza tipo
+**ID AMM-04**
+Dato che l'admin crea un bambino senza scegliere una sezione, oppure in una
+sezione senza tipo
+Quando conferma
+Allora il bambino viene creato senza nessuna riga di costi
+E nella sua scheda i costi sono solo proposti (COS-02), non salvati
+E non compare nessun errore: la creazione riesce come oggi
+
+## Scenario: se i costi iniziali non si possono scrivere, il bambino non viene creato
+**ID AMM-05**
+Dato che l'admin crea un bambino in una sezione con tipo
+Quando la scrittura dei costi iniziali fallisce (es. errore del database)
+Allora non viene creato neanche il bambino e l'admin vede un messaggio
+d'errore; riprovando non restano bambini doppi o bambini senza costi
+E il form mantiene i dati inseriti
+
+## Scenario: spostare un bambino in un'altra sezione non tocca i suoi costi
+**ID AMM-06**
+Dato che un bambino ha già la riga di costi
+Quando l'admin lo sposta in un'altra sezione (da scheda o con "Assegna")
+Allora i suoi costi restano identici (COS-03)
+E se non aveva la riga di costi, nemmeno l'assegnazione la crea: la scheda
+propone la retta del tipo della nuova sezione (COS-04)
 
 ## Scenario: vedere le classi con i bambini assegnati
 Dato che sono autenticato come admin
@@ -105,3 +167,11 @@ bambini di quella sezione
 - La sezione è facoltativa alla creazione di un bambino: un bambino
   senza sezione (`sezione_id` nullo) compare nell'elenco "senza sezione
   o disattivati" finché non gli viene assegnata una classe.
+- Una sezione ha un campo "Tipo" facoltativo (Materna, Primavera o
+  nessuno), colonna `sezioni.tipo` (issue #396). Le sezioni esistenti
+  partono senza tipo; l'allarme che le segnala è in #397. Il tipo serve
+  solo a scegliere la retta predefinita per i bambini nuovi (AMM-03) e
+  quella proposta nella scheda Costi (COS-02, COS-04).
+- Creazione bambino + riga di costi iniziali sono atomiche (AMM-05). I
+  prezzi copiati vengono dalla sezione "Prezzi" di specs/62; la regola di
+  copia completa è in specs/55.

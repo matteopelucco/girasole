@@ -14,23 +14,63 @@ mensile (vedi
 [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)).
 
 ## Scenario: impostare per la prima volta i costi di un bambino
+**ID COS-01**
 Dato che sono autenticato come admin e apro la scheda di dettaglio di un
-bambino che non ha ancora costi impostati
-Quando nella sezione "Costi" trovo i campi (prezzo retta mensile vuoto/a
-zero, prezzo buono pasto precompilato a 6€, prezzo marca da bollo
-precompilato a 2€, pre-asilo/post-asilo non richiesti con i rispettivi
-prezzi precompilati a 70€, email promemoria vuota), li compilo e
-confermo
-Allora i costi sono salvati e restano visibili riaprendo la scheda
+bambino che non ha ancora una riga di costi (es. creato senza sezione)
+Quando nella sezione "Costi" trovo i campi precompilati come proposta
+(vedi COS-02), li controllo, li correggo se serve e confermo
+Allora i costi sono salvati (nasce la riga in `costi_bambini`) e restano
+visibili riaprendo la scheda
+E fino alla conferma nulla è stato scritto nel database
 
-## Scenario: buono pasto, marca da bollo e pre/post-asilo hanno un valore predefinito
-Dato che apro la scheda di un bambino che non ha ancora costi impostati
-Quando guardo i campi "Prezzo buono pasto (€)", "Prezzo marca da bollo
-(€)", "Prezzo pre-asilo (€)" e "Prezzo post-asilo (€)" nella sezione
-"Costi"
-Allora li trovo già precompilati (6€, 2€, 70€ e 70€: gli importi
-correnti tipici di questi servizi), ciascuno modificabile come
-qualunque altro prezzo se in futuro dovesse cambiare
+## Scenario: i prezzi proposti vengono da "Prezzi", non da valori fissi
+**ID COS-02**
+Dato che un bambino non ha ancora una riga di costi
+E che in "Parametri di funzionamento > Prezzi" (specs/62) i valori sono:
+retta Materna 160, retta Primavera 200, buono pasto 6, marca da bollo 2,
+abbonamento pre-asilo 70, abbonamento post-asilo 70
+Quando apro la sua scheda, sezione "Costi"
+Allora "Prezzo buono pasto (€)" è 6,00, "Prezzo marca da bollo (€)" è 2,00,
+"Prezzo pre-asilo (€)" è 70,00 e "Prezzo post-asilo (€)" è 70,00
+E "Pre-asilo richiesto" e "Post-asilo richiesto" non sono spuntati
+E "Prezzo retta mensile (€)" è 160,00 se la sua sezione è di tipo
+Materna, 200,00 se è di tipo Primavera, vuoto se non ha sezione o se la
+sua sezione non ha tipo
+E se cambio un valore in "Prezzi" e riapro la scheda, la proposta mostra il
+valore nuovo (è solo una proposta: non è ancora salvata)
+E i "gettoni" di "Prezzi" non compaiono in questa scheda (non fanno parte
+dei costi del bambino)
+
+## Scenario: un bambino con costi già salvati non cambia mai
+**ID COS-03**
+Dato che un bambino ha una riga in `costi_bambini` (creata alla
+creazione del bambino o salvata a mano)
+Quando l'admin modifica un qualsiasi valore in "Prezzi", oppure cambia il
+tipo della sua sezione, oppure lo sposta in un'altra sezione
+Allora i suoi costi (tutti e 5 i prezzi, i due flag, l'email) restano
+identici, al centesimo
+E le rette già calcolate e le comunicazioni già inviate (specs/56) non
+cambiano
+
+## Scenario: la retta proposta segue il tipo attuale della sezione finché non si salva
+**ID COS-04**
+Dato che un bambino non ha una riga di costi (creato senza sezione, o in
+una sezione senza tipo)
+Quando gli viene assegnata una sezione di tipo Primavera e apro la scheda
+Allora "Prezzo retta mensile (€)" propone 200,00 (la retta Primavera)
+E se la sezione è poi di tipo Materna, la scheda propone 160,00
+E l'assegnazione della sezione non scrive nulla in `costi_bambini`: i
+costi si fissano solo alla conferma del form (COS-01)
+
+## Scenario: valori decimali con virgola nella scheda costi
+**ID COS-05**
+Dato che sono nella sezione "Costi" di un bambino
+Quando scrivo "160,50" in un prezzo e confermo
+Allora il prezzo salvato è 160,50 (la virgola italiana vale come
+separatore decimale, come il punto)
+E scrivendo "abc", "-5", "160,555" o "1e2" in un prezzo vedo un messaggio
+di errore sul campo e nessun valore del form viene salvato (non diventa 0)
+E lasciando un prezzo vuoto, vale 0 (nessun importo previsto)
 
 ## Scenario: modificare i costi già impostati
 Dato che un bambino ha già dei costi salvati
@@ -89,25 +129,38 @@ valido
   da `requireAdmin` (vedi
   [50 - amministrazione_base.md](50%20-%20amministrazione_base.md)).
 - Prezzo retta mensile, prezzo buono pasto, prezzo marca da bollo,
-  prezzo pre-asilo e prezzo post-asilo sono numeri non negativi, fino a
-  due decimali (euro); un valore vuoto, non numerico o negativo viene
-  trattato come 0 — coerente con "nessun importo previsto", non un
-  errore da segnalare (stesso pattern già usato per le ore in
-  [54 - profili-orari.md](54%20-%20profili-orari.md)).
-- Il prezzo della marca da bollo è una voce di costo fissa mensile come
-  la retta e il buono pasto (non un servizio opzionale come pre/post-
-  asilo, sempre inclusa nel totale): a differenza degli altri prezzi,
-  di default vale 2€ invece di 0, sia per un bambino appena creato sia
-  per uno che ha già dei costi salvati da prima dell'introduzione di
-  questo campo (`supabase/migrations/0037_marca_da_bollo.sql`).
-- Buono pasto (6€), pre-asilo e post-asilo (70€ ciascuno) hanno anche
-  loro un valore predefinito diverso da 0 (`supabase/migrations/0039_default_buono_pasto_pre_post_asilo.sql`),
-  ma — a differenza della marca da bollo — **solo per un bambino senza
-  ancora nessuna riga in `costi_bambini`**: un bambino che ha già dei
-  costi salvati (anche a 0) non viene toccato retroattivamente, perché
-  questi tre prezzi sono già in uso con importi reali scelti dall'admin
-  per bambini veri, e non c'è modo di distinguere "mai configurato" da
-  "configurato deliberatamente a zero".
+  prezzo pre-asilo e prezzo post-asilo sono numeri non negativi, con al
+  massimo due decimali (euro), da 0 a 9999,99. Il separatore decimale può
+  essere la virgola o il punto; niente separatore delle migliaia (es.
+  "1.234,50" è rifiutato), niente simbolo "€", niente notazione
+  scientifica. Un prezzo **vuoto** vale 0 ("nessun importo previsto",
+  stesso pattern delle ore in
+  [54 - profili-orari.md](54%20-%20profili-orari.md)); un valore non
+  numerico, negativo, con più di due decimali o sopra 9999,99 viene
+  **rifiutato con un messaggio** e nulla viene salvato: non diventa mai 0
+  in silenzio e non viene mai arrotondato in silenzio. (Regola più
+  severa di quella precedente, che trasformava in 0 anche i valori non
+  numerici: decisione di Matteo, issue #396.)
+- **Nessun valore predefinito fisso** nel database: le colonne di prezzo
+  di `costi_bambini` non hanno più i default 6/2/70/70 (rimossi dalla
+  migration della issue #396, che sostituisce i default di
+  `0037_marca_da_bollo.sql` e `0039_default_buono_pasto_pre_post_asilo.sql`).
+  Ogni inserimento scrive tutti i prezzi in modo esplicito. Le righe già
+  esistenti non vengono modificate.
+- **Da dove nascono i prezzi di un bambino** (specs/62 sezione "Prezzi"):
+  i valori di "Prezzi" sono usati **solo** in due momenti, mai nei
+  calcoli: (a) alla creazione di un bambino in una sezione con tipo
+  Materna o Primavera, che scrive la riga di costi (specs/50); (b) come
+  proposta precompilata nella scheda di un bambino che non ha ancora la
+  riga (COS-02). Regola di copia alla creazione: retta mensile = retta del
+  tipo della sezione; buono pasto = buono pasto; marca da bollo = marca da
+  bollo; prezzo pre-asilo = abbonamento pre-asilo; prezzo post-asilo =
+  abbonamento post-asilo; entrambi i flag "richiesto" = falso; email =
+  vuota. I gettoni non si copiano. Le rette e le comunicazioni leggono
+  solo `costi_bambini`, mai "Prezzi".
+- La marca da bollo resta una voce fissa mensile come la retta e il buono
+  pasto (non un servizio opzionale come pre/post-asilo, sempre inclusa
+  nel totale).
 - Pre-asilo e post-asilo sono due coppie indipendenti flag+prezzo
   (`pre_asilo_richiesto`/`prezzo_pre_asilo`,
   `post_asilo_richiesto`/`prezzo_post_asilo`): se il flag non è

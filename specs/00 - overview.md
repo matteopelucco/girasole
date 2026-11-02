@@ -87,7 +87,9 @@ della maestra, `5x` amministrazione.
   più), − ore da recuperare (ancora da erogare); la scheda ore mostra sempre il calcolo
   completo mese per mese; la conferma della settimana non lo modifica
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
-  sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
+  sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin);
+  tipo della sezione (Materna/Primavera) e costi iniziali del bambino
+  creato in una sezione con tipo
 - [51 - report.md](51%20-%20report.md) — report tabellari di
   presenze/pasti (giornaliero, settimanale, mensile con drill-down) e
   anagrafica classi, incluse le presenze a pre-asilo e post-asilo
@@ -104,7 +106,8 @@ della maestra, `5x` amministrazione.
 - [55 - costi-bambino.md](55%20-%20costi-bambino.md) — sezione "Costi"
   sulla scheda bambino: prezzo retta, prezzo buono pasto, abbonamento
   pre-asilo/post-asilo, email di promemoria — primo passo di Fase 2
-  (rette e pagamenti)
+  (rette e pagamenti); prezzi proposti da "Prezzi" (62), valori non validi
+  rifiutati, costi già salvati mai toccati da cambi di prezzo/tipo/sezione
 - [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md) —
   voce di menu "Rette": tabella di revisione mensile con gli importi
   calcolati, invio delle email di promemoria ai genitori e template
@@ -135,7 +138,8 @@ della maestra, `5x` amministrazione.
   pagina con titolo e breve descrizione, pronta a ospitare le sezioni future;
   prima sezione "Variabili d'ambiente" (sola lettura, valori nascosti finché
   l'admin non reinserisce la propria password); sezione "Calendario Google"
-  (indirizzo iCal segreto, vedi 64)
+  (indirizzo iCal segreto, vedi 64); sezione "Prezzi" (otto prezzi
+  predefiniti, usati solo per i bambini nuovi, PRZ-01..10)
 - [63 - cron-job.md](63%20-%20cron-job.md) — voce di menu "Azioni" sotto
   "Impostazioni" (solo admin), con due schede: "Cron Job" (lanci dei job pianificati, report notturno e
   riepilogo allarmi, raggruppati per job, con data e ora, esito OK/KO ed
