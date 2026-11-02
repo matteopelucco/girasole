@@ -85,7 +85,9 @@ della maestra, `5x` amministrazione.
   persona, gestito completamente a mano dall'admin (movimenti inseriti,
   modificati, eliminati), con segno unico: + ore a credito (già erogate in
   più), − ore da recuperare (ancora da erogare); la scheda ore mostra sempre il calcolo
-  completo mese per mese; la conferma della settimana non lo modifica
+  completo mese per mese; la conferma della settimana non lo modifica;
+  l'admin può confermare con un pulsante la differenza di un mese chiuso
+  (movimento con mese di competenza distinto dalla data di registrazione)
 - [50 - amministrazione_base.md](50%20-%20amministrazione_base.md) — creazione
   sezioni/bambini e assegnazione maestre/assistenti alle sezioni (admin)
 - [51 - report.md](51%20-%20report.md) — report tabellari di
