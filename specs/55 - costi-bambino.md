@@ -72,6 +72,30 @@ E scrivendo "abc", "-5", "160,555" o "1e2" in un prezzo vedo un messaggio
 di errore sul campo e nessun valore del form viene salvato (non diventa 0)
 E lasciando un prezzo vuoto, vale 0 (nessun importo previsto)
 
+## Scenario: avviso quando la retta mensile è vuota
+**ID COS-06**
+Dato che sono admin nella sezione "Costi" di un bambino
+Quando il campo "Prezzo retta mensile (€)" è vuoto (tipico: il bambino non
+ha riga di costi e la sua sezione non ha tipo o non c'è sezione, vedi
+COS-02/COS-04)
+Allora accanto al campo vedo l'avviso (non un errore, non in rosso di
+errore) "Retta non impostata: se salvi senza compilarla vale 0 €."
+E posso comunque confermare il form: il salvataggio non è bloccato e la
+retta vuota vale 0 (COS-05 resta valido)
+E l'avviso sparisce subito, appena scrivo qualcosa nel campo (senza
+attendere il salvataggio), e ricompare se lo svuoto di nuovo
+E l'avviso non compare se la retta è valorizzata: proposta dal tipo della
+sezione (160,00 / 200,00), già salvata, o "0" scritto apposta (0 è un
+valore, non un campo vuoto)
+E se il valore scritto non è valido (es. "abc") vale solo l'errore di
+COS-05 sul campo, non l'avviso
+E l'avviso non compare per gli altri prezzi (buono pasto, marca da bollo,
+pre-asilo, post-asilo): sono sempre proposti da "Prezzi" e, per
+pre/post-asilo, 0 è il valore normale quando il servizio non c'è; l'avviso
+serve solo per la retta, l'unico prezzo che può restare vuoto per
+mancanza di una proposta. Se l'admin svuota apposta un altro prezzo, vale
+0 senza avviso
+
 ## Scenario: modificare i costi già impostati
 Dato che un bambino ha già dei costi salvati
 Quando riapro la sua scheda, trovo il form pre-caricato con i valori
