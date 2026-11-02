@@ -76,6 +76,7 @@ $$;
 insert into auth.users (id, email, raw_user_meta_data) values
   ('a0000000-0000-0000-0000-000000000001', 'pgtap.admin@example.test', '{"ruolo":"admin"}'),
   ('a0000000-0000-0000-0000-000000000002', 'pgtap.maestra@example.test', '{"ruolo":"maestra"}'),
+  ('a0000000-0000-0000-0000-000000000003', 'pgtap.assistente@example.test', '{"ruolo":"assistente"}'),
   ('a0000000-0000-0000-0000-000000000004', 'pgtap.genitore@example.test', '{"ruolo":"genitore"}');
 
 insert into public.sezioni (id, nome, tipo) values
@@ -195,6 +196,12 @@ select is(
   '42501', 'maestra: negato'
 );
 select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000003', $q$
+    select public.crea_bambino_con_costi('Prova', 'PgTapAssistente', 'b0000000-0000-0000-0000-000000000001', '2021-04-04', 'F', null, null)
+  $q$),
+  '42501', 'assistente: negato'
+);
+select is(
   pg_temp.write_as('a0000000-0000-0000-0000-000000000004', $q$
     select public.crea_bambino_con_costi('Prova', 'PgTapGenitore', 'b0000000-0000-0000-0000-000000000001', '2021-04-04', 'F', null, null)
   $q$),
@@ -207,7 +214,7 @@ select is(
   '42501', 'anonimo: negato'
 );
 select is(
-  (select count(*)::int from public.bambini where cognome in ('PgTapMaestra', 'PgTapGenitore', 'PgTapAnon')),
+  (select count(*)::int from public.bambini where cognome in ('PgTapMaestra', 'PgTapAssistente', 'PgTapGenitore', 'PgTapAnon')),
   0, 'nessun bambino creato da chi non è admin'
 );
 
