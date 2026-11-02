@@ -78,7 +78,7 @@ export default async function AdminPage() {
 
         <section>
           <h1 className="text-lg font-medium">Sezioni</h1>
-          <FormConEsito action={creaSezione} className="mt-3 flex flex-wrap gap-2">
+          <FormConEsito action={creaSezione} resetSuOk className="mt-3 flex flex-wrap gap-2">
             <Campo
               name="nome"
               required
