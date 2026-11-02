@@ -26,7 +26,14 @@ import {
   ripristinaPrezzi,
   type Prezzi,
 } from './fixture-prezzi';
-import { ETICHETTE_COSTI, MESSAGGIO_IMPORTO_NON_VALIDO, creaBambinoDaForm, formCosti } from './pagina-prezzi';
+import {
+  ETICHETTE_COSTI,
+  MESSAGGIO_IMPORTO_NON_VALIDO,
+  TESTO_AVVISO_RETTA_VUOTA,
+  avvisoRettaVuota,
+  creaBambinoDaForm,
+  formCosti,
+} from './pagina-prezzi';
 
 // I test cambiano i prezzi (riga unica): girano in sequenza.
 test.describe.configure({ mode: 'serial' });
@@ -221,6 +228,105 @@ test.describe('55 — Costi bambino', () => {
     await expect.poll(async () => (await leggiCosti(db!, id))?.prezzo_pre_asilo).toBe(0);
     await page.reload();
     await expect(campo(page, ETICHETTE_COSTI.preAsilo)).toHaveValue('0,00');
+  });
+
+  test('COS-06: avviso quando la retta mensile è vuota (non bloccante, sparisce scrivendo)', async ({ page }) => {
+    test.slow();
+    const retta = campo(page, ETICHETTE_COSTI.retta);
+    const avviso = avvisoRettaVuota(page);
+    const sezioneSenzaTipo = await creaSezioneConTipo(db!, null);
+    const sezioneMaterna = await creaSezioneConTipo(db!, 'materna');
+    sezioniCreate.push(sezioneSenzaTipo.id, sezioneMaterna.id);
+    await scriviPrezzi(db!, { retta_materna: 160, retta_primavera: 200 });
+
+    // Bambino senza sezione, senza riga costi: retta vuota, avviso presente, non è un errore.
+    const { id } = await creaEApri(page);
+    await expect(retta).toHaveValue('');
+    await expect(avviso).toBeVisible();
+    await expect(avviso).toHaveText(TESTO_AVVISO_RETTA_VUOTA);
+    await expect(alertApp(page)).toHaveCount(0);
+    await expect(retta).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(retta).toHaveAccessibleDescription(new RegExp(TESTO_AVVISO_RETTA_VUOTA.slice(0, 20)));
+    await nessunaViolazioneA11yGrave(page);
+
+    // Sparisce subito scrivendo (senza salvare) e ricompare svuotando.
+    await retta.fill('1');
+    await expect(avviso).toHaveCount(0);
+    await retta.fill('');
+    await expect(avviso).toBeVisible();
+
+    // Anche in una sezione senza tipo l'avviso c'è.
+    await db!.from('bambini').update({ sezione_id: sezioneSenzaTipo.id }).eq('id', id);
+    await page.reload();
+    await expect(retta).toHaveValue('');
+    await expect(avviso).toBeVisible();
+
+    // Il salvataggio non è bloccato: la retta vuota vale 0; poi 0 è un valore, niente avviso.
+    await salvaCosti(page);
+    await expect.poll(async () => (await leggiCosti(db!, id))?.prezzo_mensile).toBe(0);
+    await page.reload();
+    await expect(retta).toHaveValue('0,00');
+    await expect(avviso).toHaveCount(0);
+
+    // "0" scritto apposta: nessun avviso, nemmeno prima di salvare.
+    await retta.fill('');
+    await expect(avviso).toBeVisible();
+    await retta.fill('0');
+    await expect(avviso).toHaveCount(0);
+
+    // Retta già salvata (250): niente avviso; svuotandola torna.
+    await retta.fill('250');
+    await salvaCosti(page);
+    await expect.poll(async () => (await leggiCosti(db!, id))?.prezzo_mensile).toBe(250);
+    await page.reload();
+    await expect(retta).toHaveValue('250,00');
+    await expect(avviso).toHaveCount(0);
+    await retta.fill('');
+    await expect(avviso).toBeVisible();
+
+    // Altri prezzi vuoti (con la retta compilata): nessun avviso, valgono 0.
+    await retta.fill('250');
+    for (const etichetta of [ETICHETTE_COSTI.buonoPasto, ETICHETTE_COSTI.marcaDaBollo, ETICHETTE_COSTI.preAsilo, ETICHETTE_COSTI.postAsilo]) {
+      await campo(page, etichetta).fill('');
+      await expect(avviso, etichetta).toHaveCount(0);
+    }
+    // Con retta vuota e altri vuoti l'avviso è uno solo (solo per la retta).
+    await retta.fill('');
+    await expect(avviso).toHaveCount(1);
+    await expect(formCosti(page).getByText(TESTO_AVVISO_RETTA_VUOTA)).toHaveCount(1);
+  });
+
+  test('COS-06: nessun avviso con la retta proposta dal tipo della sezione', async ({ page }) => {
+    const materna = await creaSezioneConTipo(db!, 'materna');
+    const primavera = await creaSezioneConTipo(db!, 'primavera');
+    sezioniCreate.push(materna.id, primavera.id);
+    await scriviPrezzi(db!, { retta_materna: 160, retta_primavera: 200 });
+
+    const { id } = await creaEApri(page);
+    await db!.from('bambini').update({ sezione_id: materna.id }).eq('id', id);
+    await page.reload();
+    await expect(campo(page, ETICHETTE_COSTI.retta)).toHaveValue('160,00');
+    await expect(avvisoRettaVuota(page)).toHaveCount(0);
+
+    await db!.from('bambini').update({ sezione_id: primavera.id }).eq('id', id);
+    await page.reload();
+    await expect(campo(page, ETICHETTE_COSTI.retta)).toHaveValue('200,00');
+    await expect(avvisoRettaVuota(page)).toHaveCount(0);
+    await nessunaViolazioneA11yGrave(page);
+  });
+
+  test('COS-06: con un valore non valido vale solo l\'errore di COS-05, non l\'avviso', async ({ page }) => {
+    const { id } = await creaEApri(page);
+    const retta = campo(page, ETICHETTE_COSTI.retta);
+    await expect(avvisoRettaVuota(page)).toBeVisible();
+
+    await retta.fill('abc');
+    await expect(avvisoRettaVuota(page)).toHaveCount(0);
+    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await expect(alertApp(page)).toContainText(MESSAGGIO_IMPORTO_NON_VALIDO);
+    await expect(retta).toHaveAttribute('aria-invalid', 'true');
+    await expect(avvisoRettaVuota(page)).toHaveCount(0);
+    expect(await leggiCosti(db!, id)).toBeNull();
   });
 
   test('modificare i costi già impostati aggiorna i valori salvati', async ({ page }) => {

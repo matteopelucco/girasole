@@ -103,6 +103,15 @@ export function formCosti(page: Page): Locator {
   return page.locator('form', { has: page.getByRole('button', { name: 'Salva costi' }) });
 }
 
+// Avviso COS-06 accanto alla retta vuota: NON è un errore, quindi niente
+// role="alert" (altrimenti `alertApp` lo vedrebbe); `data-testid="avviso-retta-vuota"`
+// dentro il form dei costi, collegato al campo retta con aria-describedby.
+export const TESTO_AVVISO_RETTA_VUOTA = 'Retta non impostata: se salvi senza compilarla vale 0 €.';
+
+export function avvisoRettaVuota(page: Page): Locator {
+  return formCosti(page).getByTestId('avviso-retta-vuota');
+}
+
 // Crea un bambino dal form su `/admin` e attende che compaia nell'elenco.
 // `nomeSezione` = null: nessuna sezione scelta. Il form mostra le sezioni per
 // nome (stesso testo dell'<option>), quindi basta il nome unico della sezione.
