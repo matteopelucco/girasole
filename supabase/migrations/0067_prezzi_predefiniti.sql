@@ -89,6 +89,16 @@ alter table public.costi_bambini alter column prezzo_marca_da_bollo drop default
 alter table public.costi_bambini alter column prezzo_pre_asilo drop default;
 alter table public.costi_bambini alter column prezzo_post_asilo drop default;
 
+-- Revoca dei privilegi residui ad anon (come 0059 per comunicazioni_retta).
+-- La 0035 ha creato la tabella come `postgres` senza `revoke all`, quindi con
+-- i default privileges di Supabase `anon` ha privilegi di tabella che non gli
+-- servono: oggi li ferma solo la RLS (policy admin-only). Nessun codice usa
+-- `anon` su questa tabella. Restano: `authenticated` select/insert/update/
+-- delete (0035, le policy admin li richiedono) e `service_role` select (0061,
+-- il cron degli allarmi). Idempotente: no-op dove il privilegio non c'è.
+revoke all on public.costi_bambini from public;
+revoke all on public.costi_bambini from anon;
+
 -- ---------------------------------------------------------------------
 -- 4) crea_bambino_con_costi
 -- ---------------------------------------------------------------------
