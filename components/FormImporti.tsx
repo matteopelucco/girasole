@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useActionState, useContext, useRef, type ReactNode } from 'react';
+import { createContext, useActionState, useContext, useRef, useState, type ReactNode } from 'react';
 import { useAnnullaResetForm } from './useAnnullaResetForm';
 import { Avviso } from '@/components/ui/avviso';
 import { Campo } from '@/components/ui/campo';
@@ -80,6 +80,7 @@ export function CampoImporto({
   defaultValue,
   className,
   classeCampo,
+  avvisoSeVuoto,
 }: {
   name: string;
   etichetta: string;
@@ -89,11 +90,18 @@ export function CampoImporto({
   defaultValue: string;
   className?: string;
   classeCampo?: string;
+  // Se indicato, testo di un avviso (NON un errore: niente role="alert") mostrato
+  // finché il campo, tolti gli spazi, è vuoto; collegato al campo con
+  // `aria-describedby`. Non blocca il salvataggio.
+  avvisoSeVuoto?: string;
 }) {
+  const [valore, setValore] = useState(defaultValue);
   const stato = useContext(ContestoImporti);
   const errore = stato.esito === 'errore' ? stato.errori?.[name] : undefined;
   const id = `campo-${name}`;
   const idErrore = `${id}-errore`;
+  const idAvviso = `${id}-avviso`;
+  const mostraAvviso = Boolean(avvisoSeVuoto) && valore.trim() === '' && !errore;
   return (
     <div className={className}>
       <Etichetta htmlFor={id} className="text-xs font-normal text-stone-600">
@@ -108,9 +116,15 @@ export function CampoImporto({
         defaultValue={defaultValue}
         aria-label={nomeAccessibile}
         aria-invalid={errore ? true : undefined}
-        aria-describedby={errore ? idErrore : undefined}
+        onChange={(e) => setValore(e.target.value)}
+        aria-describedby={errore ? idErrore : mostraAvviso ? idAvviso : undefined}
         className={cn('mt-1 w-full', classeCampo)}
       />
+      {mostraAvviso && (
+        <p id={idAvviso} data-testid="avviso-retta-vuota" role="status" className="mt-1 text-xs font-medium text-warning-text">
+          {avvisoSeVuoto}
+        </p>
+      )}
       {errore && (
         <TestoErrore id={idErrore} role="alert">
           {errore}

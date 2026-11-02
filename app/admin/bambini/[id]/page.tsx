@@ -201,6 +201,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 etichetta="Prezzo retta mensile (€)"
                 nomeAccessibile="Prezzo retta mensile (€)"
                 defaultValue={valoriCosti.retta}
+                avvisoSeVuoto="Retta non impostata: se salvi senza compilarla vale 0 €."
                 className="flex-1"
               />
               <CampoImporto
