@@ -1,14 +1,18 @@
 import { redirect } from 'next/navigation';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
+import { CampoImporto, FormImporti } from '@/components/FormImporti';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
+import { Avviso } from '@/components/ui/avviso';
 import { riquadroVariants } from '@/components/ui/riquadro';
 import { Campo } from '@/components/ui/campo';
 import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, meseSuccessivo, oggi } from '@/lib/date';
+import { formattaImporto as formattaImportoInput, rettaPerTipo, type TipoSezione } from '@/lib/prezzi';
+import { leggiPrezzi } from '@/lib/prezziDati';
 import { cn } from '@/lib/utils';
 import {
   aggiornaBambino,
@@ -30,7 +34,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
       .select('id, nome, cognome, data_nascita, sesso, sezione_id, note_allergie, altre_note, attiva, updated_at')
       .eq('id', params.id)
       .maybeSingle(),
-    supabase.from('sezioni').select('id, nome').order('nome'),
+    supabase.from('sezioni').select('id, nome, tipo').order('nome'),
     supabase
       .from('costi_bambini')
       .select(
@@ -46,6 +50,27 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
   ]);
 
   if (!bambino) redirect('/admin');
+
+  // Valori della scheda Costi (specs/55). Con la riga salvata: quelli salvati.
+  // Senza (COS-02, COS-04): una PROPOSTA dai prezzi predefiniti, non salvata
+  // finché l'admin non conferma; la retta segue il tipo attuale della sezione e
+  // resta vuota se manca il tipo. Mai valori fissi nel codice: se i prezzi non
+  // si leggono i campi restano vuoti e la pagina lo dice.
+  const formatta = (valore: number | string) => formattaImportoInput(Number(valore));
+  const prezziPredefiniti = costi ? null : await leggiPrezzi(supabase);
+  const proposta = prezziPredefiniti?.prezzi;
+  const tipoSezione = (sezioni?.find((sezione) => sezione.id === bambino.sezione_id)?.tipo ?? null) as TipoSezione | null;
+  const rettaProposta = proposta
+    ? rettaPerTipo(tipoSezione, { rettaMaterna: proposta.retta_materna, rettaPrimavera: proposta.retta_primavera })
+    : null;
+  const valoriCosti = {
+    retta: costi ? formatta(costi.prezzo_mensile) : rettaProposta === null ? '' : formatta(rettaProposta),
+    buonoPasto: costi ? formatta(costi.prezzo_buono_pasto) : proposta ? formatta(proposta.buono_pasto) : '',
+    marcaDaBollo: costi ? formatta(costi.prezzo_marca_da_bollo) : proposta ? formatta(proposta.marca_da_bollo) : '',
+    preAsilo: costi ? formatta(costi.prezzo_pre_asilo) : proposta ? formatta(proposta.abbonamento_pre_asilo) : '',
+    postAsilo: costi ? formatta(costi.prezzo_post_asilo) : proposta ? formatta(proposta.abbonamento_post_asilo) : '',
+  };
+  const prezziNonLeggibili = !costi && prezziPredefiniti === null;
 
   // specs/58, "il mese di competenza è precompilato con la prossima
   // retta utile": suggerimento, non un vincolo (min lasciato al mese
@@ -158,54 +183,40 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
 
         <div className="space-y-2">
           <h2 className="text-base font-medium">Costi</h2>
-          <FormConEsito
+          {prezziNonLeggibili && (
+            <Avviso tono="attenzione">
+              Impossibile leggere i prezzi predefiniti: i campi sono vuoti. Compilali a mano prima di salvare (un
+              campo vuoto vale 0).
+            </Avviso>
+          )}
+          <FormImporti
             action={aggiornaCostiBambino}
+            chiave={costi?.updated_at ?? 'nuovi'}
             className={cn(riquadroVariants(), 'space-y-3 p-4')}
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
             <div className="flex flex-wrap gap-2">
-              <label className="flex-1 text-xs text-stone-600">
-                Prezzo retta mensile (€)
-                <Campo
-                  name="prezzo_mensile"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  defaultValue={costi?.prezzo_mensile ?? 0}
-                  aria-label="Prezzo retta mensile (€)"
-                  className="mt-1 w-full"
-                />
-              </label>
-              <label className="flex-1 text-xs text-stone-600">
-                Prezzo buono pasto (€)
-                <Campo
-                  name="prezzo_buono_pasto"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  // Come marca da bollo sotto: precompilato all'importo
-                  // corrente tipico (6€), non a 0, solo per un bambino
-                  // senza ancora nessun costo salvato (specs/55).
-                  defaultValue={costi?.prezzo_buono_pasto ?? 6}
-                  aria-label="Prezzo buono pasto (€)"
-                  className="mt-1 w-full"
-                />
-              </label>
-              <label className="flex-1 text-xs text-stone-600">
-                Prezzo marca da bollo (€)
-                <Campo
-                  name="prezzo_marca_da_bollo"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  // Precompilato all'importo corrente reale (2€), non a 0
-                  // ("nessun importo previsto") — solo per un bambino
-                  // senza ancora nessun costo salvato (specs/55).
-                  defaultValue={costi?.prezzo_marca_da_bollo ?? 2}
-                  aria-label="Prezzo marca da bollo (€)"
-                  className="mt-1 w-full"
-                />
-              </label>
+              <CampoImporto
+                name="prezzo_mensile"
+                etichetta="Prezzo retta mensile (€)"
+                nomeAccessibile="Prezzo retta mensile (€)"
+                defaultValue={valoriCosti.retta}
+                className="flex-1"
+              />
+              <CampoImporto
+                name="prezzo_buono_pasto"
+                etichetta="Prezzo buono pasto (€)"
+                nomeAccessibile="Prezzo buono pasto (€)"
+                defaultValue={valoriCosti.buonoPasto}
+                className="flex-1"
+              />
+              <CampoImporto
+                name="prezzo_marca_da_bollo"
+                etichetta="Prezzo marca da bollo (€)"
+                nomeAccessibile="Prezzo marca da bollo (€)"
+                defaultValue={valoriCosti.marcaDaBollo}
+                className="flex-1"
+              />
             </div>
 
             <div className="flex flex-wrap gap-4">
@@ -219,18 +230,13 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   />
                   Pre-asilo richiesto
                 </label>
-                <label className="text-xs text-stone-600">
-                  Prezzo (€)
-                  <Campo
-                    name="prezzo_pre_asilo"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    defaultValue={costi?.prezzo_pre_asilo ?? 70}
-                    aria-label="Prezzo pre-asilo (€)"
-                    className="mt-1 block w-28"
-                  />
-                </label>
+                <CampoImporto
+                  name="prezzo_pre_asilo"
+                  etichetta="Prezzo (€)"
+                  nomeAccessibile="Prezzo pre-asilo (€)"
+                  defaultValue={valoriCosti.preAsilo}
+                  classeCampo="block w-28"
+                />
               </div>
               <div className="flex items-end gap-2">
                 <label className="flex items-center gap-2 text-sm text-stone-700">
@@ -242,18 +248,13 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                   />
                   Post-asilo richiesto
                 </label>
-                <label className="text-xs text-stone-600">
-                  Prezzo (€)
-                  <Campo
-                    name="prezzo_post_asilo"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    defaultValue={costi?.prezzo_post_asilo ?? 70}
-                    aria-label="Prezzo post-asilo (€)"
-                    className="mt-1 block w-28"
-                  />
-                </label>
+                <CampoImporto
+                  name="prezzo_post_asilo"
+                  etichetta="Prezzo (€)"
+                  nomeAccessibile="Prezzo post-asilo (€)"
+                  defaultValue={valoriCosti.postAsilo}
+                  classeCampo="block w-28"
+                />
               </div>
             </div>
 
@@ -276,7 +277,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                 Ultimo salvataggio: {formattaDataOraItaliana(costi.updated_at).replace('_', ' alle ')}
               </p>
             )}
-          </FormConEsito>
+          </FormImporti>
         </div>
 
         <div className="space-y-2">

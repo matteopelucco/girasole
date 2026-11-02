@@ -8,9 +8,11 @@ import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Campo } from '@/components/ui/campo';
 import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
+import { ETICHETTA_TIPO_SEZIONE, type TipoSezione } from '@/lib/prezzi';
 import { cn } from '@/lib/utils';
 import {
   creaSezione,
+  aggiornaTipoSezione,
   toggleAttivaSezione,
   creaAnnoScolastico,
   creaBambino,
@@ -24,7 +26,7 @@ export default async function AdminPage() {
 
   const [{ data: anniScolastici }, { data: sezioni }, { data: bambini }] = await Promise.all([
     supabase.from('anni_scolastici').select('id, nome').order('nome'),
-    supabase.from('sezioni').select('id, nome, attiva, anno_scolastico_id').order('nome'),
+    supabase.from('sezioni').select('id, nome, attiva, anno_scolastico_id, tipo').order('nome'),
     supabase
       .from('bambini')
       .select('id, nome, cognome, sezione_id, note_allergie, attiva')
@@ -95,6 +97,11 @@ export default async function AdminPage() {
                 </option>
               ))}
             </Selezione>
+            <Selezione name="tipo" defaultValue="" aria-label="Tipo">
+              <option value="">Nessuno</option>
+              <option value="materna">Materna</option>
+              <option value="primavera">Primavera</option>
+            </Selezione>
             <PulsanteInvio variante="primario" misura="normale">
               Crea
             </PulsanteInvio>
@@ -104,14 +111,38 @@ export default async function AdminPage() {
             {sezioni?.map((sezione) => (
               <li
                 key={sezione.id}
-                className={cn(riquadroVariants(), 'rounded-lg flex items-center justify-between px-3 py-2 text-sm')}
+                className={cn(
+                  riquadroVariants(),
+                  'rounded-lg flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm'
+                )}
               >
                 <span>
                   {sezione.nome}
+                  {sezione.tipo && (
+                    <EtichettaPillola data-testid="tipo-sezione" className="ml-2 font-normal">
+                      {ETICHETTA_TIPO_SEZIONE[sezione.tipo as TipoSezione]}
+                    </EtichettaPillola>
+                  )}
                   {!sezione.attiva && (
                     <EtichettaPillola className="ml-2 font-normal">non attiva</EtichettaPillola>
                   )}
                 </span>
+                <FormConEsito action={aggiornaTipoSezione} className="flex items-center gap-2">
+                  <input type="hidden" name="sezione_id" value={sezione.id} />
+                  <Selezione
+                    name="tipo"
+                    defaultValue={sezione.tipo ?? ''}
+                    aria-label={`Tipo di ${sezione.nome}`}
+                    misura="piccolo"
+                  >
+                    <option value="">Nessuno</option>
+                    <option value="materna">Materna</option>
+                    <option value="primavera">Primavera</option>
+                  </Selezione>
+                  <PulsanteInvio variante="secondario" misura="piccolo">
+                    Salva tipo
+                  </PulsanteInvio>
+                </FormConEsito>
                 <FormConEsito action={toggleAttivaSezione}>
                   <input type="hidden" name="sezione_id" value={sezione.id} />
                   <input type="hidden" name="attiva_attuale" value={String(sezione.attiva)} />
