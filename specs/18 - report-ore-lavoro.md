@@ -398,6 +398,8 @@ malattia o nota)
 E in un riquadro riassuntivo i totali del mese: "Ore previste" e
 "Differenza ore" (con segno), calcolati come nella vista settimanale sui
 soli giorni lavorativi già trascorsi, più il saldo attuale del monte ore
+(che include le eventuali conferme di mese dell'admin, vedi
+[19 - monte-ore.md](19%20-%20monte-ore.md))
 E i giorni non ancora accaduti del mese corrente sono mostrati ma non
 entrano nei totali
 E i giorni in stato Chiusura o Ferie sono mostrati come "di vacanza" e

@@ -193,7 +193,9 @@ abilitata al report ore, con, in quest'ordine:
 6. il **prospetto monte ore**: il saldo attuale in ore, con la sua
    descrizione e la legenda del segno (negativo = ore che il dipendente
    deve ancora erogare, positivo = ore già erogate in più, vedi
-   [19 - monte-ore.md](19%20-%20monte-ore.md))
+   [19 - monte-ore.md](19%20-%20monte-ore.md)); è la somma di tutti i
+   movimenti, comprese le conferme di mese, senza distinguere il mese di
+   competenza
 E questo è lo stesso PDF, prodotto dallo stesso codice, che l'admin
 scarica da `/admin/ore-lavoro` (tutto il personale) e dalla vista
 mensile del singolo dipendente (solo quella persona, vedi

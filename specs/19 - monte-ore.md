@@ -13,7 +13,8 @@ per persona ("monte ore") la cui **gestione è completamente manuale**.
 Il saldo è la somma dei movimenti registrati dall'admin: **nessun
 calcolo automatico lo modifica**, nemmeno alla conferma di una settimana
 (che serve solo a bloccare la modifica autonoma delle ore da parte del
-personale, vedi [18]).
+personale, vedi [18]). Anche la "conferma del mese" è un gesto
+dell'admin (un pulsante), mai automatico.
 
 **Convenzione del segno (unica, in tutta l'app e nei PDF).** Il saldo e i
 movimenti sono sempre espressi in ore **con il segno esplicito**:
@@ -134,6 +135,122 @@ la convenzione del segno di questa pagina e la sua legenda (vedi
 [52 - report-email-automatico.md](52%20-%20report-email-automatico.md)):
 movimenti e calcolo mese per mese restano nella pagina "Ore di lavoro"
 
+## Conferma del mese e mese di competenza
+Ogni movimento ha due date distinte: il **giorno reale di registrazione**
+(`created_at`, non cambia mai) e il **mese di competenza**, cioè il mese a
+cui le ore appartengono nel "Calcolo mese per mese". Per i movimenti
+esistenti al rilascio il mese di competenza è il mese della loro data di
+registrazione (fuso orario dell'app), quindi nessun saldo cambia. L'admin
+può confermare con un pulsante la differenza ore di un mese **già chiuso**
+(non quello in corso): nasce un movimento di tipo "conferma mese" con
+competenza quel mese, anche se registrato in un mese successivo.
+
+Definizioni usate negli scenari:
+- **Mese chiuso**: un mese precedente a quello corrente.
+- **Differenza del mese**: quella già mostrata nella riga (erogate −
+  previste, sui giorni lavorativi, arrotondata a 2 decimali).
+- **Parte non confermata** = differenza del mese − somma delle `variazione`
+  di **tutti** i movimenti (di qualunque tipo) con competenza quel mese,
+  arrotondata a 2 decimali. Il segno è quello del monte ore: positiva = ore
+  a credito ancora da riconoscere, negativa = ore da recuperare ancora da
+  riconoscere. Il pulsante compare solo se è diversa da zero (a 0,00 no).
+
+### Scenario: MOR-01 — l'admin vede "Conferma" su un mese chiuso con differenza
+Dato che sono admin sulle ore di un dipendente e il mese di ottobre è
+chiuso, con differenza +14,5h e nessun movimento con competenza ottobre
+Quando guardo la riga di ottobre del "Calcolo mese per mese"
+Allora la riga mostra il pulsante "Conferma" (con l'indicazione "+14,5h a
+credito") e la colonna movimenti dice 0h
+
+### Scenario: MOR-02 — la conferma crea un movimento nel mese giusto
+Dato la riga di ottobre di MOR-01, aperta a novembre
+Quando premo "Conferma"
+Allora viene registrato un movimento di tipo "conferma mese" di +14,5h, con
+competenza ottobre, data reale di oggi e nota automatica non vuota
+("Conferma differenza ore di ottobre 2026")
+E la colonna movimenti di ottobre mostra +14,5h, il saldo a fine ottobre e
+quelli dei mesi successivi crescono di 14,5h e il saldo attuale cresce di
+14,5h
+E il pulsante sparisce dalla riga
+E nello storico il movimento mostra la data reale e "(competenza ottobre
+2026)"
+
+### Scenario: MOR-03 — conferma di una differenza negativa
+Dato un mese chiuso con differenza −6h e nessun movimento di competenza
+Quando premo "Conferma"
+Allora viene registrato un movimento di −6h (ore da recuperare) con
+competenza quel mese, e la riga e i saldi si aggiornano come in MOR-02
+E la nota e l'etichetta dicono "da recuperare", non solo il segno
+
+### Scenario: MOR-04 — dove il pulsante non compare
+Dato che apro la scheda ore di un dipendente
+Allora non vedo "Conferma" quando: sono personale non admin (vedo la
+tabella in sola lettura); il mese è quello in corso o futuro; la parte non
+confermata è zero (differenza zero, oppure già coperta dai movimenti di
+quel mese)
+E anche l'azione di conferma, invocata a mano da un non admin o su un mese
+non chiuso, viene rifiutata senza registrare nulla
+
+### Scenario: MOR-05 — la conferma si gestisce come ogni movimento
+Dato un movimento "conferma mese" nello storico, come admin
+Quando premo "Modifica" e cambio ore, verso, nota o mese di competenza,
+oppure premo "Elimina" e confermo
+Allora il movimento riporta i nuovi valori mantenendo la data reale, o
+sparisce, e la tabella e i saldi si ricalcolano
+E se l'ho eliminato, il pulsante "Conferma" riappare sulla riga di quel
+mese (con la parte non confermata che ne risulta)
+E se il nuovo mese di competenza ha già una conferma della stessa persona,
+vedo un messaggio d'errore e nulla viene modificato
+
+### Scenario: MOR-06 — doppio click o due admin insieme: una sola conferma
+Dato la riga di MOR-01 mostrata a due admin, o premuta due volte di seguito
+Quando le richieste di conferma arrivano quasi insieme
+Allora esiste una sola conferma per quella persona e quel mese, con
+variazione pari alla parte non confermata calcolata una volta sola
+E la richiesta in più non dà errore tecnico: mostra "Mese già confermato" e
+la riga si aggiorna senza pulsante
+E il valore da registrare lo calcola sempre il server al momento della
+richiesta, non quello mostrato nel browser
+
+### Scenario: MOR-07 — la differenza cambia dopo la conferma
+Dato un mese confermato per +14,5h e poi corretto (per esempio ore
+aggiunte) in modo che la differenza diventi +16,5h
+Quando apro la scheda come admin
+Allora la riga mostra "+2h non confermate" con il pulsante "Conferma la
+differenza residua" (e il saldo di quel mese non nasconde la differenza)
+E premendolo, la variazione dell'unica conferma di quel mese diventa
++16,5h (si somma la parte non confermata: resta una sola conferma per
+persona e mese) e il pulsante sparisce
+E se la differenza scende (per esempio a +12h) la riga mostra "−2,5h non
+confermate" con lo stesso pulsante, che porta la conferma a +12h
+
+### Scenario: MOR-08 — spostare un movimento esistente al mese giusto
+Dato un movimento manuale di +14,5h registrato il 02/11, con competenza
+novembre (mese della registrazione), e ottobre con differenza +14,5h
+Quando premo "Modifica", scelgo come mese di competenza ottobre 2026 e
+confermo
+Allora il movimento conta in ottobre (colonna movimenti e saldi di fine
+mese ricalcolati), la data reale resta 02/11 e lo storico mostra
+"(competenza ottobre 2026)"
+E la riga di ottobre non propone "Conferma" (parte non confermata zero)
+E il saldo attuale non cambia
+E non si può scegliere un mese di competenza successivo al mese corrente
+
+### Scenario: MOR-09 — i movimenti esistenti non cambiano al rilascio
+Dato i movimenti registrati prima di questa funzione
+Allora il loro mese di competenza risulta quello della data di
+registrazione, il "Calcolo mese per mese" è identico a prima e il saldo
+attuale di ogni persona è invariato
+E nuovi movimenti manuali hanno nel modulo il campo "Mese di competenza",
+preimpostato al mese corrente e modificabile fino al mese corrente
+
+### Scenario: MOR-10 — report ed email restano coerenti
+Dato che esistono movimenti "conferma mese"
+Allora il saldo attuale nell'email e nel PDF (vedi
+[52 - report-email-automatico.md](52%20-%20report-email-automatico.md))
+include anche questi movimenti, con la stessa convenzione di segno, e non
+distingue il mese di competenza
+
 ## Settimane storiche con straordinario residuo
 Solo per le settimane confermate prima del calcolo "a netto pieno", con
 uno straordinario residuo ancora senza decisione (nessuna nuova conferma
@@ -172,11 +289,30 @@ E l'avviso in sola lettura per il diretto interessato mostra da quel
 momento la decisione presa, non più i pulsanti
 
 ## Regole
-- Tabella `monte_ore_movimenti`: ogni riga è un movimento, di tre tipi —
-  `precarico` (inserito a mano dall'admin, **il solo tipo che si
-  registra da ora**, nota sempre obbligatoria e non vuota),
+- Tabella `monte_ore_movimenti`: ogni riga è un movimento, di quattro tipi —
+  `precarico` (inserito a mano dall'admin, nota sempre obbligatoria e non
+  vuota), `conferma_mese` (creato dal pulsante "Conferma" di un mese
+  chiuso, vedi sopra; nota automatica non vuota, senza `settimana_inizio`),
   `settimanale` e `straordinario_residuo` (solo storico, non più
-  generati da nessuna azione).
+  generati da nessuna azione). Da ora si registrano solo `precarico` e
+  `conferma_mese`.
+- Nuova colonna `mese_competenza` (primo giorno del mese; vuota per i
+  movimenti esistenti, che valgono il mese di `created_at` nel fuso orario
+  dell'app). Un indice unico (`utente_id`, `mese_competenza`) sui soli
+  `conferma_mese` impedisce due conferme per persona e mese anche con
+  richieste simultanee; la conferma ha sempre il mese di competenza valorizzato.
+- Arrotondamenti: `variazione` è a 2 decimali (mezze ore e centesimi di
+  ora esatti, es. 14,5); differenza del mese, parte non confermata e saldi
+  sono arrotondati a 2 decimali con lo stesso criterio di `lib/monteOre.ts`,
+  e il segno non si perde (niente "−0": zero è "0h in pari").
+- Il pulsante "Conferma" è per l'admin su mesi chiusi con parte non
+  confermata ≠ 0; la parte da registrare la ricalcola il server a ogni
+  richiesta; se esiste già una conferma di quel mese, la parte si somma
+  alla sua variazione (una sola conferma per persona e mese).
+- RLS: insert/update/delete su `monte_ore_movimenti` restano solo admin
+  (nessuna nuova policy per altri ruoli); la migration che aggiunge colonna
+  e tipo mantiene i GRANT esistenti (`select` a `authenticated` e
+  `service_role`, `insert/update/delete` a `authenticated`) senza ampliarli.
 - Il saldo attuale di una persona è la somma di tutte le sue
   `variazione`: nessun campo separato da tenere sincronizzato a mano.
 - Convenzione di segno di `variazione`: **positiva** = ore a credito (già
@@ -191,11 +327,15 @@ momento la decisione presa, non più i pulsanti
   `calcoloMensileMonteOre`) usa le stesse funzioni pure della vista
   mensile di [18] (`lib/oreLavoroMese.ts`): per ogni mese, previste e
   differenza dei giorni lavorativi già trascorsi; i movimenti sono
-  attribuiti al mese della loro data di registrazione. Nessuna nuova
-  colonna: non è un dato salvato, si ricalcola a ogni apertura.
+  attribuiti al loro **mese di competenza**, con fallback al mese della
+  data di registrazione quando non è valorizzato. Il calcolo non è un dato
+  salvato, si ricalcola a ogni apertura; il saldo a fine mese è la somma
+  progressiva per competenza e il saldo attuale resta la somma di tutte le
+  `variazione`, indipendente dalla competenza.
 - L'admin può inserire, modificare (ore, verso, nota) ed eliminare
   qualunque movimento, di ogni tipo, anche storico: la gestione è
-  manuale. La modifica mantiene `created_at`. Il controllo applicativo
+  manuale. La modifica (ore, verso, nota, mese di competenza) mantiene
+  `created_at`. Il controllo applicativo
   è nelle server action; la RLS
   (`supabase/migrations/0055_monte_ore_manuale.sql`) è la difesa
   primaria: insert, update e delete solo per l'admin (nessun utente non
