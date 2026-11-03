@@ -14,14 +14,35 @@
 // interazione è ristretta a quella sezione (e alla sezione "Nota" in
 // fondo alla card, issue #110), per non confondersi con i pulsanti della
 // sezione "Pasto".
-import { test, expect } from './fixture-bambino';
+import { createClient } from '@supabase/supabase-js';
+import { test, expect, creaBambinoFixture } from './fixture-bambino';
 import {
   clickEAttendiAzione,
+  credenziali,
+  dataProssimoSabato,
   dataUltimoGiornoApertoPrimaDiOggi,
   dataOggiRoma,
   hasCredenziali,
+  meseSuccessivoRoma,
+  nessunaViolazioneA11yGrave,
   statoAutenticazione,
 } from './helpers';
+import { creaSezioneConTipo, pulisciSezioneEBambini } from './fixture-prezzi';
+import {
+  TESTO_AVVISO_FUORI_RETTA,
+  TESTO_COPERTO,
+  TESTO_DA_ADDEBITARE,
+  avviiGettone,
+  avvisoGettoneFuoriRetta,
+  contaAvviiGettoni,
+  gettone,
+  impostaAbbonamenti,
+  inserisciPresenzaConAsilo,
+  inserisciRettaInviata,
+  nessunImporto,
+  nomeAnimazione,
+  scrittaCopertura,
+} from './pagina-gettone';
 import {
   CLASSE_ATTIVO,
   apriGiornata,
@@ -37,6 +58,7 @@ import {
   colonnaPresenza,
   conteggioRiepilogo,
   etichettaPastoAssente,
+  giornoDiChiusura,
   saltaSeStatoBloccato,
   segnaAssenteOMalattia,
   segnaStato,
@@ -375,6 +397,388 @@ test.describe('13 — Segna presenza', () => {
       const bottonePresente = bottonePresenza(card, 'Presente');
       await segnaStato(page, bottonePresente);
       await expect(bottonePresente).toHaveClass(CLASSE_ATTIVO.presente);
+    });
+  });
+
+  // --- Gettone e copertura dell'abbonamento (issue #399, GET-01..GET-15) ----
+  // Ogni test crea il suo bambino con abbonamento pre/post sì/no
+  // (impostaAbbonamenti) e, dove serve, una retta già inviata. Nessun importo
+  // compare mai nella schermata (GET-07): si verificano solo le due scritte.
+  test.describe('gettone: come maestra, sulla data odierna', () => {
+    test.use({ storageState: statoAutenticazione('maestra') });
+
+    // Prepara i costi, apre la giornata di oggi e ritorna la card (salta se
+    // l'asilo è chiuso: nessun pulsante, specs/53).
+    async function apri(
+      page: import('@playwright/test').Page,
+      adminDb: import('@supabase/supabase-js').SupabaseClient | null,
+      bambino: import('./fixture-bambino').BambinoFixture,
+      abbonamenti: { pre: boolean; post: boolean }
+    ) {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      await impostaAbbonamenti(adminDb!, bambino, abbonamenti);
+      await apriGiornata(page, dataOggiRoma());
+      return cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
+    }
+
+    test('GET-01: pre/post-asilo coperto dall\'abbonamento mostra "Già pagato con l\'abbonamento"', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: true, post: true });
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(bottonePresenza(card, 'Pre-asilo')).toHaveClass(CLASSE_ATTIVO.preAsilo);
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'pre')).toHaveCount(0);
+
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'post')).toHaveCount(0);
+    });
+
+    test('GET-02: non coperto mostra il gettone, animato una sola volta, e "Da addebitare nella prossima retta"', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: false, post: false });
+      await contaAvviiGettoni(page);
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'pre')).toBeVisible();
+      // Animazione solo CSS, un solo ciclo, poi il gettone resta fermo.
+      await expect(gettone(card, 'pre')).toHaveCSS('animation-iteration-count', '1');
+      await expect.poll(() => avviiGettone(page, 'pre')).toBe(1);
+
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'post')).toBeVisible();
+    });
+
+    test('GET-03: pre e post-asilo sono valutati separatamente', async ({ page, bambino, adminDb }) => {
+      const card = await apri(page, adminDb, bambino, { pre: true, post: false });
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'pre')).toHaveCount(0);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'post')).toBeVisible();
+    });
+
+    test('GET-04: togliere il pre/post-asilo fa sparire scritta e gettone, l\'altra voce non cambia', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: false, post: false });
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(gettone(card, 'pre')).toBeVisible();
+      await expect(gettone(card, 'post')).toBeVisible();
+
+      await clickEAttendiAzione(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(bottonePresenza(card, 'Pre-asilo')).toHaveAttribute('aria-pressed', 'false');
+      await expect(scrittaCopertura(card, 'pre')).toHaveCount(0);
+      await expect(gettone(card, 'pre')).toHaveCount(0);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'post')).toBeVisible();
+    });
+
+    test('GET-05: dopo il ricaricamento le scritte restano e l\'animazione non riparte', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: false, post: false });
+      await contaAvviiGettoni(page);
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect.poll(() => avviiGettone(page, 'pre')).toBe(1);
+
+      // Un'altra voce dello stesso bambino: il gettone del pre non riparte.
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect.poll(() => avviiGettone(page, 'post')).toBe(1);
+      expect(await avviiGettone(page, 'pre')).toBe(1);
+
+      await page.reload();
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      for (const voce of ['pre', 'post'] as const) {
+        await expect(gettone(card, voce)).toBeVisible();
+        await expect(gettone(card, voce)).toHaveAttribute('data-animato', 'false');
+        expect(await nomeAnimazione(gettone(card, voce))).toBe('none');
+      }
+    });
+
+    test('GET-06: con "riduci movimento" il gettone compare fermo, con la scritta', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const card = await apri(page, adminDb, bambino, { pre: false, post: false });
+      await contaAvviiGettoni(page);
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(gettone(card, 'pre')).toBeVisible();
+      await expect(gettone(card, 'pre')).toHaveCSS('animation-name', 'none');
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_DA_ADDEBITARE);
+      expect(await avviiGettone(page, 'pre')).toBe(0);
+    });
+
+    test('GET-07: nessun importo nella schermata, con voci coperte e non coperte', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: true, post: false });
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'post')).toBeVisible();
+
+      await nessunImporto(card);
+      await expect(page.getByText(/€|\b(?:70|7),00\b/)).toHaveCount(0);
+    });
+
+    test('GET-11: se la retta del mese è già inviata conta cosa fu addebitato, non il flag attuale', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      // Flag attuale: pre sì, post no. Retta inviata: pre a zero, post addebitato.
+      await inserisciRettaInviata(adminDb!, bambino, dataOggiRoma().slice(0, 7), {
+        costoPreAsilo: 0,
+        costoPostAsilo: 70,
+      });
+      const card = await apri(page, adminDb, bambino, { pre: true, post: false });
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'pre')).toBeVisible();
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'post')).toHaveCount(0);
+    });
+
+    test('GET-12: avviso al salvataggio se la retta successiva è già inviata e il gettone non è coperto', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await inserisciRettaInviata(adminDb!, bambino, meseSuccessivoRoma());
+      const card = await apri(page, adminDb, bambino, { pre: false, post: true });
+
+      // Non coperto: la presenza si salva comunque e compare l'avviso, senza importi.
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(bottonePresenza(card, 'Pre-asilo')).toHaveClass(CLASSE_ATTIVO.preAsilo);
+      await expect(avvisoGettoneFuoriRetta(card)).toHaveText(TESTO_AVVISO_FUORI_RETTA);
+      await nessunImporto(avvisoGettoneFuoriRetta(card));
+
+      // Si rivede ricaricando finché la condizione dura.
+      await page.reload();
+      await expect(avvisoGettoneFuoriRetta(card)).toHaveText(TESTO_AVVISO_FUORI_RETTA);
+
+      // Coperto (post con abbonamento): nessun avviso aggiuntivo per quella voce.
+      // Tolgo il pre: l'avviso sparisce.
+      await clickEAttendiAzione(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(bottonePresenza(card, 'Pre-asilo')).toHaveAttribute('aria-pressed', 'false');
+      await expect(avvisoGettoneFuoriRetta(card)).toHaveCount(0);
+
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_COPERTO);
+      await expect(avvisoGettoneFuoriRetta(card)).toHaveCount(0);
+    });
+
+    test('GET-12: nessun avviso se la retta successiva non è ancora inviata', async ({ page, bambino, adminDb }) => {
+      const card = await apri(page, adminDb, bambino, { pre: false, post: false });
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(avvisoGettoneFuoriRetta(card)).toHaveCount(0);
+    });
+
+    test('GET-15: la schermata con scritte e gettoni è accessibile; il gettone è decorativo', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const card = await apri(page, adminDb, bambino, { pre: true, post: false });
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(gettone(card, 'post')).toBeVisible();
+
+      await expect(gettone(card, 'post')).toHaveAttribute('aria-hidden', 'true');
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('GET-14: data in sola lettura mostra le scritte con il gettone già fermo', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+      const passata = dataUltimoGiornoApertoPrimaDiOggi();
+      await impostaAbbonamenti(adminDb!, bambino, { pre: true, post: false });
+      await inserisciPresenzaConAsilo(adminDb!, bambino, passata, { pre: true, post: true });
+
+      await apriGiornata(page, passata);
+      const card = cardBambino(page, bambino);
+      await expect(card).toBeVisible();
+      await expect(avvisoSolaLettura(page)).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Pre-asilo' })).toHaveCount(0);
+
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'post')).toBeVisible();
+      await expect(gettone(card, 'post')).toHaveAttribute('data-animato', 'false');
+      expect(await nomeAnimazione(gettone(card, 'post'))).toBe('none');
+    });
+
+    test('GET-08: maestra e assistente ricevono solo il sì/no per i bambini delle loro sezioni', async ({
+      bambino,
+      adminDb,
+    }) => {
+      test.skip(!hasCredenziali('maestra') || !hasCredenziali('assistente'), 'richiede maestra e assistente');
+      await impostaAbbonamenti(adminDb!, bambino, { pre: true, post: false });
+      // Un bambino di un'altra sezione (non assegnata a maestra e assistente).
+      const altra = await creaSezioneConTipo(adminDb!, null);
+      const estraneo = await creaBambinoFixture(adminDb!);
+      try {
+        const { error } = await adminDb!.from('bambini').update({ sezione_id: altra.id }).eq('id', estraneo.id);
+        expect(error?.message ?? null).toBeNull();
+        await impostaAbbonamenti(adminDb!, estraneo, { pre: true, post: true });
+
+        for (const ruolo of ['maestra', 'assistente'] as const) {
+          const cred = credenziali(ruolo)!;
+          const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+            auth: { persistSession: false, autoRefreshToken: false },
+          });
+          const login = await db.auth.signInWithPassword(cred);
+          expect(login.error?.message ?? null).toBeNull();
+
+          const { data, error: errRpc } = await db.rpc('copertura_pre_post_asilo', { p_data: dataOggiRoma() });
+          expect(errRpc?.message ?? null).toBeNull();
+          const righe = (data ?? []) as Record<string, unknown>[];
+
+          // Solo sì/no per bambino: nessun prezzo, flag o altra colonna di costi_bambini.
+          const mio = righe.find((r) => r.bambino_id === bambino.id);
+          expect(mio, `${ruolo}: riga del bambino della propria sezione`).toBeDefined();
+          expect(Object.keys(mio!).sort()).toEqual([
+            'bambino_id',
+            'post_asilo_coperto',
+            'pre_asilo_coperto',
+            'retta_successiva_inviata',
+          ]);
+          expect(mio!.pre_asilo_coperto).toBe(true);
+          expect(mio!.post_asilo_coperto).toBe(false);
+          // Nessuna risposta per un bambino di un'altra sezione.
+          expect(righe.some((r) => r.bambino_id === estraneo.id)).toBe(false);
+
+          // Resta vietata la lettura diretta dei costi.
+          const costi = await db.from('costi_bambini').select('*').eq('bambino_id', bambino.id);
+          expect(costi.data ?? []).toEqual([]);
+          await db.auth.signOut();
+        }
+      } finally {
+        await pulisciSezioneEBambini(adminDb!, altra.id, [estraneo.cognome]);
+      }
+    });
+  });
+
+  test.describe('gettone: come assistente, sulla data odierna', () => {
+    test.use({ storageState: statoAutenticazione('assistente') });
+
+    test('GET-08: l\'assistente vede la scritta giusta per ogni voce', async ({ page, bambino, adminDb }) => {
+      test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+      await impostaAbbonamenti(adminDb!, bambino, { pre: true, post: false });
+      await apriGiornata(page, dataOggiRoma());
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await nessunImporto(card);
+    });
+  });
+
+  test.describe('gettone: come admin', () => {
+    test.use({ storageState: statoAutenticazione('admin') });
+
+    test('GET-09: l\'admin vede le stesse scritte e lo stesso gettone, senza importi, su una data ammessa', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      await impostaAbbonamenti(adminDb!, bambino, { pre: true, post: false });
+      await apriGiornata(page, dataUltimoGiornoApertoPrimaDiOggi());
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await segnaStato(page, bottonePresenza(card, 'Post-asilo'));
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'pre')).toHaveCount(0);
+      await expect(scrittaCopertura(card, 'post')).toHaveText(TESTO_DA_ADDEBITARE);
+      await expect(gettone(card, 'post')).toBeVisible();
+      await nessunImporto(card);
+    });
+
+    test('GET-11: la copertura vale per tutto il mese solare, anche prima di quando è stato spuntato l\'abbonamento', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      const passata = dataUltimoGiornoApertoPrimaDiOggi();
+      test.skip(passata.slice(0, 7) !== dataOggiRoma().slice(0, 7), 'il giorno aperto precedente è nel mese scorso');
+      // L'abbonamento è stato scritto adesso (oggi): la data passata dello stesso mese è coperta.
+      await impostaAbbonamenti(adminDb!, bambino, { pre: true, post: false });
+      await apriGiornata(page, passata);
+      const card = await cardConPulsante(page, bambino, 'Presenza', 'Pre-asilo');
+
+      await segnaStato(page, bottonePresenza(card, 'Pre-asilo'));
+      await expect(scrittaCopertura(card, 'pre')).toHaveText(TESTO_COPERTO);
+      await expect(gettone(card, 'pre')).toHaveCount(0);
+    });
+
+    test('GET-13: giorno di chiusura, nessun pulsante, nessuna scritta e nessun gettone', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      await impostaAbbonamenti(adminDb!, bambino, { pre: false, post: false });
+      await apriGiornata(page, dataProssimoSabato());
+      expect(await giornoDiChiusura(page)).toBe(true);
+      const card = cardBambino(page, bambino);
+      await expect(card).toBeVisible();
+
+      await expect(card.getByRole('button', { name: 'Pre-asilo' })).toHaveCount(0);
+      await expect(card.getByRole('button', { name: 'Post-asilo' })).toHaveCount(0);
+      await expect(card.getByText(TESTO_COPERTO)).toHaveCount(0);
+      await expect(card.getByText(TESTO_DA_ADDEBITARE)).toHaveCount(0);
+      await expect(card.getByTestId(/^gettone-/)).toHaveCount(0);
+    });
+  });
+
+  test.describe('gettone: come genitore', () => {
+    test.use({ storageState: statoAutenticazione('genitore') });
+
+    test('GET-10: il genitore non vede la schermata delle presenze, né scritte né gettone', async ({ page }) => {
+      test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
+      await page.goto(`/dashboard/giornata?data=${dataOggiRoma()}`);
+
+      await expect(page.getByRole('button', { name: 'Pre-asilo' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Post-asilo' })).toHaveCount(0);
+      await expect(page.getByText(TESTO_COPERTO)).toHaveCount(0);
+      await expect(page.getByText(TESTO_DA_ADDEBITARE)).toHaveCount(0);
+      await expect(page.getByTestId(/^gettone-/)).toHaveCount(0);
     });
   });
 });
