@@ -27,6 +27,16 @@ import {
   mesiRojacDaControllare,
 } from '../lib/allarmeRojac';
 import { meseDaData, mesePrecedente } from '../lib/date';
+import { creaSezioneConTipo, impostaTipoSezione, leggiPrezzi, pulisciSezioneEBambini } from './fixture-prezzi';
+import {
+  allarmePrezziPagina,
+  avvisoPrezziInAdmin,
+  bannerPrezzi,
+  CHIAVE_CONTROLLO_PREZZI,
+  linkAPrezzi,
+  linkASezioniEBambini,
+  TITOLO_ALLARME_PREZZI,
+} from './pagina-prezzi';
 
 // Fixture utente (creaUtente, apriComeUtente) e bambino (bambino, adminDb)
 // insieme: servono entrambe, gli scenari "rette non comunicate" usano un
@@ -985,6 +995,252 @@ test.describe('07 — Allarmi', () => {
     });
   });
 
+  // Allarme "Prezzi o tipi di sezione da completare" (specs/07, issue #397).
+  //
+  // Questo file tocca i dati condivisi delle sezioni e legge la riga unica dei
+  // prezzi: gira nel progetto a worker singolo 'chromium-prezzi' (playwright.config.ts).
+  //
+  // Ogni test crea una PROPRIA sezione senza tipo (nome unico) e guarda solo
+  // quella: nel DB di test possono esserci altre sezioni senza tipo (quelle
+  // esistenti prima della funzione restano senza), quindi l'allarme intero non
+  // si può dare per spento. Il caso "prezzo nullo / riga dei prezzi assente" non
+  // si ottiene dal DB (colonne NOT NULL dalla migration 0067): è coperto dallo
+  // unit test di lib/prezzi.test.ts (valutaPrezziESezioni), come AMM-05 in 50.
+  test.describe('prezzi e tipi di sezione da completare', () => {
+    async function conSezioneSenzaTipo(
+      db: SupabaseClient | null,
+      uso: (sezione: { id: string; nome: string }) => Promise<void>
+    ) {
+      test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+      const sezione = await creaSezioneConTipo(db!, null);
+      try {
+        await uso(sezione);
+      } finally {
+        await pulisciSezioneEBambini(db!, sezione.id, []);
+      }
+    }
+
+    // Link ai quali portano le voci dell'allarme (banner o pagina).
+    async function hrefVoci(allarme: Locator): Promise<string[]> {
+      return allarme.getByRole('link').evaluateAll((link) => link.map((a) => a.getAttribute('href') ?? ''));
+    }
+
+    test.describe('come admin', () => {
+      test.use({ storageState: statoAutenticazione('admin') });
+
+      test.beforeEach(async () => {
+        test.skip(!hasCredenziali('admin'), 'richiede E2E_ADMIN_EMAIL/PASSWORD');
+      });
+
+      test('prezzi non completi o sezioni senza tipo — allarme per l\'admin nella pagina Allarmi', async ({
+        page,
+        adminDb,
+      }) => {
+        await conSezioneSenzaTipo(adminDb, async (sezione) => {
+          await page.goto('/dashboard/allarmi');
+          const allarme = allarmePrezziPagina(page);
+          await expect(allarme).toHaveCount(1);
+          await expect(allarme.getByRole('heading', { name: TITOLO_ALLARME_PREZZI })).toBeVisible();
+          // La sezione è elencata per nome, con il link a "Sezioni e bambini".
+          const voce = allarme.getByRole('listitem').filter({ hasText: sezione.nome });
+          await expect(voce).toHaveCount(1);
+          await expect(linkASezioniEBambini(voce)).toHaveCount(1);
+          // L'allarme conta 1 nella campanella, qualunque sia il numero di voci.
+          await campanellaCoincideConElenco(page);
+          await nessunaViolazioneA11yGrave(page);
+
+          // Il link porta a "Sezioni e bambini".
+          await linkASezioniEBambini(voce).click();
+          await expect(page).toHaveURL(/\/admin$/);
+        });
+      });
+
+      test('sezioni senza tipo — l\'allarme scatta anche con tutti i prezzi impostati', async ({ page, adminDb }) => {
+        await conSezioneSenzaTipo(adminDb, async (sezione) => {
+          // Tutti gli otto prezzi sono impostati (colonne NOT NULL): è il caso normale.
+          const prezzi = await leggiPrezzi(adminDb!);
+          for (const [colonna, valore] of Object.entries(prezzi)) {
+            if (colonna !== 'updated_at') expect(Number.isFinite(valore)).toBe(true);
+          }
+
+          for (const percorso of ['/dashboard/allarmi', '/dashboard']) {
+            await page.goto(percorso);
+            const allarme = percorso === '/dashboard/allarmi' ? allarmePrezziPagina(page) : bannerPrezzi(page);
+            await expect(allarme).toHaveCount(1);
+            await expect(allarme.getByText(sezione.nome)).toHaveCount(1);
+            // Nessun prezzo mancante: né nomi di prezzi né link a "Prezzi".
+            await expect(allarme.getByText('Retta Materna')).toHaveCount(0);
+            await expect(linkAPrezzi(allarme)).toHaveCount(0);
+            await expect(linkASezioniEBambini(allarme).first()).toBeVisible();
+            await nessunaViolazioneA11yGrave(page);
+          }
+        });
+      });
+
+      test('prezzi non completi o sezioni senza tipo — banner in dashboard per l\'admin, con gli stessi dati della pagina Allarmi', async ({
+        page,
+        adminDb,
+      }) => {
+        await conSezioneSenzaTipo(adminDb, async (sezione) => {
+          await page.goto('/dashboard');
+          const banner = bannerPrezzi(page);
+          await expect(banner).toHaveCount(1);
+          await expect(banner.getByText(sezione.nome)).toHaveCount(1);
+          await nessunaViolazioneA11yGrave(page);
+
+          // Stessi link della pagina Allarmi (stessa funzione). Le due pagine sono
+          // richieste distinte: si rileggono finché coincidono (altri test
+          // possono creare sezioni nel frattempo).
+          await expect
+            .poll(
+              async () => {
+                await page.goto('/dashboard');
+                const nelBanner = await hrefVoci(bannerPrezzi(page));
+                await page.goto('/dashboard/allarmi');
+                const nellaPagina = await hrefVoci(allarmePrezziPagina(page));
+                return JSON.stringify(nelBanner) === JSON.stringify(nellaPagina) && nelBanner.length > 0
+                  ? 'coincide'
+                  : `banner ${nelBanner.join(',')}, pagina ${nellaPagina.join(',')}`;
+              },
+              { message: 'il banner in dashboard e la pagina Allarmi devono avere gli stessi link', timeout: 30_000 }
+            )
+            .toBe('coincide');
+        });
+      });
+
+      // Prezzo nullo o riga dei prezzi assente: dal DB non si ottengono (colonne
+      // NOT NULL, riga unica creata dalla migration). Coperto dallo unit test
+      // lib/prezzi.test.ts (valutaPrezziESezioni).
+      test('prezzo nullo o riga dei prezzi assente contano come mancanti (coperto da unit)', async () => {
+        test.skip(true, 'coperto da lib/prezzi.test.ts (valutaPrezziESezioni): le colonne sono NOT NULL');
+      });
+
+      test('prezzi non completi — riga breve vicino al form di creazione in "Sezioni e bambini"', async ({
+        page,
+        adminDb,
+      }) => {
+        await conSezioneSenzaTipo(adminDb, async (sezione) => {
+          await page.goto('/admin');
+          const avviso = avvisoPrezziInAdmin(page);
+          await expect(avviso).toBeVisible();
+          // Dice il nome della sezione senza tipo, senza link a "Prezzi" (nessun prezzo manca).
+          await expect(avviso).toContainText(sezione.nome);
+          await expect(linkAPrezzi(avviso)).toHaveCount(0);
+          // Il form resta utilizzabile: la riga non blocca la creazione.
+          await expect(page.getByRole('button', { name: 'Aggiungi bambino' })).toBeEnabled();
+          await nessunaViolazioneA11yGrave(page);
+        });
+      });
+
+      test('tutto completo — l\'allarme prezzi sparisce ovunque, e torna se un tipo torna vuoto', async ({
+        page,
+        adminDb,
+      }) => {
+        await conSezioneSenzaTipo(adminDb, async (sezione) => {
+          // Dà il tipo alla sezione: la sua voce sparisce da pagina, banner e riga.
+          await impostaTipoSezione(adminDb!, sezione.id, 'materna');
+          await expect
+            .poll(
+              async () => {
+                await page.goto('/dashboard/allarmi');
+                return allarmePrezziPagina(page).getByText(sezione.nome).count();
+              },
+              { message: 'la sezione con il tipo non deve più comparire nell\'allarme' }
+            )
+            .toBe(0);
+          await page.goto('/dashboard');
+          await expect(bannerPrezzi(page).getByText(sezione.nome)).toHaveCount(0);
+          await page.goto('/admin');
+          await expect(avvisoPrezziInAdmin(page).getByText(sezione.nome)).toHaveCount(0);
+
+          // Se in quel momento non c'è altro da completare, l'allarme sparisce del
+          // tutto (nel DB di test altre sezioni possono essere ancora senza tipo).
+          await page.goto('/dashboard/allarmi');
+          if ((await allarmePrezziPagina(page).count()) === 0) {
+            await page.goto('/dashboard');
+            await expect(bannerPrezzi(page)).toHaveCount(0);
+            await page.goto('/admin');
+            await expect(avvisoPrezziInAdmin(page)).toHaveCount(0);
+          }
+          await page.goto('/dashboard/allarmi');
+          await campanellaCoincideConElenco(page);
+          await nessunaViolazioneA11yGrave(page);
+
+          // Se un tipo torna vuoto, l'allarme torna attivo con la sezione.
+          await impostaTipoSezione(adminDb!, sezione.id, null);
+          await expect
+            .poll(
+              async () => {
+                await page.goto('/dashboard/allarmi');
+                return allarmePrezziPagina(page).getByText(sezione.nome).count();
+              },
+              { message: 'la sezione tornata senza tipo deve ricomparire nell\'allarme' }
+            )
+            .toBe(1);
+        });
+      });
+    });
+
+    test.describe('come maestra', () => {
+      test.use({ storageState: statoAutenticazione('maestra') });
+
+      test('maestra: non vede l\'allarme prezzi né la riga in "Sezioni e bambini"', async ({ page, adminDb }) => {
+        test.skip(!hasCredenziali('maestra'), 'richiede E2E_MAESTRA_EMAIL/PASSWORD');
+        await conSezioneSenzaTipo(adminDb, async () => {
+          await page.goto('/dashboard/allarmi');
+          await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+          await expect(page.getByRole('heading', { name: TITOLO_ALLARME_PREZZI })).toHaveCount(0);
+          await campanellaCoincideConElenco(page);
+
+          await page.goto('/dashboard');
+          await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+          await expect(bannerPrezzi(page)).toHaveCount(0);
+
+          // La pagina di amministrazione non è per lei: la riga non c'è.
+          await page.goto('/admin');
+          await expect(avvisoPrezziInAdmin(page)).toHaveCount(0);
+          await nessunaViolazioneA11yGrave(page);
+        });
+      });
+    });
+
+    test.describe('come assistente', () => {
+      test.use({ storageState: statoAutenticazione('assistente') });
+
+      test('assistente: non vede l\'allarme prezzi né la riga in "Sezioni e bambini"', async ({ page, adminDb }) => {
+        test.skip(!hasCredenziali('assistente'), 'richiede E2E_ASSISTENTE_EMAIL/PASSWORD');
+        await conSezioneSenzaTipo(adminDb, async () => {
+          await page.goto('/dashboard/allarmi');
+          await expect(page.getByRole('heading', { level: 1, name: 'Allarmi' })).toBeVisible();
+          await expect(page.getByRole('heading', { name: TITOLO_ALLARME_PREZZI })).toHaveCount(0);
+
+          await page.goto('/dashboard');
+          await expect(page.getByRole('heading', { level: 1, name: 'Avvisi' })).toBeVisible();
+          await expect(bannerPrezzi(page)).toHaveCount(0);
+
+          await page.goto('/admin');
+          await expect(avvisoPrezziInAdmin(page)).toHaveCount(0);
+        });
+      });
+    });
+
+    test.describe('come genitore', () => {
+      test.use({ storageState: statoAutenticazione('genitore') });
+
+      test('genitore: non ha la campanella e non vede nulla dell\'allarme prezzi', async ({ page, adminDb }) => {
+        test.skip(!hasCredenziali('genitore'), 'richiede E2E_GENITORE_EMAIL/PASSWORD');
+        await conSezioneSenzaTipo(adminDb, async () => {
+          await page.goto('/dashboard');
+          await expect(page.getByText('Il portale genitori è in arrivo')).toBeVisible();
+          await expect(page.getByRole('link', { name: /allarm/i })).toHaveCount(0);
+          await expect(bannerPrezzi(page)).toHaveCount(0);
+          await expect(page.getByText(TITOLO_ALLARME_PREZZI)).toHaveCount(0);
+          await nessunaViolazioneA11yGrave(page);
+        });
+      });
+    });
+  });
+
   // Email di riepilogo del cron (specs/07, "Email di riepilogo"). Il test non
   // legge la casella di posta: guarda l'esito che la route restituisce
   // (`riepilogo` e lo stato di ogni controllo). Servono CRON_SECRET e
@@ -1046,7 +1302,7 @@ test.describe('07 — Allarmi', () => {
     test('email di riepilogo — il riepilogo riporta tutti i controlli, anche quelli a posto', async ({ request }) => {
       const esito = await chiamaCron(request);
       expect(Object.keys(esito.controlli).sort()).toEqual(
-        ['appello', 'mail-rojac-mensile', 'ore-lavoro', 'pasti-rojac', 'rette-genitori'].sort()
+        ['appello', 'mail-rojac-mensile', 'ore-lavoro', 'pasti-rojac', 'prezzi-sezioni', 'rette-genitori'].sort()
       );
     });
 
@@ -1108,6 +1364,36 @@ test.describe('07 — Allarmi', () => {
       } else {
         expect(['ok', 'da_sistemare']).toContain(esito.controlli['mail-rojac-mensile']);
       }
+    });
+
+    test('prezzi non completi o sezioni senza tipo — voce nell\'email giornaliera dei controlli', async ({
+      request,
+      adminDb,
+    }) => {
+      test.skip(!adminDb, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+      // Una sezione attiva senza tipo rende il controllo da sistemare in ogni
+      // giorno e a ogni ora, e fa partire il riepilogo anche se il resto è a posto.
+      const sezione = await creaSezioneConTipo(adminDb!, null);
+      try {
+        const esito = await chiamaCron(request);
+        expect(esito.controlli[CHIAVE_CONTROLLO_PREZZI]).toBe('da_sistemare');
+        expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+      } finally {
+        await pulisciSezioneEBambini(adminDb!, sezione.id, []);
+      }
+    });
+
+    test('prezzi e sezioni a posto — nessuna email per questo controllo', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      // Se nel DB di test c'è una sezione senza tipo (le sezioni esistenti prima
+      // della funzione restano senza) il controllo non può essere "ok".
+      test.skip(
+        esito.controlli[CHIAVE_CONTROLLO_PREZZI] === 'da_sistemare',
+        'nel DB di test c\'è almeno una sezione attiva senza tipo: lo scenario "a posto" non è verificabile ora'
+      );
+      // Il controllo compare sempre, anche quando è a posto, e da solo non fa
+      // partire nessuna email.
+      expect(esito.controlli[CHIAVE_CONTROLLO_PREZZI]).toBe('ok');
     });
 
     test('email di riepilogo — una sola email per ogni mese di mail a Rojac mancante', async ({ request }) => {

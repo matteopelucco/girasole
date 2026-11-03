@@ -130,3 +130,40 @@ export async function creaBambinoDaForm(page: Page, cognome: string, nomeSezione
   await clickEAttendiAzione(page, page.getByRole('button', { name: 'Aggiungi bambino' }));
   await page.getByRole('link', { name: new RegExp(cognome) }).waitFor({ timeout: 20_000 });
 }
+
+// --- Allarme "Prezzi o tipi di sezione da completare" (specs/07, issue #397) --
+//
+// STRUTTURA ATTESA (l'implementazione deve rispettarla).
+//   * Pagina Allarmi (`/dashboard/allarmi`): un <li> dell'elenco con <h3>
+//     "Prezzi o tipi di sezione da completare"; dentro, un listitem per ogni
+//     prezzo mancante (nome senza "(€)", es. "Retta Materna") e uno per ogni
+//     sezione senza tipo (il suo nome), ciascuna con un link a `/admin`. Il
+//     link a `/admin/parametri-funzionamento` c'è solo se manca un prezzo.
+//   * Dashboard: stesso contenuto in un banner `role="alert"` con lo stesso
+//     titolo.
+//   * Controllo del cron: chiave `prezzi-sezioni` in `controlli`.
+//   * `/admin`, vicino al form di creazione del bambino:
+//     `data-testid="avviso-prezzi-incompleti"` (non role="alert"), con il nome
+//     delle sezioni senza tipo e, solo se manca un prezzo, il link a Prezzi.
+export const TITOLO_ALLARME_PREZZI = 'Prezzi o tipi di sezione da completare';
+export const CHIAVE_CONTROLLO_PREZZI = 'prezzi-sezioni';
+
+export function allarmePrezziPagina(page: Page): Locator {
+  return page.locator('main section ul > li:has(h3)').filter({ hasText: TITOLO_ALLARME_PREZZI });
+}
+
+export function bannerPrezzi(page: Page): Locator {
+  return page.getByRole('alert').filter({ hasText: TITOLO_ALLARME_PREZZI });
+}
+
+export function avvisoPrezziInAdmin(page: Page): Locator {
+  return page.getByTestId('avviso-prezzi-incompleti');
+}
+
+export function linkAPrezzi(contenitore: Locator): Locator {
+  return contenitore.locator(`a[href="${PERCORSO_PARAMETRI}"]`);
+}
+
+export function linkASezioniEBambini(contenitore: Locator): Locator {
+  return contenitore.locator('a[href="/admin"]');
+}
