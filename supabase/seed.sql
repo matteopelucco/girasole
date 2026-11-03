@@ -3,8 +3,8 @@
 -- Da eseguire a mano nel SQL Editor di Supabase (dopo le migration 0001 e 0002),
 -- su un progetto di sviluppo/test — non in produzione.
 
-insert into public.sezioni (id, nome)
-values ('00000000-0000-0000-0000-000000000001', 'Girasoli')
+insert into public.sezioni (id, nome, tipo)
+values ('00000000-0000-0000-0000-000000000001', 'Girasoli', 'materna')
 on conflict (id) do nothing;
 
 -- sesso (issue #106, specs/10): un bambino per caso — femmina, maschio,

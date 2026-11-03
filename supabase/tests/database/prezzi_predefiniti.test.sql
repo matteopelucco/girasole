@@ -12,8 +12,8 @@
 --     compilata: 160, 200, 6, 2, 70, 70, 7, 7.
 --   * RLS attiva; due sole policy (select e update, solo admin).
 --   * GRANT: authenticated ha SELECT e UPDATE sulle otto colonne e su
---     updated_at (non su id); nessun INSERT ne' DELETE; anon e service_role
---     nessun privilegio.
+--     updated_at (non su id); nessun INSERT ne' DELETE; anon nessun privilegio;
+--     service_role solo SELECT (migration 0068, il cron dell'allarme prezzi).
 --   * Maestra, assistente, genitore e anonimo non leggono ne' modificano nulla.
 --
 -- Tutto dentro una transazione chiusa da `rollback`. Dati fittizi. Si esegue
@@ -199,7 +199,7 @@ select ok(has_column_privilege('authenticated', 'public.prezzi_predefiniti', 'up
 select ok(not has_column_privilege('authenticated', 'public.prezzi_predefiniti', 'id', 'UPDATE'), 'authenticated: nessun UPDATE su id');
 select ok(not has_table_privilege('authenticated', 'public.prezzi_predefiniti', 'INSERT'), 'authenticated: nessun INSERT');
 select ok(not has_table_privilege('authenticated', 'public.prezzi_predefiniti', 'DELETE'), 'authenticated: nessun DELETE');
-select ok(not has_table_privilege('service_role', 'public.prezzi_predefiniti', 'SELECT'), 'service_role: nessun SELECT');
+select ok(has_table_privilege('service_role', 'public.prezzi_predefiniti', 'SELECT'), 'service_role: ha SELECT (migration 0068, lo legge il cron dell''allarme prezzi)');
 select ok(not has_table_privilege('service_role', 'public.prezzi_predefiniti', 'UPDATE'), 'service_role: nessun UPDATE');
 select ok(not has_table_privilege('service_role', 'public.prezzi_predefiniti', 'INSERT'), 'service_role: nessun INSERT');
 select ok(not has_table_privilege('service_role', 'public.prezzi_predefiniti', 'DELETE'), 'service_role: nessun DELETE');

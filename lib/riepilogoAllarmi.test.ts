@@ -29,6 +29,7 @@ function input(parziale: Partial<InputRiepilogo> = {}): InputRiepilogo {
     rette: { ora: ORA_11_45, mancanti: [] },
     ore: { ora: ORA_11_45, intervallo: 'dal 05/10 al 11/10', utenti: [] },
     rojac: { ora: ORA_11_45, mancanti: [], daAvvisare: [] },
+    prezziSezioni: { ora: ORA_11_45, esito: { prezziMancanti: [], sezioniSenzaTipo: [], daSistemare: false } },
     ...parziale,
   };
 }
@@ -52,7 +53,7 @@ describe('formattaOraRoma', () => {
 describe('costruisciControlliRiepilogo', () => {
   it('riporta sempre tutti i controlli, nello stesso ordine', () => {
     const ids = costruisciControlliRiepilogo(input()).map((c) => c.id);
-    expect(ids).toEqual(['appello', 'pasti-rojac', 'rette-genitori', 'mail-rojac-mensile', 'ore-lavoro']);
+    expect(ids).toEqual(['appello', 'pasti-rojac', 'rette-genitori', 'mail-rojac-mensile', 'ore-lavoro', 'prezzi-sezioni']);
   });
 
   it('con tutto a posto: appello, pasti e ore sono ok, ciascuno con la propria ora', () => {
@@ -336,5 +337,48 @@ describe('htmlRiepilogoAllarmi', () => {
     expect(html).not.toContain('<i>X</i>');
     expect(html).toContain('&lt;b&gt;Anna&lt;/b&gt;');
     expect(html).toContain('a&amp;b@example.test');
+  });
+});
+
+describe('controllo prezzi e tipi di sezione (specs/07, #397)', () => {
+  it('a posto: ok e non fa partire la mail', () => {
+    const controlli = costruisciControlliRiepilogo(input());
+    expect(controllo(controlli, 'prezzi-sezioni').stato).toBe('ok');
+    expect(riepilogoDaSistemare(controlli)).toBe(false);
+  });
+
+  it('prezzi mancanti e sezioni senza tipo: da sistemare, con i nomi, e fa partire la mail', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({
+        prezziSezioni: {
+          ora: ORA_11_45,
+          esito: {
+            prezziMancanti: ['retta_materna', 'buono_pasto'],
+            sezioniSenzaTipo: [{ id: 's1', nome: 'Girasoli' }],
+            daSistemare: true,
+          },
+        },
+      })
+    );
+    const c = controllo(controlli, 'prezzi-sezioni');
+    expect(c.stato).toBe('da_sistemare');
+    expect(c.dettaglio.join(' ')).toContain('Retta Materna, Buono pasto');
+    expect(c.dettaglio.join(' ')).toContain('Girasoli');
+    expect(c.azione).toContain('Sezioni e bambini');
+    expect(riepilogoDaSistemare(controlli)).toBe(true);
+    expect(giornalieroDaInviare(controlli)).toBe(true);
+  });
+
+  it('si valuta anche in un giorno di chiusura', () => {
+    const controlli = costruisciControlliRiepilogo(
+      input({
+        giornoAttivo: false,
+        prezziSezioni: {
+          ora: ORA_11_45,
+          esito: { prezziMancanti: [], sezioniSenzaTipo: [{ id: 's1', nome: 'Girasoli' }], daSistemare: true },
+        },
+      })
+    );
+    expect(controllo(controlli, 'prezzi-sezioni').stato).toBe('da_sistemare');
   });
 });

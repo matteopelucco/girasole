@@ -15,7 +15,7 @@ import { sezioniEBambiniVisibili } from '@/lib/sezioni';
 import { cardsDashboard } from '@/lib/dashboardSezioni';
 import { percorsoGiornata } from '@/lib/giornata';
 import { allarmePersonalePresenzePastiAttivo } from '@/lib/allarmi';
-import { ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
+import { ID_ALLARME_PREZZI, ID_ALLARME_RETTE } from '@/lib/elencoAllarmi';
 import { ID_ALLARME_ROJAC } from '@/lib/allarmeRojac';
 import { creaPromemoria } from './actions';
 import { ProssimiEventi } from './ProssimiEventi';
@@ -84,9 +84,12 @@ export default async function DashboardPage(
   // da qui, solo visibilità. Vuoto per gli altri ruoli.
   const allarmiStaff = datiAllarmi?.personale ?? [];
 
-  // Allarmi 4 e 5: rette non comunicate e mail mensile a Rojac non inviata,
+  // Allarmi 4, 5 e 6: rette non comunicate, mail mensile a Rojac non inviata,
+  // prezzi o tipi di sezione da completare,
   // solo per l'admin (per gli altri ruoli non sono nell'elenco).
-  const allarmiAdmin = (elencoAllarmi ?? []).filter((a) => a.id === ID_ALLARME_RETTE || a.id === ID_ALLARME_ROJAC);
+  const allarmiAdmin = (elencoAllarmi ?? []).filter((a) =>
+    [ID_ALLARME_RETTE, ID_ALLARME_ROJAC, ID_ALLARME_PREZZI].includes(a.id)
+  );
 
   return (
     <NavHeader nome={nomeVisualizzato} ruolo={ruolo}>

@@ -70,6 +70,8 @@ test.describe('50 — Amministrazione base', () => {
     const nome = `Sezione E2E ${Date.now()}`;
 
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nome);
+    // Con un tipo: una sezione senza tipo accende l'allarme prezzi (specs/62).
+    await campoTipoNuovaSezione(page).selectOption('materna');
     // Due form "Crea" in pagina (Anni scolastici + Sezioni, in quest'ordine
     // nel DOM — vedi specs/04 - data-types.md): questo è quello di Sezioni.
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();

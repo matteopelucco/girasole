@@ -3,6 +3,7 @@ import type { EsitoLavoroCron, OpzioniLavoroCron } from '@/lib/cronEsecuzioniDat
 import { problemaRiepilogoAllarmi } from '@/lib/cronEsecuzioni';
 import { inviaEmail, destinatarioNotifiche } from '@/lib/email';
 import { oggi, formattaIntervalloItaliano } from '@/lib/date';
+import { calcolaPrezziESezioni } from '@/lib/prezziDati';
 import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
 import { calcolaMesiRojacMancanti, mesiRojacDaAvvisare, TIPO_ALLARME_ROJAC } from '@/lib/allarmeRojac';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
@@ -28,7 +29,7 @@ import {
 // perché i controlli guardano tutte le sezioni.
 //
 // Valuta tutti i controlli (appello, pasti a Rojac, rette ai genitori, mail
-// mensile a Rojac, ore di lavoro) e invia UN'email di riepilogo, che li
+// mensile a Rojac, ore di lavoro, prezzi e tipi di sezione) e invia UN'email di riepilogo, che li
 // riporta sempre tutti con ora e stato, se almeno uno è da sistemare. La mail
 // mensile a Rojac fa partire l'email una sola volta per ogni mese mancante
 // (riga in `allarmi_inviati`, tipo `rojac_non_inviata`, chiave = mese).
@@ -115,6 +116,10 @@ export async function lavoroRiepilogoAllarmi(
     daAvvisare: mesiRojacDaAvvisare(mesiRojac, mesiGiaAvvisati),
   };
 
+  // Prezzi e tipi di sezione (#397): si valuta ogni giorno, senza orario né
+  // chiusura. Un errore di lettura fa fallire il lancio (come per Rojac).
+  const prezziSezioni = { ora: new Date(), esito: await calcolaPrezziESezioni(supabase) };
+
   const controlli = costruisciControlliRiepilogo({
     oggi: dataOggi,
     giornoAttivo,
@@ -124,6 +129,7 @@ export async function lavoroRiepilogoAllarmi(
     rette,
     ore,
     rojac,
+    prezziSezioni,
   });
   const stati = Object.fromEntries(controlli.map((c) => [c.id, c.stato]));
   const risposta = (

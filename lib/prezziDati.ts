@@ -1,5 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { CAMPI_PREZZI, type Prezzi } from './prezzi';
+import {
+  CAMPI_PREZZI,
+  valutaPrezziESezioni,
+  type ColonnaPrezzo,
+  type EsitoPrezziESezioni,
+  type Prezzi,
+} from './prezzi';
 
 // Lettura e salvataggio della riga unica `prezzi_predefiniti` (specs/62,
 // migration 0067), con la sessione dell'admin: la RLS lascia leggere e
@@ -47,4 +53,22 @@ export async function salvaPrezzi(
     .select('id');
   if (error) return 'errore';
   return Array.isArray(data) && data.length === 1 ? 'ok' : 'concorrenza';
+}
+
+// Esito per l'allarme "Prezzi o tipi di sezione da completare" (specs/07, #397):
+// legge la riga dei prezzi e le sezioni attive e li passa alla funzione pura.
+// Con la sessione dell'admin (RLS) o con la service_role del cron (migration
+// 0068). Un errore di lettura LANCIA: un elenco vuoto darebbe un falso "tutto
+// a posto" (o, al contrario, otto prezzi mancanti inventati).
+export async function calcolaPrezziESezioni(supabase: SupabaseClient): Promise<EsitoPrezziESezioni> {
+  const [prezzi, sezioni] = await Promise.all([
+    supabase.from('prezzi_predefiniti').select(CAMPI_PREZZI.map((c) => c.colonna).join(', ')).eq('id', true).maybeSingle(),
+    supabase.from('sezioni').select('id, nome, tipo').eq('attiva', true).order('nome'),
+  ]);
+  if (prezzi.error) throw new Error(`lettura prezzi non riuscita (${prezzi.error.code})`);
+  if (sezioni.error) throw new Error(`lettura sezioni non riuscita (${sezioni.error.code})`);
+  return valutaPrezziESezioni(
+    prezzi.data as unknown as Partial<Record<ColonnaPrezzo, number | null>> | null,
+    (sezioni.data ?? []) as { id: string; nome: string; tipo: string | null }[]
+  );
 }

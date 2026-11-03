@@ -1,0 +1,21 @@
+-- Girasole — SELECT di service_role sulla riga dei prezzi predefiniti (specs/07,
+-- issue #397). Applicazione: in test con `supabase db push --project-ref
+-- <ref-test>`; in produzione solo Matteo, a mano, con `--project-ref`
+-- esplicito (prima `--dry-run`, mai SQL Editor, mai automazioni).
+--
+-- Ordine di rilascio: applicare questa migration in produzione PRIMA del
+-- deploy del codice. Senza il privilegio il cron `/api/cron/allarmi` non
+-- riesce a leggere `prezzi_predefiniti` e il lancio fallisce (esito KO in
+-- "Cron Job"): meglio un errore visibile di un falso "tutto a posto".
+--
+-- La 0067 ha tolto ogni privilegio a service_role su `prezzi_predefiniti`. Il
+-- controllo "Prezzi e tipi di sezione" dell'email giornaliera dei controlli
+-- (specs/07) è calcolato dal cron, che usa service_role. Si concede il solo
+-- SELECT:
+--   * nessun INSERT, UPDATE o DELETE per service_role: la riga la modifica
+--     solo l'admin con la propria sessione (RLS);
+--   * nessuna policy nuova (la RLS non si applica a service_role) e nessun
+--     privilegio nuovo per anon o authenticated.
+-- `sezioni`: service_role la legge già (altri controlli del cron).
+
+grant select on public.prezzi_predefiniti to service_role;

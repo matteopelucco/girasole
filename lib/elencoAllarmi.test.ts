@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { componiAllarmi, testoNumeroAllarmi, type InputElencoAllarmi } from './elencoAllarmi';
+import { componiAllarmi, ID_ALLARME_PREZZI, testoNumeroAllarmi, type InputElencoAllarmi } from './elencoAllarmi';
 
 // Solo logica pura (nessun I/O): il caricamento dei dati da Supabase sta in
 // lib/allarmiDati.ts ed è coperto da e2e (specs/07 - allarmi.md).
@@ -229,5 +229,45 @@ describe('testoNumeroAllarmi', () => {
   });
   it('nessun allarme per zero', () => {
     expect(testoNumeroAllarmi(0)).toBe('Nessun allarme');
+  });
+});
+
+describe('componiAllarmi: prezzi e tipi di sezione (specs/07, #397)', () => {
+  it('nessuna voce se è tutto a posto o se il dato manca (non admin)', () => {
+    const esito = { prezziMancanti: [], sezioniSenzaTipo: [], daSistemare: false };
+    expect(componiAllarmi({ ...base, prezziSezioni: esito })).toEqual([]);
+    expect(componiAllarmi({ ...base, prezziSezioni: null })).toEqual([]);
+  });
+
+  it('una sola voce, con una riga per ogni elemento e i link giusti', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      prezziSezioni: {
+        prezziMancanti: ['retta_materna'],
+        sezioniSenzaTipo: [
+          { id: 's1', nome: 'Sole' },
+          { id: 's2', nome: 'Luna' },
+        ],
+        daSistemare: true,
+      },
+    });
+    expect(elenco).toHaveLength(1);
+    expect(elenco[0].id).toBe(ID_ALLARME_PREZZI);
+    expect(elenco[0].titolo).toBe('Prezzi o tipi di sezione da completare');
+    expect(elenco[0].voci.map((v) => v.href)).toEqual([
+      '/admin/parametri-funzionamento',
+      '/admin',
+      '/admin',
+    ]);
+    expect(elenco[0].voci[0].testo).toContain('Retta Materna');
+    expect(elenco[0].voci[2].testo).toContain('Luna');
+  });
+
+  it('con tutti i prezzi impostati non c e il link a Prezzi', () => {
+    const elenco = componiAllarmi({
+      ...base,
+      prezziSezioni: { prezziMancanti: [], sezioniSenzaTipo: [{ id: 's1', nome: 'Sole' }], daSistemare: true },
+    });
+    expect(elenco[0].voci.map((v) => v.href)).toEqual(['/admin']);
   });
 });

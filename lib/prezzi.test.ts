@@ -22,6 +22,21 @@
 //   formattaImporto(valore: number): string
 //     Due decimali con la virgola, senza migliaia e senza "€": 160 -> '160,00'.
 //
+// Allarme prezzi (specs/07, issue #397) - da aggiungere a lib/prezzi.ts:
+//
+//   nomePrezzo(colonna: ColonnaPrezzo): string
+//     Etichetta di CAMPI_PREZZI senza " (€)": 'retta_materna' -> 'Retta Materna'.
+//
+//   valutaPrezziESezioni(
+//     prezzi: Partial<Record<ColonnaPrezzo, number | null | undefined>> | null | undefined,
+//     sezioni: { id: string; nome: string; tipo?: string | null; attiva?: boolean }[]
+//   ): { prezziMancanti: ColonnaPrezzo[]; sezioniSenzaTipo: { id: string; nome: string }[]; daSistemare: boolean }
+//     Prezzo null/undefined = mancante, 0 = valido; riga assente (null/undefined)
+//     = tutti e otto mancanti. prezziMancanti nell'ordine di CAMPI_PREZZI,
+//     sezioniSenzaTipo nell'ordine di input. Sezione senza tipo valido
+//     (null, undefined, valore sconosciuto) = senza tipo; `attiva === false`
+//     = ignorata. daSistemare = almeno un elenco non vuoto.
+//
 //   type TipoSezione = 'materna' | 'primavera'
 //
 //   rettaPerTipo(
@@ -37,6 +52,9 @@ import {
   parseImporto,
   parseImportoOpzionale,
   rettaPerTipo,
+  CAMPI_PREZZI,
+  nomePrezzo,
+  valutaPrezziESezioni,
 } from './prezzi';
 
 function centesimi(testo: string): number | null {
@@ -171,5 +189,117 @@ describe('rettaPerTipo (PRZ-07, PRZ-08, COS-02, COS-04)', () => {
   it('segue i prezzi passati, non valori fissi', () => {
     expect(rettaPerTipo('materna', { rettaMaterna: 165.5, rettaPrimavera: 210 })).toBe(165.5);
     expect(rettaPerTipo('primavera', { rettaMaterna: 165.5, rettaPrimavera: 210 })).toBe(210);
+  });
+});
+
+const prezziCompleti = () => ({
+  retta_materna: 160,
+  retta_primavera: 200,
+  buono_pasto: 6,
+  marca_da_bollo: 2,
+  abbonamento_pre_asilo: 70,
+  abbonamento_post_asilo: 70,
+  gettone_pre_asilo: 7,
+  gettone_post_asilo: 7,
+});
+
+const sezione = (nome: string, tipo: string | null | undefined, extra: { attiva?: boolean } = {}) => ({
+  id: `id-${nome}`,
+  nome,
+  tipo,
+  ...extra,
+});
+
+describe('valutaPrezziESezioni - prezzi', () => {
+  it('prezzi tutti impostati e nessuna sezione: niente da sistemare', () => {
+    expect(valutaPrezziESezioni(prezziCompleti(), [])).toEqual({
+      prezziMancanti: [],
+      sezioniSenzaTipo: [],
+      daSistemare: false,
+    });
+  });
+
+  it('un prezzo nullo e mancante', () => {
+    const esito = valutaPrezziESezioni({ ...prezziCompleti(), retta_materna: null }, []);
+    expect(esito.prezziMancanti).toEqual(['retta_materna']);
+    expect(esito.daSistemare).toBe(true);
+  });
+
+  it('un prezzo non presente (undefined) e mancante', () => {
+    const { buono_pasto: _tolto, ...senzaBuono } = prezziCompleti();
+    expect(valutaPrezziESezioni(senzaBuono, []).prezziMancanti).toEqual(['buono_pasto']);
+  });
+
+  it('un prezzo pari a 0 e un valore valido, non e mancante', () => {
+    const esito = valutaPrezziESezioni({ ...prezziCompleti(), marca_da_bollo: 0, gettone_pre_asilo: 0 }, []);
+    expect(esito.prezziMancanti).toEqual([]);
+    expect(esito.daSistemare).toBe(false);
+  });
+
+  it("riga dei prezzi assente (null o undefined): mancano tutti e otto, nell'ordine del form", () => {
+    for (const riga of [null, undefined]) {
+      const esito = valutaPrezziESezioni(riga, []);
+      expect(esito.prezziMancanti).toEqual(CAMPI_PREZZI.map((c) => c.colonna));
+      expect(esito.prezziMancanti).toHaveLength(8);
+      expect(esito.daSistemare).toBe(true);
+    }
+  });
+
+  it("piu prezzi mancanti: elencati nell'ordine del form", () => {
+    const esito = valutaPrezziESezioni({ ...prezziCompleti(), gettone_post_asilo: null, retta_primavera: null }, []);
+    expect(esito.prezziMancanti).toEqual(['retta_primavera', 'gettone_post_asilo']);
+  });
+});
+
+describe('valutaPrezziESezioni - sezioni', () => {
+  it('sezioni tutte con un tipo: niente da sistemare', () => {
+    const esito = valutaPrezziESezioni(prezziCompleti(), [sezione('Girasoli', 'materna'), sezione('Pulcini', 'primavera')]);
+    expect(esito.sezioniSenzaTipo).toEqual([]);
+    expect(esito.daSistemare).toBe(false);
+  });
+
+  it('una sezione senza tipo (null o undefined) e elencata con id e nome, anche con tutti i prezzi impostati', () => {
+    const esito = valutaPrezziESezioni(prezziCompleti(), [
+      sezione('Girasoli', 'materna'),
+      sezione('Tulipani', null),
+      sezione('Margherite', undefined),
+    ]);
+    expect(esito.prezziMancanti).toEqual([]);
+    expect(esito.sezioniSenzaTipo).toEqual([
+      { id: 'id-Tulipani', nome: 'Tulipani' },
+      { id: 'id-Margherite', nome: 'Margherite' },
+    ]);
+    expect(esito.daSistemare).toBe(true);
+  });
+
+  it('un tipo sconosciuto conta come senza tipo', () => {
+    const esito = valutaPrezziESezioni(prezziCompleti(), [sezione('Strana', 'altro')]);
+    expect(esito.sezioniSenzaTipo).toEqual([{ id: 'id-Strana', nome: 'Strana' }]);
+  });
+
+  it('le sezioni non attive non contano', () => {
+    const esito = valutaPrezziESezioni(prezziCompleti(), [sezione('Vecchia', null, { attiva: false })]);
+    expect(esito.sezioniSenzaTipo).toEqual([]);
+    expect(esito.daSistemare).toBe(false);
+  });
+
+  it('una sezione con attiva esplicitamente vera e senza tipo conta', () => {
+    const esito = valutaPrezziESezioni(prezziCompleti(), [sezione('Nuova', null, { attiva: true })]);
+    expect(esito.sezioniSenzaTipo).toEqual([{ id: 'id-Nuova', nome: 'Nuova' }]);
+  });
+
+  it('prezzi e sezioni mancanti insieme: entrambi gli elenchi', () => {
+    const esito = valutaPrezziESezioni(null, [sezione('Tulipani', null)]);
+    expect(esito.prezziMancanti).toHaveLength(8);
+    expect(esito.sezioniSenzaTipo).toHaveLength(1);
+    expect(esito.daSistemare).toBe(true);
+  });
+});
+
+describe('nomePrezzo', () => {
+  it("da il nome leggibile senza il simbolo dell'euro", () => {
+    expect(nomePrezzo('retta_materna')).toBe('Retta Materna');
+    expect(nomePrezzo('abbonamento_pre_asilo')).toBe('Abbonamento pre-asilo');
+    expect(nomePrezzo('gettone_post_asilo')).toBe('Gettone post-asilo');
   });
 });

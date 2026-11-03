@@ -2,13 +2,16 @@ import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
 import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
+import { Avviso } from '@/components/ui/avviso';
 import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
 import { Riquadro, riquadroVariants } from '@/components/ui/riquadro';
 import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Campo } from '@/components/ui/campo';
 import { Selezione } from '@/components/ui/selezione';
 import { requireAdmin } from '@/lib/auth';
-import { ETICHETTA_TIPO_SEZIONE, type TipoSezione } from '@/lib/prezzi';
+import { nomePrezzo, ETICHETTA_TIPO_SEZIONE, type TipoSezione } from '@/lib/prezzi';
+import { calcolaPrezziESezioni } from '@/lib/prezziDati';
+import { PERCORSO_PREZZI } from '@/lib/elencoAllarmi';
 import { cn } from '@/lib/utils';
 import {
   creaSezione,
@@ -24,13 +27,19 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPage() {
   const { supabase, user, profilo } = await requireAdmin();
 
-  const [{ data: anniScolastici }, { data: sezioni }, { data: bambini }] = await Promise.all([
+  const [{ data: anniScolastici }, { data: sezioni }, { data: bambini }, prezziSezioni] = await Promise.all([
     supabase.from('anni_scolastici').select('id, nome').order('nome'),
     supabase.from('sezioni').select('id, nome, attiva, anno_scolastico_id, tipo').order('nome'),
     supabase
       .from('bambini')
       .select('id, nome, cognome, sezione_id, note_allergie, attiva')
       .order('cognome'),
+    // Riga breve vicino al form dei bambini (specs/07, #397). Se la lettura
+    // non riesce la riga manca, ma la pagina funziona.
+    calcolaPrezziESezioni(supabase).catch((errore) => {
+      console.error('Allarme prezzi e sezioni non calcolato:', errore instanceof Error ? errore.message : errore);
+      return null;
+    }),
   ]);
 
   const tuttiBambini = bambini ?? [];
@@ -162,6 +171,27 @@ export default async function AdminPage() {
 
         <section>
           <h1 className="text-lg font-medium">Bambini</h1>
+          {prezziSezioni?.daSistemare && (
+            <Avviso tono="attenzione" data-testid="avviso-prezzi-incompleti" className="mt-3">
+              <p>
+                I prezzi o i tipi delle sezioni non sono completi: la scheda dei nuovi bambini potrebbe restare
+                senza costi.
+              </p>
+              {prezziSezioni.prezziMancanti.length > 0 && (
+                <p className="mt-1">
+                  Prezzi mancanti: {prezziSezioni.prezziMancanti.map(nomePrezzo).join(', ')}.{' '}
+                  <Link href={PERCORSO_PREZZI} className="underline">
+                    Vai a Prezzi
+                  </Link>
+                </p>
+              )}
+              {prezziSezioni.sezioniSenzaTipo.length > 0 && (
+                <p className="mt-1">
+                  Sezioni senza tipo: {prezziSezioni.sezioniSenzaTipo.map((sezione) => sezione.nome).join(', ')}.
+                </p>
+              )}
+            </Avviso>
+          )}
           <FormConEsito
             action={creaBambino}
             className={cn(riquadroVariants(), 'mt-3 space-y-2 p-4')}
