@@ -193,7 +193,7 @@ export function gettoniMesePrecedente(args: {
   const voce = (nome: VocePrePost, flagAttuale: boolean, prezzo: number): GettoniVoce => {
     if (copertoDaAbbonamento({ voce: nome, flagAttuale, rettaDelMese: args.rettaMesePrecedente })) return zero();
     const numero = giorniValidi.filter((p) => (nome === 'pre' ? p.preAsilo : p.postAsilo)).length;
-    return { numero, importo: Math.round(numero * prezzo * 100) / 100 + 0 };
+    return { numero, importo: Math.round(numero * prezzo * 100) / 100 };
   };
   return {
     pre: voce('pre', costi.preAsiloRichiesto, costi.gettonePreAsilo),

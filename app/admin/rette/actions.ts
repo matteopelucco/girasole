@@ -75,12 +75,6 @@ async function giorniAperturaMeseCorrente(
 // I/O: la "persistenza" delle eventuali modifiche avviene subito dopo,
 // quando il chiamante scrive la riga in comunicazioni_retta (specs/56,
 // "le modifiche non hanno un salvataggio separato").
-// Numero di gettoni (intero non negativo) arrivato nel campo nascosto del form.
-function numeroIntero(valore: FormDataEntryValue | null): number {
-  const numero = Number(valore);
-  return Number.isInteger(numero) && numero >= 0 ? numero : 0;
-}
-
 function riepilogoDalForm(
   formData: FormData,
   bambinoId: string,
@@ -125,7 +119,15 @@ function riepilogoDalForm(
   };
 }
 
-// Numero di gettoni pre/post-asilo letto dai campi nascosti del form.
+// Numero di gettoni (intero non negativo) arrivato nel campo nascosto del form.
+function numeroIntero(valore: FormDataEntryValue | null): number {
+  const numero = Number(valore);
+  return Number.isInteger(numero) && numero >= 0 ? numero : 0;
+}
+
+// Numero di gettoni pre/post-asilo letto dai campi nascosti del form. È solo
+// un'etichetta per l'admin e per l'email: non entra nel totale, che usa gli
+// importi dei gettoni (modificabili come gli altri campi della retta).
 type NumeriGettoni = { pre: number; post: number };
 
 function numeriGettoniDalForm(formData: FormData, bambinoId: string): NumeriGettoni {
