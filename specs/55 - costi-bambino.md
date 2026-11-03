@@ -251,7 +251,8 @@ valido
   Il gettone è un prezzo per bambino, indipendente dall'abbonamento e dal
   relativo flag: non viene azzerato né ignorato quando l'abbonamento è
   attivo o no (COS-10). Qui si salva soltanto il prezzo; l'uso del gettone
-  nelle presenze e nelle rette è fuori ambito (#399, #400).
+  nelle presenze è in `specs/13 - segna-presenza.md` (GET-01..15, con la
+  funzione di sola lettura di GET-08) e nelle rette in #400.
 - **Nessun valore predefinito fisso** nel database: le colonne di prezzo
   di `costi_bambini` non hanno più i default 6/2/70/70 (rimossi dalla
   migration della issue #396, che sostituisce i default di
