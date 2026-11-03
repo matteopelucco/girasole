@@ -34,7 +34,7 @@ begin
 end;
 $$;
 
-select plan(26);
+select plan(37);
 
 -- Helper (temporanei: spariscono con la transazione) ----------------------
 create function pg_temp.impersona(p_uid uuid) returns void
@@ -103,8 +103,8 @@ language sql as $$
   select format(
     $q$insert into public.costi_bambini
          (bambino_id, prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo,
-          prezzo_pre_asilo, prezzo_post_asilo)
-       values (%L, 100, 6, 2, 70, 70)$q$,
+          prezzo_pre_asilo, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo)
+       values (%L, 100, 6, 2, 70, 70, 7, 7)$q$,
     p_bambino
   );
 $$;
@@ -138,10 +138,10 @@ insert into public.bambini_genitori (bambino_id, genitore_id) values
 
 insert into public.costi_bambini
   (bambino_id, prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo,
-   prezzo_pre_asilo, prezzo_post_asilo)
+   prezzo_pre_asilo, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo)
 values
-  ('c0000000-0000-0000-0000-000000000001', 100, 6, 2, 70, 70),
-  ('c0000000-0000-0000-0000-000000000002', 100, 6, 2, 70, 70);
+  ('c0000000-0000-0000-0000-000000000001', 100, 6, 2, 70, 70, 7, 7),
+  ('c0000000-0000-0000-0000-000000000002', 100, 6, 2, 70, 70, 7, 7);
 
 -- =========================================================================
 -- RLS attiva, una sola policy, nessun privilegio ad anon
@@ -316,6 +316,51 @@ select is(
   (select count(*)::int from public.costi_bambini where bambino_id = 'c0000000-0000-0000-0000-000000000001'),
   0, 'admin: la riga è stata davvero cancellata'
 );
+
+-- =========================================================================
+-- COS-11 (issue #398): colonne dei gettoni. Il fatto che i bambini già
+-- esistenti abbiano 7 euro dopo il rilascio è l'effetto di questa migration
+-- (backfill, poi default tolto): qui si prova la forma finale delle colonne.
+-- (come postgres, fuori dalla RLS)
+-- =========================================================================
+select has_column('public', 'costi_bambini', 'gettone_pre_asilo', 'COS-11: esiste costi_bambini.gettone_pre_asilo');
+select has_column('public', 'costi_bambini', 'gettone_post_asilo', 'COS-11: esiste costi_bambini.gettone_post_asilo');
+select is(
+  (select format_type(a.atttypid, a.atttypmod) from pg_attribute a
+    where a.attrelid = 'public.costi_bambini'::regclass and a.attname = 'gettone_pre_asilo'),
+  'numeric(6,2)', 'COS-11: gettone_pre_asilo è numeric(6,2)'
+);
+select is(
+  (select format_type(a.atttypid, a.atttypmod) from pg_attribute a
+    where a.attrelid = 'public.costi_bambini'::regclass and a.attname = 'gettone_post_asilo'),
+  'numeric(6,2)', 'COS-11: gettone_post_asilo è numeric(6,2)'
+);
+select col_not_null('public', 'costi_bambini', 'gettone_pre_asilo', 'COS-11: gettone_pre_asilo è not null');
+select col_not_null('public', 'costi_bambini', 'gettone_post_asilo', 'COS-11: gettone_post_asilo è not null');
+select col_hasnt_default('public', 'costi_bambini', 'gettone_pre_asilo', 'COS-11: gettone_pre_asilo senza default dopo la migration (era 7 solo per il backfill)');
+select col_hasnt_default('public', 'costi_bambini', 'gettone_post_asilo', 'COS-11: gettone_post_asilo senza default dopo la migration (era 7 solo per il backfill)');
+
+-- Vincolo 0..9999,99 (come gli altri importi): SQLSTATE dell'insert, 'ok' se riuscito.
+insert into public.bambini (id, nome, cognome, sezione_id) values
+  ('c0000000-0000-0000-0000-000000000005', 'PgtapCinque', 'Fittizio', 'd0000000-0000-0000-0000-000000000001');
+create function pg_temp.stato_gettoni(p_pre numeric, p_post numeric) returns text
+language plpgsql as $$
+begin
+  begin
+    insert into public.costi_bambini
+      (bambino_id, prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo,
+       prezzo_pre_asilo, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo)
+    values ('c0000000-0000-0000-0000-000000000005', 100, 6, 2, 70, 70, p_pre, p_post);
+    delete from public.costi_bambini where bambino_id = 'c0000000-0000-0000-0000-000000000005';
+    return 'ok';
+  exception when others then
+    return sqlstate;
+  end;
+end;
+$$;
+select is(pg_temp.stato_gettoni(-0.01, 7), '23514', 'COS-11: gettone pre-asilo negativo rifiutato');
+select is(pg_temp.stato_gettoni(7, 10000), '22003', 'COS-11: gettone post-asilo 10000 rifiutato (fuori scala per numeric(6,2), come nei prezzi predefiniti)');
+select is(pg_temp.stato_gettoni(0, 9999.99), 'ok', 'COS-11: 0 e 9999,99 sono validi');
 
 select * from finish();
 

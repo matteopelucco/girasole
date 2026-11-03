@@ -23,6 +23,8 @@ const eslintConfig = defineConfig([
     'blob-report/**',
     'confronto-visivo/**',
     'playwright/**',
+    // Copie di lavoro degli agenti (git worktree), non codice di questo ramo.
+    '.claude/worktrees/**',
   ]),
   {
     // eslint-plugin-react-hooks 7 (arrivato con eslint-config-next 16)

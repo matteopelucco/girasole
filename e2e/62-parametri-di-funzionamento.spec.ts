@@ -401,6 +401,8 @@ test.describe('62 — Prezzi', () => {
           prezzo_pre_asilo: 33.33,
           post_asilo_richiesto: false,
           prezzo_post_asilo: 44.44,
+          gettone_pre_asilo: 7.11,
+          gettone_post_asilo: 7.22,
           email_promemoria: 'genitore.prezzi@example.test',
         };
         await scriviCostiInModoEsplicito(db!, bambino.id, costi);
@@ -413,6 +415,8 @@ test.describe('62 — Prezzi', () => {
           marca_da_bollo: '3',
           abbonamento_pre_asilo: '80',
           abbonamento_post_asilo: '81',
+          gettone_pre_asilo: '9',
+          gettone_post_asilo: '9,50',
         });
         await salvaPrezzi(page);
         await expect(sezionePrezzi(page).getByText('Prezzi salvati', { exact: true })).toBeVisible();
@@ -460,15 +464,19 @@ test.describe('62 — Prezzi', () => {
             prezzo_pre_asilo: 71.55,
             post_asilo_richiesto: false,
             prezzo_post_asilo: 72.66,
+            gettone_pre_asilo: 7.77,
+            gettone_post_asilo: 7.88,
             email_promemoria: '',
           });
 
         await creaBambinoDaForm(page, cognomi[1], materna.nome);
         const idMaterna = await idBambinoPerCognome(db!, cognomi[1]);
         await expect.poll(async () => (await leggiCosti(db!, idMaterna))?.prezzo_mensile).toBe(161.11);
-        // I gettoni non entrano nei costi del bambino: la scheda non li mostra.
+        // I gettoni di "Prezzi" sono copiati nei costi del bambino (COS-12) e la scheda li mostra salvati.
+        await expect.poll(async () => (await leggiCosti(db!, idMaterna))?.gettone_pre_asilo).toBe(7.77);
         await page.goto(`/admin/bambini/${idMaterna}`);
-        await expect(page.getByLabel(/gettone/i)).toHaveCount(0);
+        await expect(page.getByLabel('Prezzo gettone pre-asilo (€)', { exact: true })).toHaveValue('7,77');
+        await expect(page.getByLabel('Prezzo gettone post-asilo (€)', { exact: true })).toHaveValue('7,88');
       } finally {
         await pulisciSezioneEBambini(db!, primavera.id, cognomi);
         await pulisciSezioneEBambini(db!, materna.id, []);

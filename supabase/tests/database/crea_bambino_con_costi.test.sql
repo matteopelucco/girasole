@@ -124,8 +124,16 @@ select is(
   (select to_jsonb(c) - 'updated_at' - 'bambino_id'
      from public.costi_bambini c join public.bambini b on b.id = c.bambino_id
     where b.cognome = 'PgTapMaterna'),
-  '{"prezzo_mensile":161.11,"prezzo_buono_pasto":6.33,"prezzo_marca_da_bollo":2.44,"pre_asilo_richiesto":false,"prezzo_pre_asilo":71.55,"post_asilo_richiesto":false,"prezzo_post_asilo":72.66,"email_promemoria":null}'::jsonb,
-  'materna: retta Materna, buono pasto, marca da bollo e abbonamenti dei prezzi; flag falsi; email vuota; nessun gettone'
+  '{"prezzo_mensile":161.11,"prezzo_buono_pasto":6.33,"prezzo_marca_da_bollo":2.44,"pre_asilo_richiesto":false,"prezzo_pre_asilo":71.55,"post_asilo_richiesto":false,"prezzo_post_asilo":72.66,"gettone_pre_asilo":7.77,"gettone_post_asilo":7.88,"email_promemoria":null}'::jsonb,
+  'materna: retta Materna, buono pasto, marca da bollo, abbonamenti e gettoni dei prezzi; flag falsi; email vuota'
+);
+-- COS-12 / PRZ-07: i gettoni vengono da prezzi_predefiniti, non da valori fissi.
+select is(
+  (select (c.gettone_pre_asilo, c.gettone_post_asilo)::text
+     from public.costi_bambini c join public.bambini b on b.id = c.bambino_id
+    where b.cognome = 'PgTapMaterna'),
+  '(7.77,7.88)',
+  'COS-12: i gettoni del nuovo bambino sono quelli di "Prezzi" (7,77 e 7,88)'
 );
 select is(
   (select sezione_id from public.bambini where cognome = 'PgTapMaterna'),
@@ -143,6 +151,11 @@ select is(
   (select c.prezzo_mensile from public.costi_bambini c join public.bambini b on b.id = c.bambino_id where b.cognome = 'PgTapPrimavera'),
   201.22::numeric,
   'primavera: la retta è quella Primavera'
+);
+select is(
+  (select (c.gettone_pre_asilo, c.gettone_post_asilo)::text from public.costi_bambini c join public.bambini b on b.id = c.bambino_id where b.cognome = 'PgTapPrimavera'),
+  '(7.77,7.88)',
+  'COS-12: anche in primavera i gettoni sono quelli di "Prezzi"'
 );
 select is(
   (select (note_allergie, altre_note)::text from public.bambini where cognome = 'PgTapPrimavera'),

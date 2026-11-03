@@ -48,7 +48,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     await page.getByLabel('Prezzo retta mensile (€)').fill(prezzoMensile);
     await page.getByLabel('Prezzo buono pasto (€)').fill('0');
     await page.getByLabel('Email promemoria retta').fill(`e2e-bonifico-${Date.now()}@example.com`);
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await page.getByRole('button', { name: 'Salva', exact: true }).click();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue(prezzoMensile, { timeout: 20_000 });
 
     await page.goto('/admin/rette');

@@ -83,7 +83,7 @@ test.describe('05 — Feedback sulle azioni', () => {
   });
 
   test('form di modifica senza altro effetto visibile mostra "Ultimo salvataggio"', async ({ page }) => {
-    // "Salva costi" sulla scheda di un bambino appena creato: i valori
+    // "Salva" (parte economica) sulla scheda di un bambino appena creato: i valori
     // scritti coincidono con quelli precompilati di default, quindi il
     // form ha esattamente lo stesso aspetto prima e dopo l'invio — solo
     // "Ultimo salvataggio" segnala che è davvero avvenuto (specs/05).
@@ -103,9 +103,9 @@ test.describe('05 — Feedback sulle azioni', () => {
     // La scheda ha due "Ultimo salvataggio" (anagrafica e costi): quello
     // dell'anagrafica è già valorizzato alla creazione del bambino,
     // quindi guardo solo quello del form dei costi.
-    const formCosti = page.locator('form', { has: page.getByRole('button', { name: 'Salva costi' }) });
+    const formCosti = page.locator('form', { has: page.getByRole('button', { name: 'Salva', exact: true }) });
     await expect(formCosti.getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await page.getByRole('button', { name: 'Salva', exact: true }).click();
 
     await expect(formCosti.getByText('Ultimo salvataggio:', { exact: false })).toContainText(
       /\d{2}\/\d{2}\/\d{4} alle \d{2}:\d{2}/,

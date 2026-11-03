@@ -233,6 +233,8 @@ const CAMPI_COSTI = [
   'prezzo_marca_da_bollo',
   'prezzo_pre_asilo',
   'prezzo_post_asilo',
+  'gettone_pre_asilo',
+  'gettone_post_asilo',
 ] as const;
 
 // specs/55 - costi-bambino.md (COS-01, COS-05): prezzo retta, prezzo buono

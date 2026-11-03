@@ -386,6 +386,8 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
       prezzo_pre_asilo: 33.33,
       post_asilo_richiesto: true,
       prezzo_post_asilo: 44.44,
+      gettone_pre_asilo: 7.11,
+      gettone_post_asilo: 7.22,
       email_promemoria: null,
     };
     await scriviCostiInModoEsplicito(db!, bambino.id, costi);
@@ -441,6 +443,8 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
         prezzo_pre_asilo: prezzi.abbonamento_pre_asilo,
         post_asilo_richiesto: false,
         prezzo_post_asilo: prezzi.abbonamento_post_asilo,
+        gettone_pre_asilo: prezzi.gettone_pre_asilo,
+        gettone_post_asilo: prezzi.gettone_post_asilo,
         email_promemoria: '',
       });
 
@@ -448,6 +452,8 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
     await page.goto(`/admin/bambini/${id}`);
     await expect(page.getByLabel(ETICHETTE_COSTI.retta, { exact: true })).toHaveValue(formatta(prezzi.retta_primavera));
     await expect(page.getByLabel(ETICHETTE_COSTI.buonoPasto, { exact: true })).toHaveValue(formatta(prezzi.buono_pasto));
+    await expect(page.getByLabel(ETICHETTE_COSTI.gettonePreAsilo, { exact: true })).toHaveValue(formatta(prezzi.gettone_pre_asilo));
+    await expect(page.getByLabel(ETICHETTE_COSTI.gettonePostAsilo, { exact: true })).toHaveValue(formatta(prezzi.gettone_post_asilo));
     await expect(formCosti(page).getByText('Ultimo salvataggio:', { exact: false })).toBeVisible();
   });
 
@@ -465,7 +471,7 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
 
       // Nella scheda i costi sono solo proposti, non salvati.
       await page.goto(`/admin/bambini/${id}`);
-      await expect(page.getByRole('heading', { name: 'Costi', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Retta e pasti', exact: true })).toBeVisible();
       await expect(formCosti(page).getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
     }
   });
@@ -492,6 +498,8 @@ test.describe('50 — Tipo di sezione e costi iniziali', () => {
       prezzo_pre_asilo: 33.33,
       post_asilo_richiesto: false,
       prezzo_post_asilo: 44.44,
+      gettone_pre_asilo: 7.11,
+      gettone_post_asilo: 7.22,
       email_promemoria: null,
     };
     await scriviCostiInModoEsplicito(db!, conCosti.id, costi);
