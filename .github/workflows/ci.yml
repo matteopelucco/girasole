@@ -94,9 +94,12 @@ name: CI
 #      trascinato in un componente client — il buco esatto di v0.39/v0.40,
 #      che tsc/lint/vitest non vedono. Resta in `statico` (anche se `e2e`
 #      ricompila) perché fallisca PRIMA di mettersi in coda per il DB.
-#   6. reset DB di test (A23) — `supabase db reset --linked --project-ref <ref> --yes`
-#      (--yes salta la conferma interattiva, che in CI non ha nessuno a
-#      cui chiedere) via Supabase CLI: riapplica tutte le migration da
+#   6. reset DB di test (A23) — `supabase db reset --remote=<ref> --yes`
+#      (--remote=<ref> indica il progetto di test remoto; senza --remote la
+#      CLI 3 lavora sul DB locale. La versione è fissa, 3.0.0, perché le
+#      versioni nuove possono togliere flag o cambiare comportamento: si
+#      aggiorna con una PR dedicata. --yes salta la conferma interattiva,
+#      che in CI non ha nessuno a cui chiedere) via Supabase CLI: riapplica tutte le migration da
 #      zero sul progetto di test condiviso (`girasole_dev`) e poi lancia
 #      `supabase/seed.sql`, così ogni run e2e parte da schema/seed noti
 #      (compromesso accettato da Matteo, ADR-0006). Richiede il secret
@@ -266,8 +269,10 @@ jobs:
       - name: 6. Reset del DB di test (Supabase CLI, A23)
         id: reset-db
         run: |
-          npm install -g supabase
-          supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
+          # Versione fissa: una CLI nuova potrebbe togliere flag e rompere
+          # la CI all'improvviso. Si aggiorna a mano, con una PR dedicata.
+          npm install -g supabase@3.0.0
+          supabase db reset --remote=${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
         env:
           # Token di accesso personale Supabase (Management API), non la
           # password del database: letto automaticamente dal CLI.
@@ -276,11 +281,11 @@ jobs:
       # Test pgTAP sulle policy RLS (issue #29/#180): file in
       # supabase/tests/database/, ognuno in `begin; ... rollback;` (nessun
       # dato resta nel DB di test). Un test rosso fa fallire il job.
-      # `--linked --project-ref` come il reset qui sopra: stesso progetto di
+      # `--remote=<ref>` come il reset qui sopra: stesso progetto di
       # TEST, mai la produzione. `--yes`: il CLI, senza terminale, chiede una
       # conferma esplicita e senza si ferma (come per il reset).
       - name: 6a. Test pgTAP sulle policy RLS (issue #180)
-        run: supabase test db --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
+        run: supabase test db --remote=${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
