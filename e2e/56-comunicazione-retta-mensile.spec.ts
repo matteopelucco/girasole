@@ -8,7 +8,24 @@
 // comunicazioni_retta: usa un indirizzo di dominio "example.com", mai
 // un indirizzo reale.
 import { test, expect } from '@playwright/test';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { modalitaInvioEmail } from '../lib/email';
+import { accediComeAdminDb, creaBambinoFixture, eliminaBambinoFixture, type BambinoFixture } from './fixture-bambino';
+import { inserisciRettaInviata } from './pagina-gettone';
+import {
+  apriAnteprima,
+  campoGettoni,
+  importoGettoniInviato,
+  impostaCostiGettoni,
+  inserisciChiusura,
+  inserisciPresenzeMesePrecedente,
+  inserisciRettaConGettoni,
+  meseCorrenteRoma,
+  mesePrecedenteRoma,
+  numeroGettoni,
+  primiGiorniFeriali,
+  rigaRette,
+} from './pagina-gettoni-retta';
 import {
   emailDisponibile,
   formCreaBambino,
@@ -81,6 +98,8 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(page.getByRole('columnheader', { name: 'Marca da bollo' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Pre-asilo' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Post-asilo' }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Gettoni pre-asilo', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Gettoni post-asilo', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Costi extra' }).first()).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Totale' }).first()).toBeVisible();
     await nessunaViolazioneA11yGrave(page);
@@ -606,9 +625,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga).toContainText('2,00 €'); // Marca da bollo
     await expect(riga).toContainText('0,00 €'); // Pasti mese corrente, Credito/Debito (prezzoBuonoPasto 0)
     await expect(riga).toContainText('202,00 €'); // Totale (200 retta + 2 marca da bollo)
-    // Conguaglio pasti/Pre-asilo/Post-asilo/Costi extra: simbolo fuori
-    // dal campo compilabile, uno per ciascuno dei quattro campi.
-    await expect(riga.getByText('€', { exact: true })).toHaveCount(4);
+    // Conguaglio pasti/Pre-asilo/Post-asilo/Gettoni pre/Gettoni post/Costi extra:
+    // simbolo fuori dal campo compilabile, uno per ciascuno dei sei campi.
+    await expect(riga.getByText('€', { exact: true })).toHaveCount(6);
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
@@ -715,6 +734,287 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.reload();
     await expect(page.getByLabel('Oggetto')).toHaveValue(oggettoUnico);
+  });
+
+  // --- Gettoni pre e post-asilo del mese precedente (RET-01..RET-12, issue #400) ---
+  // Ogni test crea il SUO bambino fixture (costi, presenze del mese precedente) e lo
+  // elimina alla fine; l'invio passa dall'anteprima singola con "Conferma senza
+  // inviare" (registra la comunicazione, nessuna email, quindi nessuno skip per la posta).
+  let db: SupabaseClient;
+
+  test.beforeAll(async () => {
+    const connesso = await accediComeAdminDb();
+    if (connesso) db = connesso;
+  });
+
+  // Presenze del mese precedente: `pre` giorni con pre-asilo, `post` con post-asilo.
+  const presenze = (pre: number, post: number) => async (b: BambinoFixture) => {
+    await inserisciPresenzeMesePrecedente(db, b, { pre, post });
+  };
+
+  async function conBambino(
+    fn: (bambino: BambinoFixture) => Promise<void>,
+    prepara?: (bambino: BambinoFixture) => Promise<void>
+  ) {
+    test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
+    const bambino = await creaBambinoFixture(db);
+    try {
+      await impostaCostiGettoni(db, bambino);
+      if (prepara) await prepara(bambino);
+      await fn(bambino);
+    } finally {
+      await eliminaBambinoFixture(db, bambino.id);
+    }
+  }
+
+  async function confermaSenzaInviare(page: import('@playwright/test').Page, bambino: BambinoFixture) {
+    const popup = await apriAnteprima(page, bambino);
+    await clickEAttendiAzione(page, popup.getByRole('button', { name: 'Conferma senza inviare' }));
+    await page.reload();
+    await expect(rigaRette(page, bambino).getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
+  }
+
+  test('RET-01: i gettoni pre e post-asilo del mese precedente compaiono nella retta', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      // 3 giorni pre x 7,00 = 21; 2 giorni post x 8,00 = 16.
+      await expect(campoGettoni(riga, bambino, 'pre')).toHaveValue('21');
+      await expect(campoGettoni(riga, bambino, 'post')).toHaveValue('16');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('3 gettoni');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('2 gettoni');
+      await nessunaViolazioneA11yGrave(page);
+    }, presenze(3, 2));
+  });
+
+  test('RET-01: una voce senza giorni non coperti mostra 0,00 e 0 gettoni', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      await expect(campoGettoni(riga, bambino, 'pre')).toHaveValue('0');
+      await expect(campoGettoni(riga, bambino, 'post')).toHaveValue('0');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('0 gettoni');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('0 gettoni');
+    });
+  });
+
+  test("RET-02: un giorno è coperto se l'abbonamento della voce c'era nella retta di quel mese", async ({ page }) => {
+    // A: retta di M-1 inviata con pre addebitato (70) e post a zero, mentre i flag attuali
+    // sono opposti (pre spento, post acceso): conta la retta, non il flag.
+    // B: nessuna retta di M-1, vale il flag attuale (pre acceso, post spento).
+    test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
+    const a = await creaBambinoFixture(db);
+    const b = await creaBambinoFixture(db);
+    try {
+      await impostaCostiGettoni(db, a, { abbonamentoPre: false, abbonamentoPost: true });
+      await presenze(3, 2)(a);
+      await inserisciRettaInviata(db, a, mesePrecedenteRoma(), { costoPreAsilo: 70, costoPostAsilo: 0 });
+      await impostaCostiGettoni(db, b, { abbonamentoPre: true, abbonamentoPost: false });
+      await presenze(3, 2)(b);
+
+      await page.goto('/admin/rette');
+      const rigaA = rigaRette(page, a);
+      await expect(campoGettoni(rigaA, a, 'pre')).toHaveValue('0');
+      await expect(campoGettoni(rigaA, a, 'post')).toHaveValue('16');
+      const rigaB = rigaRette(page, b);
+      await expect(campoGettoni(rigaB, b, 'pre')).toHaveValue('0');
+      await expect(campoGettoni(rigaB, b, 'post')).toHaveValue('16');
+      await expect(numeroGettoni(rigaB, 'post')).toHaveText('2 gettoni');
+    } finally {
+      await eliminaBambinoFixture(db, a.id);
+      await eliminaBambinoFixture(db, b.id);
+    }
+  });
+
+  test('RET-03: i giorni di chiusura non generano gettoni', async ({ page }) => {
+    // Le presenze si scrivono solo in giorni aperti (trigger): la chiusura si registra
+    // DOPO le presenze. I fine settimana sono coperti dai test unit.
+    let eliminaChiusura: (() => Promise<void>) | undefined;
+    try {
+      await conBambino(async (bambino) => {
+        const giorni = primiGiorniFeriali(mesePrecedenteRoma(), 3);
+        eliminaChiusura = await inserisciChiusura(db, giorni[1]);
+        await page.goto('/admin/rette');
+        const riga = rigaRette(page, bambino);
+        // 3 presenze con pre-asilo, una in giorno di chiusura: 2 x 7,00.
+        await expect(campoGettoni(riga, bambino, 'pre')).toHaveValue('14');
+        await expect(numeroGettoni(riga, 'pre')).toHaveText('2 gettoni');
+      }, presenze(3, 0));
+    } finally {
+      await eliminaChiusura?.();
+    }
+  });
+
+  test("RET-04: il cambio d'anno e i mesi senza presenze (coperto da unit)", async () => {
+    // Gennaio -> dicembre e settembre -> agosto dipendono dal mese in cui gira la suite.
+    test.skip(true, 'coperto da lib/prezzi.test.ts (gettoniMesePrecedente)');
+  });
+
+  test('RET-05: il totale della retta include i gettoni, anche modificati a mano', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      // 100 retta + 2 marca da bollo + 21 + 16 gettoni = 139,00.
+      await expect(riga).toContainText('139,00');
+
+      // Correzione a mano: il totale comunicato usa il valore scritto.
+      await campoGettoni(riga, bambino, 'pre').fill('10');
+      await confermaSenzaInviare(page, bambino);
+      const rigaInviata = rigaRette(page, bambino);
+      // 100 + 2 + 10 + 16 = 128,00.
+      await expect(rigaInviata).toContainText('128,00');
+      await expect(importoGettoniInviato(rigaInviata, 'pre')).toHaveText('10,00 €');
+      // Il numero non cambia con l'importo scritto.
+      await expect(numeroGettoni(rigaInviata, 'pre')).toHaveText('3 gettoni');
+    }, presenze(3, 2));
+  });
+
+  test('RET-06: i gettoni inviati restano quelli comunicati', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      await confermaSenzaInviare(page, bambino);
+      await expect(importoGettoniInviato(rigaRette(page, bambino), 'pre')).toHaveText('21,00 €');
+      await expect(rigaRette(page, bambino)).toContainText('139,00');
+
+      // Dopo l'invio cambiano presenze, abbonamento e prezzo del gettone.
+      const giorni = primiGiorniFeriali(mesePrecedenteRoma(), 5);
+      const { error } = await db
+        .from('presenze')
+        .insert({ bambino_id: bambino.id, data: giorni[4], stato: 'presente', pre_asilo: true, post_asilo: false });
+      expect(error?.message ?? null).toBeNull();
+      await impostaCostiGettoni(db, bambino, { abbonamentoPre: true, gettonePre: 9 });
+
+      await page.reload();
+      const riga = rigaRette(page, bambino);
+      await expect(importoGettoniInviato(riga, 'pre')).toHaveText('21,00 €');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('3 gettoni');
+      await expect(importoGettoniInviato(riga, 'post')).toHaveText('16,00 €');
+      await expect(riga).toContainText('139,00');
+    }, presenze(3, 2));
+  });
+
+  test('RET-06: una retta inviata prima del rilascio mostra 0,00 € e 0 gettoni, con il totale di sempre', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      // Retta inviata senza valorizzare le colonne nuove (default 0), come le vecchie.
+      await inserisciRettaInviata(db, bambino, meseCorrenteRoma());
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      await expect(importoGettoniInviato(riga, 'pre')).toHaveText('0,00 €');
+      await expect(importoGettoniInviato(riga, 'post')).toHaveText('0,00 €');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('0 gettoni');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('0 gettoni');
+      await expect(riga).toContainText('160,00');
+    }, presenze(3, 2));
+  });
+
+  test('RET-07: una retta non ancora inviata mostra i gettoni subito', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      await expect(campoGettoni(rigaRette(page, bambino), bambino, 'pre')).toHaveValue('0');
+
+      // Registro due pre-asilo nel mese precedente e ricarico.
+      const giorni = primiGiorniFeriali(mesePrecedenteRoma(), 2);
+      for (const data of giorni) {
+        const { error } = await db
+          .from('presenze')
+          .insert({ bambino_id: bambino.id, data, stato: 'presente', pre_asilo: true, post_asilo: false });
+        expect(error?.message ?? null).toBeNull();
+      }
+      await page.reload();
+      await expect(campoGettoni(rigaRette(page, bambino), bambino, 'pre')).toHaveValue('14');
+      await expect(numeroGettoni(rigaRette(page, bambino), 'pre')).toHaveText('2 gettoni');
+
+      // Li tolgo e ricarico: torna a zero.
+      const { error } = await db.from('presenze').update({ pre_asilo: false }).eq('bambino_id', bambino.id);
+      expect(error?.message ?? null).toBeNull();
+      await page.reload();
+      await expect(campoGettoni(rigaRette(page, bambino), bambino, 'pre')).toHaveValue('0');
+    });
+  });
+
+  test('RET-08: una retta annullata e rifatta usa le regole e i dati di oggi', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      await confermaSenzaInviare(page, bambino);
+      await expect(importoGettoniInviato(rigaRette(page, bambino), 'pre')).toHaveText('21,00 €');
+
+      // Cambiano abbonamento pre (ora coperto) e prezzo del gettone post (9,00).
+      await impostaCostiGettoni(db, bambino, { abbonamentoPre: true, gettonePost: 9 });
+      await clickEAttendiAzione(page, rigaRette(page, bambino).getByRole('button', { name: 'Annulla invio' }));
+      await page.reload();
+
+      const riga = rigaRette(page, bambino);
+      await expect(riga.getByText(/Inviata il/)).toHaveCount(0);
+      await expect(campoGettoni(riga, bambino, 'pre')).toHaveValue('0');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('0 gettoni');
+      await expect(campoGettoni(riga, bambino, 'post')).toHaveValue('18');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('2 gettoni');
+    }, presenze(3, 2));
+  });
+
+  test('RET-09: il modello email contiene le righe dei gettoni dopo la migration (coperto da pgTAP)', async () => {
+    // Il modello è una riga unica che altri test sovrascrivono: la verifica è sul DB
+    // appena resettato (supabase/tests/database/modello_email_retta_gettoni.test.sql).
+    test.skip(true, 'coperto da supabase/tests/database/modello_email_retta_gettoni.test.sql');
+  });
+
+  test('RET-10: la migration del modello email non duplica le righe (coperto da pgTAP)', async () => {
+    test.skip(true, 'coperto da supabase/tests/database/modello_email_retta_gettoni.test.sql');
+  });
+
+  test('RET-11: i gettoni sono usabili come segnaposto nella mail', async ({ page }) => {
+    await page.goto('/admin/rette/template');
+    for (const segnaposto of [
+      '{{gettoni_pre_asilo}}',
+      '{{numero_gettoni_pre_asilo}}',
+      '{{gettoni_post_asilo}}',
+      '{{numero_gettoni_post_asilo}}',
+    ]) {
+      await expect(page.getByText(segnaposto, { exact: true })).toBeVisible();
+    }
+    await nessunaViolazioneA11yGrave(page);
+
+    const corpo = `Gettoni: pre [{{gettoni_pre_asilo}}] n.[{{numero_gettoni_pre_asilo}}] post [{{gettoni_post_asilo}}] n.[{{numero_gettoni_post_asilo}}] E2E ${Date.now()}`;
+    await page.getByLabel('Corpo').fill(corpo);
+    await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva modello' }));
+    await expect(page.getByLabel('Corpo')).toHaveValue(corpo, { timeout: 20_000 });
+
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      // Valori del form al momento dell'invio: il post è corretto a mano (16 -> 12,5).
+      await campoGettoni(rigaRette(page, bambino), bambino, 'post').fill('12.5');
+      const popup = await apriAnteprima(page, bambino);
+      await expect(popup).toContainText('pre [21,00] n.[3] post [12,50] n.[2]');
+      await popup.getByRole('button', { name: 'Annulla' }).click();
+    }, presenze(3, 2));
+  });
+
+  test('RET-12: i gettoni sono visibili nelle comunicazioni inviate e nei mesi passati', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      // Mese corrente: retta appena inviata.
+      await page.goto('/admin/rette');
+      await confermaSenzaInviare(page, bambino);
+      const riga = rigaRette(page, bambino);
+      await expect(importoGettoniInviato(riga, 'pre')).toHaveText('21,00 €');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('3 gettoni');
+      await expect(importoGettoniInviato(riga, 'post')).toHaveText('16,00 €');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('2 gettoni');
+
+      // Mese passato: retta registrata con i gettoni.
+      await inserisciRettaConGettoni(db, bambino, mesePrecedenteRoma(), {
+        rettaMensile: 100,
+        gettoniPre: { importo: 35, numero: 5 },
+        gettoniPost: { importo: 16, numero: 2 },
+        totale: 151,
+      });
+      await page.goto(`/admin/rette?mese=${mesePrecedenteRoma()}`);
+      const rigaPassata = rigaRette(page, bambino);
+      await expect(importoGettoniInviato(rigaPassata, 'pre')).toHaveText('35,00 €');
+      await expect(numeroGettoni(rigaPassata, 'pre')).toHaveText('5 gettoni');
+      await expect(importoGettoniInviato(rigaPassata, 'post')).toHaveText('16,00 €');
+      await expect(numeroGettoni(rigaPassata, 'post')).toHaveText('2 gettoni');
+      await nessunaViolazioneA11yGrave(page);
+    }, presenze(3, 2));
   });
 
   test('accesso negato a chi non è admin', async ({ browser }) => {

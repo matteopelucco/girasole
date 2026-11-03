@@ -15,6 +15,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { test, expect, type BambinoFixture } from './fixture-bambino';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
+import { inserisciRettaConGettoni } from './pagina-gettoni-retta';
 
 const PERCORSO = '/admin/pagamenti-bambino';
 const ANNO_FISSO = 2020;
@@ -185,6 +186,8 @@ test.describe('60 — Pagamenti bambino', () => {
         'Conguaglio pasti',
         'Pre-asilo',
         'Post-asilo',
+        'Gettoni pre-asilo',
+        'Gettoni post-asilo',
         'Costi extra',
         'Credito/Debito',
         'Totale',
@@ -222,7 +225,34 @@ test.describe('60 — Pagamenti bambino', () => {
       expect(stileTotale.dimensione).toBeGreaterThan(stileRetta.dimensione);
     });
 
-    test('un mese senza comunicazione non mostra importi', async ({ page, bambino, adminDb }) => {
+    test('PAG-01: i gettoni sono nel dettaglio e nel totale del mese', async ({ page, bambino, adminDb }) => {
+      // Mese con gettoni: 250 retta + 21 (3 gettoni pre) + 16 (2 gettoni post) = 287.
+      await inserisciRettaConGettoni(adminDb!, bambino, `${ANNO_FISSO}-09`, {
+        rettaMensile: 250,
+        gettoniPre: { importo: 21, numero: 3 },
+        gettoniPost: { importo: 16, numero: 2 },
+        totale: 287,
+      });
+      // Mese inviato prima dei gettoni (colonne nuove a default 0): totale di sempre.
+      await inserisciRettaConGettoni(adminDb!, bambino, `${ANNO_FISSO}-10`, { rettaMensile: 100, totale: 100 });
+
+      await page.goto(urlBambino(bambino));
+      const riga = page.getByRole('row', { name: /settembre 2020/ });
+      await expect(riga.getByRole('cell', { name: /^21,00 €.*3 gettoni$/ })).toBeVisible();
+      await expect(riga.getByRole('cell', { name: /^16,00 €.*2 gettoni$/ })).toBeVisible();
+      await expect(riga.getByRole('cell', { name: '287,00 €', exact: true })).toBeVisible();
+
+      const rigaVecchia = page.getByRole('row', { name: /ottobre 2020/ });
+      await expect(rigaVecchia.getByRole('cell', { name: /^0,00 €.*0 gettoni$/ })).toHaveCount(2);
+      await expect(rigaVecchia.getByRole('cell', { name: '100,00 €', exact: true }).last()).toBeVisible();
+
+      // Totale richiesto dell'anno: 287 + 100.
+      const piede = page.getByRole('row', { name: /Totale richiesto/ });
+      await expect(piede.getByRole('cell', { name: '387,00 €', exact: true })).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('un mese senza comunicazione non mostra importi',async ({ page, bambino, adminDb }) => {
       await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 100, totale: 100 });
 
       await page.goto(urlBambino(bambino));
