@@ -40,7 +40,10 @@ name: Anteprima fumo
 #
 # Gli account E2E_* non vengono ricreati qui: li ricrea la CI e2e
 # (`scripts/crea-utenti-e2e.mjs`) dopo ogni reset del DB di test, e servono
-# la service_role key, che questo workflow non riceve. Se il login fallisce
+# la service_role key, che questo workflow non riceve. Dalla issue #406 la
+# CI li ricrea anche quando la sua e2e si ferma dopo il reset (test pgTAP
+# rossi, run annullato da un nuovo push): prima il DB restava senza account
+# e il fumo successivo cadeva con "Login rifiutato". Se il login fallisce
 # perché gli account non ci sono, il test lo dice a chiare lettere.
 
 on:

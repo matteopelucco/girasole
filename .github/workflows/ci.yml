@@ -116,7 +116,9 @@ name: CI
 #      API di Supabase (service_role key), stesse email/password dei
 #      secret `E2E_<RUOLO>_EMAIL`/`_PASSWORD` letti da `e2e/auth.setup.ts`.
 #      Un ruolo il cui secret non è configurato viene solo saltato (log);
-#      admin/maestra/assistente/genitore falliscono forte lo step.
+#      admin/maestra/assistente/genitore falliscono forte lo step. Gira
+#      anche se 6a-6c falliscono o il run viene annullato dopo il reset
+#      (issue #406), così il DB di test non resta mai senza account.
 #   8. e2e      — Playwright contro il DB di test appena resettato/riseedato
 #      (mai la produzione): i secret sono "Repository secrets" di GitHub,
 #      mai hardcoded qui. Un ruolo E2E_* mancante fa solo saltare
@@ -262,6 +264,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: 6. Reset del DB di test (Supabase CLI, A23)
+        id: reset-db
         run: |
           npm install -g supabase
           supabase db reset --linked --project-ref ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes
@@ -297,7 +300,14 @@ jobs:
           SUPABASE_TEST_PROJECT_REF: ${{ vars.SUPABASE_TEST_PROJECT_REF }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      # Gira ogni volta che il reset (6) è partito, anche se 6a/6b/6c
+      # falliscono o il run viene annullato a metà (issue #406): altrimenti il
+      # DB di test resta senza account E2E_* e il prossimo giro di fumo
+      # sull'anteprima (anteprima-fumo.yml) non riesce a entrare. `always()`
+      # serve anche per l'annullo: senza, GitHub salta lo step. Lo script è
+      # ripetibile (crea o aggiorna).
       - name: 7. Ricrea gli account di test E2E_* (Admin API, A24)
+        if: always() && steps.reset-db.outcome != 'skipped'
         run: node scripts/crea-utenti-e2e.mjs
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
