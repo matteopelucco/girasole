@@ -682,7 +682,9 @@ test.describe('13 — Segna presenza', () => {
           // Resta vietata la lettura diretta dei costi.
           const costi = await db.from('costi_bambini').select('*').eq('bambino_id', bambino.id);
           expect(costi.data ?? []).toEqual([]);
-          await db.auth.signOut();
+          // Solo questa sessione: il signOut predefinito è globale e chiuderebbe
+          // le sessioni E2E di maestra e assistente usate dagli altri test.
+          await db.auth.signOut({ scope: 'local' });
         }
       } finally {
         await pulisciSezioneEBambini(adminDb!, altra.id, [estraneo.cognome]);
