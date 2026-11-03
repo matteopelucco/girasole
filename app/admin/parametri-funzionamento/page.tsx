@@ -7,7 +7,9 @@ import { nomiParametriPresenti } from '@/lib/parametriAmbiente';
 import { PARAMETRI_VISIBILI } from '@/lib/parametriVisibili';
 import { SezioneCalendarioGoogle } from '@/components/SezioneCalendarioGoogle';
 import { statoCalendario } from '@/lib/calendarioImpostazioniDati';
-import { aggiornaIndirizzoCalendario, rivelaIndirizzoCalendario, rivelaValoriParametri } from './actions';
+import { SezionePrezzi } from '@/components/SezionePrezzi';
+import { leggiPrezzi } from '@/lib/prezziDati';
+import { aggiornaIndirizzoCalendario, aggiornaPrezzi, rivelaIndirizzoCalendario, rivelaValoriParametri } from './actions';
 
 // force-dynamic: la pagina è resa a ogni richiesta (legge l'ambiente del
 // server) e la risposta ha `Cache-Control: no-store`.
@@ -23,6 +25,7 @@ export default async function ParametriFunzionamentoPage() {
   const nomi = nomiParametriPresenti(PARAMETRI_VISIBILI, process.env);
   // Del calendario arriva al browser solo se l'indirizzo c'è, mai il valore.
   const calendario = await statoCalendario(supabase);
+  const prezzi = await leggiPrezzi(supabase);
 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
@@ -52,6 +55,7 @@ export default async function ParametriFunzionamentoPage() {
           )}
         </section>
         <SezioneCalendarioGoogle stato={calendario} salva={aggiornaIndirizzoCalendario} rivela={rivelaIndirizzoCalendario} />
+        <SezionePrezzi letti={prezzi} salva={aggiornaPrezzi} />
         <ParametriFunzionalita />
       </main>
     </NavHeader>

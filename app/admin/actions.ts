@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { emailListaValida } from '@/lib/costiBambino';
 import { formattaMeseItaliano, meseDaData, oggi } from '@/lib/date';
+import { leggiTipoSezione, parseImportoOpzionale } from '@/lib/prezzi';
 import type { EsitoAzione } from '@/components/FormConEsito';
+import type { StatoImporti } from '@/components/FormImporti';
 
 export async function creaSezione(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
   const { supabase } = await requireAdmin();
@@ -13,12 +15,45 @@ export async function creaSezione(_stato: EsitoAzione, formData: FormData): Prom
 
   if (!nome) return { ok: false, messaggio: 'Inserisci un nome per la sezione.' };
 
+  // Tipo facoltativo (specs/50 AMM-01): "" = Nessuno. Un valore che non sia
+  // un tipo noto è rifiutato, non trasformato in "nessun tipo".
+  const tipo = leggiTipoSezione(formData.get('tipo'));
+  if (!tipo.ok) return { ok: false, messaggio: 'Scegli un tipo di sezione valido.' };
+
   const { error } = await supabase
     .from('sezioni')
-    .insert({ nome, anno_scolastico_id: annoScolasticoId });
+    .insert({ nome, anno_scolastico_id: annoScolasticoId, tipo: tipo.tipo });
   if (error) {
     return { ok: false, messaggio: 'Impossibile creare la sezione.', dettaglio: error.message };
   }
+
+  revalidatePath('/admin');
+  return { ok: true };
+}
+
+// specs/50 AMM-02: cambia il tipo di una sezione. Non tocca bambini né costi:
+// vale per i bambini creati dopo e per la retta proposta a chi non ha ancora i
+// costi salvati.
+export async function aggiornaTipoSezione(
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+  const sezioneId = formData.get('sezione_id') as string;
+  const tipo = leggiTipoSezione(formData.get('tipo'));
+
+  if (!sezioneId) return { ok: false, messaggio: 'Sezione non valida.' };
+  if (!tipo.ok) return { ok: false, messaggio: 'Scegli un tipo di sezione valido.' };
+
+  const { data, error } = await supabase
+    .from('sezioni')
+    .update({ tipo: tipo.tipo })
+    .eq('id', sezioneId)
+    .select('id');
+  if (error) {
+    return { ok: false, messaggio: 'Impossibile aggiornare il tipo della sezione.', dettaglio: error.message };
+  }
+  if (!data?.length) return { ok: false, messaggio: 'Sezione non trovata.' };
 
   revalidatePath('/admin');
   return { ok: true };
@@ -104,14 +139,18 @@ export async function creaBambino(_stato: EsitoAzione, formData: FormData): Prom
     return { ok: false, messaggio: 'Compila nome e cognome del bambino.' };
   }
 
-  const { error } = await supabase.from('bambini').insert({
-    nome,
-    cognome,
-    sezione_id: sezioneId,
-    data_nascita: dataNascita,
-    sesso,
-    note_allergie: noteAllergie,
-    altre_note: altreNote,
+  // Bambino e, se la sezione ha un tipo, la sua riga di costi nascono insieme
+  // in un'unica operazione del database (specs/50 AMM-03, AMM-05): se i costi
+  // non si scrivono, non resta nemmeno il bambino. Senza sezione o senza tipo
+  // nasce solo il bambino (AMM-04). Migration 0067.
+  const { error } = await supabase.rpc('crea_bambino_con_costi', {
+    p_nome: nome,
+    p_cognome: cognome,
+    p_sezione_id: sezioneId,
+    p_data_nascita: dataNascita,
+    p_sesso: sesso,
+    p_note_allergie: noteAllergie,
+    p_altre_note: altreNote,
   });
   if (error) return esitoErroreBambino(error);
 
@@ -186,38 +225,48 @@ export async function toggleAttivaBambino(
   return { ok: true };
 }
 
-// Un importo in euro (prezzi in "Costi", specs/55): un valore vuoto,
-// non numerico o negativo diventa 0 — coerente con "nessun importo
-// previsto", stesso pattern già usato per le ore in
-// app/admin/profili-orari/actions.ts.
-function importoEuro(valore: FormDataEntryValue | null): number {
-  const numero = Number(valore);
-  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) / 100 : 0;
-}
+// Campi di prezzo della scheda Costi (specs/55): il nome del campo del form è
+// anche la colonna di `costi_bambini`.
+const CAMPI_COSTI = [
+  'prezzo_mensile',
+  'prezzo_buono_pasto',
+  'prezzo_marca_da_bollo',
+  'prezzo_pre_asilo',
+  'prezzo_post_asilo',
+] as const;
 
-// specs/55 - costi-bambino.md: prezzo retta, prezzo buono pasto,
-// abbonamento pre-asilo/post-asilo ed email di promemoria per un
-// bambino. Upsert su bambino_id: la prima conferma crea la riga, le
-// successive la aggiornano.
+// specs/55 - costi-bambino.md (COS-01, COS-05): prezzo retta, prezzo buono
+// pasto, marca da bollo, abbonamento pre-asilo/post-asilo ed email di
+// promemoria per un bambino. Upsert su bambino_id: la prima conferma crea la
+// riga, le successive la aggiornano. Ogni prezzo passa da
+// `parseImportoOpzionale`: vuoto = 0 ("nessun importo previsto"); un valore non
+// numerico, negativo, con più di due decimali o sopra 9999,99 è rifiutato con
+// un messaggio sul campo e NON si salva nulla (mai trasformato in 0 in silenzio).
 export async function aggiornaCostiBambino(
-  _stato: EsitoAzione,
+  _stato: StatoImporti,
   formData: FormData
-): Promise<EsitoAzione> {
+): Promise<StatoImporti> {
   const { supabase } = await requireAdmin();
   const bambinoId = formData.get('bambino_id') as string;
-  const prezzoMensile = importoEuro(formData.get('prezzo_mensile'));
-  const prezzoBuonoPasto = importoEuro(formData.get('prezzo_buono_pasto'));
-  const prezzoMarcaDaBollo = importoEuro(formData.get('prezzo_marca_da_bollo'));
   const preAsiloRichiesto = formData.get('pre_asilo_richiesto') === 'on';
-  const prezzoPreAsilo = importoEuro(formData.get('prezzo_pre_asilo'));
   const postAsiloRichiesto = formData.get('post_asilo_richiesto') === 'on';
-  const prezzoPostAsilo = importoEuro(formData.get('prezzo_post_asilo'));
   const emailPromemoria = ((formData.get('email_promemoria') as string) || '').trim();
 
-  if (!bambinoId) return { ok: false, messaggio: 'Bambino non valido.' };
+  if (!bambinoId) return { esito: 'errore', messaggio: 'Bambino non valido.' };
+
+  const valori: Record<string, number> = {};
+  const errori: Record<string, string> = {};
+  for (const campo of CAMPI_COSTI) {
+    const grezzo = formData.get(campo);
+    const esito = parseImportoOpzionale(typeof grezzo === 'string' ? grezzo : '');
+    if (esito.ok) valori[campo] = esito.valore;
+    else errori[campo] = esito.errore;
+  }
+  if (Object.keys(errori).length > 0) return { esito: 'errore', errori };
+
   if (emailPromemoria && !emailListaValida(emailPromemoria)) {
     return {
-      ok: false,
+      esito: 'errore',
       messaggio:
         "Inserisci uno o più indirizzi email validi per il promemoria (separati da \";\"), oppure lascia il campo vuoto.",
     };
@@ -225,13 +274,9 @@ export async function aggiornaCostiBambino(
 
   const { error } = await supabase.from('costi_bambini').upsert({
     bambino_id: bambinoId,
-    prezzo_mensile: prezzoMensile,
-    prezzo_buono_pasto: prezzoBuonoPasto,
-    prezzo_marca_da_bollo: prezzoMarcaDaBollo,
+    ...valori,
     pre_asilo_richiesto: preAsiloRichiesto,
-    prezzo_pre_asilo: prezzoPreAsilo,
     post_asilo_richiesto: postAsiloRichiesto,
-    prezzo_post_asilo: prezzoPostAsilo,
     email_promemoria: emailPromemoria || null,
     // Senza questo campo esplicito, upsert lascia `updated_at` al
     // default (solo insert) invariato sui salvataggi successivi — la
@@ -241,12 +286,12 @@ export async function aggiornaCostiBambino(
     updated_at: new Date().toISOString(),
   });
   if (error) {
-    return { ok: false, messaggio: 'Impossibile salvare i costi.', dettaglio: error.message };
+    return { esito: 'errore', messaggio: 'Impossibile salvare i costi.', dettaglio: error.message };
   }
 
   revalidatePath(`/admin/bambini/${bambinoId}`);
   revalidatePath('/admin/rette');
-  return { ok: true };
+  return { esito: 'salvato' };
 }
 
 // specs/58 - crediti-debiti-bambino.md, scenario "aggiungere un

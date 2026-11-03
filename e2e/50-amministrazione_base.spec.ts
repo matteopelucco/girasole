@@ -3,8 +3,15 @@
 // ATTENZIONE: questi test scrivono davvero in `sezioni`/`bambini`/
 // `maestre_sezioni`/`profili` sul progetto Supabase di test — vedi la
 // nota in 13-segna-presenza.spec.ts.
+//
+// Gli scenari AMM-01..AMM-06 (tipo della sezione e costi iniziali del bambino,
+// issue #396) sono nel blocco "50 — Tipo di sezione e costi iniziali" in fondo:
+// usano sezioni di prova con nome unico e bambini con cognome unico, ripuliti
+// alla fine con il client admin (e2e/fixture-prezzi.ts).
 import { test, expect, type Page } from '@playwright/test';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
+  alertApp,
   dataOggiRoma,
   formCreaBambino,
   hasCredenziali,
@@ -14,6 +21,26 @@ import {
   clickEAttendiAzione,
 } from './helpers';
 import { cardBambini } from './pagina-giornata';
+import { accediComeAdminDb, creaBambinoFixture, eliminaBambinoFixture } from './fixture-bambino';
+import {
+  creaSezioneConTipo,
+  formatta,
+  idBambinoPerCognome,
+  leggiCosti,
+  leggiPrezzi,
+  leggiTipoSezione,
+  pulisciSezioneEBambini,
+  scriviCostiInModoEsplicito,
+} from './fixture-prezzi';
+import {
+  ETICHETTE_COSTI,
+  campoTipoNuovaSezione,
+  campoTipoRiga,
+  creaBambinoDaForm,
+  formCosti,
+  formCreaSezione,
+  tipoSezioneInElenco,
+} from './pagina-prezzi';
 import { PERCORSO_UTENTI, aggiornaRigaUtente, schedaUtente, selectRuolo } from './pagina-personale';
 
 function gruppoClassiAssegnate(page: Page) {
@@ -276,5 +303,217 @@ test.describe('50 — Amministrazione base', () => {
     if (await bottoneRimuovi.count()) {
       await bottoneRimuovi.click();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tipo della sezione e costi iniziali del bambino (issue #396, AMM-01..AMM-06)
+// ---------------------------------------------------------------------------
+test.describe('50 — Tipo di sezione e costi iniziali', () => {
+  test.use({ storageState: statoAutenticazione('admin') });
+
+  let db: SupabaseClient | null = null;
+  const sezioniCreate: string[] = [];
+  const nomiSezioniUI: string[] = [];
+  const cognomiCreati: string[] = [];
+  const idFixtureCreati: string[] = [];
+
+  test.beforeAll(async () => {
+    db = await accediComeAdminDb();
+  });
+
+  test.afterAll(async () => {
+    if (!db) return;
+    for (const id of idFixtureCreati) await eliminaBambinoFixture(db, id);
+    await pulisciSezioneEBambini(db, null, cognomiCreati);
+    for (const id of sezioniCreate) await pulisciSezioneEBambini(db, id, []);
+    for (const nome of nomiSezioniUI) await db.from('sezioni').delete().eq('nome', nome);
+  });
+
+  test.beforeEach(async () => {
+    test.skip(!hasCredenziali('admin') || !db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+  });
+
+  function cognomeUnico(prefisso: string): string {
+    const cognome = `${prefisso}${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    cognomiCreati.push(cognome);
+    return cognome;
+  }
+
+  test('AMM-01: creare una sezione scegliendo il tipo (facoltativo)', async ({ page }) => {
+    await page.goto('/admin');
+    const campoTipo = campoTipoNuovaSezione(page);
+    await expect(campoTipo).toHaveValue(''); // "Nessuno" è il valore iniziale
+    await expect(campoTipo.locator('option')).toHaveText(['Nessuno', 'Materna', 'Primavera']);
+    await expect(campoTipo.locator('option')).toHaveCount(3);
+
+    const conTipo = `Sezione E2E tipo ${Date.now()}`;
+    const senzaTipo = `Sezione E2E nessuno ${Date.now()}`;
+    nomiSezioniUI.push(conTipo, senzaTipo);
+
+    await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(conTipo);
+    await campoTipo.selectOption('primavera');
+    await clickEAttendiAzione(page, formCreaSezione(page).getByRole('button', { name: 'Crea' }));
+    await expect(rigaSezione(page, conTipo)).toBeVisible({ timeout: 20_000 });
+    await expect(tipoSezioneInElenco(rigaSezione(page, conTipo))).toHaveText('Primavera');
+
+    // Il tipo è facoltativo: con "Nessuno" la sezione si crea comunque, senza indicazione.
+    await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(senzaTipo);
+    await clickEAttendiAzione(page, formCreaSezione(page).getByRole('button', { name: 'Crea' }));
+    await expect(rigaSezione(page, senzaTipo)).toBeVisible({ timeout: 20_000 });
+    await expect(tipoSezioneInElenco(rigaSezione(page, senzaTipo))).toHaveCount(0);
+
+    const { data } = await db!.from('sezioni').select('nome, tipo').in('nome', [conTipo, senzaTipo]);
+    const tipi = Object.fromEntries((data ?? []).map((r) => [r.nome as string, r.tipo as string | null]));
+    expect(tipi[conTipo]).toBe('primavera');
+    expect(tipi[senzaTipo]).toBeNull();
+    await nessunaViolazioneA11yGrave(page);
+  });
+
+  test('AMM-02: modificare il tipo di una sezione non tocca i bambini già presenti', async ({ page }) => {
+    const sezione = await creaSezioneConTipo(db!, null); // come le sezioni create prima di questa funzione
+    sezioniCreate.push(sezione.id);
+    const bambino = await creaBambinoFixture(db!);
+    idFixtureCreati.push(bambino.id);
+    await db!.from('bambini').update({ sezione_id: sezione.id }).eq('id', bambino.id);
+    const costi = {
+      prezzo_mensile: 123.45,
+      prezzo_buono_pasto: 5.55,
+      prezzo_marca_da_bollo: 1.99,
+      pre_asilo_richiesto: false,
+      prezzo_pre_asilo: 33.33,
+      post_asilo_richiesto: true,
+      prezzo_post_asilo: 44.44,
+      email_promemoria: null,
+    };
+    await scriviCostiInModoEsplicito(db!, bambino.id, costi);
+
+    await page.goto('/admin');
+    const riga = rigaSezione(page, sezione.nome);
+    await expect(tipoSezioneInElenco(riga)).toHaveCount(0);
+
+    await campoTipoRiga(riga, sezione.nome).selectOption('materna');
+    await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva tipo' }));
+    await expect.poll(async () => leggiTipoSezione(db!, sezione.id)).toBe('materna');
+    await page.reload();
+    await expect(tipoSezioneInElenco(rigaSezione(page, sezione.nome))).toHaveText('Materna');
+
+    await campoTipoRiga(rigaSezione(page, sezione.nome), sezione.nome).selectOption('primavera');
+    await clickEAttendiAzione(page, rigaSezione(page, sezione.nome).getByRole('button', { name: 'Salva tipo' }));
+    await expect.poll(async () => leggiTipoSezione(db!, sezione.id)).toBe('primavera');
+    await page.reload();
+    await expect(tipoSezioneInElenco(rigaSezione(page, sezione.nome))).toHaveText('Primavera');
+
+    await campoTipoRiga(rigaSezione(page, sezione.nome), sezione.nome).selectOption('');
+    await clickEAttendiAzione(page, rigaSezione(page, sezione.nome).getByRole('button', { name: 'Salva tipo' }));
+    await expect.poll(async () => leggiTipoSezione(db!, sezione.id)).toBeNull();
+    await page.reload();
+    await expect(tipoSezioneInElenco(rigaSezione(page, sezione.nome))).toHaveCount(0);
+
+    // Il bambino e i suoi costi sono rimasti identici, al centesimo.
+    expect(await leggiCosti(db!, bambino.id)).toEqual(costi);
+    const { data } = await db!.from('bambini').select('sezione_id').eq('id', bambino.id).single();
+    expect(data?.sezione_id).toBe(sezione.id);
+  });
+
+  test('AMM-03: creare un bambino in una sezione con tipo: i costi nascono subito', async ({ page }) => {
+    const sezione = await creaSezioneConTipo(db!, 'primavera');
+    sezioniCreate.push(sezione.id);
+    // Legge i prezzi del momento: la retta attesa è quella del tipo della sezione.
+    const prezzi = await leggiPrezzi(db!);
+
+    const cognome = cognomeUnico('E2eAmm03');
+    await creaBambinoDaForm(page, cognome, sezione.nome);
+    const id = await idBambinoPerCognome(db!, cognome);
+
+    await expect
+      .poll(async () => {
+        const c = await leggiCosti(db!, id);
+        return c && { ...c, email_promemoria: c.email_promemoria ?? '' };
+      })
+      .toEqual({
+        prezzo_mensile: prezzi.retta_primavera,
+        prezzo_buono_pasto: prezzi.buono_pasto,
+        prezzo_marca_da_bollo: prezzi.marca_da_bollo,
+        pre_asilo_richiesto: false,
+        prezzo_pre_asilo: prezzi.abbonamento_pre_asilo,
+        post_asilo_richiesto: false,
+        prezzo_post_asilo: prezzi.abbonamento_post_asilo,
+        email_promemoria: '',
+      });
+
+    // La scheda mostra già i valori come salvati (c'è la data dell'ultimo salvataggio).
+    await page.goto(`/admin/bambini/${id}`);
+    await expect(page.getByLabel(ETICHETTE_COSTI.retta, { exact: true })).toHaveValue(formatta(prezzi.retta_primavera));
+    await expect(page.getByLabel(ETICHETTE_COSTI.buonoPasto, { exact: true })).toHaveValue(formatta(prezzi.buono_pasto));
+    await expect(formCosti(page).getByText('Ultimo salvataggio:', { exact: false })).toBeVisible();
+  });
+
+  test('AMM-04: creare un bambino senza sezione o in una sezione senza tipo: nessuna riga di costi', async ({ page }) => {
+    const senzaTipo = await creaSezioneConTipo(db!, null);
+    sezioniCreate.push(senzaTipo.id);
+
+    for (const nomeSezione of [null, senzaTipo.nome]) {
+      const cognome = cognomeUnico('E2eAmm04');
+      await creaBambinoDaForm(page, cognome, nomeSezione);
+      // La creazione riesce come oggi: nessun errore in pagina.
+      await expect(alertApp(page)).toHaveCount(0);
+      const id = await idBambinoPerCognome(db!, cognome);
+      expect(await leggiCosti(db!, id), cognome).toBeNull();
+
+      // Nella scheda i costi sono solo proposti, non salvati.
+      await page.goto(`/admin/bambini/${id}`);
+      await expect(page.getByRole('heading', { name: 'Costi', exact: true })).toBeVisible();
+      await expect(formCosti(page).getByText('Ultimo salvataggio:', { exact: false })).toHaveCount(0);
+    }
+  });
+
+  // AMM-05: se i costi iniziali non si possono scrivere, il bambino non viene
+  // creato. NON TESTABILE IN E2E (per farlo fallire bisognerebbe rompere lo schema
+  // del database di test condiviso): è coperto a livello di funzione del database
+  // dal test pgTAP `supabase/tests/database/crea_bambino_con_costi.test.sql`
+  // (sezione "AMM-05"), perché la creazione è un'unica funzione
+  // `crea_bambino_con_costi` (una sola transazione).
+
+  test('AMM-06: spostare un bambino in un\'altra sezione non tocca i suoi costi', async ({ page }) => {
+    const destinazione = await creaSezioneConTipo(db!, 'primavera');
+    sezioniCreate.push(destinazione.id);
+
+    // Bambino 1: ha la riga di costi (valori distintivi).
+    const conCosti = await creaBambinoFixture(db!);
+    idFixtureCreati.push(conCosti.id);
+    const costi = {
+      prezzo_mensile: 123.45,
+      prezzo_buono_pasto: 5.55,
+      prezzo_marca_da_bollo: 1.99,
+      pre_asilo_richiesto: true,
+      prezzo_pre_asilo: 33.33,
+      post_asilo_richiesto: false,
+      prezzo_post_asilo: 44.44,
+      email_promemoria: null,
+    };
+    await scriviCostiInModoEsplicito(db!, conCosti.id, costi);
+    // Bambino 2: nessuna riga di costi.
+    const senzaCosti = await creaBambinoFixture(db!);
+    idFixtureCreati.push(senzaCosti.id);
+    // Entrambi senza sezione, così compaiono tra quelli da assegnare.
+    await db!.from('bambini').update({ sezione_id: null }).in('id', [conCosti.id, senzaCosti.id]);
+
+    await page.goto('/admin');
+    for (const b of [conCosti, senzaCosti]) {
+      const riga = gruppoSenzaClasse(page).locator('li', { hasText: b.cognome });
+      await riga.locator('select[name="sezione_id"]').selectOption({ label: destinazione.nome });
+      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Assegna' }));
+      await expect(gruppoSenzaClasse(page).locator('li', { hasText: b.cognome })).toHaveCount(0, { timeout: 20_000 });
+    }
+
+    // Costi identici; e per chi non li aveva, l'assegnazione non ha creato la riga.
+    expect(await leggiCosti(db!, conCosti.id)).toEqual(costi);
+    expect(await leggiCosti(db!, senzaCosti.id)).toBeNull();
+
+    // La scheda del secondo propone la retta del tipo della nuova sezione.
+    const prezzi = await leggiPrezzi(db!);
+    await page.goto(`/admin/bambini/${senzaCosti.id}`);
+    await expect(page.getByLabel(ETICHETTE_COSTI.retta, { exact: true })).toHaveValue(formatta(prezzi.retta_primavera));
   });
 });

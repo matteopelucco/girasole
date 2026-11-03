@@ -3,6 +3,7 @@
 import { useFormState } from 'react-dom';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { DialogErrore } from './DialogErrore';
+import { useAnnullaResetForm } from './useAnnullaResetForm';
 
 // Esito di un'azione lato server, per il feedback "done"/"ko" di
 // specs/05 - feedback.md: { ok: true } = nessun errore da mostrare
@@ -51,21 +52,10 @@ export function FormConEsito({
   const primoRender = useRef(true);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // React 19 svuota da sé i campi non controllati (li riporta al
-  // defaultValue) a ogni invio con `action={funzione}`, anche se l'azione
-  // ha restituito un errore, e lo fa quando la risposta del server è già
-  // arrivata: chi ha già ricominciato a digitare perde i valori. Qui i dati
-  // digitati devono restare (modifica di dati già salvati, errore da
-  // correggere), quindi si annulla quel reset. Serve un ascoltatore nativo:
-  // verificato in e2e, `onReset` di React qui non basta. Il vero svuotamento dopo una creazione è `resetSuOk`, con la
-  // `key` del form.
-  useEffect(() => {
-    const form = formRef.current;
-    if (!form) return;
-    const annulla = (evento: Event) => evento.preventDefault();
-    form.addEventListener('reset', annulla);
-    return () => form.removeEventListener('reset', annulla);
-  }, [chiaveForm]);
+  // I dati digitati devono restare (modifica di dati già salvati, errore da
+  // correggere): si annulla il reset automatico di React 19. Il vero svuotamento
+  // dopo una creazione è `resetSuOk`, con la `key` del form.
+  useAnnullaResetForm(formRef, chiaveForm);
 
   useEffect(() => {
     if (primoRender.current) {

@@ -15,7 +15,10 @@ in una lista nel codice, con i valori nascosti finché l'admin non
 reinserisce la propria password. La seconda è "Calendario Google" (issue
 #319): l'indirizzo iCal segreto del calendario dell'asilo, l'unico parametro
 oggi salvato nel database, descritto in
-[64 - calendario-eventi.md](64%20-%20calendario-eventi.md).
+[64 - calendario-eventi.md](64%20-%20calendario-eventi.md). La terza è
+"Prezzi" (issue #396): i prezzi predefiniti dell'asilo, usati solo per
+compilare i costi di un bambino nuovo (vedi sotto e
+[55 - costi-bambino.md](55%20-%20costi-bambino.md)).
 
 ## Scenario: "Parametri di funzionamento" compare nel menu sotto "Impostazioni", solo per l'admin
 Dato che sono autenticato come admin
@@ -93,7 +96,129 @@ con un test per scenario in `e2e/64-calendario-eventi.spec.ts`. Sta sotto
 delle variabili d'ambiente (password dell'admin ricontrollata sul server, limite
 dei tentativi, sblocco solo nello stato della pagina).
 
+## Sezione "Prezzi"
+Sta sotto "Calendario Google" e sopra "Parametri delle funzionalità".
+Contiene otto prezzi in euro: retta Materna, retta Primavera, buono pasto,
+marca da bollo, abbonamento pre-asilo, abbonamento post-asilo, gettone
+pre-asilo, gettone post-asilo. Valori iniziali: 160, 200, 6, 2, 70, 70, 7, 7.
+
+## Scenario: l'admin vede la sezione "Prezzi" con gli otto campi
+**ID PRZ-01**
+Dato che sono autenticato come admin e la sezione non è mai stata modificata
+Quando apro `/admin/parametri-funzionamento`
+Allora vedo la sezione "Prezzi" con una breve descrizione che dice che i
+valori servono solo per i bambini nuovi e non cambiano quelli esistenti
+E vedo otto campi con etichetta: "Retta Materna (€)" 160,00, "Retta
+Primavera (€)" 200,00, "Buono pasto (€)" 6,00, "Marca da bollo (€)" 2,00,
+"Abbonamento pre-asilo (€)" 70,00, "Abbonamento post-asilo (€)" 70,00,
+"Gettone pre-asilo (€)" 7,00, "Gettone post-asilo (€)" 7,00
+E vedo il pulsante "Salva prezzi"
+E tutti gli otto campi sono sempre valorizzati (la migration crea la riga già
+compilata): non esiste uno stato "prezzo non impostato"
+E la pagina non ha violazioni di accessibilità gravi
+
+## Scenario: gli altri ruoli non vedono i prezzi
+**ID PRZ-02**
+Dato che sono autenticato come maestra, assistente o genitore
+Quando provo ad aprire `/admin/parametri-funzionamento`
+Allora vengo reindirizzato alla dashboard (come nello scenario di accesso
+negato) e non vedo mai i valori di "Prezzi"
+
+## Scenario: salvare i prezzi e ritrovarli dopo il ricaricamento
+**ID PRZ-03**
+Dato che sono admin sulla pagina "Parametri di funzionamento"
+Quando scrivo nei campi valori validi (es. retta Materna "165,50", gettone
+pre-asilo "7") e premo "Salva prezzi"
+Allora vedo la conferma "Prezzi salvati"
+E ricaricando la pagina i campi mostrano i valori salvati con due
+decimali (165,50 e 7,00)
+E la virgola e il punto sono accettati entrambi come separatore decimale
+
+## Scenario: un valore non valido è rifiutato con un messaggio chiaro
+**ID PRZ-04**
+Dato che sono admin sulla pagina "Parametri di funzionamento"
+Quando in un campo scrivo un valore vuoto, "abc", "-1", "6,555", "1e2",
+"1.234,50" oppure "10000" e premo "Salva prezzi"
+Allora vedo un messaggio di errore chiaro sul campo ("Inserisci un importo
+tra 0 e 9999,99 con al massimo due decimali")
+E il valore non viene trasformato in 0 né arrotondato
+E ricaricando la pagina i campi mostrano i valori salvati prima
+E "0" e "9999,99" sono invece valori accettati
+
+## Scenario: il salvataggio è tutto o niente
+**ID PRZ-05**
+Dato che modifico tre prezzi e uno di loro non è valido
+Quando premo "Salva prezzi"
+Allora nessuno degli otto prezzi viene salvato (neanche i due validi)
+E i campi mantengono quanto ho scritto, con l'errore sul campo sbagliato,
+così posso correggerlo senza riscrivere tutto
+
+## Scenario: cambiare un prezzo non tocca i bambini già esistenti
+**ID PRZ-06**
+Dato che esiste un bambino con la riga dei costi già salvata (a mano o alla
+creazione)
+Quando l'admin cambia uno o più valori in "Prezzi" e salva
+Allora i costi di quel bambino restano identici al centesimo
+E le rette e le comunicazioni già calcolate o inviate non cambiano
+E lo stesso vale se l'admin cambia il tipo di una sezione (vedi COS-03 in
+specs/55)
+
+## Scenario: un bambino creato in una sezione con tipo parte con i prezzi di "Prezzi"
+**ID PRZ-07**
+Dato che in "Prezzi" i valori sono 160, 200, 6, 2, 70, 70 e gettoni 7, 7
+E che la sezione "Girasoli" ha tipo Primavera
+Quando l'admin crea un bambino nella sezione "Girasoli" (specs/50)
+Allora il bambino nasce con la riga costi già salvata: retta 200,00 (la
+retta del tipo della sezione), buono pasto 6,00, marca da bollo 2,00,
+prezzo pre-asilo 70,00, prezzo post-asilo 70,00, pre e post asilo non
+richiesti, email vuota
+E con una sezione di tipo Materna la retta è 160,00
+E i gettoni non entrano nei costi del bambino
+
+## Scenario: bambino creato senza sezione, o in una sezione senza tipo
+**ID PRZ-08**
+Dato che l'admin crea un bambino senza sezione, oppure in una sezione che
+non ha ancora un tipo
+Quando la creazione termina
+Allora il bambino viene creato ma non ha nessuna riga di costi
+E aprendo la sua scheda i costi sono proposti come in COS-02 (retta vuota
+se manca il tipo) e non sono salvati finché l'admin non conferma (COS-01)
+
+## Scenario: due admin salvano i prezzi insieme
+**ID PRZ-09**
+Dato che due admin aprono "Prezzi" con gli stessi valori
+Quando il primo salva una modifica e poi il secondo, che ha ancora i dati
+vecchi, preme "Salva prezzi"
+Allora il salvataggio del secondo è rifiutato con un messaggio ("I prezzi
+sono stati modificati da un altro utente: ricarica la pagina e riprova")
+E i valori salvati dal primo restano quelli validi
+E il secondo, dopo aver ricaricato, vede i valori del primo
+
+## Scenario: i prezzi si leggono e si scrivono solo da admin (a livello di database)
+**ID PRZ-10**
+Dato che sono autenticato come maestra, assistente o genitore, oppure non
+sono autenticato
+Quando provo a leggere o modificare i prezzi direttamente dall'API del
+database
+Allora non vedo nessun valore e nessuna modifica va a buon fine
+E solo l'admin può leggerli e modificarli
+E c'è una sola riga di prezzi: non se ne possono creare altre né
+cancellare quella esistente
+
 ## Regole
+- Sezione "Prezzi" (issue #396): una sola riga nel database (tabella a riga
+  unica), con RLS e GRANT solo per l'admin, creata già con i valori
+  iniziali dalla migration. Gli otto prezzi sono obbligatori, tra 0 e
+  9999,99 con al massimo due decimali; formato come in specs/55
+  (virgola o punto, niente migliaia, niente "€").
+- I prezzi di questa sezione si usano solo alla creazione di un bambino
+  (PRZ-07) e come proposta precompilata nella scheda Costi (COS-02): non
+  entrano mai in rette, comunicazioni o altri calcoli.
+- Il salvataggio è atomico (tutto o niente) e controlla la concorrenza
+  (PRZ-09): rifiuta chi salva partendo da dati non più aggiornati.
+- I valori non vengono storicizzati: non resta traccia dei prezzi vecchi.
+- Fuori ambito: allarme quando i prezzi non sono impostati (#397); uso del
+  gettone nelle presenze e nelle rette (#398-#400); storicizzazione.
 - La sezione "Parametri delle funzionalità" (componente
   `components/ParametriFunzionalita.tsx`) in futuro elencherà i parametri in
   tabella (nome + valore in un campo modificabile); l'admin non può aggiungerne

@@ -89,7 +89,15 @@ const EMAIL_RETTE_E2E = 'e2e-rette-allarme@example.test';
 async function configuraEmailPromemoria(db: SupabaseClient, bambino: BambinoFixture) {
   const { error } = await db
     .from('costi_bambini')
-    .insert({ bambino_id: bambino.id, email_promemoria: EMAIL_RETTE_E2E });
+    .insert({
+      bambino_id: bambino.id,
+      email_promemoria: EMAIL_RETTE_E2E,
+      // Senza valori predefiniti nel database (specs/55, #396): importi espliciti.
+      prezzo_buono_pasto: 6,
+      prezzo_marca_da_bollo: 2,
+      prezzo_pre_asilo: 70,
+      prezzo_post_asilo: 70,
+    });
   if (error) throw new Error(`Configurazione dell'email di prova non riuscita: ${error.message}`);
 }
 

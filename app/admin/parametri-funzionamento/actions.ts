@@ -2,9 +2,12 @@
 
 import { revalidatePath } from 'next/cache';
 import type { EsitoAzione } from '@/components/FormConEsito';
+import type { StatoImporti } from '@/components/FormImporti';
 import { requireAdmin } from '@/lib/auth';
 import { validaIndirizzoIcal } from '@/lib/calendarioIcal';
 import { indirizzoCalendario, salvaIndirizzoCalendario } from '@/lib/calendarioImpostazioniDati';
+import { CAMPI_PREZZI, MESSAGGIO_CONCORRENZA, parseImporto, type Prezzi } from '@/lib/prezzi';
+import { salvaPrezzi } from '@/lib/prezziDati';
 import {
   messaggioBlocco,
   minutiBloccoRimanenti,
@@ -91,4 +94,37 @@ export async function aggiornaIndirizzoCalendario(_stato: EsitoAzione, formData:
   }
   revalidatePath('/admin/parametri-funzionamento');
   return { ok: true };
+}
+
+// specs/62, sezione "Prezzi" (PRZ-03, PRZ-04, PRZ-05, PRZ-09): salva gli otto
+// prezzi tutti insieme o nessuno. Ogni valore passa da `parseImporto`: uno non
+// valido (vuoto, testo, negativo, più di due decimali, notazione scientifica,
+// migliaia, sopra 9999,99) è rifiutato con un messaggio sul suo campo e non si
+// scrive nulla; mai arrotondato, mai trasformato in 0. Il salvataggio parte dai
+// dati letti dal form: se un altro admin ha salvato nel frattempo, viene
+// rifiutato (controllo con `updated_at`). Niente nei log.
+export async function aggiornaPrezzi(_stato: StatoImporti, formData: FormData): Promise<StatoImporti> {
+  const { supabase } = await requireAdmin();
+
+  const prezzi = {} as Prezzi;
+  const errori: Record<string, string> = {};
+  for (const { colonna } of CAMPI_PREZZI) {
+    const grezzo = formData.get(colonna);
+    const esito = parseImporto(typeof grezzo === 'string' ? grezzo : '');
+    if (esito.ok) prezzi[colonna] = esito.valore;
+    else errori[colonna] = esito.errore;
+  }
+  if (Object.keys(errori).length > 0) return { esito: 'errore', errori };
+
+  const aggiornatoIl = formData.get('aggiornato_il');
+  if (typeof aggiornatoIl !== 'string' || aggiornatoIl === '') {
+    return { esito: 'errore', messaggio: MESSAGGIO_CONCORRENZA };
+  }
+
+  const esito = await salvaPrezzi(supabase, prezzi, aggiornatoIl);
+  if (esito === 'concorrenza') return { esito: 'errore', messaggio: MESSAGGIO_CONCORRENZA };
+  if (esito === 'errore') return { esito: 'errore', messaggio: 'Impossibile salvare i prezzi. Riprova.' };
+
+  revalidatePath('/admin/parametri-funzionamento');
+  return { esito: 'salvato' };
 }

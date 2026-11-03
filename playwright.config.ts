@@ -31,6 +31,13 @@ const FILE_STATO_CONDIVISO =
 // vanno in un solo worker, in sequenza (vedi il progetto 'chromium-rette').
 const FILE_INVIO_RETTE = /(56-comunicazione-retta-mensile|59-verifica-bonifico-retta)\.spec\.ts/;
 
+// File e2e che cambiano la riga unica dei prezzi predefiniti (specs/62, issue
+// #396): 50 (costi iniziali alla creazione del bambino), 55 (proposta dei
+// prezzi nella scheda Costi) e 62 (sezione "Prezzi"). Ognuno la cambia e poi
+// la rimette com'era: in parallelo uno vedrebbe i prezzi dell'altro. Un solo
+// worker, in sequenza (vedi il progetto 'chromium-prezzi').
+const FILE_PREZZI = /(50-amministrazione_base|55-costi-bambino|62-parametri-di-funzionamento)\.spec\.ts/;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000, // le chiamate reali a Supabase Auth possono richiedere diversi secondi
@@ -81,7 +88,7 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
-      testIgnore: [FILE_STATO_CONDIVISO, FILE_INVIO_RETTE],
+      testIgnore: [FILE_STATO_CONDIVISO, FILE_INVIO_RETTE, FILE_PREZZI],
     },
     {
       // Restano solo i file di presenze e pasti di oggi. 16 legge lo stato
@@ -112,6 +119,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       testMatch: FILE_INVIO_RETTE,
+      fullyParallel: false,
+      workers: 1,
+    },
+    {
+      // Solo i file che toccano la riga unica dei prezzi, in sequenza (vedi
+      // FILE_PREZZI).
+      name: 'chromium-prezzi',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testMatch: FILE_PREZZI,
       fullyParallel: false,
       workers: 1,
     },
