@@ -32,11 +32,11 @@ const FILE_STATO_CONDIVISO =
 const FILE_INVIO_RETTE = /(56-comunicazione-retta-mensile|59-verifica-bonifico-retta)\.spec\.ts/;
 
 // File e2e che cambiano la riga unica dei prezzi predefiniti (specs/62, issue
-// #396): 50 (costi iniziali alla creazione del bambino), 55 (proposta dei
+// #396, #397): 07 (allarme prezzi, crea sezioni proprie), 50 (costi iniziali alla creazione del bambino), 55 (proposta dei
 // prezzi nella scheda Costi) e 62 (sezione "Prezzi"). Ognuno la cambia e poi
 // la rimette com'era: in parallelo uno vedrebbe i prezzi dell'altro. Un solo
 // worker, in sequenza (vedi il progetto 'chromium-prezzi').
-const FILE_PREZZI = /(50-amministrazione_base|55-costi-bambino|62-parametri-di-funzionamento)\.spec\.ts/;
+const FILE_PREZZI = /(07-allarmi|50-amministrazione_base|55-costi-bambino|62-parametri-di-funzionamento)\.spec\.ts/;
 
 export default defineConfig({
   testDir: './e2e',
