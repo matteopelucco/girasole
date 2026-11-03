@@ -16,10 +16,10 @@ un agente) senza specificare esplicitamente il progetto finirebbe lì.
 - Il link CLI (`supabase link`) resta solo sul progetto di **test**; mai
   un link permanente verso il ref di produzione.
 - In locale, ogni comando verso il progetto di test usa
-  `--project-ref <ref-test>` esplicito e incrementale, mai un link
+  `--remote=<ref-test>` esplicito e incrementale, mai un link
   implicito su cui contare a occhi chiusi.
 - In produzione, l'applicazione di una migration resta **manuale e
-  deliberata, solo Matteo**, con `--project-ref <ref-produzione>`
+  deliberata, solo Matteo**, con `--remote=<ref-produzione>`
   esplicito sul singolo comando dopo il merge — mai un'automazione
   CI/agente verso la produzione.
 - La CI resetta solo il DB di test (`SUPABASE_TEST_PROJECT_REF`, una
@@ -36,3 +36,9 @@ un agente) senza specificare esplicitamente il progetto finirebbe lì.
 - Un agente (incluso Claude Code) non deve mai proporre di automatizzare
   questo passo o di creare un link permanente verso il ref di
   produzione, nemmeno per velocizzare un rilascio.
+
+## Nota del 3 novembre 2026
+Con la Supabase CLI 3.0.0 (fissata in CI) i vecchi flag per scegliere il progetto nei
+comandi `db push`, `db reset`, `test db` e `migration list/repair` sono deprecati: i
+comandi citati sopra usano ora `--remote=<ref>`. Senza `--remote` lavorano sul
+database locale. La decisione non cambia (issue #410).

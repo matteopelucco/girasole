@@ -182,7 +182,7 @@ Guarda il diff della PR (`gh pr diff <pr> --name-only`). Se tocca
    review; se resta `BLOCCO`, fermati su questo task come `human-in-the-loop`
    (e segnalalo);
 3. **qualsiasi** PR che arriva qui diventa `human-in-the-loop` (migration da
-   applicare a mano sul DB, in produzione solo Matteo con `--project-ref`
+   applicare a mano sul DB, in produzione solo Matteo con `--remote=<ref>`
    esplicito). Scambia la label e commenta il motivo.
 
 Riclassifica a `human-in-the-loop` anche se il diff reale ha sforato i criteri

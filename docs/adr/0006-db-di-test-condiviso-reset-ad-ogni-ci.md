@@ -7,7 +7,7 @@
 La suite e2e (Playwright) scrive dati veri (presenze, pasti, promemoria,
 sezioni, bambini, ruoli) contro un progetto Supabase di test,
 `girasole_dev`. Per partire da uno stato noto ad ogni run, la CI esegue
-`supabase db reset --project-ref <ref-test>` prima della suite e2e:
+`supabase db reset --remote=<ref-test>` prima della suite e2e:
 riapplica tutte le migration da zero e poi `supabase/seed.sql`. Questo
 stesso progetto `girasole_dev` è anche quello usato da Matteo in
 sviluppo locale (`.env.local`), non un progetto isolato dedicato alla
@@ -37,3 +37,9 @@ la CI.
   sovrappongono più sul DB, le e2e sono in coda globale — vedi
   [ADR-0008](0008-coda-globale-e2e-db-di-test.md). Resta possibile la
   sovrapposizione tra una CI e una sessione locale.
+
+## Nota del 3 novembre 2026
+Con la Supabase CLI 3.0.0 (fissata in CI) i vecchi flag per scegliere il progetto nei
+comandi `db push`, `db reset`, `test db` e `migration list/repair` sono deprecati: i
+comandi citati sopra usano ora `--remote=<ref>`. Senza `--remote` lavorano sul
+database locale. La decisione non cambia (issue #410).

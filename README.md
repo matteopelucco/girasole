@@ -12,7 +12,7 @@ Next.js 16 · TypeScript · Tailwind · Supabase (Postgres + Auth + RLS) · Verc
    progetto Supabase (Project Settings → API).
 3. Applica lo schema con il [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
    (`npm install -g supabase`), mai più a mano dal SQL Editor:
-   `supabase db push --project-ref <ref-del-tuo-progetto>` applica in
+   `supabase db push --remote=<ref-del-tuo-progetto>` applica in
    ordine tutte le migration di `supabase/migrations/`, in modo esplicito
    e incrementale (nessun `supabase link` permanente su cui contare a
    occhi chiusi).
