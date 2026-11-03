@@ -2,6 +2,7 @@ import { descrizioneMeseRojac } from './allarmeRojac';
 import { descrizioneBambinoRetta, GIORNO_ALLARME_RETTE, type BambinoRetta } from './allarmeRette';
 import type { StatoOperativoGiorno, UtenteSettimanaNonConfermata } from './allarmi';
 import { formattaDataItaliana } from './date';
+import { nomePrezzo, type EsitoPrezziESezioni } from './prezzi';
 import { escapeHtml } from './htmlEscape';
 
 // Email di riepilogo dei controlli (specs/07 - allarmi.md): un'unica email
@@ -12,7 +13,7 @@ import { escapeHtml } from './htmlEscape';
 
 export type StatoControllo = 'ok' | 'da_sistemare' | 'non_applicabile' | 'non_controllato';
 
-export type IdControllo = 'appello' | 'pasti-rojac' | 'rette-genitori' | 'mail-rojac-mensile' | 'ore-lavoro';
+export type IdControllo = 'appello' | 'pasti-rojac' | 'rette-genitori' | 'mail-rojac-mensile' | 'ore-lavoro' | 'prezzi-sezioni';
 
 export type ControlloRiepilogo = {
   id: IdControllo;
@@ -51,6 +52,8 @@ export type InputRiepilogo = {
   // ("YYYY-MM", dal più vecchio) e, tra questi, quelli per cui l'email non è
   // ancora partita (`daAvvisare`).
   rojac: { ora: Date; mancanti: string[]; daAvvisare: string[] };
+  // Prezzi mancanti e sezioni attive senza tipo (specs/07, #397).
+  prezziSezioni: { ora: Date; esito: EsitoPrezziESezioni };
 };
 
 const AZIONE_APPELLO =
@@ -58,6 +61,8 @@ const AZIONE_APPELLO =
 const AZIONE_PASTI = 'Comunicare i pasti di oggi a Rojac dalla schermata "Presenze e pasti" (entro la giornata).';
 const AZIONE_RETTE = 'Inviare le comunicazioni delle rette ai genitori dalla tabella "Rette".';
 const AZIONE_ORE = 'Confermare le ore della settimana in "Ore di lavoro".';
+const AZIONE_PREZZI =
+  'Completare i prezzi in "Prezzi" (Parametri di funzionamento) e impostare il tipo delle sezioni in "Sezioni e bambini".';
 const AZIONE_ROJAC = 'Inviare la mail dei pasti a Rojac dal Report mensile del mese indicato.';
 
 // "HH:MM" nel fuso Europe/Rome.
@@ -186,10 +191,30 @@ function controlloRojac(input: InputRiepilogo): ControlloRiepilogo {
   });
 }
 
-// L'ordine è quello dell'email: giornata, mensili, ore.
+// Prezzi e tipi di sezione (specs/07, #397): si valuta ogni giorno, senza
+// orario né chiusura.
+function controlloPrezzi(input: InputRiepilogo): ControlloRiepilogo {
+  const nome = 'Prezzi e tipi di sezione';
+  const { ora, esito } = input.prezziSezioni;
+  if (!esito.daSistemare) {
+    return controlloBase('prezzi-sezioni', nome, ora, 'ok', {
+      dettaglio: ['Tutti i prezzi sono impostati e tutte le sezioni attive hanno un tipo.'],
+    });
+  }
+  const dettaglio: string[] = [];
+  if (esito.prezziMancanti.length) {
+    dettaglio.push('Prezzi mancanti: ' + esito.prezziMancanti.map(nomePrezzo).join(', ') + '.');
+  }
+  if (esito.sezioniSenzaTipo.length) {
+    dettaglio.push('Sezioni attive senza tipo: ' + esito.sezioniSenzaTipo.map((s) => s.nome).join(', ') + '.');
+  }
+  return controlloBase('prezzi-sezioni', nome, ora, 'da_sistemare', { dettaglio, azione: AZIONE_PREZZI });
+}
+
+// L'ordine è quello dell'email: giornata, mensili, ore, prezzi.
 export function costruisciControlliRiepilogo(input: InputRiepilogo): ControlloRiepilogo[] {
   const [appello, pasti] = controlliGiornata(input);
-  return [appello, pasti, controlloRette(input), controlloRojac(input), controlloOre(input)];
+  return [appello, pasti, controlloRette(input), controlloRojac(input), controlloOre(input), controlloPrezzi(input)];
 }
 
 // Almeno un controllo "da sistemare" che fa partire l'email.
