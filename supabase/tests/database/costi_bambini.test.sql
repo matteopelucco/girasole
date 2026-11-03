@@ -359,7 +359,7 @@ begin
 end;
 $$;
 select is(pg_temp.stato_gettoni(-0.01, 7), '23514', 'COS-11: gettone pre-asilo negativo rifiutato');
-select is(pg_temp.stato_gettoni(7, 10000), '23514', 'COS-11: gettone post-asilo sopra 9999,99 rifiutato');
+select is(pg_temp.stato_gettoni(7, 10000), '22003', 'COS-11: gettone post-asilo 10000 rifiutato (fuori scala per numeric(6,2), come nei prezzi predefiniti)');
 select is(pg_temp.stato_gettoni(0, 9999.99), 'ok', 'COS-11: 0 e 9999,99 sono validi');
 
 select * from finish();
