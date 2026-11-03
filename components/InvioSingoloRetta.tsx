@@ -23,6 +23,8 @@ const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
   ['conguaglio_pasti', 'conguaglio_pasti'],
   ['pre_asilo', 'costo_pre_asilo'],
   ['post_asilo', 'costo_post_asilo'],
+  ['gettoni_pre_asilo', 'gettoni_pre_asilo'],
+  ['gettoni_post_asilo', 'gettoni_post_asilo'],
   ['costi_extra', 'costi_extra'],
 ];
 
@@ -106,6 +108,10 @@ export function InvioSingoloRetta({
       const valore = campo ? Number(campo.value) || 0 : 0;
       valori[placeholder] = formattaImporto(valore);
       totale += valore;
+    }
+    for (const chiave of ['numero_gettoni_pre_asilo', 'numero_gettoni_post_asilo']) {
+      const campo = riga.querySelector<HTMLInputElement>(`[name="${chiave}_${bambinoId}"]`);
+      valori[chiave] = String(Number(campo?.value) || 0);
     }
     valori.totale = formattaImporto(totale);
 

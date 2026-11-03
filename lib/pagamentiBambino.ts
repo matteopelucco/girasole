@@ -50,6 +50,11 @@ export type ComunicazioneImporti = {
   conguaglio_pasti: number | string;
   costo_pre_asilo: number | string;
   costo_post_asilo: number | string;
+  // Gettoni del mese precedente (#400); assenti = 0 (rette di prima).
+  gettoni_pre_asilo?: number | string;
+  numero_gettoni_pre_asilo?: number;
+  gettoni_post_asilo?: number | string;
+  numero_gettoni_post_asilo?: number;
   costi_extra: number | string;
   note_costi_extra: string | null;
   credito_debito: number | string;
@@ -57,7 +62,7 @@ export type ComunicazioneImporti = {
   totale: number | string;
 };
 
-export type VoceImporto = { etichetta: string; importo: number; nota: string | null };
+export type VoceImporto = { etichetta: string; importo: number; nota: string | null; numeroGettoni?: number };
 
 // Intestazioni delle colonne delle voci, nell'ordine della tabella di "Rette"
 // (specs/56) — stessa sequenza usata da `vociComunicazione`.
@@ -68,6 +73,8 @@ export const ETICHETTE_VOCI = [
   'Conguaglio pasti',
   'Pre-asilo',
   'Post-asilo',
+  'Gettoni pre-asilo',
+  'Gettoni post-asilo',
   'Costi extra',
   'Credito/Debito',
 ] as const;
@@ -86,13 +93,20 @@ export function vociComunicazione(c: ComunicazioneImporti): VoceImporto[] {
     c.conguaglio_pasti,
     c.costo_pre_asilo,
     c.costo_post_asilo,
+    c.gettoni_pre_asilo ?? 0,
+    c.gettoni_post_asilo ?? 0,
     c.costi_extra,
     c.credito_debito,
   ];
+  const numeri: Record<string, number> = {
+    'Gettoni pre-asilo': c.numero_gettoni_pre_asilo ?? 0,
+    'Gettoni post-asilo': c.numero_gettoni_post_asilo ?? 0,
+  };
   return ETICHETTE_VOCI.map((etichetta, i) => ({
     etichetta,
     importo: Number(importi[i]),
     nota: note[etichetta]?.trim() || null,
+    ...(etichetta in numeri ? { numeroGettoni: numeri[etichetta] } : {}),
   }));
 }
 

@@ -15,6 +15,7 @@ import {
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
+import { gettoniMesePrecedente } from '@/lib/prezzi';
 import { raggruppaPerSezione } from '@/lib/sezioni';
 import { Campo } from '@/components/ui/campo';
 import { Pulsante } from '@/components/ui/pulsante';
@@ -77,6 +78,10 @@ type ComunicazioneRettaRiga = {
   marca_da_bollo: number | string;
   costo_pre_asilo: number | string;
   costo_post_asilo: number | string;
+  gettoni_pre_asilo: number | string;
+  numero_gettoni_pre_asilo: number;
+  gettoni_post_asilo: number | string;
+  numero_gettoni_post_asilo: number;
   costi_extra: number | string;
   note_costi_extra: string | null;
   credito_debito: number | string;
@@ -90,6 +95,51 @@ type ComunicazioneRettaRiga = {
   bonifico_verificato_da_nome: string | null;
   bonifico_verificato_il: string | null;
 };
+
+// Gettoni di una retta già inviata (sola lettura): importo e numero.
+function CellaGettoniInviati({ importo, numero, voce }: { importo: number; numero: number; voce: 'pre-asilo' | 'post-asilo' }) {
+  return (
+    <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
+      <div data-testid={`importo-gettoni-${voce}`}>{formattaImporto(importo)} €</div>
+      <div className="text-xs text-stone-500" data-testid={`numero-gettoni-${voce}`}>
+        {numero} gettoni
+      </div>
+    </TabellaCella>
+  );
+}
+
+// Gettoni di una retta da inviare: importo modificabile e numero in sola
+// lettura (il numero viaggia nel form con un campo nascosto).
+function CellaGettoniDaInviare({
+  bambinoId,
+  nomeCompleto,
+  importo,
+  numero,
+  voce,
+}: {
+  bambinoId: string;
+  nomeCompleto: string;
+  importo: number;
+  numero: number;
+  voce: 'pre-asilo' | 'post-asilo';
+}) {
+  const chiave = voce === 'pre-asilo' ? 'pre_asilo' : 'post_asilo';
+  return (
+    <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
+      <CampoImportoConEuro
+        min={0}
+        defaultValue={importo}
+        name={`gettoni_${chiave}_${bambinoId}`}
+        ariaLabel={`Gettoni ${voce} per ${nomeCompleto}`}
+        className="w-14 px-1.5 text-right"
+      />
+      <input type="hidden" name={`numero_gettoni_${chiave}_${bambinoId}`} value={numero} />
+      <div className="text-right text-xs text-stone-500" data-testid={`numero-gettoni-${voce}`}>
+        {numero} gettoni
+      </div>
+    </TabellaCella>
+  );
+}
 
 // Riga di un bambino già comunicato (specs/56): stessa forma sia nella
 // vista del mese corrente sia in quella di revisione di un mese passato
@@ -137,6 +187,8 @@ function RigaComunicazione({
       <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costo_post_asilo))} €
       </TabellaCella>
+      <CellaGettoniInviati importo={Number(comunicazione.gettoni_pre_asilo)} numero={comunicazione.numero_gettoni_pre_asilo} voce="pre-asilo" />
+      <CellaGettoniInviati importo={Number(comunicazione.gettoni_post_asilo)} numero={comunicazione.numero_gettoni_post_asilo} voce="post-asilo" />
       <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
         {formattaImporto(Number(comunicazione.costi_extra))} €
       </TabellaCella>
@@ -208,6 +260,12 @@ const INTESTAZIONE_COLONNE = (
       </TabellaTitolo>
       <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Post-asilo
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
+        Gettoni pre-asilo
+      </TabellaTitolo>
+      <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
+        Gettoni post-asilo
       </TabellaTitolo>
       <TabellaTitolo allinea="destra" scope="col" className="max-w-26 px-2 py-1.5 font-medium text-stone-700">
         Costi extra
@@ -292,8 +350,36 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
       return { data: righe };
     }
 
-    const [{ data: costi }, { data: pastiEffettivi }, { data: comunicazioni }, { data: creditiDebiti }, { data: template }, chiusure] =
-      await Promise.all([
+    // Presenze di pre/post-asilo del mese precedente (specs/56, gettoni):
+    // lette a pagine per lo stesso motivo dei pasti (tetto di 1000 righe).
+    async function presenzePrePostMesePrecedente() {
+      const righe: { bambino_id: string; data: string; pre_asilo: boolean; post_asilo: boolean }[] = [];
+      for (let da = 0; ; da += 1000) {
+        const { data } = await supabase
+          .from('presenze')
+          .select('id, bambino_id, data, pre_asilo, post_asilo')
+          .in('bambino_id', bambinoIds)
+          .gte('data', primoGiornoMese(mesePrecedenteValore))
+          .lte('data', ultimoGiornoMese(mesePrecedenteValore))
+          .or('pre_asilo.eq.true,post_asilo.eq.true')
+          .order('id')
+          .range(da, da + 999);
+        righe.push(...(data ?? []));
+        if ((data?.length ?? 0) < 1000) break;
+      }
+      return { data: righe };
+    }
+
+    const [
+      { data: costi },
+      { data: pastiEffettivi },
+      { data: comunicazioni },
+      { data: creditiDebiti },
+      { data: template },
+      chiusure,
+      { data: presenzePrePost },
+      { data: rettePrecedenti },
+    ] = await Promise.all([
         bambinoIds.length
           ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
@@ -314,6 +400,15 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
           : Promise.resolve({ data: [] }),
         supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
         chiusurePerPeriodo(supabase, primoGiornoMese(mesePrecedenteValore), ultimoGiornoMese(meseVisualizzato)),
+        bambinoIds.length ? presenzePrePostMesePrecedente() : Promise.resolve({ data: [] }),
+        // Retta inviata del mese precedente: dice cosa fu coperto dall'abbonamento.
+        bambinoIds.length
+          ? supabase
+              .from('comunicazioni_retta')
+              .select('bambino_id, costo_pre_asilo, costo_post_asilo')
+              .eq('mese', mesePrecedenteValore)
+              .in('bambino_id', bambinoIds)
+          : Promise.resolve({ data: [] }),
       ]);
     const oggettoTemplate = template?.oggetto ?? 'Promemoria retta {{mese}}';
     const corpoTemplate = template?.corpo ?? '';
@@ -332,10 +427,23 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
       pastiEffettiviPerBambino.set(riga.bambino_id, (pastiEffettiviPerBambino.get(riga.bambino_id) ?? 0) + 1);
     }
 
+    const presenzePrePostPerBambino = new Map<string, { data: string; preAsilo: boolean; postAsilo: boolean }[]>();
+    for (const riga of presenzePrePost ?? []) {
+      const elenco = presenzePrePostPerBambino.get(riga.bambino_id) ?? [];
+      elenco.push({ data: riga.data, preAsilo: riga.pre_asilo, postAsilo: riga.post_asilo });
+      presenzePrePostPerBambino.set(riga.bambino_id, elenco);
+    }
+    const rettaPrecedentePerBambino = new Map(
+      (rettePrecedenti ?? []).map((r) => [
+        r.bambino_id,
+        { costoPreAsilo: Number(r.costo_pre_asilo), costoPostAsilo: Number(r.costo_post_asilo) },
+      ])
+    );
+
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
         Giorni di apertura stimati questo mese: {giorniApertura}. Pasti potenziali del mese precedente (giorni di
-        apertura): {pastiPotenziali}. Conguaglio pasti, pre-asilo, post-asilo, costi
+        apertura): {pastiPotenziali}. Conguaglio pasti, pre-asilo, post-asilo, gettoni, costi
         extra e relative note sono modificabili per una correzione ad-hoc (retta, marca da bollo, costo pasti e
         credito/debito no — questi ultimi due si cambiano dalla scheda del bambino); il totale mostrato per i
         bambini da comunicare resta la stima calcolata al caricamento della pagina, non si aggiorna mentre
@@ -369,7 +477,7 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
                 {bambino.nome} {bambino.cognome}
               </Link>
             </TabellaTitolo>
-            <TabellaCella allinea="sinistra" colSpan={11} className="px-2 py-1.5 text-xs text-amber-700">
+            <TabellaCella allinea="sinistra" colSpan={13} className="px-2 py-1.5 text-xs text-amber-700">
               Costi o email non configurati —{' '}
               <Link href={`/admin/bambini/${bambino.id}`} className="underline">
                 completa la scheda
@@ -380,6 +488,18 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
       }
 
       const creditoDebito = creditoDebitoPerBambino.get(bambino.id);
+      const gettoni = gettoniMesePrecedente({
+        meseCorrente: meseVisualizzato,
+        presenze: presenzePrePostPerBambino.get(bambino.id) ?? [],
+        chiusure,
+        costi: {
+          preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
+          postAsiloRichiesto: costiBambino.post_asilo_richiesto,
+          gettonePreAsilo: Number(costiBambino.gettone_pre_asilo),
+          gettonePostAsilo: Number(costiBambino.gettone_post_asilo),
+        },
+        rettaMesePrecedente: rettaPrecedentePerBambino.get(bambino.id) ?? null,
+      });
       const riepilogo = calcolaRiepilogoRetta({
         prezzoMensile: Number(costiBambino.prezzo_mensile),
         prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
@@ -393,6 +513,8 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
         costiExtra: 0,
         creditoDebito: creditoDebito?.importo ?? 0,
+        gettoniPreAsilo: gettoni.pre.importo,
+        gettoniPostAsilo: gettoni.post.importo,
       });
 
       const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
@@ -435,6 +557,20 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               className={classeCampoImporto}
             />
           </TabellaCella>
+          <CellaGettoniDaInviare
+            bambinoId={bambino.id}
+            nomeCompleto={nomeCompleto}
+            importo={gettoni.pre.importo}
+            numero={gettoni.pre.numero}
+            voce="pre-asilo"
+          />
+          <CellaGettoniDaInviare
+            bambinoId={bambino.id}
+            nomeCompleto={nomeCompleto}
+            importo={gettoni.post.importo}
+            numero={gettoni.post.numero}
+            voce="post-asilo"
+          />
           <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
             <CampoImportoConEuro
               min={0}

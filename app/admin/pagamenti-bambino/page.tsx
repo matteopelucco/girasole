@@ -21,7 +21,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const COLONNE_COMUNICAZIONE =
-  'mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il';
+  'mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il';
 
 // specs/60 - pagamenti-bambino.md: vista di sola lettura, riservata
 // all'admin, degli importi richiesti a un bambino mese per mese lungo un
@@ -162,6 +162,9 @@ export default async function PagamentiBambinoPage(
                             {vociComunicazione(comunicazione).map((voce) => (
                               <TabellaCella allinea="destra" key={voce.etichetta} className="px-2 py-2">
                                 <div className="whitespace-nowrap">{formattaImporto(voce.importo)} €</div>
+                                {voce.numeroGettoni !== undefined && (
+                                  <div className="whitespace-nowrap text-xs text-stone-500">{voce.numeroGettoni} gettoni</div>
+                                )}
                                 {voce.nota && <div className="text-left text-xs text-stone-500">{voce.nota}</div>}
                               </TabellaCella>
                             ))}
