@@ -13,6 +13,8 @@ import {
   vociRiepilogo,
 } from '@/lib/giornata';
 import { CardBambino } from './CardBambino';
+import { ProveGettoni } from './Gettone';
+import type { CoperturaBambino } from './CoperturaPrePost';
 import { BoxComunicazioneRojac, type ComunicazioneGiorno } from './BoxComunicazioneRojac';
 import type { PresenzaGiorno } from './ColonnaPresenza';
 import type { PastoGiorno } from './ColonnaPasto';
@@ -21,6 +23,30 @@ export const dynamic = 'force-dynamic';
 
 type RigaPresenzaDb = PresenzaGiorno & { bambino_id: string };
 type RigaPastoDb = PastoGiorno & { bambino_id: string };
+
+type RigaCopertura = {
+  bambino_id: string;
+  pre_asilo_coperto: boolean;
+  post_asilo_coperto: boolean;
+  retta_successiva_inviata: boolean;
+};
+
+// Sì/no di copertura del pre/post-asilo per i bambini visibili (specs/13,
+// funzione SQL di sola lettura, mai importi). Se la chiamata non riesce la
+// pagina funziona lo stesso, senza le scritte.
+async function caricaCoperture(supabase: Awaited<ReturnType<typeof requireStaff>>['supabase'], data: string) {
+  const { data: righe } = await supabase.rpc('copertura_pre_post_asilo', { p_data: data });
+  return new Map<string, CoperturaBambino>(
+    ((righe ?? []) as RigaCopertura[]).map((r) => [
+      r.bambino_id,
+      {
+        preCoperto: r.pre_asilo_coperto,
+        postCoperto: r.post_asilo_coperto,
+        rettaSuccessivaInviata: r.retta_successiva_inviata,
+      },
+    ])
+  );
+}
 
 // Schermata unica "Presenze e pasti" (specs/10 - presenze-e-pasti.md):
 // sostituisce le vecchie /dashboard/presenze e /dashboard/pasti (che ora
@@ -43,6 +69,7 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
     { data: datiBambiniData },
     { data: comunicazione },
     { editable, messaggioChiuso },
+    coperture,
   ] = await Promise.all([
     idBambini.length
       ? supabase
@@ -74,6 +101,7 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
           .maybeSingle<ComunicazioneGiorno>()
       : Promise.resolve({ data: null }),
     editabilitaGiorno(supabase, data, ruolo),
+    caricaCoperture(supabase, data),
   ]);
 
   const presenzaPerBambino = new Map((presenzeData ?? []).map((p) => [p.bambino_id, p]));
@@ -81,6 +109,8 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
   const allergiePerBambino = new Map((datiBambiniData ?? []).map((b) => [b.id, b.note_allergie]));
   const sessoPerBambino = new Map((datiBambiniData ?? []).map((b) => [b.id, b.sesso]));
   const pastiComunicati = !!comunicazione;
+  // Giorno di chiusura: nessuna scritta e nessun gettone (GET-13).
+  const copertureVisibili = messaggioChiuso ? new Map<string, CoperturaBambino>() : coperture;
 
   // Dopo la comunicazione (per l'intero asilo, specs/16) la colonna Pasto
   // è in sola lettura per la maestra, in ogni sezione; l'admin può sempre
@@ -171,6 +201,7 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
                     sesso={sessoPerBambino.get(bambino.id)}
                     presenza={presenza}
                     pasto={pasto}
+                    copertura={copertureVisibili.get(bambino.id)}
                     conPasti={conPasti}
                     editable={editable}
                     pastoModificabile={pastoModificabile}
@@ -201,7 +232,7 @@ export default async function GiornataPage(props: { searchParams: Promise<{ data
       messaggioChiusura={messaggioChiuso}
       editable={editable}
     >
-      {contenuto}
+      <ProveGettoni>{contenuto}</ProveGettoni>
     </PaginaAttivitaGiornaliera>
   );
 }

@@ -3,6 +3,7 @@ import { EtichettaMalattia } from '@/components/EtichettaMalattia';
 import { AvvisoInconsistenza } from '@/components/AvvisoInconsistenza';
 import { inconsistenzeGiorno, type StatoPasto, type StatoPresenza } from '@/lib/consistenza';
 import { avvisoAzzeramentoPerAssenza, datiDaAzzerarePerAssenza } from '@/lib/presenza';
+import type { CoperturaBambino } from './CoperturaPrePost';
 import { ColonnaPresenza, type PresenzaGiorno } from './ColonnaPresenza';
 import { ColonnaPasto, type PastoGiorno } from './ColonnaPasto';
 import { SezioneNota } from './SezioneNota';
@@ -31,6 +32,7 @@ export function CardBambino({
   editable,
   pastoModificabile,
   assenzaBloccata,
+  copertura,
 }: {
   bambino: { id: string; nome: string; cognome: string };
   data: string;
@@ -42,6 +44,7 @@ export function CardBambino({
   editable: boolean;
   pastoModificabile: boolean;
   assenzaBloccata: boolean;
+  copertura?: CoperturaBambino;
 }) {
   const problemiConsistenza = inconsistenzeGiorno({
     stato: presenza?.stato as StatoPresenza | undefined,
@@ -101,6 +104,7 @@ export function CardBambino({
             editable={editable}
             assenzaBloccata={assenzaBloccata}
             avvisoAzzeramento={avvisoAzzeramento}
+            copertura={copertura}
           />
         </div>
         {conPasti && (
