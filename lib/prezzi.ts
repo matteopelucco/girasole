@@ -1,3 +1,6 @@
+import { giorniInRange, isWeekend, mesePrecedente, primoGiornoMese, ultimoGiornoMese } from './date';
+import { isGiornoChiuso, type GiornoChiusura } from './calendarioScolastico';
+
 // Prezzi predefiniti dell'asilo e importi in euro (specs/62 sezione "Prezzi",
 // specs/55 "Costi", issue #396). Logica pura, nessun I/O.
 //
@@ -155,4 +158,45 @@ export function gettoneFuoriRetta(args: {
   rettaSuccessivaInviata: boolean;
 }): boolean {
   return args.attivo && !args.coperto && args.rettaSuccessivaInviata;
+}
+
+// --- Gettoni del mese precedente nella retta (specs/56 RET-01..RET-05, #400) --
+
+export type GettoniVoce = { numero: number; importo: number };
+
+// Gettoni da addebitare nella retta del mese `meseCorrente`: per ogni voce
+// (pre, post) i giorni del mese PRECEDENTE con presenza in quella voce, esclusi
+// weekend, giorni di chiusura e giorni coperti dall'abbonamento
+// (`copertoDaAbbonamento`), per il prezzo del gettone della voce. Senza riga
+// costi: 0 e 0. Logica pura, nessun I/O.
+export function gettoniMesePrecedente(args: {
+  meseCorrente: string;
+  presenze: { data: string; preAsilo: boolean; postAsilo: boolean }[];
+  chiusure: GiornoChiusura[];
+  costi: {
+    preAsiloRichiesto: boolean;
+    postAsiloRichiesto: boolean;
+    gettonePreAsilo: number;
+    gettonePostAsilo: number;
+  } | null;
+  rettaMesePrecedente: { costoPreAsilo: number; costoPostAsilo: number } | null;
+}): { pre: GettoniVoce; post: GettoniVoce } {
+  const zero = (): GettoniVoce => ({ numero: 0, importo: 0 });
+  if (!args.costi) return { pre: zero(), post: zero() };
+  const { costi } = args;
+  const mese = mesePrecedente(args.meseCorrente);
+  const primo = primoGiornoMese(mese);
+  const ultimo = ultimoGiornoMese(mese);
+  const giorniValidi = args.presenze.filter(
+    (p) => p.data >= primo && p.data <= ultimo && !isWeekend(p.data) && !isGiornoChiuso(p.data, args.chiusure)
+  );
+  const voce = (nome: VocePrePost, flagAttuale: boolean, prezzo: number): GettoniVoce => {
+    if (copertoDaAbbonamento({ voce: nome, flagAttuale, rettaDelMese: args.rettaMesePrecedente })) return zero();
+    const numero = giorniValidi.filter((p) => (nome === 'pre' ? p.preAsilo : p.postAsilo)).length;
+    return { numero, importo: Math.round(numero * prezzo * 100) / 100 + 0 };
+  };
+  return {
+    pre: voce('pre', costi.preAsiloRichiesto, costi.gettonePreAsilo),
+    post: voce('post', costi.postAsiloRichiesto, costi.gettonePostAsilo),
+  };
 }
