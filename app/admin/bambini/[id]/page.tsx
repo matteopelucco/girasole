@@ -38,7 +38,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
     supabase
       .from('costi_bambini')
       .select(
-        'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria, updated_at'
+        'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo, email_promemoria, updated_at'
       )
       .eq('bambino_id', params.id)
       .maybeSingle(),
@@ -69,6 +69,8 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
     marcaDaBollo: costi ? formatta(costi.prezzo_marca_da_bollo) : proposta ? formatta(proposta.marca_da_bollo) : '',
     preAsilo: costi ? formatta(costi.prezzo_pre_asilo) : proposta ? formatta(proposta.abbonamento_pre_asilo) : '',
     postAsilo: costi ? formatta(costi.prezzo_post_asilo) : proposta ? formatta(proposta.abbonamento_post_asilo) : '',
+    gettonePreAsilo: costi ? formatta(costi.gettone_pre_asilo) : proposta ? formatta(proposta.gettone_pre_asilo) : '',
+    gettonePostAsilo: costi ? formatta(costi.gettone_post_asilo) : proposta ? formatta(proposta.gettone_post_asilo) : '',
   };
   const prezziNonLeggibili = !costi && prezziPredefiniti === null;
 
@@ -94,6 +96,10 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
           )}
         </div>
 
+        <section aria-labelledby="titolo-anagrafica" className="space-y-2">
+        <h2 id="titolo-anagrafica" className="text-base font-medium">
+          Anagrafica
+        </h2>
         <FormConEsito
           action={aggiornaBambino}
           className={cn(riquadroVariants(), 'space-y-2 p-4')}
@@ -180,9 +186,9 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
             {bambino.attiva ? 'Disattiva bambino' : 'Riattiva bambino'}
           </PulsanteInvio>
         </FormConEsito>
+        </section>
 
         <div className="space-y-2">
-          <h2 className="text-base font-medium">Costi</h2>
           {prezziNonLeggibili && (
             <Avviso tono="attenzione">
               Impossibile leggere i prezzi predefiniti: i campi sono vuoti. Compilali a mano prima di salvare (un
@@ -192,36 +198,45 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
           <FormImporti
             action={aggiornaCostiBambino}
             chiave={costi?.updated_at ?? 'nuovi'}
-            className={cn(riquadroVariants(), 'space-y-3 p-4')}
+            className="space-y-6"
           >
             <input type="hidden" name="bambino_id" value={bambino.id} />
-            <div className="flex flex-wrap gap-2">
-              <CampoImporto
-                name="prezzo_mensile"
-                etichetta="Prezzo retta mensile (€)"
-                nomeAccessibile="Prezzo retta mensile (€)"
-                defaultValue={valoriCosti.retta}
-                avvisoSeVuoto="Retta non impostata: se salvi senza compilarla vale 0 €."
-                className="flex-1"
-              />
-              <CampoImporto
-                name="prezzo_buono_pasto"
-                etichetta="Prezzo buono pasto (€)"
-                nomeAccessibile="Prezzo buono pasto (€)"
-                defaultValue={valoriCosti.buonoPasto}
-                className="flex-1"
-              />
-              <CampoImporto
-                name="prezzo_marca_da_bollo"
-                etichetta="Prezzo marca da bollo (€)"
-                nomeAccessibile="Prezzo marca da bollo (€)"
-                defaultValue={valoriCosti.marcaDaBollo}
-                className="flex-1"
-              />
-            </div>
 
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-end gap-2">
+            <section aria-labelledby="titolo-retta-pasti" className="space-y-2">
+              <h2 id="titolo-retta-pasti" className="text-base font-medium">
+                Retta e pasti
+              </h2>
+              <div className={cn(riquadroVariants(), 'flex flex-wrap gap-2 p-4')}>
+                <CampoImporto
+                  name="prezzo_mensile"
+                  etichetta="Prezzo retta mensile (€)"
+                  nomeAccessibile="Prezzo retta mensile (€)"
+                  defaultValue={valoriCosti.retta}
+                  avvisoSeVuoto="Retta non impostata: se salvi senza compilarla vale 0 €."
+                  className="flex-1"
+                />
+                <CampoImporto
+                  name="prezzo_buono_pasto"
+                  etichetta="Prezzo buono pasto (€)"
+                  nomeAccessibile="Prezzo buono pasto (€)"
+                  defaultValue={valoriCosti.buonoPasto}
+                  className="flex-1"
+                />
+                <CampoImporto
+                  name="prezzo_marca_da_bollo"
+                  etichetta="Prezzo marca da bollo (€)"
+                  nomeAccessibile="Prezzo marca da bollo (€)"
+                  defaultValue={valoriCosti.marcaDaBollo}
+                  className="flex-1"
+                />
+              </div>
+            </section>
+
+            <section aria-labelledby="titolo-pre-asilo" className="space-y-2">
+              <h2 id="titolo-pre-asilo" className="text-base font-medium">
+                Pre-asilo
+              </h2>
+              <div className={cn(riquadroVariants(), 'space-y-3 p-4')}>
                 <label className="flex items-center gap-2 text-sm text-stone-700">
                   <input
                     type="checkbox"
@@ -229,17 +244,32 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     defaultChecked={costi?.pre_asilo_richiesto ?? false}
                     className="h-4 w-4"
                   />
-                  Pre-asilo richiesto
+                  Abbonamento mensile pre-asilo
                 </label>
-                <CampoImporto
-                  name="prezzo_pre_asilo"
-                  etichetta="Prezzo (€)"
-                  nomeAccessibile="Prezzo pre-asilo (€)"
-                  defaultValue={valoriCosti.preAsilo}
-                  classeCampo="block w-28"
-                />
+                <div className="flex flex-wrap gap-2">
+                  <CampoImporto
+                    name="prezzo_pre_asilo"
+                    etichetta="Prezzo (€)"
+                    nomeAccessibile="Prezzo pre-asilo (€)"
+                    defaultValue={valoriCosti.preAsilo}
+                    classeCampo="block w-36"
+                  />
+                  <CampoImporto
+                    name="gettone_pre_asilo"
+                    etichetta="Prezzo gettone (€)"
+                    nomeAccessibile="Prezzo gettone pre-asilo (€)"
+                    defaultValue={valoriCosti.gettonePreAsilo}
+                    classeCampo="block w-36"
+                  />
+                </div>
               </div>
-              <div className="flex items-end gap-2">
+            </section>
+
+            <section aria-labelledby="titolo-post-asilo" className="space-y-2">
+              <h2 id="titolo-post-asilo" className="text-base font-medium">
+                Post-asilo
+              </h2>
+              <div className={cn(riquadroVariants(), 'space-y-3 p-4')}>
                 <label className="flex items-center gap-2 text-sm text-stone-700">
                   <input
                     type="checkbox"
@@ -247,42 +277,57 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     defaultChecked={costi?.post_asilo_richiesto ?? false}
                     className="h-4 w-4"
                   />
-                  Post-asilo richiesto
+                  Abbonamento mensile post-asilo
                 </label>
-                <CampoImporto
-                  name="prezzo_post_asilo"
-                  etichetta="Prezzo (€)"
-                  nomeAccessibile="Prezzo post-asilo (€)"
-                  defaultValue={valoriCosti.postAsilo}
-                  classeCampo="block w-28"
-                />
+                <div className="flex flex-wrap gap-2">
+                  <CampoImporto
+                    name="prezzo_post_asilo"
+                    etichetta="Prezzo (€)"
+                    nomeAccessibile="Prezzo post-asilo (€)"
+                    defaultValue={valoriCosti.postAsilo}
+                    classeCampo="block w-36"
+                  />
+                  <CampoImporto
+                    name="gettone_post_asilo"
+                    etichetta="Prezzo gettone (€)"
+                    nomeAccessibile="Prezzo gettone post-asilo (€)"
+                    defaultValue={valoriCosti.gettonePostAsilo}
+                    classeCampo="block w-36"
+                  />
+                </div>
               </div>
-            </div>
+            </section>
 
-            <label className="block text-xs text-stone-600">
-              Email promemoria retta
-              <Campo
-                name="email_promemoria"
-                defaultValue={costi?.email_promemoria ?? ''}
-                placeholder="genitore@esempio.it (opzionale, più indirizzi separati da ;)"
-                aria-label="Email promemoria retta"
-                className="mt-1 w-full"
-              />
-            </label>
-
-            <PulsanteInvio variante="primario" misura="normale">
-              Salva costi
-            </PulsanteInvio>
-            {costi?.updated_at && (
-              <p className="text-xs text-stone-500">
-                Ultimo salvataggio: {formattaDataOraItaliana(costi.updated_at).replace('_', ' alle ')}
-              </p>
-            )}
+            <section aria-labelledby="titolo-comunicazioni" className="space-y-2">
+              <h2 id="titolo-comunicazioni" className="text-base font-medium">
+                Comunicazioni
+              </h2>
+              <div className={cn(riquadroVariants(), 'space-y-3 p-4')}>
+                <label className="block text-xs text-stone-600">
+                  Email promemoria retta
+                  <Campo
+                    name="email_promemoria"
+                    defaultValue={costi?.email_promemoria ?? ''}
+                    placeholder="genitore@esempio.it (opzionale, più indirizzi separati da ;)"
+                    aria-label="Email promemoria retta"
+                    className="mt-1 w-full"
+                  />
+                </label>
+                <PulsanteInvio variante="primario" misura="normale">
+                  Salva
+                </PulsanteInvio>
+                {costi?.updated_at && (
+                  <p className="text-xs text-stone-500">
+                    Ultimo salvataggio: {formattaDataOraItaliana(costi.updated_at).replace('_', ' alle ')}
+                  </p>
+                )}
+              </div>
+            </section>
           </FormImporti>
         </div>
 
-        <div className="space-y-2">
-          <h2 className="text-base font-medium">Crediti e debiti</h2>
+        <section aria-labelledby="titolo-crediti-debiti" className="space-y-2">
+          <h2 id="titolo-crediti-debiti" className="text-base font-medium">Crediti e debiti</h2>
           <p className="text-xs text-stone-600">
             Un credito o debito verso l&apos;asilo non derivante dal calcolo automatico della retta: verrà
             proposto in sola lettura nella comunicazione del mese di competenza scelto — per correggerlo prima
@@ -387,7 +432,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
               Aggiungi credito/debito
             </PulsanteInvio>
           </FormConEsito>
-        </div>
+        </section>
       </main>
     </NavHeader>
   );
