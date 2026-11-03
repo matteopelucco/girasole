@@ -14,6 +14,7 @@ import { calcolaRetteNonComunicate } from '@/lib/allarmeRette';
 import { chiusuraPerData, isGiornoChiuso } from '@/lib/calendarioScolastico';
 import { oggi } from '@/lib/date';
 import type { InputElencoAllarmi } from '@/lib/elencoAllarmi';
+import { calcolaPrezziESezioni } from '@/lib/prezziDati';
 import { sezioniAttiveVisibili } from '@/lib/sezioni';
 
 const STATO_VUOTO: StatoPersonaleGiorno = { sezioniPresenzeIncomplete: [], pastiNonConfermati: false };
@@ -73,14 +74,32 @@ export async function calcolaDatiAllarmiUtente(
       return [];
     }
   };
-  const [chiusuraOggi, presenzeLette, settimanaOreNonConfermata, datiPersonale, retteNonComunicate, mailRojacNonInviata] =
-    await Promise.all([
+  // Prezzi e tipi di sezione (#397): solo l'admin; come per Rojac, un errore
+  // di lettura non rompe ogni pagina, l'allarme manca e resta nei log.
+  const prezziSezioni = async () => {
+    try {
+      return await calcolaPrezziESezioni(supabase);
+    } catch (errore) {
+      console.error('Allarme prezzi e sezioni non calcolato:', errore instanceof Error ? errore.message : errore);
+      return null;
+    }
+  };
+  const [
+    chiusuraOggi,
+    presenzeLette,
+    settimanaOreNonConfermata,
+    datiPersonale,
+    retteNonComunicate,
+    mailRojacNonInviata,
+    esitoPrezziSezioni,
+  ] = await Promise.all([
       weekend ? null : chiusuraPerData(supabase, dataOggi),
       presenzeOggi(),
       settimanaOre(),
       ruolo === 'admin' ? leggiDatiPersonale(supabase, userId, settimanaRiferimento.inizio) : null,
       ruolo === 'admin' ? calcolaRetteNonComunicate(supabase, dataOggi) : [],
       ruolo === 'admin' ? mailRojac() : [],
+      ruolo === 'admin' ? prezziSezioni() : null,
     ]);
 
   const giornoAttivo = !isGiornoChiuso(dataOggi, chiusuraOggi ? [chiusuraOggi] : []);
@@ -95,5 +114,6 @@ export async function calcolaDatiAllarmiUtente(
     personale: datiPersonale ? allarmiDipendentiDa(datiPersonale, presenze, settimanaRiferimento) : [],
     retteNonComunicate,
     mailRojacNonInviata,
+    prezziSezioni: esitoPrezziSezioni,
   };
 }

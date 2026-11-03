@@ -3,6 +3,7 @@ import { descrizioneBambinoRetta, type BambinoRetta } from './allarmeRette';
 import { allarmePersonalePresenzePastiAttivo, type AllarmeDipendente, type StatoPersonaleGiorno } from './allarmi';
 import { formattaIntervalloItaliano } from './date';
 import { percorsoGiornata } from './giornata';
+import { nomePrezzo, type EsitoPrezziESezioni } from './prezzi';
 
 // Elenco unico degli allarmi attivi di chi guarda (specs/07 - allarmi.md):
 // alimenta sia il numero accanto alla campanella sia la pagina "Allarmi",
@@ -30,6 +31,12 @@ export type Allarme = {
 // invece di ricalcolarlo (specs/07).
 export const ID_ALLARME_RETTE = 'rette-non-comunicate';
 
+// Identificativo dell'allarme prezzi e tipi di sezione (specs/07, #397).
+export const ID_ALLARME_PREZZI = 'prezzi-sezioni';
+export const TITOLO_ALLARME_PREZZI = 'Prezzi o tipi di sezione da completare';
+export const PERCORSO_PREZZI = '/admin/parametri-funzionamento';
+export const PERCORSO_SEZIONI_E_BAMBINI = '/admin';
+
 export type SettimanaOre = { inizio: string; fine: string };
 
 export type InputElencoAllarmi = {
@@ -47,6 +54,9 @@ export type InputElencoAllarmi = {
   // Mesi conclusi la cui mail a Rojac non risulta inviata ("YYYY-MM", dal
   // più vecchio, specs/07): solo per l'admin; vuoto per gli altri.
   mailRojacNonInviata: string[];
+  // Prezzi mancanti e sezioni attive senza tipo (specs/07, #397): solo per
+  // l'admin; assente o null per gli altri.
+  prezziSezioni?: EsitoPrezziESezioni | null;
 };
 
 function vociPersonale(allarme: AllarmeDipendente): VoceAllarme[] {
@@ -116,6 +126,25 @@ export function componiAllarmi(input: InputElencoAllarmi): Allarme[] {
         testo: `Pasti di ${descrizioneMeseRojac(mese)}: vai al Report mensile per inviare la mail`,
         href: hrefReportRojac(mese),
       })),
+    });
+  }
+
+  if (input.prezziSezioni?.daSistemare) {
+    const { prezziMancanti, sezioniSenzaTipo } = input.prezziSezioni;
+    elenco.push({
+      id: ID_ALLARME_PREZZI,
+      tipo: 'proprio',
+      titolo: TITOLO_ALLARME_PREZZI,
+      voci: [
+        ...prezziMancanti.map((colonna) => ({
+          testo: `Prezzo mancante: ${nomePrezzo(colonna)}`,
+          href: PERCORSO_PREZZI,
+        })),
+        ...sezioniSenzaTipo.map((sezione) => ({
+          testo: `Sezione senza tipo: ${sezione.nome}`,
+          href: PERCORSO_SEZIONI_E_BAMBINI,
+        })),
+      ],
     });
   }
 
