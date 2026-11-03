@@ -58,7 +58,7 @@ test.describe('56 — Comunicazione retta mensile', () => {
       if (opzioni.email) await page.getByLabel('Email promemoria retta').fill(opzioni.email);
       // I campi mostrano già i valori digitati: prima di navigare altrove
       // aspetto la fine della Server Action, o il goto la annullerebbe (#70).
-      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva costi' }));
+      await clickEAttendiAzione(page, page.getByRole('button', { name: 'Salva', exact: true }));
       await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue(
         opzioni.prezzoMensile ?? '0',
         { timeout: 20_000 }

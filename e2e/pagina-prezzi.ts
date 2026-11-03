@@ -97,10 +97,46 @@ export const ETICHETTE_COSTI = {
   marcaDaBollo: 'Prezzo marca da bollo (€)',
   preAsilo: 'Prezzo pre-asilo (€)',
   postAsilo: 'Prezzo post-asilo (€)',
+  gettonePreAsilo: 'Prezzo gettone pre-asilo (€)',
+  gettonePostAsilo: 'Prezzo gettone post-asilo (€)',
 } as const;
 
+// STRUTTURA ATTESA della scheda (specs/55, COS-07..COS-10, issue #398).
+//   * Sei sezioni, in quest'ordine, ciascuna un <section aria-labelledby> con un
+//     <h2> (ruolo "region" col nome del titolo): TITOLI_SEZIONI_SCHEDA.
+//   * "Retta e pasti": ETICHETTE_COSTI.retta / buonoPasto / marcaDaBollo.
+//   * "Pre-asilo": casella ETICHETTA_ABBONAMENTO_PRE, ETICHETTE_COSTI.preAsilo
+//     (prezzo dell'abbonamento) e ETICHETTE_COSTI.gettonePreAsilo; "Post-asilo"
+//     lo stesso con ETICHETTA_ABBONAMENTO_POST, postAsilo, gettonePostAsilo.
+//   * "Comunicazioni": campo "Email promemoria retta".
+//   * UN solo form per le sezioni "Retta e pasti", "Pre-asilo", "Post-asilo" e
+//     "Comunicazioni", con UN solo pulsante di nome esatto "Salva" (non più
+//     "Salva costi", rinominato); sotto, "Ultimo salvataggio: ..." come prima.
+//   * Anagrafica: campi Nome e Cognome (placeholder), select "Sezione",
+//     pulsante "Salva modifiche" e pulsante "Disattiva bambino"/"Riattiva
+//     bambino" (l'attivo); nessuna sezione "Costi".
+export const TITOLI_SEZIONI_SCHEDA = [
+  'Anagrafica',
+  'Retta e pasti',
+  'Pre-asilo',
+  'Post-asilo',
+  'Comunicazioni',
+  'Crediti e debiti',
+] as const;
+
+export const ETICHETTA_ABBONAMENTO_PRE = 'Abbonamento mensile pre-asilo';
+export const ETICHETTA_ABBONAMENTO_POST = 'Abbonamento mensile post-asilo';
+
+export function sezioneScheda(page: Page, titolo: (typeof TITOLI_SEZIONI_SCHEDA)[number]): Locator {
+  return page.getByRole('region', { name: titolo, exact: true });
+}
+
+export function pulsanteSalvaCosti(page: Page): Locator {
+  return page.getByRole('button', { name: 'Salva', exact: true });
+}
+
 export function formCosti(page: Page): Locator {
-  return page.locator('form', { has: page.getByRole('button', { name: 'Salva costi' }) });
+  return page.locator('form', { has: pulsanteSalvaCosti(page) });
 }
 
 // Avviso COS-06 accanto alla retta vuota: NON è un errore, quindi niente

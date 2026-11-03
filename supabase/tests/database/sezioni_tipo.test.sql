@@ -184,8 +184,9 @@ insert into public.sezioni (id, nome, tipo) values
 insert into public.bambini (id, nome, cognome, sezione_id) values
   ('c0000000-0000-0000-0000-000000000001', 'Prova', 'PgTap', 'b0000000-0000-0000-0000-000000000002');
 insert into public.costi_bambini
-  (bambino_id, prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, prezzo_pre_asilo, prezzo_post_asilo)
-values ('c0000000-0000-0000-0000-000000000001', 123.45, 5.55, 1.99, 33.33, 44.44);
+  (bambino_id, prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, prezzo_pre_asilo, prezzo_post_asilo,
+   gettone_pre_asilo, gettone_post_asilo)
+values ('c0000000-0000-0000-0000-000000000001', 123.45, 5.55, 1.99, 33.33, 44.44, 7.11, 7.22);
 
 update public.sezioni set tipo = 'primavera' where id = 'b0000000-0000-0000-0000-000000000002';
 update public.bambini set sezione_id = 'b0000000-0000-0000-0000-000000000003'
@@ -193,7 +194,7 @@ update public.bambini set sezione_id = 'b0000000-0000-0000-0000-000000000003'
 
 select is(
   (select to_jsonb(c) - 'updated_at' from public.costi_bambini c where bambino_id = 'c0000000-0000-0000-0000-000000000001'),
-  '{"bambino_id":"c0000000-0000-0000-0000-000000000001","prezzo_mensile":123.45,"prezzo_buono_pasto":5.55,"prezzo_marca_da_bollo":1.99,"pre_asilo_richiesto":false,"prezzo_pre_asilo":33.33,"post_asilo_richiesto":false,"prezzo_post_asilo":44.44,"email_promemoria":null}'::jsonb,
+  '{"bambino_id":"c0000000-0000-0000-0000-000000000001","prezzo_mensile":123.45,"prezzo_buono_pasto":5.55,"prezzo_marca_da_bollo":1.99,"pre_asilo_richiesto":false,"prezzo_pre_asilo":33.33,"post_asilo_richiesto":false,"prezzo_post_asilo":44.44,"gettone_pre_asilo":7.11,"gettone_post_asilo":7.22,"email_promemoria":null}'::jsonb,
   'dopo il cambio di tipo e lo spostamento di sezione i costi del bambino sono identici al centesimo'
 );
 select is(

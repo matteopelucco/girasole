@@ -118,7 +118,7 @@ test.describe('58 — Crediti e debiti di un bambino', () => {
     await page.getByLabel('Prezzo retta mensile (€)').fill('100');
     await page.getByLabel('Prezzo buono pasto (€)').fill('0');
     await page.getByLabel('Email promemoria retta').fill(email);
-    await page.getByRole('button', { name: 'Salva costi' }).click();
+    await page.getByRole('button', { name: 'Salva', exact: true }).click();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue('100', { timeout: 20_000 });
 
     // Il mese di competenza è precompilato sul mese successivo

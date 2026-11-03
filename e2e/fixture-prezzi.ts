@@ -9,7 +9,8 @@
 //   * colonna `sezioni.tipo`: 'materna' | 'primavera' | null;
 //   * tabella `costi_bambini` (bambino_id, prezzo_mensile, prezzo_buono_pasto,
 //     prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo,
-//     post_asilo_richiesto, prezzo_post_asilo, email_promemoria, updated_at).
+//     post_asilo_richiesto, prezzo_post_asilo, gettone_pre_asilo,
+//     gettone_post_asilo, email_promemoria, updated_at) (gettoni: issue #398).
 //
 // ATTENZIONE. I prezzi sono UNA riga per tutto l'asilo: i test che li cambiano
 // li rimettono com'erano alla fine (`salvaPrezziOriginali`/`ripristinaPrezzi`,
@@ -58,6 +59,8 @@ export type CostiBambino = {
   prezzo_pre_asilo: number;
   post_asilo_richiesto: boolean;
   prezzo_post_asilo: number;
+  gettone_pre_asilo: number;
+  gettone_post_asilo: number;
   email_promemoria: string | null;
 };
 
@@ -144,7 +147,7 @@ export async function leggiCosti(db: SupabaseClient, bambinoId: string): Promise
   const { data, error } = await db
     .from('costi_bambini')
     .select(
-      'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, email_promemoria'
+      'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo, email_promemoria'
     )
     .eq('bambino_id', bambinoId)
     .maybeSingle();
@@ -158,6 +161,8 @@ export async function leggiCosti(db: SupabaseClient, bambinoId: string): Promise
     prezzo_pre_asilo: Number(data.prezzo_pre_asilo),
     post_asilo_richiesto: data.post_asilo_richiesto as boolean,
     prezzo_post_asilo: Number(data.prezzo_post_asilo),
+    gettone_pre_asilo: Number(data.gettone_pre_asilo),
+    gettone_post_asilo: Number(data.gettone_post_asilo),
     email_promemoria: (data.email_promemoria as string | null) ?? null,
   };
 }

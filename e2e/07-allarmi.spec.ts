@@ -107,6 +107,8 @@ async function configuraEmailPromemoria(db: SupabaseClient, bambino: BambinoFixt
       prezzo_marca_da_bollo: 2,
       prezzo_pre_asilo: 70,
       prezzo_post_asilo: 70,
+      gettone_pre_asilo: 7,
+      gettone_post_asilo: 7,
     });
   if (error) throw new Error(`Configurazione dell'email di prova non riuscita: ${error.message}`);
 }
