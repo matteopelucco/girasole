@@ -36,6 +36,8 @@ test.describe('05 — Feedback sulle azioni', () => {
     await page.goto('/admin');
     const nome = `Sezione Feedback E2E ${Date.now()}`;
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nome);
+    // Con un tipo: una sezione senza tipo accende l'allarme prezzi per tutti i test (specs/62).
+    await page.getByLabel('Tipo', { exact: true }).selectOption('materna');
 
     // Rallenta la risposta della server action per poter osservare lo
     // stato "in corso", altrimenti troppo rapido da intercettare in un

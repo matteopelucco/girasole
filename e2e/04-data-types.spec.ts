@@ -52,6 +52,8 @@ test.describe('04 — Tipi di dato ed entità', () => {
 
     const nomeSezione = `Sezione E2E ${Date.now()}`;
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nomeSezione);
+    // Con un tipo: una sezione senza tipo accende l'allarme prezzi per tutti i test (specs/62).
+    await page.getByLabel('Tipo', { exact: true }).selectOption('materna');
     await page.locator('select[name="anno_scolastico_id"]').selectOption({ label: nomeAnno });
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
@@ -62,6 +64,8 @@ test.describe('04 — Tipi di dato ed entità', () => {
     await page.goto('/admin');
     const nomeSezione = `Sezione Toggle E2E ${Date.now()}`;
     await page.getByPlaceholder('Nome sezione (es. Girasoli)').fill(nomeSezione);
+    // Con un tipo: una sezione senza tipo accende l'allarme prezzi per tutti i test (specs/62).
+    await page.getByLabel('Tipo', { exact: true }).selectOption('materna');
     await page.getByRole('button', { name: 'Crea' }).nth(1).click();
 
     const riga = rigaSezione(page, nomeSezione);

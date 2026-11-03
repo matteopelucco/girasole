@@ -1001,9 +1001,9 @@ test.describe('07 — Allarmi', () => {
   // prezzi: gira nel progetto a worker singolo 'chromium-prezzi' (playwright.config.ts).
   //
   // Ogni test crea una PROPRIA sezione senza tipo (nome unico) e guarda solo
-  // quella: nel DB di test possono esserci altre sezioni senza tipo (quelle
-  // esistenti prima della funzione restano senza), quindi l'allarme intero non
-  // si può dare per spento. Il caso "prezzo nullo / riga dei prezzi assente" non
+  // quella. Il seed dà un tipo alla sua sezione e i test degli altri file danno
+  // un tipo alle sezioni che creano (o le cancellano): nei test "allarme assente"
+  // si usa expect.poll per le sezioni altrui ancora in corso. Il caso "prezzo nullo / riga dei prezzi assente" non
   // si ottiene dal DB (colonne NOT NULL dalla migration 0067): è coperto dallo
   // unit test di lib/prezzi.test.ts (valutaPrezziESezioni), come AMM-05 in 50.
   test.describe('prezzi e tipi di sezione da completare', () => {
@@ -1153,15 +1153,23 @@ test.describe('07 — Allarmi', () => {
           await page.goto('/admin');
           await expect(avvisoPrezziInAdmin(page).getByText(sezione.nome)).toHaveCount(0);
 
-          // Se in quel momento non c'è altro da completare, l'allarme sparisce del
-          // tutto (nel DB di test altre sezioni possono essere ancora senza tipo).
-          await page.goto('/dashboard/allarmi');
-          if ((await allarmePrezziPagina(page).count()) === 0) {
-            await page.goto('/dashboard');
-            await expect(bannerPrezzi(page)).toHaveCount(0);
-            await page.goto('/admin');
-            await expect(avvisoPrezziInAdmin(page)).toHaveCount(0);
-          }
+          // Il seed dà un tipo alla sezione di prova e le sezioni create dagli altri
+          // test hanno un tipo o vengono cancellate: con tutti i prezzi impostati
+          // non resta nulla da completare, quindi l'allarme sparisce del tutto.
+          // Poll perché una sezione di un altro test può esserci ancora per un attimo.
+          await expect
+            .poll(
+              async () => {
+                await page.goto('/dashboard/allarmi');
+                return allarmePrezziPagina(page).count();
+              },
+              { message: "l'allarme prezzi deve sparire del tutto dalla pagina Allarmi" }
+            )
+            .toBe(0);
+          await page.goto('/dashboard');
+          await expect(bannerPrezzi(page)).toHaveCount(0);
+          await page.goto('/admin');
+          await expect(avvisoPrezziInAdmin(page)).toHaveCount(0);
           await page.goto('/dashboard/allarmi');
           await campanellaCoincideConElenco(page);
           await nessunaViolazioneA11yGrave(page);
@@ -1291,6 +1299,108 @@ test.describe('07 — Allarmi', () => {
         expect(['inviato', 'gia_inviato']).toContain(prima.riepilogo);
         expect(seconda.riepilogo).toBe('gia_inviato');
       }
+    });
+
+    test('email di riepilogo — se tutto è a posto non parte nessuna email', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      test.skip(haDaSistemare(esito), 'nel DB di test c è almeno un controllo da sistemare: lo scenario tutto a posto non è verificabile ora');
+      expect(esito.riepilogo).toBe('tutto_ok');
+    });
+
+    test('email di riepilogo — il riepilogo riporta tutti i controlli, anche quelli a posto', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      expect(Object.keys(esito.controlli).sort()).toEqual(
+        ['appello', 'mail-rojac-mensile', 'ore-lavoro', 'pasti-rojac', 'prezzi-sezioni', 'rette-genitori'].sort()
+      );
+    });
+
+    test('email di riepilogo — appello e pasti solo dopo le 10:00 in un giorno di apertura', async ({ request }) => {
+      test.skip(
+        oraRomaAdesso() >= 10 && oggiEGiornoFeriale(),
+        'verificabile solo prima delle 10:00 o in un weekend (fuso Europe/Rome)'
+      );
+      const esito = await chiamaCron(request);
+      expect(esito.controlli.appello).toBe('non_applicabile');
+      expect(esito.controlli['pasti-rojac']).toBe('non_applicabile');
+    });
+
+    test('email di riepilogo — appello incompleto: il controllo è da sistemare e il riepilogo parte', async ({
+      request,
+    }) => {
+      test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
+      const esito = await chiamaCron(request);
+      test.skip(esito.controlli.appello !== 'da_sistemare', 'oggi tutti i bambini del DB di test hanno una voce di presenza');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
+
+    test('email di riepilogo — pasti non comunicati a Rojac: il controllo è da sistemare e il riepilogo parte', async ({
+      request,
+    }) => {
+      test.skip(oraRomaAdesso() < 10 || !oggiEGiornoFeriale(), 'verificabile solo dopo le 10:00 in un giorno feriale');
+      const esito = await chiamaCron(request);
+      test.skip(esito.controlli['pasti-rojac'] !== 'da_sistemare', 'oggi i pasti risultano già comunicati a Rojac');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
+
+    test('email di riepilogo — rette ai genitori: dal giorno 3 il controllo è attivo, prima no', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      if (giornoDelMeseRoma() < 3) {
+        expect(esito.controlli['rette-genitori']).toBe('non_applicabile');
+      } else {
+        expect(['ok', 'da_sistemare']).toContain(esito.controlli['rette-genitori']);
+        if (esito.controlli['rette-genitori'] === 'da_sistemare') {
+          expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+        }
+      }
+    });
+
+    test('email di riepilogo — settimane di ore di lavoro da confermare', async ({ request, creaUtente }) => {
+      // Un utente abilitato che non ha mai confermato nessuna settimana
+      // rende il controllo sempre da sistemare, e fa partire il riepilogo.
+      await creaUtente({ ruolo: 'maestra', abilitato: true });
+      const esito = await chiamaCron(request);
+      expect(esito.controlli['ore-lavoro']).toBe('da_sistemare');
+      expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+    });
+
+    test('email di riepilogo — la mail mensile dei pasti a Rojac', async ({ request }) => {
+      const esito = await chiamaCron(request);
+      // Senza mesi conclusi da controllare il controllo è a posto; altrimenti
+      // dipende dal registro degli invii: ok o da sistemare, mai "non controllato".
+      if (mesiRojacDaControllare(dataOggiRoma()).length === 0) {
+        expect(esito.controlli['mail-rojac-mensile']).toBe('ok');
+      } else {
+        expect(['ok', 'da_sistemare']).toContain(esito.controlli['mail-rojac-mensile']);
+      }
+    });
+
+    test('prezzi non completi o sezioni senza tipo — voce nell\'email giornaliera dei controlli', async ({
+      request,
+      adminDb,
+    }) => {
+      test.skip(!adminDb, 'richiede E2E_ADMIN_EMAIL/PASSWORD e le variabili Supabase');
+      // Una sezione attiva senza tipo rende il controllo da sistemare in ogni
+      // giorno e a ogni ora, e fa partire il riepilogo anche se il resto è a posto.
+      const sezione = await creaSezioneConTipo(adminDb!, null);
+      try {
+        const esito = await chiamaCron(request);
+        expect(esito.controlli[CHIAVE_CONTROLLO_PREZZI]).toBe('da_sistemare');
+        expect(['inviato', 'gia_inviato']).toContain(esito.riepilogo);
+      } finally {
+        await pulisciSezioneEBambini(adminDb!, sezione.id, []);
+      }
+    });
+
+    test('prezzi e sezioni a posto — nessuna email per questo controllo', async ({ request }) => {
+      // Il seed dà un tipo alla sezione di prova e gli altri test non lasciano
+      // sezioni senza tipo: il controllo deve essere a posto (poll, perché una
+      // sezione di un altro test può esserci ancora per un attimo). Il controllo
+      // compare sempre, anche quando è a posto, e da solo non fa partire nessuna email.
+      await expect
+        .poll(async () => (await chiamaCron(request)).controlli[CHIAVE_CONTROLLO_PREZZI], {
+          message: 'il controllo prezzi deve risultare a posto',
+        })
+        .toBe('ok');
     });
 
     test('email di riepilogo — se tutto è a posto non parte nessuna email', async ({ request }) => {
