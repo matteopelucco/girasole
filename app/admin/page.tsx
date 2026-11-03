@@ -36,7 +36,10 @@ export default async function AdminPage() {
       .order('cognome'),
     // Riga breve vicino al form dei bambini (specs/07, #397). Se la lettura
     // non riesce la riga manca, ma la pagina funziona.
-    calcolaPrezziESezioni(supabase).catch(() => null),
+    calcolaPrezziESezioni(supabase).catch((errore) => {
+      console.error('Allarme prezzi e sezioni non calcolato:', errore instanceof Error ? errore.message : errore);
+      return null;
+    }),
   ]);
 
   const tuttiBambini = bambini ?? [];
