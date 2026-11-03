@@ -53,11 +53,11 @@ Quando l'admin crea un bambino scegliendo la sezione "Girasoli"
 Allora il bambino e la sua riga di costi vengono creati insieme, in
 un'unica operazione
 E la riga di costi contiene la retta del tipo della sezione, il buono pasto,
-la marca da bollo e i prezzi dell'abbonamento pre-asilo e post-asilo
-dei "Prezzi"; pre-asilo e post-asilo non sono richiesti; i gettoni non
-vengono copiati (PRZ-07)
-E aprendo la scheda del bambino, la sezione "Costi" mostra già questi valori
-come salvati
+la marca da bollo, i prezzi dell'abbonamento pre-asilo e post-asilo e i
+prezzi dei gettoni pre-asilo e post-asilo dei "Prezzi"; pre-asilo e
+post-asilo non sono richiesti (PRZ-07, COS-12)
+E aprendo la scheda del bambino, le sezioni economiche mostrano già questi
+valori come salvati
 
 ## Scenario: creare un bambino senza sezione o in una sezione senza tipo
 **ID AMM-04**

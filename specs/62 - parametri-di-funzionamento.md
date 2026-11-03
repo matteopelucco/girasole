@@ -170,10 +170,9 @@ E che la sezione "Girasoli" ha tipo Primavera
 Quando l'admin crea un bambino nella sezione "Girasoli" (specs/50)
 Allora il bambino nasce con la riga costi già salvata: retta 200,00 (la
 retta del tipo della sezione), buono pasto 6,00, marca da bollo 2,00,
-prezzo pre-asilo 70,00, prezzo post-asilo 70,00, pre e post asilo non
-richiesti, email vuota
+prezzo pre-asilo 70,00, prezzo post-asilo 70,00, gettone pre-asilo 7,00,
+gettone post-asilo 7,00, pre e post asilo non richiesti, email vuota
 E con una sezione di tipo Materna la retta è 160,00
-E i gettoni non entrano nei costi del bambino
 
 ## Scenario: bambino creato senza sezione, o in una sezione senza tipo
 **ID PRZ-08**
@@ -219,8 +218,10 @@ cancellare quella esistente
 - I valori non vengono storicizzati: non resta traccia dei prezzi vecchi.
 - L'allarme per prezzi mancanti e sezioni senza tipo (#397) è in
   [07 - allarmi.md](07%20-%20allarmi.md).
-- Fuori ambito: uso del
-  gettone nelle presenze e nelle rette (#398-#400); storicizzazione.
+- I gettoni di "Prezzi" si copiano nei costi del bambino come gli altri
+  prezzi (#398, COS-12 in specs/55).
+- Fuori ambito: uso del gettone nelle presenze e nelle rette (#399-#400);
+  storicizzazione.
 - La sezione "Parametri delle funzionalità" (componente
   `components/ParametriFunzionalita.tsx`) in futuro elencherà i parametri in
   tabella (nome + valore in un campo modificabile); l'admin non può aggiungerne

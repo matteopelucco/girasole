@@ -105,9 +105,10 @@ della maestra, `5x` amministrazione.
   (admin) di profili orari settimanali e loro assegnazione al
   personale, che può consultare il proprio in sola lettura
   (`/dashboard/profilo-orario`)
-- [55 - costi-bambino.md](55%20-%20costi-bambino.md) — sezione "Costi"
-  sulla scheda bambino: prezzo retta, prezzo buono pasto, abbonamento
-  pre-asilo/post-asilo, email di promemoria — primo passo di Fase 2
+- [55 - costi-bambino.md](55%20-%20costi-bambino.md) — costi
+  sulla scheda bambino (sezioni Retta e pasti, Pre-asilo, Post-asilo,
+  Comunicazioni): prezzo retta, buono pasto, abbonamento mensile
+  pre-asilo/post-asilo, prezzo dei gettoni, email di promemoria — primo passo di Fase 2
   (rette e pagamenti); prezzi proposti da "Prezzi" (62), valori non validi
   rifiutati, costi già salvati mai toccati da cambi di prezzo/tipo/sezione
 - [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md) —
