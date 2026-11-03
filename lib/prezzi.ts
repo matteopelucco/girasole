@@ -93,3 +93,32 @@ export type ColonnaPrezzo = (typeof CAMPI_PREZZI)[number]['colonna'];
 export type Prezzi = Record<ColonnaPrezzo, number>;
 
 export const MESSAGGIO_CONCORRENZA = 'I prezzi sono stati modificati da un altro utente: ricarica la pagina e riprova';
+
+// Nome leggibile del prezzo, senza il simbolo dell'euro (es. "Retta Materna").
+export function nomePrezzo(colonna: ColonnaPrezzo): string {
+  const campo = CAMPI_PREZZI.find((c) => c.colonna === colonna);
+  return (campo?.etichetta ?? colonna).replace(/\s*\(€\)\s*$/, '');
+}
+
+export type EsitoPrezziESezioni = {
+  prezziMancanti: ColonnaPrezzo[];
+  sezioniSenzaTipo: { id: string; nome: string }[];
+  daSistemare: boolean;
+};
+
+// Allarme "Prezzi o tipi di sezione da completare" (specs/07, issue #397).
+// Un prezzo nullo o assente (o la riga intera assente) è mancante; 0 è un
+// valore valido. Una sezione attiva senza un tipo valido è senza tipo; le
+// sezioni non attive si ignorano. Logica pura.
+export function valutaPrezziESezioni(
+  prezzi: Partial<Record<ColonnaPrezzo, number | null | undefined>> | null | undefined,
+  sezioni: { id: string; nome: string; tipo?: string | null; attiva?: boolean }[]
+): EsitoPrezziESezioni {
+  const prezziMancanti = CAMPI_PREZZI.map((c) => c.colonna).filter(
+    (colonna) => prezzi?.[colonna] === null || prezzi?.[colonna] === undefined
+  );
+  const sezioniSenzaTipo = sezioni
+    .filter((s) => s.attiva !== false && s.tipo !== 'materna' && s.tipo !== 'primavera')
+    .map(({ id, nome }) => ({ id, nome }));
+  return { prezziMancanti, sezioniSenzaTipo, daSistemare: prezziMancanti.length > 0 || sezioniSenzaTipo.length > 0 };
+}
