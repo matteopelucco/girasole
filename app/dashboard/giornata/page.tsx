@@ -35,7 +35,9 @@ type RigaCopertura = {
 // funzione SQL di sola lettura, mai importi). Se la chiamata non riesce la
 // pagina funziona lo stesso, senza le scritte.
 async function caricaCoperture(supabase: Awaited<ReturnType<typeof requireStaff>>['supabase'], data: string) {
-  const { data: righe } = await supabase.rpc('copertura_pre_post_asilo', { p_data: data });
+  const { data: righe, error } = await supabase.rpc('copertura_pre_post_asilo', { p_data: data });
+  // Senza coperture la pagina funziona lo stesso, senza scritte: resta il log.
+  if (error) console.error('Copertura pre/post-asilo non letta:', error.code);
   return new Map<string, CoperturaBambino>(
     ((righe ?? []) as RigaCopertura[]).map((r) => [
       r.bambino_id,
