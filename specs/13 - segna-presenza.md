@@ -188,7 +188,166 @@ ricevuto dal browser: la richiesta viene rifiutata con un errore in italiano
 E nel database non viene scritto nulla: dopo aver ricaricato la pagina il
 bambino resta "presente" senza pre-asilo né post-asilo
 
+## Scenario: pre/post-asilo coperto dall'abbonamento mostra "Già pagato con l'abbonamento"
+**ID GET-01**
+Dato che un bambino ha l'abbonamento mensile pre-asilo attivo (specs/55)
+E che sono su "Presenze e pasti" per una data in cui sono ammesse modifiche
+Quando premo "Pre-asilo" sul suo nome
+Allora l'indicatore pre-asilo si attiva (come da scenari precedenti)
+E nella sezione "Presenza" della card compare la scritta "Già pagato con
+l'abbonamento" accanto al pre-asilo
+E non compare nessun gettone e nessuna animazione
+E lo stesso vale per il post-asilo con l'abbonamento mensile post-asilo
+
+## Scenario: pre/post-asilo non coperto mostra il gettone e "Da addebitare nella prossima retta"
+**ID GET-02**
+Dato che un bambino non ha l'abbonamento mensile pre-asilo
+Quando premo "Pre-asilo" sul suo nome
+Allora l'indicatore si attiva e compare un gettone con la scritta "Da
+addebitare nella prossima retta"
+E il gettone compie la sua animazione una sola volta e poi resta fermo
+E lo stesso vale per il post-asilo senza abbonamento post-asilo
+
+## Scenario: pre e post-asilo sono valutati separatamente
+**ID GET-03**
+Dato che un bambino ha solo l'abbonamento pre-asilo
+Quando attivo sia "Pre-asilo" sia "Post-asilo" nello stesso giorno
+Allora il pre-asilo mostra "Già pagato con l'abbonamento" senza gettone
+E il post-asilo mostra il gettone e "Da addebitare nella prossima retta"
+E l'abbonamento di una voce non copre mai l'altra
+
+## Scenario: togliere il pre/post-asilo fa sparire scritta e gettone
+**ID GET-04**
+Dato che il pre-asilo (o il post-asilo) è attivo e mostra la scritta
+Quando ripremo "Pre-asilo" (o "Post-asilo")
+Allora l'indicatore si disattiva e la scritta (e l'eventuale gettone) di
+quella voce spariscono
+E l'altra voce, se attiva, non cambia
+
+## Scenario: dopo il ricaricamento le scritte restano e l'animazione non riparte
+**ID GET-05**
+Dato che un pre/post-asilo attivo mostra "Da addebitare nella prossima
+retta" (o "Già pagato con l'abbonamento")
+Quando ricarico la pagina
+Allora la scritta è ancora lì, calcolata dai dati e non da quanto è
+successo prima nella pagina
+E il gettone è già fermo: l'animazione non riparte
+E non riparte nemmeno quando una voce diversa dello stesso bambino (o
+un altro bambino) viene modificata e la schermata si aggiorna
+
+## Scenario: con "riduci movimento" il gettone non si anima
+**ID GET-06**
+Dato che il sistema dell'utente ha attiva la preferenza
+`prefers-reduced-motion: reduce`
+Quando attivo un pre/post-asilo non coperto
+Allora il gettone compare già fermo, senza animazione
+E la scritta "Da addebitare nella prossima retta" è presente come negli
+altri casi (il significato non dipende dall'animazione)
+
+## Scenario: nella schermata presenze non compare nessun importo
+**ID GET-07**
+Dato che sono admin, maestra o assistente su "Presenze e pasti"
+Quando guardo le card con pre/post-asilo coperti e non coperti
+Allora non vedo prezzi, totali, importi del gettone né dell'abbonamento,
+nemmeno nell'avviso di GET-12
+E vedo solo le due scritte "Già pagato con l'abbonamento" e "Da addebitare
+nella prossima retta"
+E questo vale anche per l'admin: i soldi si calcolano solo nella retta
+(specs/56)
+
+## Scenario: maestra e assistente sanno solo "coperto / non coperto"
+**ID GET-08**
+Dato che sono autenticata come maestra o assistente (che non leggono
+`costi_bambini`, specs/03 e specs/55)
+Quando segno un pre/post-asilo sui bambini delle mie sezioni
+Allora vedo la scritta giusta (coperto / da addebitare) per ogni voce
+E la risposta del server contiene solo il sì/no per bambino e voce, mai
+prezzi, flag o altri dati di `costi_bambini`
+E per un bambino di un'altra sezione non ottengo nessuna risposta: il sì/no
+vale solo per i bambini che posso già vedere
+
+## Scenario: l'admin vede le stesse scritte
+**ID GET-09**
+Dato che sono autenticato come admin
+Quando segno un pre/post-asilo su qualunque bambino e data ammessa
+Allora vedo le stesse scritte e lo stesso gettone di maestra e assistente,
+senza importi (GET-07)
+
+## Scenario: il genitore non vede nulla di questo
+**ID GET-10**
+Dato che sono autenticato come genitore
+Quando uso l'app
+Allora non vedo la schermata delle presenze, né le scritte, né il gettone
+(la lettura delle presenze del proprio figlio è fuori scope UI, specs/03)
+
+## Scenario: la copertura segue il mese della presenza
+**ID GET-11**
+Dato che il bambino ha l'abbonamento pre-asilo e la data è nel mese M
+Quando guardo una presenza pre-asilo di quel mese
+Allora è "Già pagato con l'abbonamento" per tutte le date di M (mese
+solare), non solo da quando l'abbonamento è stato spuntato
+E se la retta del mese M è già stata inviata (specs/56), conta quello che
+è stato addebitato in quella retta: la voce pre-asilo (o post-asilo) c'era
+oppure no; il flag attuale in `costi_bambini` si usa solo se la retta di M
+non è ancora inviata
+
+## Scenario: avviso al salvataggio se il gettone non entrerà più in retta
+**ID GET-12**
+Dato che la retta del mese successivo a quello della presenza (dove
+andrebbe il gettone) è già stata inviata (specs/56)
+E il bambino non è coperto per quella voce
+Quando salvo (attivo) un pre/post-asilo su quella data
+Allora la presenza viene salvata comunque
+E compare nella card un avviso senza importi: "Questo gettone non entrerà
+più in retta: l'admin lo gestirà con crediti e debiti."
+E l'avviso non compare se la presenza è coperta, se la retta successiva non
+è ancora inviata, o se tolgo il pre/post-asilo
+E l'avviso si rivede ricaricando la pagina finché la condizione dura
+
+## Scenario: giorno di chiusura
+**ID GET-13**
+Dato che la data è un giorno di chiusura o un fine settimana (specs/53)
+Quando apro "Presenze e pasti" per quella data
+Allora non ci sono pulsanti Pre-asilo e Post-asilo (nessuna scrittura
+possibile, per nessun ruolo)
+E non compare nessuna scritta "Già pagato…" / "Da addebitare…" e nessun
+gettone, nemmeno animato
+E nessuna presenza di quel giorno può generare un gettone
+
+## Scenario: data in sola lettura mostra le scritte senza animazione
+**ID GET-14**
+Dato che sono maestra o assistente su una data diversa da oggi, con un
+pre/post-asilo già registrato
+Quando apro la schermata
+Allora vedo la scritta (coperto / da addebitare) in sola lettura
+E il gettone è già fermo (nessuna animazione, perché nessuna azione è
+stata appena compiuta)
+
+## Scenario: la schermata è accessibile
+**ID GET-15**
+Dato che la schermata mostra scritte e gettoni
+Quando eseguo il controllo di accessibilità
+Allora non ci sono violazioni gravi: il gettone è decorativo (nascosto agli
+screen reader) e il significato è nella scritta
+
 ## Regole
+- **Gettone e copertura** (issue #399, parte di #401): per ogni
+  pre/post-asilo attivo la card dice se è coperto dall'abbonamento mensile
+  della stessa voce (GET-01) o da addebitare come gettone nella retta del
+  mese successivo (GET-02). Pre e post sono voci separate (GET-03). Mai
+  importi (GET-07). Lo stato si calcola dai dati esistenti (`costi_bambini`,
+  `comunicazioni_retta`), senza colonne nuove; il gettone animato è solo
+  CSS, si ferma dopo un ciclo e non si salva (GET-05, GET-06).
+- Poiché maestra e assistente non leggono `costi_bambini`, il sì/no arriva
+  da una funzione SQL di sola lettura (con il suo `GRANT` minimo nella
+  stessa migration) che, per i bambini visibili al chiamante, restituisce
+  solo coperto / non coperto per pre e post (GET-08). L'accesso va
+  controllato con il `security-reviewer`.
+- Scelte di dettaglio: l'avviso di GET-12 è mostrato a ogni ruolo che
+  salva, senza importi, e non blocca il salvataggio; la correzione economica
+  la fa l'admin con i crediti/debiti
+  ([58](58%20-%20crediti-debiti-bambino.md)). Se la retta del mese della
+  presenza è già inviata, vale cosa fu addebitato (GET-11).
 - Le azioni di scrittura della presenza che dipendono dallo stato attuale
   (Pre-asilo, Post-asilo, Salva nota) non si fidano mai della riga di
   presenza ricevuta dal browser: la rileggono dal database con la sessione

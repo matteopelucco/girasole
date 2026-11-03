@@ -173,6 +173,11 @@ non c'è nessun credito/debito quel mese) — stesso pattern di
   successivo) non compare in nessuna colonna finché non si arriva a
   quel mese — non c'è una vista d'insieme di "tutti i crediti/debiti in
   attesa di tutti i bambini" in questa fase (vedi Fuori scope).
+- Un gettone pre/post-asilo nato dopo l'invio della retta del mese in cui
+  doveva entrare non viene più addebitato da solo: la schermata presenze
+  avvisa al salvataggio (GET-12 in
+  [13 - segna-presenza.md](13%20-%20segna-presenza.md)) e l'admin lo
+  recupera con un debito da questa scheda.
 - Fuori scope in questa fase: più di un credito/debito "da conteggiare"
   sullo stesso bambino e mese contemporaneamente (vedi indice unico
   sopra — bisogna modificare o eliminare quello esistente), una vista
