@@ -377,6 +377,103 @@ E i dati sono gli stessi della pagina "Allarmi" (una sola funzione)
 E se l'allarme non è attivo il banner non compare, e maestra e assistente
 non lo vedono mai
 
+## Scenario: prezzi non completi o sezioni senza tipo — allarme per l'admin nella pagina Allarmi
+Dato che sono autenticato come admin
+E almeno una di queste condizioni è vera: uno degli otto prezzi di "Prezzi"
+([62 - parametri-di-funzionamento.md](62%20-%20parametri-di-funzionamento.md))
+è mancante (valore nullo o riga dei prezzi assente), oppure esiste almeno una
+sezione attiva senza tipo (Materna o Primavera, vedi PRZ-08 e COS-03 in
+[55 - costi-bambino.md](55%20-%20costi-bambino.md))
+Quando apro la pagina "Allarmi"
+Allora vedo l'allarme "Prezzi o tipi di sezione da completare", che elenca
+per nome i prezzi mancanti (per esempio "Retta Materna") e/o le sezioni
+senza tipo (per nome)
+E ha un link alla sezione "Prezzi" di `/admin/parametri-funzionamento` se
+manca almeno un prezzo, e un link a "Sezioni e bambini" (`/admin`) se manca
+il tipo di almeno una sezione
+E conta 1 nel numero della campanella, qualunque sia il numero di elementi
+mancanti
+
+## Scenario: sezioni senza tipo — l'allarme scatta anche con tutti i prezzi impostati
+Dato che sono autenticato come admin
+E tutti gli otto prezzi sono impostati (è il caso normale: dopo la migration
+i prezzi sono sempre valorizzati)
+E esiste almeno una sezione attiva senza tipo (le sezioni esistenti prima di
+questa funzione restano senza tipo)
+Quando apro la pagina "Allarmi" o la dashboard
+Allora vedo l'allarme con l'elenco delle sole sezioni senza tipo, senza
+prezzi mancanti
+E ogni sezione elencata ha un link a "Sezioni e bambini" (`/admin`) dove
+posso impostarne il tipo
+E non c'è il link a "Prezzi", perché nessun prezzo manca
+
+## Scenario: prezzi non completi o sezioni senza tipo — banner in dashboard per l'admin
+Dato che sono autenticato come admin
+E l'allarme "Prezzi o tipi di sezione da completare" è attivo
+Quando apro la dashboard
+Allora vedo un banner di allarme con lo stesso elenco di prezzi mancanti e/o
+sezioni senza tipo e gli stessi link della pagina "Allarmi"
+E i dati sono gli stessi della pagina "Allarmi" (una sola funzione)
+
+## Scenario: prezzo nullo o riga dei prezzi assente contano come mancanti
+Dato che la funzione che valuta i prezzi riceve un prezzo nullo, oppure
+nessuna riga di prezzi
+Quando calcola l'esito
+Allora i prezzi nulli sono elencati come mancanti
+E se la riga manca del tutto sono elencati tutti e otto
+E un prezzo pari a 0 è un valore valido e non è mancante
+
+## Scenario: prezzi non completi o sezioni senza tipo — voce nell'email giornaliera dei controlli
+Dato che il job pianificato gira (vedi gli scenari sull'email di riepilogo)
+E c'è almeno un prezzo mancante o una sezione attiva senza tipo
+Quando viene costruito il riepilogo
+Allora il controllo "Prezzi e tipi di sezione" è "da sistemare", indica quali
+prezzi mancano e quali sezioni non hanno il tipo, e chiede di completarli in
+"Prezzi" (Parametri di funzionamento) e in "Sezioni e bambini"
+E il controllo fa scattare l'email, anche se tutti gli altri sono a posto
+E l'email non contiene link all'app
+E non dipende dall'orario né dal giorno di chiusura (si valuta in ogni
+giorno in cui il job gira)
+
+## Scenario: prezzi e sezioni a posto — nessuna email per questo controllo
+Dato che il job gira, tutti i prezzi sono impostati e tutte le sezioni attive
+hanno un tipo
+Quando viene costruito il riepilogo
+Allora il controllo "Prezzi e tipi di sezione" compare con stato "ok"
+E non fa scattare l'email; se nessun altro controllo è da sistemare non parte
+nessuna email (regola "nessuna email se tutto è a posto")
+
+## Scenario: prezzi non completi — riga breve vicino al form di creazione in "Sezioni e bambini"
+Dato che sono autenticato come admin
+E c'è almeno un prezzo mancante o una sezione attiva senza tipo
+Quando apro "Sezioni e bambini" (`/admin`)
+Allora vedo, vicino al form di creazione di un bambino, una riga breve che
+avvisa che i prezzi o i tipi delle sezioni non sono completi e che la scheda
+dei nuovi bambini potrebbe restare senza costi, con un link a "Prezzi"
+(se manca un prezzo)
+E se è la sezione a non avere il tipo, la riga lo dice con il nome della
+sezione, senza link a "Prezzi"
+E il form resta utilizzabile: la riga non blocca la creazione
+
+## Scenario: tutto completo — l'allarme prezzi sparisce ovunque
+Dato che l'allarme "Prezzi o tipi di sezione da completare" è attivo
+Quando tutti gli otto prezzi sono impostati e ogni sezione attiva ha un tipo
+Allora l'allarme non compare più nella pagina "Allarmi", nel banner della
+dashboard e nella riga vicino al form di "Sezioni e bambini"
+E la campanella non lo conta
+E nell'email del job il controllo è "ok"
+E se un tipo di sezione torna vuoto, o una sezione senza tipo viene creata,
+l'allarme torna attivo
+
+## Scenario: maestra, assistente e genitore non vedono l'allarme prezzi
+Dato che l'allarme "Prezzi o tipi di sezione da completare" sarebbe attivo
+Quando apro l'app come maestra o assistente
+Allora non vedo né il banner né la voce nella pagina "Allarmi", la
+campanella non lo conta e non vedo la riga vicino al form (che non
+possono comunque aprire)
+E per me il calcolo non parte e non si leggono i prezzi
+E il genitore non ha la campanella e non vede nulla di tutto questo
+
 ## Regole
 - Ogni maestra/assistente vede il proprio banner presenze/pasti
   calcolato solo sulle proprie sezioni assegnate (stessa visibilità RLS
@@ -458,6 +555,9 @@ non lo vedono mai
      non ancora avvisati.
   5. **Ore di lavoro**: la settimana di riferimento è confermata da ogni
      utente abilitato (una riga per utente da sistemare).
+  6. **Prezzi e tipi di sezione**: tutti i prezzi sono impostati e ogni
+     sezione attiva ha un tipo (vedi la regola "Prezzi e tipi di sezione
+     da completare").
   Gli stati sono: "ok", "da sistemare", "non applicabile oggi" (con il
   motivo: prima delle 10:00, giorno di chiusura, nessun bambino attivo,
   prima del giorno 3) e "non ancora controllato". L'email parte solo se
@@ -511,6 +611,21 @@ non lo vedono mai
   registro. Il cron legge `invii_rojac` con la service_role key (migration
   0066: solo SELECT, nessuna policy nuova, nessun privilegio per anon o
   authenticated).
+- **Prezzi e tipi di sezione da completare** (issue #397): logica pura in
+  `lib/` (con unit test) che riceve la riga dei prezzi (anche assente) e le
+  sezioni attive e restituisce i prezzi mancanti (nulli o riga assente) e le
+  sezioni senza tipo. Dalla migration 0067 i prezzi sono NOT NULL e il form
+  non accetta valori vuoti, quindi in pratica l'allarme scatta per le sezioni
+  senza tipo (le sezioni esistenti restano senza tipo); la funzione tratta
+  comunque null e riga mancante come mancanti, per non perdere l'allarme in
+  silenzio. Un prezzo 0 è valido. L'allarme è una sola voce, con una riga
+  per ogni elemento mancante, conta 1 nella campanella ed è solo per
+  l'admin (lettura con la sessione dell'admin, RLS di PRZ-10: nessun dato
+  letto per gli altri ruoli). Banner, pagina "Allarmi" e riga nel form
+  prendono la voce dallo stesso elenco di `caricaAllarmiCorrenti`; il cron
+  la calcola con la service_role key e la riporta come controllo 6
+  dell'email. Non serve nessuna riga in `allarmi_inviati`: vale
+  l'idempotenza per giorno dell'email di riepilogo.
 - Il banner "mail mensile a Rojac non inviata" in dashboard (solo admin)
   prende la voce `rojac-non-inviata` dall'elenco di `caricaAllarmiCorrenti`,
   come il banner delle rette.

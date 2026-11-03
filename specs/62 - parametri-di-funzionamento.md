@@ -217,7 +217,9 @@ cancellare quella esistente
 - Il salvataggio è atomico (tutto o niente) e controlla la concorrenza
   (PRZ-09): rifiuta chi salva partendo da dati non più aggiornati.
 - I valori non vengono storicizzati: non resta traccia dei prezzi vecchi.
-- Fuori ambito: allarme quando i prezzi non sono impostati (#397); uso del
+- L'allarme per prezzi mancanti e sezioni senza tipo (#397) è in
+  [07 - allarmi.md](07%20-%20allarmi.md).
+- Fuori ambito: uso del
   gettone nelle presenze e nelle rette (#398-#400); storicizzazione.
 - La sezione "Parametri delle funzionalità" (componente
   `components/ParametriFunzionalita.tsx`) in futuro elencherà i parametri in
