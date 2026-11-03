@@ -172,12 +172,15 @@ insert into public.bambini_genitori (bambino_id, genitore_id) values
 
 -- Costi (upsert: un eventuale trigger può aver già creato la riga). B2 resta
 -- volutamente senza costi: si cancella l'eventuale riga di default.
-insert into public.costi_bambini (bambino_id, pre_asilo_richiesto, post_asilo_richiesto) values
-  ('c0000000-0000-0000-0000-000000000001', true, false),
-  ('c0000000-0000-0000-0000-000000000003', true, true),
-  ('c0000000-0000-0000-0000-000000000004', true, false),
-  ('c0000000-0000-0000-0000-000000000005', false, false),
-  ('c0000000-0000-0000-0000-000000000006', true, false)
+-- Gli importi non hanno più default (0067, 0069): si scrivono tutti.
+insert into public.costi_bambini
+  (bambino_id, pre_asilo_richiesto, post_asilo_richiesto, prezzo_buono_pasto,
+   prezzo_marca_da_bollo, prezzo_pre_asilo, prezzo_post_asilo, gettone_pre_asilo, gettone_post_asilo) values
+  ('c0000000-0000-0000-0000-000000000001', true, false, 6, 2, 70, 70, 7, 7),
+  ('c0000000-0000-0000-0000-000000000003', true, true, 6, 2, 70, 70, 7, 7),
+  ('c0000000-0000-0000-0000-000000000004', true, false, 6, 2, 70, 70, 7, 7),
+  ('c0000000-0000-0000-0000-000000000005', false, false, 6, 2, 70, 70, 7, 7),
+  ('c0000000-0000-0000-0000-000000000006', true, false, 6, 2, 70, 70, 7, 7)
 on conflict (bambino_id) do update
   set pre_asilo_richiesto = excluded.pre_asilo_richiesto,
       post_asilo_richiesto = excluded.post_asilo_richiesto;
