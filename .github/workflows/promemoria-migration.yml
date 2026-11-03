@@ -49,11 +49,11 @@ jobs:
 
           Il merge su `main` fa il deploy su Vercel **da solo**, ma le migration in produzione **non si applicano da sole** (ADR 0005). Finché non le applichi, il codice nuovo può chiamare funzioni o colonne che in produzione non esistono.
 
-          **Subito dopo il merge, Matteo, a mano**, con `--project-ref` esplicito:
+          **Subito dopo il merge, Matteo, a mano**, con `--remote=<ref>` esplicito (senza `--remote=` il comando lavora sul database locale, non sulla produzione):
 
-          1. `supabase db push --project-ref <ref-produzione> --dry-run` — deve elencare solo le migration di questa PR
-          2. `supabase db push --project-ref <ref-produzione>`
-          3. `supabase migration list --project-ref <ref-produzione>` — Local e Remote devono coincidere
+          1. `supabase db push --remote=<ref-produzione> --dry-run` — deve elencare solo le migration di questa PR
+          2. `supabase db push --remote=<ref-produzione>`
+          3. `supabase migration list --remote=<ref-produzione>` — Local e Remote devono coincidere
 
           Mai dal SQL Editor: lo storico delle migration non si aggiorna e `db push`/`--dry-run` non servono più a scoprire cosa manca. Dettagli: `docs/sviluppo-dettagli.md`, «Migration in produzione dopo il merge».
 

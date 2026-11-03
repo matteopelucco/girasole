@@ -22,9 +22,9 @@ sia su Vercel sia su Supabase (da ottobre 2026, prima free tier).
   campi altrove; niente `lucide-react` né `@base-ui/react` (icone da
   `components/icone.tsx`). Guida in `docs/sviluppo-dettagli.md`, ADR 0011.
 - Schema: file numerati in `supabase/migrations/`, mai dashboard.
-  Applicazione: in locale `supabase db push --project-ref <ref-test>`, in
+  Applicazione: in locale `supabase db push --remote=<ref-test>`, in
   test il reset di CI, in **produzione solo Matteo, a mano**, con
-  `--project-ref` esplicito, subito dopo il merge di una PR con migration
+  `--remote=<ref>` esplicito (senza `--remote` la CLI 3 lavora in locale), subito dopo il merge di una PR con migration
   (prima `--dry-run`, mai dal SQL Editor: vedi `docs/sviluppo-dettagli.md`).
   Mai link permanenti né automazioni verso la produzione.
 - RLS: difesa primaria; ogni query rispetta i confini di ruolo (admin /

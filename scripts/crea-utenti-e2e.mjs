@@ -2,7 +2,7 @@
 // Girasole — ricrea gli account di test E2E_* dopo un `supabase db reset`.
 //
 // Perché esiste (A24, docs/programma-attivita.md): il reset del DB di
-// test in CI (A23, `supabase db reset --linked ...`) riapplica le
+// test in CI (A23, `supabase db reset --remote=<ref> ...`) riapplica le
 // migration e il seed, ma azzera anche `auth.users` — non solo lo
 // schema `public`. Gli account E2E_* usati da `e2e/auth.setup.ts` non
 // sono più creati a mano una tantum nella dashboard Authentication (lì

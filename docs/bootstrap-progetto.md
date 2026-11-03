@@ -129,13 +129,13 @@ best practice** e scrivilo nella PR: non bloccare il lavoro.
 - **Migration**: solo file numerati in `supabase/migrations/`, mai modifiche dal
   dashboard o dal SQL Editor. Una migration già applicata **non si modifica**:
   se ne scrive una nuova. Ogni migration apre con un'intestazione standard che
-  dice come si applica (test con `--project-ref <ref-test>`, produzione solo io,
+  dice come si applica (test con `--remote=<ref-test>`, produzione solo io,
   a mano) e vieta SQL Editor e automazioni. Non copiare l'intestazione
   dell'ultima migration.
 - **Nessun link permanente né automazione verso la produzione.**
   `supabase link` resta solo sul progetto di test; ogni comando ha
-  `--project-ref` esplicito. In produzione le migration le applico **io, a
-  mano, subito dopo il merge**: prima `supabase db push --project-ref
+  `--remote=<ref>` esplicito. In produzione le migration le applico **io, a
+  mano, subito dopo il merge**: prima `supabase db push --remote=
   <ref-produzione> --dry-run` (deve elencare solo le migration della PR), poi il
   push vero, poi `supabase migration list` (Local e Remote coincidono) e un
   dry-run finale pulito. Mai dal SQL Editor: sfasa lo storico delle migration.
@@ -360,7 +360,7 @@ statico ──► e2e ──► verifica
   progetto di test).
 - **`e2e`** (`needs: statico`, parte solo se serve; timeout ~25 min, solo
   esecuzione): build di produzione (serve a `next start`) → Chromium → **reset
-  DB di test** (`supabase db reset --linked --project-ref
+  DB di test** (`supabase db reset --remote=
   ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes`, token in
   `SUPABASE_ACCESS_TOKEN`) → pgTAP (`supabase test db`) → grant-check →
   rls-check → ricreazione degli account `E2E_*` con la Admin API (il reset
@@ -535,7 +535,7 @@ eseguirli tu)**
 5. `bash scripts/setup-board-labels.sh`; creare il Project con le colonne e le
    automazioni native.
 6. `supabase link` **solo** sul progetto di test; primo `supabase db push
-   --project-ref <ref-test>`.
+   --remote=<ref-test>`.
 7. Attivare Dependabot e gli alert di sicurezza del repo; impostare un budget con
    alert nella console Anthropic.
 

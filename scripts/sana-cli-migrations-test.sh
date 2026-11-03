@@ -17,8 +17,8 @@ set -euo pipefail
 VERSIONI=$(printf '%04d ' $(seq 1 51))
 
 echo "Marco come 'applied' le migration: $VERSIONI"
-supabase migration repair --status applied $VERSIONI --linked
+supabase migration repair --status applied $VERSIONI --remote=aehukkmiwgddsilodxzz
 
 echo
 echo "Verifica finale:"
-supabase migration list
+supabase migration list --remote=aehukkmiwgddsilodxzz

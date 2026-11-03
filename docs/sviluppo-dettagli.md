@@ -31,12 +31,12 @@ Contesto operativo per Claude Code su questo progetto.
 - Ogni nuova tabella o modifica allo schema va in `supabase/migrations/` come
   nuovo file numerato, mai modificata a mano dalla dashboard Supabase in
   produzione. **Anche l'applicazione di una migration non passa più dal SQL
-  Editor** (A22): in locale si usa `supabase db push --project-ref <ref-test>`
+  Editor** (A22): in locale si usa `supabase db push --remote=<ref-test>`
   (esplicito e incrementale, mai un `supabase link` implicito su cui contare
   a occhi chiusi); in test l'applicazione avviene tramite il reset completo
-  di CI (A23, `supabase db reset --project-ref <ref-test>`, prima della
+  di CI (A23, `supabase db reset --remote=<ref-test>`, prima della
   suite e2e — vedi sotto); in produzione resta manuale e deliberato, solo
-  Matteo, con `supabase db push --project-ref <ref-produzione>` esplicito
+  Matteo, con `supabase db push --remote=<ref-produzione>` esplicito
   sul singolo comando dopo il merge — mai un link permanente verso il ref
   di produzione, mai un'automazione CI/agente verso la produzione.
 - **Intestazione delle nuove migration** (issue #204): ogni nuova migration
@@ -45,8 +45,8 @@ Contesto operativo per Claude Code su questo progetto.
 
   ```sql
   -- Girasole — <titolo> (specs/NN). Applicazione: in test con
-  -- `supabase db push --project-ref <ref-test>`; in produzione solo Matteo,
-  -- a mano, con `--project-ref` esplicito (mai SQL Editor, mai automazioni).
+  -- `supabase db push --remote=<ref-test>`; in produzione solo Matteo,
+  -- a mano, con `--remote=<ref>` esplicito (mai SQL Editor, mai automazioni).
   -- Non incollare questo file nel SQL Editor.
   ```
 
@@ -116,14 +116,23 @@ Contesto operativo per Claude Code su questo progetto.
   il workflow `.github/workflows/promemoria-migration.yml` pubblica (una
   sola volta per PR) un commento con questi passi. Non ha secret, non si collega a
   nessun database, non applica nulla: è solo un avviso.
+- **Supabase CLI 3 (3 novembre 2026, issue #410)**: in CI la versione è
+  fissata (`npm install -g supabase@3.0.0`) e si cambia solo con una PR
+  dedicata. Per `db push`, `db reset`, `test db`, `migration list` e
+  `migration repair` il progetto remoto si indica con `--remote=<ref>`, sempre
+  con il ref scritto (mai `--remote` da solo: userebbe il progetto collegato
+  con `supabase link`). **Senza `--remote` questi comandi lavorano sul database
+  locale**, non su test né produzione. `--linked` e `--project-ref` sono
+  deprecati (spariranno nella v4). `--yes` per i database remoti vale solo da
+  riga di comando o esportato nella shell, mai da `.env`.
 - **Procedura (solo Matteo, subito dopo il merge)**, sempre con
-  `--project-ref <ref-produzione>` esplicito:
-  1. `supabase db push --project-ref <ref-produzione> --dry-run`: elenca
+  `--remote=<ref-produzione>` esplicito:
+  1. `supabase db push --remote=<ref-produzione> --dry-run`: elenca
      cosa verrebbe applicato, senza modificare nulla. Deve elencare
      **solo** le migration della PR appena mergiata.
-  2. `supabase db push --project-ref <ref-produzione>`: le applica, in
+  2. `supabase db push --remote=<ref-produzione>`: le applica, in
      ordine di versione, e le registra nello storico.
-  3. `supabase migration list --project-ref <ref-produzione>`: Local e
+  3. `supabase migration list --remote=<ref-produzione>`: Local e
      Remote devono coincidere. Poi un dry-run finale deve rispondere
      «Remote database is up to date».
   4. Se la PR cambia anche il codice che usa la migration, provare la
@@ -138,8 +147,7 @@ Contesto operativo per Claude Code su questo progetto.
   dry-run elencava tutte e 59.
 - **Se qualcuno ha già applicato a mano** (storico fuori allineamento):
   prima verificare che lo schema contenga davvero quelle migration, poi
-  `supabase migration repair --status applied <versione> --project-ref
-  <ref-produzione>` (più versioni nello stesso comando). Il comando scrive
+  `supabase migration repair --status applied <versione> --remote=<ref-produzione>` (più versioni nello stesso comando). Il comando scrive
   solo nella tabella dello storico, non esegue le migration; si fida di chi
   lo lancia, quindi non va usato per «far sparire» una migration mancante.
   Chiudere con `migration list` e un dry-run pulito.
@@ -422,7 +430,7 @@ finché non risulta tutto verde.
 - pgTAP sul progetto di test è già installato nello schema `extensions`, che non è nel `search_path` della connessione di `pg_prove`: senza rimedio `plan()`/`is()`/`finish()` danno "function plan(integer) does not exist".
   Per questo ogni file, dopo `create extension if not exists pgtap with schema extensions`, legge dal catalogo lo schema di pgTAP e fa `set local search_path` (blocco `do` in testa a `profili_orari.test.sql`): copialo così com'è.
   Il login role temporaneo della CLI remota può non ereditare USAGE su quello schema: il file prova `set local role postgres` e stampa un `DIAG[...]` (ruolo, search_path, schema, USAGE, funzioni `plan`) nel log, utile se `plan()` non si risolve.
-- Non eseguire `supabase test db --linked` a mano: in CI gira nel job `e2e`, step "6a", subito dopo il reset del DB di test (stesso `--project-ref`, mai la produzione).
+- Non eseguire `supabase test db --remote=<ref-test>` a mano: in CI gira nel job `e2e`, step "6a", subito dopo il reset del DB di test (stesso `--remote=<ref>`, mai la produzione).
 - Esito: lo step è rosso se un `ok`/`is` fallisce; nel log del job le righe `not ok N - descrizione` con `Failed test` indicano quale asserzione e perché (atteso/ottenuto). Riga finale `Result: PASS`/`FAIL`.
 
 ## Repo pubblico — regole di sicurezza (non negoziabili)
@@ -481,7 +489,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   dubbio è codice: se gli SHA mancano o `git diff` fallisce, lo step non
   fallisce e la PR è classificata "codice" (CI completa, review eseguita).
 - **Il reset del DB di test prima della e2e (A23)** usa il Supabase CLI
-  (`supabase db reset --project-ref <ref-test>`, ref letto dalla
+  (`supabase db reset --remote=<ref-test>`, ref letto dalla
   repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret): riapplica
   tutte le migration da zero e poi lancia `supabase/seed.sql`, così ogni
   run parte da schema e seed noti. Il DB di test (`girasole_dev`) è
