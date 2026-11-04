@@ -42,7 +42,7 @@ begin
 end;
 $$;
 
-select plan(28);
+select plan(30);
 
 -- Helper (temporanei: spariscono con la transazione) ----------------------
 create function pg_temp.impersona(p_uid uuid) returns void
