@@ -204,3 +204,54 @@ export function gettoniMesePrecedente(args: {
     post: voce('post', costi.postAsiloRichiesto, costi.gettonePostAsilo),
   };
 }
+
+// --- Avvisi sui gettoni (issue #414: RET-19..RET-21, COS-13, PRZ-11) --------
+//
+// Sono avvisi, mai errori: non bloccano nessun salvataggio né invio.
+
+// Prezzo dell'abbonamento con cui confrontare i gettoni (RET-21): quello della
+// scheda del bambino se maggiore di 0, altrimenti quello di «Prezzi», altrimenti 0.
+export function prezzoAbbonamentoDiRiferimento(
+  scheda: number | null | undefined,
+  prezzi: number | null | undefined
+): number {
+  if (typeof scheda === 'number' && scheda > 0) return scheda;
+  if (typeof prezzi === 'number' && prezzi > 0) return prezzi;
+  return 0;
+}
+
+// Confronto stretto in centesimi interi, per non dipendere dai decimali binari.
+function centesimiDi(valore: number): number {
+  return Math.round(valore * 100);
+}
+
+// Avviso B (tabella «Rette», RET-19/RET-20): l'importo dei gettoni del mese è
+// strettamente maggiore dell'abbonamento di riferimento. Nessun avviso se
+// l'importo è 0, se l'abbonamento è attivo nel mese o se il riferimento è 0.
+export function avvisoGettoniSuperanoAbbonamento(args: {
+  importoGettoni: number;
+  abbonamentoAttivo: boolean;
+  prezzoAbbonamentoScheda: number | null | undefined;
+  prezzoAbbonamentoPrezzi: number | null | undefined;
+}): boolean {
+  if (args.abbonamentoAttivo || !(args.importoGettoni > 0)) return false;
+  const riferimento = prezzoAbbonamentoDiRiferimento(args.prezzoAbbonamentoScheda, args.prezzoAbbonamentoPrezzi);
+  if (riferimento <= 0) return false;
+  return centesimiDi(args.importoGettoni) > centesimiDi(riferimento);
+}
+
+// Avviso A (scheda del bambino e «Prezzi», COS-13/PRZ-11): il prezzo di un
+// gettone è strettamente maggiore di quello dell'abbonamento della stessa voce.
+export function avvisoGettoneSuperaAbbonamento(args: { prezzoGettone: number; prezzoAbbonamento: number }): boolean {
+  return centesimiDi(args.prezzoGettone) > centesimiDi(args.prezzoAbbonamento);
+}
+
+export const TESTO_AVVISO_GETTONE: Record<VocePrePost, string> = {
+  pre: "Il gettone costa più dell'abbonamento pre-asilo",
+  post: "Il gettone costa più dell'abbonamento post-asilo",
+};
+
+export const TESTO_AVVISO_GETTONI: Record<VocePrePost, string> = {
+  pre: "Gettoni oltre il prezzo dell'abbonamento pre-asilo",
+  post: "Gettoni oltre il prezzo dell'abbonamento post-asilo",
+};
