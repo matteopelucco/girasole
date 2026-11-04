@@ -55,6 +55,9 @@ import {
   CAMPI_PREZZI,
   nomePrezzo,
   valutaPrezziESezioni,
+  copertoDaAbbonamento,
+  statoGettone,
+  gettoneFuoriRetta,
 } from './prezzi';
 
 function centesimi(testo: string): number | null {
@@ -301,5 +304,69 @@ describe('nomePrezzo', () => {
     expect(nomePrezzo('retta_materna')).toBe('Retta Materna');
     expect(nomePrezzo('abbonamento_pre_asilo')).toBe('Abbonamento pre-asilo');
     expect(nomePrezzo('gettone_post_asilo')).toBe('Gettone post-asilo');
+  });
+});
+
+// Copertura del pre/post-asilo (specs/13, GET-01..03, GET-11, GET-12; #399).
+// Funzioni pure in lib/prezzi.ts. Flag attuale = abbonamento in costi_bambini;
+// rettaDelMese = snapshot di comunicazioni_retta se già inviata, altrimenti null.
+describe('copertoDaAbbonamento', () => {
+  it('GET-01: senza retta inviata vale il flag attuale (attivo)', () => {
+    expect(copertoDaAbbonamento({ voce: 'pre', flagAttuale: true, rettaDelMese: null })).toBe(true);
+    expect(copertoDaAbbonamento({ voce: 'post', flagAttuale: true, rettaDelMese: null })).toBe(true);
+  });
+
+  it('GET-02: senza retta inviata e senza abbonamento non è coperto', () => {
+    expect(copertoDaAbbonamento({ voce: 'pre', flagAttuale: false, rettaDelMese: null })).toBe(false);
+    expect(copertoDaAbbonamento({ voce: 'post', flagAttuale: false, rettaDelMese: null })).toBe(false);
+  });
+
+  it("GET-03: l'abbonamento di una voce non copre l'altra", () => {
+    expect(copertoDaAbbonamento({ voce: 'pre', flagAttuale: true, rettaDelMese: null })).toBe(true);
+    expect(copertoDaAbbonamento({ voce: 'post', flagAttuale: false, rettaDelMese: null })).toBe(false);
+  });
+
+  it('GET-11: con la retta inviata conta il costo addebitato, non il flag (flag acceso, voce a zero)', () => {
+    const retta = { costoPreAsilo: 0, costoPostAsilo: 70 };
+    expect(copertoDaAbbonamento({ voce: 'pre', flagAttuale: true, rettaDelMese: retta })).toBe(false);
+  });
+
+  it('GET-11: con la retta inviata conta il costo addebitato (flag spento, voce addebitata)', () => {
+    const retta = { costoPreAsilo: 0, costoPostAsilo: 70 };
+    expect(copertoDaAbbonamento({ voce: 'post', flagAttuale: false, rettaDelMese: retta })).toBe(true);
+  });
+
+  it('GET-11: pre e post usano ciascuno la propria voce della retta', () => {
+    const retta = { costoPreAsilo: 70, costoPostAsilo: 0 };
+    expect(copertoDaAbbonamento({ voce: 'pre', flagAttuale: false, rettaDelMese: retta })).toBe(true);
+    expect(copertoDaAbbonamento({ voce: 'post', flagAttuale: true, rettaDelMese: retta })).toBe(false);
+  });
+});
+
+describe('statoGettone', () => {
+  it('GET-01: coperto -> "coperto"', () => {
+    expect(statoGettone(true)).toBe('coperto');
+  });
+
+  it('GET-02: non coperto -> "da_addebitare"', () => {
+    expect(statoGettone(false)).toBe('da_addebitare');
+  });
+});
+
+describe('gettoneFuoriRetta', () => {
+  it('GET-12: attivo, non coperto e retta successiva inviata -> avviso', () => {
+    expect(gettoneFuoriRetta({ attivo: true, coperto: false, rettaSuccessivaInviata: true })).toBe(true);
+  });
+
+  it('GET-12: nessun avviso se coperto', () => {
+    expect(gettoneFuoriRetta({ attivo: true, coperto: true, rettaSuccessivaInviata: true })).toBe(false);
+  });
+
+  it('GET-12: nessun avviso se la retta successiva non è inviata', () => {
+    expect(gettoneFuoriRetta({ attivo: true, coperto: false, rettaSuccessivaInviata: false })).toBe(false);
+  });
+
+  it('GET-12: nessun avviso se il pre/post-asilo è stato tolto', () => {
+    expect(gettoneFuoriRetta({ attivo: false, coperto: false, rettaSuccessivaInviata: true })).toBe(false);
   });
 });

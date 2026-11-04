@@ -122,3 +122,37 @@ export function valutaPrezziESezioni(
     .map(({ id, nome }) => ({ id, nome }));
   return { prezziMancanti, sezioniSenzaTipo, daSistemare: prezziMancanti.length > 0 || sezioniSenzaTipo.length > 0 };
 }
+
+// --- Copertura del pre/post-asilo (specs/13, GET-01..GET-12, issue #399) -----
+
+export type VocePrePost = 'pre' | 'post';
+
+export type StatoGettone = 'coperto' | 'da_addebitare';
+
+// Il pre/post-asilo di una voce è "coperto" dall'abbonamento? Se la retta del
+// mese è già inviata conta cosa fu addebitato in quella retta (costo > 0); in
+// caso contrario il flag attuale di `costi_bambini`. Pre e post sono separati.
+// Stessa regola della funzione SQL `copertura_pre_post_asilo` (migration 0070).
+export function copertoDaAbbonamento(args: {
+  voce: VocePrePost;
+  flagAttuale: boolean;
+  rettaDelMese: { costoPreAsilo: number; costoPostAsilo: number } | null;
+}): boolean {
+  if (!args.rettaDelMese) return args.flagAttuale;
+  const costo = args.voce === 'pre' ? args.rettaDelMese.costoPreAsilo : args.rettaDelMese.costoPostAsilo;
+  return costo > 0;
+}
+
+export function statoGettone(coperto: boolean): StatoGettone {
+  return coperto ? 'coperto' : 'da_addebitare';
+}
+
+// Avviso "il gettone non entrerà più in retta" (GET-12): voce attiva, non
+// coperta, e retta del mese successivo già inviata.
+export function gettoneFuoriRetta(args: {
+  attivo: boolean;
+  coperto: boolean;
+  rettaSuccessivaInviata: boolean;
+}): boolean {
+  return args.attivo && !args.coperto && args.rettaSuccessivaInviata;
+}

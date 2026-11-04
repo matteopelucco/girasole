@@ -83,6 +83,12 @@ in ogni file — il dettaglio di ciascuna riga resta nel file linkato.
 | Avvisi ([15](15%20-%20memo.md)) | crud | crud | crud | lettura dei soli avvisi a lui destinati (fuori scope UI) |
 | Report/anagrafica classi ([51](51%20-%20report.md)) | tutte le classi | proprie classi | proprie classi | — |
 
+Nota su pre/post-asilo (issue #399): maestra e assistente vedono nella
+schermata presenze solo "Già pagato con l'abbonamento" / "Da addebitare
+nella prossima retta", mai importi né dati di `costi_bambini` (solo admin,
+[55](55%20-%20costi-bambino.md)); il genitore non vede nulla di questo
+([13](13%20-%20segna-presenza.md), GET-07..GET-10).
+
 Nota su presenze e pasti: l'eliminazione (DELETE) è riservata all'admin,
 che la usa per il reset di una giornata ([57](57%20-%20reset-giornata.md));
 maestra e assistente non eliminano mai righe di presenze o pasti, nemmeno

@@ -6,6 +6,7 @@ import type { RigaPresenza, StatoPresenza } from '@/lib/presenza';
 import { segnaPresenza, segnaPreAsilo, segnaPostAsilo } from '../presenze/actions';
 import { ETICHETTE_PRESENZA, IntestazioneSezione, PulsanteStato } from './comune';
 import { PulsantiAssenzaConAvviso } from './PulsantiAssenzaConAvviso';
+import { CoperturaPrePost, type CoperturaBambino } from './CoperturaPrePost';
 
 export type PresenzaGiorno = {
   stato: StatoPresenza;
@@ -39,6 +40,7 @@ export function ColonnaPresenza({
   editable,
   assenzaBloccata,
   avvisoAzzeramento,
+  copertura,
 }: {
   bambinoId: string;
   data: string;
@@ -46,6 +48,7 @@ export function ColonnaPresenza({
   editable: boolean;
   assenzaBloccata: boolean;
   avvisoAzzeramento: string | null;
+  copertura?: CoperturaBambino;
 }) {
   const idTitolo = `presenza-${bambinoId}`;
   const idBlocco = `blocco-assenza-${bambinoId}`;
@@ -132,6 +135,7 @@ export function ColonnaPresenza({
           {presenza?.post_asilo && <span className="text-sky-700">Post-asilo</span>}
         </div>
       )}
+      <CoperturaPrePost copertura={copertura} preAsilo={preAsilo} postAsilo={postAsilo} />
     </div>
   );
 }
