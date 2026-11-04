@@ -45,7 +45,8 @@ mese di quell'anno scolastico
 Quando guardo la riga di quel mese
 Allora vedo, una per colonna, le voci della comunicazione: retta mensile,
 marca da bollo, costo pasti, conguaglio pasti, pre-asilo, post-asilo,
-costi extra e credito/debito, ciascuna in euro con la virgola (es.
+gettoni pre-asilo e gettoni post-asilo (PAG-01), costi extra e
+credito/debito, ciascuna in euro con la virgola (es.
 "250,00 €")
 E vedo le note di costi extra e credito/debito, se presenti, sotto il
 rispettivo importo
@@ -58,6 +59,17 @@ Allora il totale è in una colonna "Totale" dedicata, in grassetto e con un
 carattere più grande delle altre voci
 E coincide con il totale registrato nella comunicazione (lo stesso
 importo che la famiglia ha ricevuto nella mail)
+
+## Scenario: i gettoni sono nel dettaglio e nel totale del mese
+**ID PAG-01**
+Dato che la comunicazione di un mese ha gettoni pre-asilo 21,00 € (3
+gettoni) e gettoni post-asilo 16,00 € (2 gettoni)
+Quando guardo la riga di quel mese
+Allora vedo due colonne con gli importi (21,00 € e 16,00 €), con il
+numero di gettoni sotto
+E il "Totale" della riga e il "Totale richiesto" dell'anno li includono,
+perché sono quelli registrati nella comunicazione
+E per i mesi inviati prima dei gettoni vedo 0,00 € e il totale di sempre
 
 ## Scenario: un mese senza comunicazione non mostra importi
 Dato che per un mese dell'anno scolastico non è stata inviata nessuna
@@ -121,7 +133,8 @@ dashboard
   e non viene mai ricalcolato: coincide per costruzione con quanto
   inviato nella mail, anche se in seguito il bambino cambia costi. Le voci
   sono quelle della comunicazione (specs/56): retta mensile, marca da
-  bollo, costo pasti, conguaglio pasti, pre-asilo, post-asilo, costi extra
+  bollo, costo pasti, conguaglio pasti, pre-asilo, post-asilo, gettoni
+  pre-asilo e post-asilo (importo e numero, #400), costi extra
   (con nota), credito/debito (con nota, specs/58). Il totale di una
   comunicazione è quello registrato (`totale`).
 - Sono visibili anche i bambini non più attivi (lo storico dei pagamenti

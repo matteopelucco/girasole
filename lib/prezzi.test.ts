@@ -58,7 +58,9 @@ import {
   copertoDaAbbonamento,
   statoGettone,
   gettoneFuoriRetta,
+  gettoniMesePrecedente,
 } from './prezzi';
+import { calcolaRiepilogoRetta } from './comunicazioneRetta';
 
 function centesimi(testo: string): number | null {
   const r = parseImporto(testo);
@@ -368,5 +370,191 @@ describe('gettoneFuoriRetta', () => {
 
   it('GET-12: nessun avviso se il pre/post-asilo è stato tolto', () => {
     expect(gettoneFuoriRetta({ attivo: false, coperto: false, rettaSuccessivaInviata: true })).toBe(false);
+  });
+});
+
+// Gettoni del mese precedente nella retta (specs/56 RET-01..RET-05, RET-08; #400).
+// API attesa in lib/prezzi.ts (logica pura, nessun I/O):
+//
+//   gettoniMesePrecedente(args: {
+//     meseCorrente: string;                       // "YYYY-MM", il mese M della retta
+//     presenze: { data: string; preAsilo: boolean; postAsilo: boolean }[];
+//     chiusure: GiornoChiusura[];                 // lib/calendarioScolastico
+//     costi: { preAsiloRichiesto: boolean; postAsiloRichiesto: boolean;
+//              gettonePreAsilo: number; gettonePostAsilo: number } | null;  // null = nessuna riga costi_bambini
+//     rettaMesePrecedente: { costoPreAsilo: number; costoPostAsilo: number } | null; // retta inviata di M-1
+//   }): { pre: { numero: number; importo: number }; post: { numero: number; importo: number } }
+//
+//   Si contano i giorni di M-1 con pre (o post) vero, senza weekend né chiusure,
+//   con la voce non coperta (copertoDaAbbonamento: GET-11), x gettone della voce;
+//   le presenze fuori da M-1 si ignorano; costi null = 0 e 0. Importo arrotondato a 2 decimali.
+//
+// calcolaRiepilogoRetta (lib/comunicazioneRetta.ts) deve accettare i parametri
+// `gettoniPreAsilo` e `gettoniPostAsilo` (importi, in euro) e restituirli nel riepilogo,
+// sommandoli al totale.
+describe('gettoniMesePrecedente', () => {
+  const costi = { preAsiloRichiesto: false, postAsiloRichiesto: false, gettonePreAsilo: 7, gettonePostAsilo: 8 };
+  const p = (data: string, preAsilo: boolean, postAsilo: boolean) => ({ data, preAsilo, postAsilo });
+  // Settembre 2026: 1 = martedì, 5 = sabato, 6 = domenica. Agosto 2026: 3 = lunedì.
+  const base = { meseCorrente: '2026-10', chiusure: [], costi, rettaMesePrecedente: null };
+
+  it('RET-01: giorni non coperti x prezzo del gettone, per ogni voce (3 x 7 e 2 x 8)', () => {
+    const presenze = [p('2026-09-01', true, true), p('2026-09-02', true, true), p('2026-09-03', true, false)];
+    expect(gettoniMesePrecedente({ ...base, presenze })).toEqual({
+      pre: { numero: 3, importo: 21 },
+      post: { numero: 2, importo: 16 },
+    });
+  });
+
+  it('RET-01: una voce senza giorni non coperti vale 0 e 0, e senza presenze sono entrambe zero', () => {
+    expect(gettoniMesePrecedente({ ...base, presenze: [p('2026-09-01', true, false)] }).post).toEqual({
+      numero: 0,
+      importo: 0,
+    });
+    expect(gettoniMesePrecedente({ ...base, presenze: [] })).toEqual({
+      pre: { numero: 0, importo: 0 },
+      post: { numero: 0, importo: 0 },
+    });
+  });
+
+  it('RET-01: le voci sono separate (solo pre o solo post)', () => {
+    const presenze = [p('2026-09-01', true, false), p('2026-09-02', false, true)];
+    expect(gettoniMesePrecedente({ ...base, presenze })).toEqual({
+      pre: { numero: 1, importo: 7 },
+      post: { numero: 1, importo: 8 },
+    });
+  });
+
+  it('RET-01: importo arrotondato al centesimo (3 x 7,33)', () => {
+    const presenze = [p('2026-09-01', true, false), p('2026-09-02', true, false), p('2026-09-03', true, false)];
+    const r = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, gettonePreAsilo: 7.33 } });
+    expect(r.pre).toEqual({ numero: 3, importo: 21.99 });
+  });
+
+  it('RET-02: senza retta di M-1 inviata vale il flag attuale: abbonamento pre acceso copre il pre, non il post', () => {
+    const presenze = [p('2026-09-01', true, true), p('2026-09-02', true, true)];
+    const r = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, preAsiloRichiesto: true } });
+    expect(r.pre).toEqual({ numero: 0, importo: 0 });
+    expect(r.post).toEqual({ numero: 2, importo: 16 });
+  });
+
+  it('RET-02: con la retta di M-1 inviata conta il costo addebitato, non il flag (flag acceso, costo a zero)', () => {
+    const presenze = [p('2026-09-01', true, true)];
+    const r = gettoniMesePrecedente({
+      ...base,
+      presenze,
+      costi: { ...costi, preAsiloRichiesto: true },
+      rettaMesePrecedente: { costoPreAsilo: 0, costoPostAsilo: 70 },
+    });
+    expect(r.pre).toEqual({ numero: 1, importo: 7 }); // non coperto: costo pre = 0
+    expect(r.post).toEqual({ numero: 0, importo: 0 }); // coperto: costo post > 0, anche col flag spento
+  });
+
+  it("RET-02: pre e post sono valutati separatamente (l'abbonamento di una voce non copre l'altra)", () => {
+    const presenze = [p('2026-09-01', true, true)];
+    const r = gettoniMesePrecedente({
+      ...base,
+      presenze,
+      rettaMesePrecedente: { costoPreAsilo: 70, costoPostAsilo: 0 },
+    });
+    expect(r.pre.numero).toBe(0);
+    expect(r.post.numero).toBe(1);
+  });
+
+  it('RET-03: weekend e giorni di chiusura registrati non generano gettoni', () => {
+    const presenze = [
+      p('2026-09-05', true, true), // sabato
+      p('2026-09-06', true, true), // domenica
+      p('2026-09-08', true, true), // chiusura
+      p('2026-09-09', true, true), // aperto
+    ];
+    const chiusure = [{ id: '1', dataInizio: '2026-09-08', dataFine: '2026-09-08', nota: 'Festa' }];
+    expect(gettoniMesePrecedente({ ...base, presenze, chiusure })).toEqual({
+      pre: { numero: 1, importo: 7 },
+      post: { numero: 1, importo: 8 },
+    });
+  });
+
+  it('RET-03: una chiusura di più giorni esclude tutti i giorni coperti', () => {
+    const presenze = [p('2026-09-14', true, false), p('2026-09-15', true, false), p('2026-09-16', true, false)];
+    const chiusure = [{ id: '1', dataInizio: '2026-09-14', dataFine: '2026-09-15', nota: null }];
+    expect(gettoniMesePrecedente({ ...base, presenze, chiusure }).pre.numero).toBe(1);
+  });
+
+  it("RET-04: a gennaio si contano i giorni di dicembre dell'anno precedente", () => {
+    const presenze = [
+      p('2026-12-28', true, false),
+      p('2026-12-29', true, true),
+      p('2027-01-04', true, true), // gennaio stesso: non conta
+    ];
+    expect(gettoniMesePrecedente({ ...base, meseCorrente: '2027-01', presenze })).toEqual({
+      pre: { numero: 2, importo: 14 },
+      post: { numero: 1, importo: 8 },
+    });
+  });
+
+  it('RET-04: a settembre (mese precedente agosto, senza apertura) i gettoni sono 0,00 e 0', () => {
+    const chiusure = [{ id: '1', dataInizio: '2026-08-01', dataFine: '2026-08-31', nota: 'Estate' }];
+    const presenze = [p('2026-08-03', true, true), p('2026-09-01', true, true)];
+    expect(gettoniMesePrecedente({ ...base, meseCorrente: '2026-09', presenze, chiusure })).toEqual({
+      pre: { numero: 0, importo: 0 },
+      post: { numero: 0, importo: 0 },
+    });
+  });
+
+  it('le presenze di altri mesi (anche due mesi prima) non contano', () => {
+    const presenze = [p('2026-08-31', true, true), p('2026-10-01', true, true), p('2026-09-30', true, false)];
+    expect(gettoniMesePrecedente({ ...base, presenze })).toEqual({
+      pre: { numero: 1, importo: 7 },
+      post: { numero: 0, importo: 0 },
+    });
+  });
+
+  it('senza riga costi (bambino non comunicabile) i gettoni sono 0 e 0', () => {
+    const presenze = [p('2026-09-01', true, true)];
+    expect(gettoniMesePrecedente({ ...base, presenze, costi: null })).toEqual({
+      pre: { numero: 0, importo: 0 },
+      post: { numero: 0, importo: 0 },
+    });
+  });
+
+  it('gettone a prezzo zero: i giorni si contano, importo 0', () => {
+    const presenze = [p('2026-09-01', true, false)];
+    const r = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, gettonePreAsilo: 0 } });
+    expect(r.pre).toEqual({ numero: 1, importo: 0 });
+  });
+});
+
+describe('calcolaRiepilogoRetta con i gettoni', () => {
+  const parametri = {
+    prezzoMensile: 100,
+    prezzoBuonoPasto: 0,
+    giorniAperturaMeseCorrente: 20,
+    pastiPotenzialiMesePrecedente: 0,
+    pastiEffettiviMesePrecedente: 0,
+    marcaDaBollo: 2,
+    preAsiloRichiesto: false,
+    prezzoPreAsilo: 70,
+    postAsiloRichiesto: false,
+    prezzoPostAsilo: 70,
+    costiExtra: 0,
+    creditoDebito: 0,
+    gettoniPreAsilo: 21,
+    gettoniPostAsilo: 16,
+  };
+
+  it('RET-05: il totale è la somma delle voci già previste più 37,00 € di gettoni', () => {
+    const senza = calcolaRiepilogoRetta({ ...parametri, gettoniPreAsilo: 0, gettoniPostAsilo: 0 });
+    const con = calcolaRiepilogoRetta(parametri);
+    expect(senza.totale).toBe(102);
+    expect(con.totale).toBe(139);
+    expect(con.gettoniPreAsilo).toBe(21);
+    expect(con.gettoniPostAsilo).toBe(16);
+  });
+
+  it('RET-05: il totale somma i gettoni con le altre voci (abbonamento, extra, credito)', () => {
+    const r = calcolaRiepilogoRetta({ ...parametri, preAsiloRichiesto: true, costiExtra: 15, creditoDebito: -5 });
+    // 100 + 0 + 0 + 2 + 70 + 0 + 21 + 16 + 15 - 5
+    expect(r.totale).toBe(219);
   });
 });

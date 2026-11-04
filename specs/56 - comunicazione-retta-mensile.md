@@ -25,7 +25,8 @@ ciascun bambino attivo con: nome e cognome (con l'email a cui verrà
 inviata la comunicazione subito sotto, tra parentesi), retta mensile,
 marca da bollo e costo pasti proiettato (testo, in quest'ordine),
 eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
-post-asilo (questi tre modificabili), un campo "Costi extra" (con una
+post-asilo (modificabili), i gettoni pre-asilo e post-asilo del mese
+precedente (RET-01, modificabili), un campo "Costi extra" (con una
 nota facoltativa) da compilare, un eventuale credito/debito "da
 conteggiare" questo mese con la sua nota (specs/58, di sola lettura,
 importo e nota condivisi in un'unica colonna), e il totale calcolato
@@ -53,7 +54,8 @@ invio
 ## Scenario: modificare manualmente una voce di costo prima dell'invio
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
-Quando modifico il valore di conguaglio pasti, pre-asilo o post-asilo —
+Quando modifico il valore di conguaglio pasti, pre-asilo, post-asilo o
+dei gettoni pre/post-asilo (importo) —
 non solo i già modificabili costi extra/nota — rispetto a quello
 proposto, e premo "Invia comunicazioni"
 Allora l'email inviata e il log della comunicazione registrano il
@@ -286,6 +288,116 @@ mail vere non si bloccano per errore
 (la scelta è logica pura in `lib/email.ts`, coperta dai test unit di
 `lib/email.test.ts`)
 
+## Scenario: i gettoni pre e post-asilo del mese precedente compaiono nella retta
+**ID RET-01**
+Dato che un bambino ha, nel mese precedente M-1, 3 giorni con pre-asilo e
+2 giorni con post-asilo non coperti, e il suo gettone pre-asilo è 7,00 e
+quello post-asilo è 8,00 (specs/55)
+Quando apro "Rette" sul mese M (corrente)
+Allora nella sua riga vedo due voci separate: gettoni pre-asilo
+21,00 € (3 gettoni) e gettoni post-asilo 16,00 € (2 gettoni)
+E importo e numero sono calcolati per ogni bambino e per ogni voce:
+giorni non coperti × prezzo del gettone di quella voce
+E se una voce non ha giorni non coperti mostra 0,00 € e 0 gettoni
+
+## Scenario: un giorno è coperto se l'abbonamento della voce c'era nella retta di quel mese
+**ID RET-02**
+Dato che la retta del mese M-1 del bambino è già stata inviata
+Quando vedo i gettoni del mese M
+Allora i giorni con pre-asilo di M-1 sono coperti solo se in quella retta
+la quota pre-asilo era maggiore di zero (valore addebitato, non il flag
+attuale in `costi_bambini`), e lo stesso vale per il post-asilo
+E se la retta di M-1 non è stata inviata (o non esiste) vale
+l'abbonamento attuale della voce (`costi_bambini`)
+E pre e post sono valutati separatamente: l'abbonamento di una voce non
+copre l'altra
+E è la stessa regola di GET-11 ([13](13%20-%20segna-presenza.md)): la
+schermata presenze e la retta non possono mai dire cose diverse
+
+## Scenario: i giorni di chiusura e i fine settimana non generano gettoni
+**ID RET-03**
+Dato che nel mese M-1 il bambino ha una presenza con pre-asilo in un
+giorno che è weekend o giorno di chiusura registrato (specs/53)
+Quando vedo i gettoni del mese M
+Allora quel giorno non viene contato
+
+## Scenario: il cambio d'anno e i mesi senza presenze
+**ID RET-04**
+Dato che il mese M è gennaio
+Quando vedo i gettoni
+Allora si contano i giorni di dicembre dell'anno precedente
+E per settembre (mese precedente agosto, senza apertura) i gettoni sono
+0,00 € e 0
+
+## Scenario: il totale della retta include i gettoni
+**ID RET-05**
+Dato che un bambino ha gettoni pre-asilo 21,00 € e gettoni post-asilo
+16,00 € nella sua riga
+Quando guardo il totale (e, per la riga appena modificata a mano,
+quello comunicato all'invio)
+Allora il totale è la somma di tutte le voci già previste più 37,00 €
+E se ho modificato a mano un importo prima dell'invio, il totale
+comunicato usa il valore che ho scritto
+
+## Scenario: i gettoni inviati restano quelli comunicati
+**ID RET-06**
+Dato che una retta è già stata inviata (anche prima di questo rilascio)
+Quando in seguito cambiano presenze, abbonamento o prezzo del gettone
+Allora la sua riga, il suo totale e il suo log non cambiano
+E le rette inviate prima del rilascio mostrano 0,00 € e 0 gettoni nelle
+nuove voci, con il totale di sempre
+
+## Scenario: una retta non ancora inviata mostra i gettoni subito
+**ID RET-07**
+Dato che una retta del mese corrente non è ancora stata inviata
+Quando registro o tolgo un pre/post-asilo del mese precedente e ricarico
+"Rette"
+Allora i gettoni della sua riga riflettono i dati di quel momento
+
+## Scenario: una retta annullata e rifatta usa le regole e i dati di oggi
+**ID RET-08**
+Dato che annullo l'invio di una retta (dopo, per esempio, un cambio di
+abbonamento o di prezzo del gettone)
+Quando la riga torna "da inviare"
+Allora i gettoni sono ricalcolati con la copertura e il prezzo di quel
+momento (non quelli del vecchio invio)
+
+## Scenario: il modello email contiene le righe dei gettoni dopo la migration
+**ID RET-09**
+Dato che il modello email salvato (`impostazioni_email_retta`) e quello
+predefinito non contengono i segnaposto dei gettoni
+Quando viene applicata la migration di questa funzione
+Allora in entrambi compaiono due righe: «Gettoni pre-asilo (mese
+precedente): € {{gettoni_pre_asilo}}» e la riga analoga per il
+post-asilo, subito dopo la riga del conguaglio pasti
+E se la riga del conguaglio manca, vanno subito prima della riga del
+totale
+E il resto del testo non cambia
+
+## Scenario: la migration del modello email non duplica le righe
+**ID RET-10**
+Dato che il modello ha già i segnaposto dei gettoni (migration rieseguita
+o righe scritte a mano)
+Quando la migration viene applicata di nuovo
+Allora non aggiunge né duplica nulla: ogni riga si aggiunge solo se il
+suo segnaposto non c'è già
+
+## Scenario: i gettoni sono usabili come segnaposto nella mail
+**ID RET-11**
+Dato che il modello contiene `{{gettoni_pre_asilo}}`,
+`{{numero_gettoni_pre_asilo}}`, `{{gettoni_post_asilo}}` e
+`{{numero_gettoni_post_asilo}}`
+Quando apro l'anteprima o invio la comunicazione
+Allora gli importi sono in euro con la virgola (es. "21,00") e i numeri
+sono interi (es. "3"), quelli del form al momento dell'invio
+E gli stessi segnaposto sono elencati nella pagina "Modello email"
+
+## Scenario: i gettoni sono visibili nelle comunicazioni inviate
+**ID RET-12**
+Dato che una retta è stata inviata, oppure sto rivedendo un mese passato
+Quando guardo la riga di quel bambino
+Allora vedo gettoni pre e post (importo e numero) come registrati
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)
@@ -337,9 +449,28 @@ Allora vengo reindirizzato alla dashboard
 - Pre-asilo e post-asilo contano il loro prezzo pieno se richiesti
   (specs/55), 0 se non richiesti: non dipendono dai giorni di apertura
   né dalle presenze effettive.
+- Gettoni (issue #400, parte di #401): `comunicazioni_retta` ha quattro
+  colonne nuove, `gettoni_pre_asilo` e `gettoni_post_asilo` (importo,
+  `numeric(8,2) not null default 0`, non negativo) e
+  `numero_gettoni_pre_asilo` e `numero_gettoni_post_asilo` (intero non
+  negativo, default 0): le righe esistenti restano a 0, nessuna tabella
+  o GRANT nuovi. Calcolo puro in `lib/` (test unit con cambio d'anno,
+  chiusure, voci miste): giorni del mese M-1 con `pre_asilo` (o
+  `post_asilo`) vero, senza weekend né chiusure, non coperti × gettone
+  della voce. Copertura come GET-11: retta di M-1 inviata → coperto se la
+  quota addebitata (pre o post) è > 0, altrimenti flag attuale. Se il
+  bambino non ha riga in `costi_bambini` non è comunicabile e i gettoni
+  sono 0. Importo modificabile a mano come il conguaglio (non negativo);
+  il numero è di sola lettura, non cambia con l'importo scritto.
+- Colonne dei costi: i gettoni pre e post-asilo (importo e, sotto,
+  numero) vengono subito dopo il post-asilo e prima dei costi extra.
+- Migration del modello email (RET-09, RET-10): idempotente, applicata
+  alla riga salvata e al modello predefinito (anche la costante in
+  codice); il testo finale delle righe lo scrive Matteo. In produzione la
+  migration si applica solo a mano (prima `--dry-run`).
 - Il totale di una riga è: retta mensile + costo pasti (proiettato) +
   conguaglio pasti (negativo o zero) + marca da bollo + costo pre-asilo
-  + costo post-asilo + costi extra + credito/debito (specs/58,
+  + costo post-asilo + gettoni pre-asilo + gettoni post-asilo + costi extra + credito/debito (specs/58,
   negativo se credito, positivo se debito). Può risultare negativo
   (credito verso la famiglia) se conguaglio e/o credito superano gli
   altri importi: non viene forzato a zero.
@@ -493,10 +624,13 @@ Allora vengo reindirizzato alla dashboard
 - Placeholder disponibili: `{{nome}}`, `{{cognome}}`, `{{mese}}` (es.
   "settembre 2026"), `{{retta_mensile}}`, `{{costo_pasti}}`,
   `{{conguaglio_pasti}}`, `{{marca_da_bollo}}`, `{{costo_pre_asilo}}`,
-  `{{costo_post_asilo}}`, `{{costi_extra}}`, `{{note_costi_extra}}`,
+  `{{costo_post_asilo}}`, `{{gettoni_pre_asilo}}`,
+  `{{numero_gettoni_pre_asilo}}`, `{{gettoni_post_asilo}}`,
+  `{{numero_gettoni_post_asilo}}`, `{{costi_extra}}`, `{{note_costi_extra}}`,
   `{{credito_debito}}`, `{{nota_credito_debito}}` (specs/58),
   `{{totale}}` — tutti gli importi già formattati in euro con la
-  virgola (es. "250,00"); `{{note_costi_extra}}` e
+  virgola (es. "250,00"; i `{{numero_gettoni_*}}` sono interi);
+  `{{note_costi_extra}}` e
   `{{nota_credito_debito}}` sono invece testo libero (il contenuto del
   rispettivo campo nota, stringa vuota se non compilato). Un modello
   salvato prima dell'introduzione di un nuovo placeholder (es.

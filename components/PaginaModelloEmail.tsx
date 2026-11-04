@@ -90,7 +90,11 @@ export function PaginaModelloEmail({
         <div>
           <h1 className="text-lg font-medium">{titolo}</h1>
           <p className="mt-1 text-sm text-stone-600">{descrizione}</p>
-          <p className="mt-1 font-mono text-xs text-stone-600">{placeholder.join('  ')}</p>
+          <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-xs text-stone-600">
+            {placeholder.map((segnaposto) => (
+              <span key={segnaposto}>{segnaposto}</span>
+            ))}
+          </p>
         </div>
 
         <FormModelloEmail

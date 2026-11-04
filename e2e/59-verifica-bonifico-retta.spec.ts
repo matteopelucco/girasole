@@ -47,6 +47,9 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
     await page.getByLabel('Prezzo retta mensile (€)').fill(prezzoMensile);
     await page.getByLabel('Prezzo buono pasto (€)').fill('0');
+    // Esplicita: il form la propone dai prezzi predefiniti condivisi, che il
+    // file 55 (COS-03) cambia per un attimo mentre questo gira in parallelo.
+    await page.getByLabel('Prezzo marca da bollo (€)').fill('2');
     await page.getByLabel('Email promemoria retta').fill(`e2e-bonifico-${Date.now()}@example.com`);
     await page.getByRole('button', { name: 'Salva', exact: true }).click();
     await expect(page.getByLabel('Prezzo retta mensile (€)')).toHaveValue(prezzoMensile, { timeout: 20_000 });
@@ -91,7 +94,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     test.skip(!emailDisponibile(), "richiede RESEND_API_KEY o EMAIL_DRY_RUN per inviare l'email");
 
     const { cognome, rigaInviata } = await creaBambinoEInviaComunicazione(page, '130');
-    // 130 retta + 2 marca da bollo (default) = 132 atteso.
+    // 130 retta + 2 marca da bollo = 132 atteso.
     await rigaInviata.getByRole('button', { name: 'Importo diverso' }).click();
 
     const popup = page.getByRole('dialog', { name: new RegExp(`Importo bonifico diverso per.*${cognome}`) });

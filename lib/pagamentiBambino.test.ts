@@ -74,7 +74,7 @@ describe('etichettaAnnoScolastico', () => {
 });
 
 describe('vociComunicazione', () => {
-  it("restituisce le otto voci nell'ordine della tabella di Rette, con importi numerici", () => {
+  it("restituisce le dieci voci nell'ordine della tabella di Rette, con importi numerici", () => {
     const voci = vociComunicazione(base);
     expect(voci.map((v) => v.etichetta)).toEqual([
       'Retta mensile',
@@ -83,10 +83,24 @@ describe('vociComunicazione', () => {
       'Conguaglio pasti',
       'Pre-asilo',
       'Post-asilo',
+      'Gettoni pre-asilo',
+      'Gettoni post-asilo',
       'Costi extra',
       'Credito/Debito',
     ]);
-    expect(voci.map((v) => v.importo)).toEqual([250, 2, 66, -11, 30, 0, 15, -5]);
+    expect(voci.map((v) => v.importo)).toEqual([250, 2, 66, -11, 30, 0, 0, 0, 15, -5]);
+  });
+
+  it('i gettoni (importo e numero) vengono dalle colonne nuove, 0 se assenti', () => {
+    const voci = vociComunicazione({
+      ...base,
+      gettoni_pre_asilo: '21.00',
+      numero_gettoni_pre_asilo: 3,
+      gettoni_post_asilo: 16,
+      numero_gettoni_post_asilo: 2,
+    });
+    expect(voci.find((v) => v.etichetta === 'Gettoni pre-asilo')).toMatchObject({ importo: 21, numeroGettoni: 3 });
+    expect(voci.find((v) => v.etichetta === 'Gettoni post-asilo')).toMatchObject({ importo: 16, numeroGettoni: 2 });
   });
 
   it('allega la nota solo a costi extra e credito/debito, ignorandola se vuota', () => {

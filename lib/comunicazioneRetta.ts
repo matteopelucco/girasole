@@ -48,6 +48,9 @@ export type ParametriRiepilogoRetta = {
   // credito, positivo se debito, 0 se il bambino non ne ha nessuno in
   // attesa per questo mese.
   creditoDebito: number;
+  // Gettoni pre/post-asilo del mese precedente (importi in euro, #400).
+  gettoniPreAsilo: number;
+  gettoniPostAsilo: number;
 };
 
 export type RiepilogoRetta = {
@@ -59,6 +62,8 @@ export type RiepilogoRetta = {
   costoPostAsilo: number;
   costiExtra: number;
   creditoDebito: number;
+  gettoniPreAsilo: number;
+  gettoniPostAsilo: number;
   totale: number;
 };
 
@@ -83,6 +88,8 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
   const costoPreAsilo = parametri.preAsiloRichiesto ? parametri.prezzoPreAsilo : 0;
   const costoPostAsilo = parametri.postAsiloRichiesto ? parametri.prezzoPostAsilo : 0;
   const creditoDebito = arrotonda(parametri.creditoDebito);
+  const gettoniPreAsilo = arrotonda(parametri.gettoniPreAsilo);
+  const gettoniPostAsilo = arrotonda(parametri.gettoniPostAsilo);
   const totale = arrotonda(
     parametri.prezzoMensile +
       costoPasti +
@@ -91,7 +98,9 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
       costoPreAsilo +
       costoPostAsilo +
       parametri.costiExtra +
-      creditoDebito
+      creditoDebito +
+      gettoniPreAsilo +
+      gettoniPostAsilo
   );
 
   return {
@@ -103,6 +112,8 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
     costoPostAsilo,
     costiExtra: parametri.costiExtra,
     creditoDebito,
+    gettoniPreAsilo,
+    gettoniPostAsilo,
     totale,
   };
 }

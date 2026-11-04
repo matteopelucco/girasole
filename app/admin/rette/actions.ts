@@ -86,6 +86,8 @@ function riepilogoDalForm(
   const conguaglioPasti = importoConSegno(formData.get(`conguaglio_pasti_${bambinoId}`));
   const costoPreAsilo = importoEuro(formData.get(`pre_asilo_${bambinoId}`));
   const costoPostAsilo = importoEuro(formData.get(`post_asilo_${bambinoId}`));
+  const gettoniPreAsilo = importoEuro(formData.get(`gettoni_pre_asilo_${bambinoId}`));
+  const gettoniPostAsilo = importoEuro(formData.get(`gettoni_post_asilo_${bambinoId}`));
   const costiExtra = importoEuro(formData.get(`costi_extra_${bambinoId}`));
   const totale =
     Math.round(
@@ -95,6 +97,8 @@ function riepilogoDalForm(
         marcaDaBollo +
         costoPreAsilo +
         costoPostAsilo +
+        gettoniPreAsilo +
+        gettoniPostAsilo +
         costiExtra +
         creditoDebito) *
         100
@@ -109,7 +113,27 @@ function riepilogoDalForm(
     costoPostAsilo,
     costiExtra,
     creditoDebito,
+    gettoniPreAsilo,
+    gettoniPostAsilo,
     totale,
+  };
+}
+
+// Numero di gettoni (intero non negativo) arrivato nel campo nascosto del form.
+function numeroIntero(valore: FormDataEntryValue | null): number {
+  const numero = Number(valore);
+  return Number.isInteger(numero) && numero >= 0 ? numero : 0;
+}
+
+// Numero di gettoni pre/post-asilo letto dai campi nascosti del form. È solo
+// un'etichetta per l'admin e per l'email: non entra nel totale, che usa gli
+// importi dei gettoni (modificabili come gli altri campi della retta).
+type NumeriGettoni = { pre: number; post: number };
+
+function numeriGettoniDalForm(formData: FormData, bambinoId: string): NumeriGettoni {
+  return {
+    pre: numeroIntero(formData.get(`numero_gettoni_pre_asilo_${bambinoId}`)),
+    post: numeroIntero(formData.get(`numero_gettoni_post_asilo_${bambinoId}`)),
   };
 }
 
@@ -121,6 +145,7 @@ function placeholderRetta(
   bambino: { nome: string; cognome: string },
   mese: string,
   riepilogo: RiepilogoRetta,
+  numeriGettoni: NumeriGettoni,
   noteExtra: string | null,
   notaCreditoDebito: string | null
 ): Record<string, string> {
@@ -134,6 +159,10 @@ function placeholderRetta(
     marca_da_bollo: formattaImporto(riepilogo.marcaDaBollo),
     costo_pre_asilo: formattaImporto(riepilogo.costoPreAsilo),
     costo_post_asilo: formattaImporto(riepilogo.costoPostAsilo),
+    gettoni_pre_asilo: formattaImporto(riepilogo.gettoniPreAsilo),
+    numero_gettoni_pre_asilo: String(numeriGettoni.pre),
+    gettoni_post_asilo: formattaImporto(riepilogo.gettoniPostAsilo),
+    numero_gettoni_post_asilo: String(numeriGettoni.post),
     costi_extra: formattaImporto(riepilogo.costiExtra),
     note_costi_extra: noteExtra ?? '',
     credito_debito: formattaImporto(riepilogo.creditoDebito),
@@ -159,6 +188,7 @@ async function inviaEPersistiComunicazione(
   email: string,
   mese: string,
   riepilogo: RiepilogoRetta,
+  numeriGettoni: NumeriGettoni,
   noteExtra: string | null,
   notaCreditoDebito: string | null,
   template: TemplateRetta,
@@ -167,7 +197,7 @@ async function inviaEPersistiComunicazione(
   // solo passo dell'invio e-mail (famiglia e copia all'asilo) è saltato.
   inviaMail: boolean
 ): Promise<boolean> {
-  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, noteExtra, notaCreditoDebito);
+  const valoriPlaceholder = placeholderRetta(bambino, mese, riepilogo, numeriGettoni, noteExtra, notaCreditoDebito);
   const oggetto = sostituisciPlaceholder(template?.oggetto ?? 'Promemoria retta {{mese}}', valoriPlaceholder);
   // Corpo: testo escapato (specs/56); oggetto: testo semplice, non HTML.
   const corpoHtml = corpoEmailHtmlRetta(template?.corpo ?? '', valoriPlaceholder);
@@ -199,6 +229,10 @@ async function inviaEPersistiComunicazione(
     marca_da_bollo: riepilogo.marcaDaBollo,
     costo_pre_asilo: riepilogo.costoPreAsilo,
     costo_post_asilo: riepilogo.costoPostAsilo,
+    gettoni_pre_asilo: riepilogo.gettoniPreAsilo,
+    numero_gettoni_pre_asilo: numeriGettoni.pre,
+    gettoni_post_asilo: riepilogo.gettoniPostAsilo,
+    numero_gettoni_post_asilo: numeriGettoni.post,
     costi_extra: riepilogo.costiExtra,
     note_costi_extra: noteExtra,
     credito_debito: riepilogo.creditoDebito,
@@ -312,6 +346,7 @@ export async function inviaComunicazioniRetta(
       costiBambino.email_promemoria,
       meseCorrente,
       riepilogo,
+      numeriGettoniDalForm(formData, bambino.id),
       noteExtra,
       notaCreditoDebito,
       template,
@@ -412,6 +447,7 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMai
     costiBambino.email_promemoria,
     meseCorrente,
     riepilogo,
+    numeriGettoniDalForm(formData, bambinoId),
     noteExtra,
     notaCreditoDebito,
     template,

@@ -73,6 +73,8 @@ describe('calcolaRiepilogoRetta', () => {
     prezzoPostAsilo: 0,
     costiExtra: 0,
     creditoDebito: 0,
+    gettoniPreAsilo: 0,
+    gettoniPostAsilo: 0,
   };
 
   it('solo retta e pasti proiettati, nessun extra', () => {
@@ -86,6 +88,8 @@ describe('calcolaRiepilogoRetta', () => {
       costoPostAsilo: 0,
       costiExtra: 0,
       creditoDebito: 0,
+      gettoniPreAsilo: 0,
+      gettoniPostAsilo: 0,
       totale: 350,
     });
   });
@@ -186,6 +190,8 @@ describe('calcolaRiepilogoRetta', () => {
       prezzoPostAsilo: 0,
       costiExtra: 0,
       creditoDebito: 0,
+      gettoniPreAsilo: 0,
+      gettoniPostAsilo: 0,
     });
     expect(riepilogo.totale).toBe(-50);
   });
