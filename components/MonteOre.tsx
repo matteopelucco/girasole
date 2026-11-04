@@ -85,7 +85,13 @@ export function MonteOre({
             </label>
             <label className="text-xs font-medium text-purple-900">
               Mese di competenza
-              <Selezione name="mese_competenza" defaultValue={meseCorrente} misura="piccolo" className="mt-1 block">
+              <Selezione
+                name="mese_competenza"
+                aria-label="Mese di competenza"
+                defaultValue={meseCorrente}
+                misura="piccolo"
+                className="mt-1 block"
+              >
                 {mesiCompetenza.map((mese) => (
                   <option key={mese} value={mese}>
                     {formattaMeseItaliano(mese)}

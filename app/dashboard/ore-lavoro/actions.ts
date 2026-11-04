@@ -544,6 +544,9 @@ export async function confermaMeseMonteOre(_stato: EsitoAzione, formData: FormDa
 
   if (!riga || !puoConfermareMese(riga, meseCorrente)) {
     const giaCoperto = Boolean(esistente) || (riga !== undefined && riga.movimenti !== 0);
+    // Pagina vecchia (secondo admin, doppio click): si aggiorna anche qui, così
+    // la riga non resta con un pulsante che non serve più (MOR-06).
+    revalidatePath('/dashboard/ore-lavoro', 'layout');
     return { ok: true, avviso: giaCoperto ? MESSAGGIO_MESE_GIA_CONFERMATO : 'Niente da confermare' };
   }
 
