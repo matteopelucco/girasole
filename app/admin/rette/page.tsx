@@ -4,7 +4,7 @@ import { FormConEsito } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { requireAdmin } from '@/lib/auth';
 import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
-import { calcolaRiepilogoRetta, formattaImporto, giorniAperturaMese, meseRettaRichiesto } from '@/lib/comunicazioneRetta';
+import { formattaImporto, giorniAperturaMese, meseRettaRichiesto, pastiNonUsufruiti } from '@/lib/comunicazioneRetta';
 import {
   formattaDataOraItaliana,
   formattaMeseItaliano,
@@ -16,12 +16,13 @@ import {
   ultimoGiornoMese,
 } from '@/lib/date';
 import { gettoniMesePrecedente } from '@/lib/prezzi';
+import { leggiPrezzi } from '@/lib/prezziDati';
+import { pastiEffettiviPerBambino } from '@/lib/retteDati';
 import { raggruppaPerSezione } from '@/lib/sezioni';
-import { Campo } from '@/components/ui/campo';
 import { Pulsante } from '@/components/ui/pulsante';
 import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
-import { InvioSingoloRetta } from '@/components/InvioSingoloRetta';
+import { RigaRettaDaInviare } from '@/components/RigaRettaDaInviare';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
 import {
   annullaComunicazioneRetta,
@@ -33,41 +34,6 @@ import {
 } from './actions';
 
 export const dynamic = 'force-dynamic';
-
-// Campo importo modificabile con il simbolo "€" a fianco, fuori dal
-// campo compilabile (richiesta dell'utente): condiviso da conguaglio
-// pasti/pre-asilo/post-asilo/costi extra, le uniche voci ancora
-// modificabili in tabella (specs/56) — evita di ripetere quattro volte
-// lo stesso markup input+simbolo (CLAUDE.md, jscpd).
-function CampoImportoConEuro({
-  name,
-  ariaLabel,
-  defaultValue,
-  min,
-  className,
-}: {
-  name: string;
-  ariaLabel: string;
-  defaultValue: number;
-  min?: number;
-  className: string;
-}) {
-  return (
-    <div className="flex items-center justify-end gap-1">
-      <Campo
-        misura="piccolo"
-        type="number"
-        min={min}
-        step={0.01}
-        defaultValue={defaultValue}
-        name={name}
-        aria-label={ariaLabel}
-        className={className}
-      />
-      <span className="text-xs text-stone-500">€</span>
-    </div>
-  );
-}
 
 type ComunicazioneRettaRiga = {
   id: string;
@@ -102,39 +68,6 @@ function CellaGettoniInviati({ importo, numero, voce }: { importo: number; numer
     <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
       <div data-testid={`importo-gettoni-${voce}`}>{formattaImporto(importo)} €</div>
       <div className="text-xs text-stone-500" data-testid={`numero-gettoni-${voce}`}>
-        {numero} gettoni
-      </div>
-    </TabellaCella>
-  );
-}
-
-// Gettoni di una retta da inviare: importo modificabile e numero in sola
-// lettura (il numero viaggia nel form con un campo nascosto).
-function CellaGettoniDaInviare({
-  bambinoId,
-  nomeCompleto,
-  importo,
-  numero,
-  voce,
-}: {
-  bambinoId: string;
-  nomeCompleto: string;
-  importo: number;
-  numero: number;
-  voce: 'pre-asilo' | 'post-asilo';
-}) {
-  const chiave = voce === 'pre-asilo' ? 'pre_asilo' : 'post_asilo';
-  return (
-    <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
-      <CampoImportoConEuro
-        min={0}
-        defaultValue={importo}
-        name={`gettoni_${chiave}_${bambinoId}`}
-        ariaLabel={`Gettoni ${voce} per ${nomeCompleto}`}
-        className="w-14 px-1.5 text-right"
-      />
-      <input type="hidden" name={`numero_gettoni_${chiave}_${bambinoId}`} value={numero} />
-      <div className="text-right text-xs text-stone-500" data-testid={`numero-gettoni-${voce}`}>
         {numero} gettoni
       </div>
     </TabellaCella>
@@ -199,7 +132,7 @@ function RigaComunicazione({
           <div className="text-left text-xs text-stone-500">{comunicazione.nota_credito_debito}</div>
         )}
       </TabellaCella>
-      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5 font-medium">
+      <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5 font-medium" data-testid="totale-riga">
         {formattaImporto(Number(comunicazione.totale))} €
       </TabellaCella>
       <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-1.5 text-xs">
@@ -328,28 +261,6 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
       .order('cognome');
     const bambinoIds = (bambini ?? []).map((b) => b.id);
 
-    // Pasti effettivi del mese precedente (specs/56, conguaglio pasti):
-    // le righe `pasti` con mangiato = 'si'. Lette a pagine perché il tetto
-    // di righe per richiesta di PostgREST (1000) troncherebbe in silenzio
-    // un mese con tanti bambini e darebbe un conguaglio sbagliato.
-    async function pastiEffettiviMese() {
-      const righe: { bambino_id: string }[] = [];
-      for (let da = 0; ; da += 1000) {
-        const { data } = await supabase
-          .from('pasti')
-          .select('bambino_id')
-          .in('bambino_id', bambinoIds)
-          .gte('data', primoGiornoMese(mesePrecedenteValore))
-          .lte('data', ultimoGiornoMese(mesePrecedenteValore))
-          .eq('mangiato', 'si')
-          .order('id')
-          .range(da, da + 999);
-        righe.push(...(data ?? []));
-        if ((data?.length ?? 0) < 1000) break;
-      }
-      return { data: righe };
-    }
-
     // Presenze di pre/post-asilo del mese precedente (specs/56, gettoni):
     // lette a pagine per lo stesso motivo dei pasti (tetto di 1000 righe).
     async function presenzePrePostMesePrecedente() {
@@ -372,18 +283,19 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
 
     const [
       { data: costi },
-      { data: pastiEffettivi },
+      pastiEffettiviPerBambinoMappa,
       { data: comunicazioni },
       { data: creditiDebiti },
       { data: template },
       chiusure,
       { data: presenzePrePost },
       { data: rettePrecedenti },
+      prezziPredefiniti,
     ] = await Promise.all([
         bambinoIds.length
           ? supabase.from('costi_bambini').select('*').in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
-        bambinoIds.length ? pastiEffettiviMese() : Promise.resolve({ data: [] }),
+        pastiEffettiviPerBambino(supabase, bambinoIds, mesePrecedenteValore),
         bambinoIds.length
           ? supabase.from('comunicazioni_retta').select('*').eq('mese', meseVisualizzato).in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
@@ -409,6 +321,9 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
               .eq('mese', mesePrecedenteValore)
               .in('bambino_id', bambinoIds)
           : Promise.resolve({ data: [] }),
+        // Prezzi predefiniti: abbonamento di riferimento per l'avviso sui
+        // gettoni quando quello della scheda è 0 (RET-21). null se non leggibili.
+        leggiPrezzi(supabase),
       ]);
     const oggettoTemplate = template?.oggetto ?? 'Promemoria retta {{mese}}';
     const corpoTemplate = template?.corpo ?? '';
@@ -422,10 +337,6 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
     // Pasti potenziali: giorni di servizio pasto del mese precedente,
     // pagati in anticipo (stesso calendario per tutti i bambini).
     const pastiPotenziali = giorniAperturaMese(mesePrecedenteValore, chiusure);
-    const pastiEffettiviPerBambino = new Map<string, number>();
-    for (const riga of pastiEffettivi ?? []) {
-      pastiEffettiviPerBambino.set(riga.bambino_id, (pastiEffettiviPerBambino.get(riga.bambino_id) ?? 0) + 1);
-    }
 
     const presenzePrePostPerBambino = new Map<string, { data: string; preAsilo: boolean; postAsilo: boolean }[]>();
     for (const riga of presenzePrePost ?? []) {
@@ -443,12 +354,10 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
     sottotitolo = (
       <p className="mt-1 text-sm text-stone-600">
         Giorni di apertura stimati questo mese: {giorniApertura}. Pasti potenziali del mese precedente (giorni di
-        apertura): {pastiPotenziali}. Conguaglio pasti, pre-asilo, post-asilo, gettoni, costi
-        extra e relative note sono modificabili per una correzione ad-hoc (retta, marca da bollo, costo pasti e
-        credito/debito no — questi ultimi due si cambiano dalla scheda del bambino); il totale mostrato per i
-        bambini da comunicare resta la stima calcolata al caricamento della pagina, non si aggiorna mentre
-        modifichi i campi — quello realmente comunicato è la somma dei valori presenti nel form al momento
-        dell&apos;invio.
+        apertura): {pastiPotenziali}. Si modificano solo i gettoni, i costi
+        extra e la relativa nota per una correzione ad-hoc: le altre voci vengono dalla scheda del bambino
+        (conguaglio pasti e credito/debito si correggono con il credito/debito della scheda). Il totale di ogni
+        riga si aggiorna mentre scrivi e coincide con quello che verrà comunicato.
       </p>
     );
 
@@ -500,125 +409,47 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
         },
         rettaMesePrecedente: rettaPrecedentePerBambino.get(bambino.id) ?? null,
       });
-      const riepilogo = calcolaRiepilogoRetta({
-        prezzoMensile: Number(costiBambino.prezzo_mensile),
-        prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
-        giorniAperturaMeseCorrente: giorniApertura,
-        pastiPotenzialiMesePrecedente: pastiPotenziali,
-        pastiEffettiviMesePrecedente: pastiEffettiviPerBambino.get(bambino.id) ?? 0,
-        marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
-        preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
-        prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),
-        postAsiloRichiesto: costiBambino.post_asilo_richiesto,
-        prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
-        costiExtra: 0,
-        creditoDebito: creditoDebito?.importo ?? 0,
-        gettoniPreAsilo: gettoni.pre.importo,
-        gettoniPostAsilo: gettoni.post.importo,
-      });
-
-      const nomeCompleto = `${bambino.nome} ${bambino.cognome}`;
-      const classeCampoImporto = 'w-14 px-1.5 text-right';
+      const pastiEffettivi = pastiEffettiviPerBambinoMappa.get(bambino.id) ?? 0;
 
       return (
-        <TabellaRiga key={bambino.id}>
-          <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-1.5 font-normal">
-            <Link href={`/admin/bambini/${bambino.id}`} className="hover:underline">
-              {bambino.nome} {bambino.cognome}
-            </Link>
-            <div className="text-xs text-stone-500">({costiBambino.email_promemoria})</div>
-          </TabellaTitolo>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.rettaMensile)} €</TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.marcaDaBollo)} €</TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">{formattaImporto(riepilogo.costoPasti)} €</TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
-            <CampoImportoConEuro
-              defaultValue={riepilogo.conguaglioPasti}
-              name={`conguaglio_pasti_${bambino.id}`}
-              ariaLabel={`Conguaglio pasti mese precedente per ${nomeCompleto}`}
-              className={classeCampoImporto}
-            />
-          </TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
-            <CampoImportoConEuro
-              min={0}
-              defaultValue={riepilogo.costoPreAsilo}
-              name={`pre_asilo_${bambino.id}`}
-              ariaLabel={`Pre-asilo per ${nomeCompleto}`}
-              className={classeCampoImporto}
-            />
-          </TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
-            <CampoImportoConEuro
-              min={0}
-              defaultValue={riepilogo.costoPostAsilo}
-              name={`post_asilo_${bambino.id}`}
-              ariaLabel={`Post-asilo per ${nomeCompleto}`}
-              className={classeCampoImporto}
-            />
-          </TabellaCella>
-          <CellaGettoniDaInviare
-            bambinoId={bambino.id}
-            nomeCompleto={nomeCompleto}
-            importo={gettoni.pre.importo}
-            numero={gettoni.pre.numero}
-            voce="pre-asilo"
-          />
-          <CellaGettoniDaInviare
-            bambinoId={bambino.id}
-            nomeCompleto={nomeCompleto}
-            importo={gettoni.post.importo}
-            numero={gettoni.post.numero}
-            voce="post-asilo"
-          />
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5">
-            <CampoImportoConEuro
-              min={0}
-              defaultValue={0}
-              name={`costi_extra_${bambino.id}`}
-              ariaLabel={`Costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-16 px-1.5 text-right"
-            />
-          </TabellaCella>
-          <TabellaCella allinea="sinistra" className="px-2 py-1.5">
-            <Campo
-              misura="piccolo"
-              type="text"
-              name={`note_extra_${bambino.id}`}
-              placeholder="Nota (opzionale)"
-              aria-label={`Nota costi extra per ${bambino.nome} ${bambino.cognome}`}
-              className="w-32 px-1.5"
-            />
-          </TabellaCella>
-          <TabellaCella allinea="destra" className="px-2 py-1.5">
-            <div>{formattaImporto(riepilogo.creditoDebito)} €</div>
-            {creditoDebito?.nota && <div className="text-left text-xs text-stone-500">{creditoDebito.nota}</div>}
-          </TabellaCella>
-          <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-1.5 font-medium">
-            {formattaImporto(riepilogo.totale)} €
-          </TabellaCella>
-          <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-1.5 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-stone-500">Da inviare</span>
-              <InvioSingoloRetta
-                bambinoId={bambino.id}
-                nome={bambino.nome}
-                cognome={bambino.cognome}
-                email={costiBambino.email_promemoria}
-                mese={meseVisualizzato}
-                rettaMensile={riepilogo.rettaMensile}
-                marcaDaBollo={riepilogo.marcaDaBollo}
-                costoPasti={riepilogo.costoPasti}
-                creditoDebito={riepilogo.creditoDebito}
-                notaCreditoDebito={creditoDebito?.nota ?? null}
-                oggettoTemplate={oggettoTemplate}
-                corpoTemplate={corpoTemplate}
-                formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id, true)}
-                formActionSenzaInvio={inviaComunicazioneRettaSingola.bind(null, bambino.id, false)}
-              />
-            </div>
-          </TabellaCella>
-        </TabellaRiga>
+        <RigaRettaDaInviare
+          key={bambino.id}
+          bambino={bambino}
+          email={costiBambino.email_promemoria}
+          mese={meseVisualizzato}
+          fissi={{
+            prezzoMensile: Number(costiBambino.prezzo_mensile),
+            prezzoBuonoPasto: Number(costiBambino.prezzo_buono_pasto),
+            giorniAperturaMeseCorrente: giorniApertura,
+            pastiPotenzialiMesePrecedente: pastiPotenziali,
+            pastiEffettiviMesePrecedente: pastiEffettivi,
+            marcaDaBollo: Number(costiBambino.prezzo_marca_da_bollo),
+            preAsiloRichiesto: costiBambino.pre_asilo_richiesto,
+            prezzoPreAsilo: Number(costiBambino.prezzo_pre_asilo),
+            postAsiloRichiesto: costiBambino.post_asilo_richiesto,
+            prezzoPostAsilo: Number(costiBambino.prezzo_post_asilo),
+            creditoDebito: creditoDebito?.importo ?? 0,
+          }}
+          gettoni={gettoni}
+          abbonamento={{
+            pre: {
+              attivo: costiBambino.pre_asilo_richiesto,
+              prezzoScheda: Number(costiBambino.prezzo_pre_asilo),
+              prezzoPrezzi: prezziPredefiniti?.prezzi.abbonamento_pre_asilo ?? null,
+            },
+            post: {
+              attivo: costiBambino.post_asilo_richiesto,
+              prezzoScheda: Number(costiBambino.prezzo_post_asilo),
+              prezzoPrezzi: prezziPredefiniti?.prezzi.abbonamento_post_asilo ?? null,
+            },
+          }}
+          pastiNonUsufruiti={pastiNonUsufruiti(pastiPotenziali, pastiEffettivi)}
+          notaCreditoDebito={creditoDebito?.nota ?? null}
+          oggettoTemplate={oggettoTemplate}
+          corpoTemplate={corpoTemplate}
+          formAction={inviaComunicazioneRettaSingola.bind(null, bambino.id, true)}
+          formActionSenzaInvio={inviaComunicazioneRettaSingola.bind(null, bambino.id, false)}
+        />
       );
     }
 
