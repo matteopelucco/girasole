@@ -16,7 +16,7 @@ export async function pastiEffettiviPerBambino(
   const conteggio = new Map<string, number>();
   if (!bambinoIds.length) return conteggio;
   for (let da = 0; ; da += 1000) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('pasti')
       .select('bambino_id')
       .in('bambino_id', bambinoIds)
@@ -25,6 +25,9 @@ export async function pastiEffettiviPerBambino(
       .eq('mangiato', 'si')
       .order('id')
       .range(da, da + 999);
+    // Un errore non si trasforma in «0 pasti»: il conguaglio comunicato per email
+    // sarebbe sbagliato. Meglio fermarsi (la pagina o l'invio falliscono in modo visibile).
+    if (error) throw new Error(`lettura pasti non riuscita (${error.code})`);
     for (const riga of data ?? []) {
       conteggio.set(riga.bambino_id, (conteggio.get(riga.bambino_id) ?? 0) + 1);
     }
