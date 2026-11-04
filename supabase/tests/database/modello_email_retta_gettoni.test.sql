@@ -25,6 +25,14 @@ create extension if not exists pgtap with schema extensions;
 
 do $$
 begin
+  set local role postgres;
+exception when others then
+  raise notice 'set local role postgres non riuscito: % (%)', sqlerrm, sqlstate;
+end;
+$$;
+
+do $$
+begin
   execute format(
     'set local search_path to public, %s, pg_temp',
     (select quote_ident(n.nspname)
