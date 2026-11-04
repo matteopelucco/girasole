@@ -204,6 +204,17 @@ E solo l'admin può leggerli e modificarli
 E c'è una sola riga di prezzi: non se ne possono creare altre né
 cancellare quella esistente
 
+## Scenario: avviso se il gettone costa più dell'abbonamento della stessa voce
+**ID PRZ-11**
+Dato che sono admin sulla pagina "Parametri di funzionamento"
+Quando "Gettone pre-asilo (€)" è strettamente maggiore di "Abbonamento
+pre-asilo (€)" (es. 70,01 contro 70,00)
+Allora il campo del gettone si colora di rosso tenue e compare una breve
+scritta collegata al campo (`aria-describedby`), non solo colore
+E con valori uguali o gettone minore non compare nessun avviso
+E vale lo stesso per il post-asilo, in modo indipendente
+E l'avviso si aggiorna mentre scrivo e non blocca "Salva prezzi"
+
 ## Regole
 - Sezione "Prezzi" (issue #396): una sola riga nel database (tabella a riga
   unica), con RLS e GRANT solo per l'admin, creata già con i valori
@@ -212,7 +223,10 @@ cancellare quella esistente
   (virgola o punto, niente migliaia, niente "€").
 - I prezzi di questa sezione si usano solo alla creazione di un bambino
   (PRZ-07) e come proposta precompilata nella scheda Costi (COS-02): non
-  entrano mai in rette, comunicazioni o altri calcoli.
+  entrano in rette, comunicazioni o calcoli, salvo un caso: nella tabella
+  "Rette" l'abbonamento di «Prezzi» è il prezzo di confronto per l'avviso
+  sui gettoni quando il prezzo della scheda del bambino è 0 (RET-21,
+  specs/56); solo visivo, non cambia nessun importo.
 - Il salvataggio è atomico (tutto o niente) e controlla la concorrenza
   (PRZ-09): rifiuta chi salva partendo da dati non più aggiornati.
 - I valori non vengono storicizzati: non resta traccia dei prezzi vecchi.

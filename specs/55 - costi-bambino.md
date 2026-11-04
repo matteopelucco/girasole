@@ -174,6 +174,20 @@ valori, non ancora salvati (COS-02)
 E cambiando poi i gettoni in "Prezzi", i bambini con costi salvati non
 cambiano (COS-03)
 
+## Scenario: avviso se il prezzo del gettone supera l'abbonamento della stessa voce
+**ID COS-13**
+Dato che sono nella scheda di un bambino
+Quando "Prezzo gettone pre-asilo (€)" è strettamente maggiore di "Prezzo
+pre-asilo (€)" (es. 70,01 contro 70,00, errore di battitura)
+Allora il campo del gettone si colora di rosso tenue e compare una breve
+scritta collegata al campo (`aria-describedby`), non solo colore
+E con prezzi uguali (70,00 e 70,00) o gettone minore non compare nessun
+avviso
+E l'avviso si aggiorna mentre scrivo
+E pre e post sono indipendenti
+E l'avviso non blocca il salvataggio
+E si confrontano i valori scritti nel form (anche non ancora salvati)
+
 ## Scenario: modificare i costi già impostati
 Dato che un bambino ha già dei costi salvati
 Quando riapro la sua scheda, trovo il form pre-caricato con i valori
