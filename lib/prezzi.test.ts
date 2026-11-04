@@ -446,7 +446,7 @@ describe('gettoniMesePrecedente', () => {
       costi: { ...costi, preAsiloRichiesto: true },
       rettaMesePrecedente: { costoPreAsilo: 0, costoPostAsilo: 70 },
     });
-    expect(r.pre).toEqual({ numero: 1, importo: 7 }); // non coperto: costo pre = 0
+    expect(r.pre).toEqual({ numero: 1, importo: 0 }); // non coperto (costo pre = 0), ma flag acceso: importo 0 (RET-13)
     expect(r.post).toEqual({ numero: 0, importo: 0 }); // coperto: costo post > 0, anche col flag spento
   });
 
@@ -459,6 +459,39 @@ describe('gettoniMesePrecedente', () => {
     });
     expect(r.pre.numero).toBe(0);
     expect(r.post.numero).toBe(1);
+  });
+
+  // 14 giorni feriali di settembre 2026 (1-4, 7-11, 14-18), tutti con pre-asilo.
+  const quattordici = [1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18].map((g) =>
+    p(`2026-09-${String(g).padStart(2, '0')}`, true, false)
+  );
+
+  it('RET-13: abbonamento pre attivo con 14 giorni non coperti: numero 14, importo 0', () => {
+    const r = gettoniMesePrecedente({ ...base, presenze: quattordici, costi: { ...costi, preAsiloRichiesto: true } });
+    expect(r.pre).toEqual({ numero: 14, importo: 0 });
+  });
+
+  it("RET-13: senza abbonamento della voce nel mese l'importo è numero x prezzo", () => {
+    const r = gettoniMesePrecedente({ ...base, presenze: quattordici });
+    expect(r.pre).toEqual({ numero: 14, importo: 98 });
+  });
+
+  it('RET-13: pre e post sono indipendenti (l\'abbonamento di una voce azzera solo quella)', () => {
+    const presenze = [p('2026-09-01', true, true), p('2026-09-02', true, true)];
+    const soloPost = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, postAsiloRichiesto: true } });
+    expect(soloPost).toEqual({ pre: { numero: 2, importo: 14 }, post: { numero: 2, importo: 0 } });
+    const soloPre = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, preAsiloRichiesto: true } });
+    expect(soloPre).toEqual({ pre: { numero: 2, importo: 0 }, post: { numero: 2, importo: 16 } });
+  });
+
+  it('RET-13: con M-1 coperto e abbonamento attivo numero e importo sono 0 e 0', () => {
+    const r = gettoniMesePrecedente({
+      ...base,
+      presenze: quattordici,
+      costi: { ...costi, preAsiloRichiesto: true },
+      rettaMesePrecedente: { costoPreAsilo: 70, costoPostAsilo: 0 },
+    });
+    expect(r.pre).toEqual({ numero: 0, importo: 0 });
   });
 
   it('RET-03: weekend e giorni di chiusura registrati non generano gettoni', () => {
