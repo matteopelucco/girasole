@@ -167,6 +167,25 @@ export async function creaBambinoDaForm(page: Page, cognome: string, nomeSezione
   await page.getByRole('link', { name: new RegExp(cognome) }).waitFor({ timeout: 20_000 });
 }
 
+// --- Avviso A: il gettone costa più dell'abbonamento (COS-13, PRZ-11; issue #414) --
+//
+// STRUTTURA ATTESA (l'implementazione deve rispettarla), nella scheda del bambino
+// (dentro il form dei costi) e nella sezione "Prezzi":
+//   * accanto al campo del gettone, SOLO se gettone > abbonamento della stessa voce
+//     (strettamente), un elemento `data-testid="avviso-gettone-pre-asilo"` /
+//     `"avviso-gettone-post-asilo"` con il testo TESTO_AVVISO_GETTONE (non role="alert",
+//     non un errore); il campo del gettone ha `aria-describedby` che lo richiama
+//     (descrizione accessibile = quel testo) e NON ha aria-invalid;
+//   * il colore rosso tenue del campo non si controlla (solo testo e descrizione).
+export const TESTO_AVVISO_GETTONE = {
+  pre: "Il gettone costa più dell'abbonamento pre-asilo",
+  post: "Il gettone costa più dell'abbonamento post-asilo",
+} as const;
+
+export function avvisoGettone(contenitore: Locator, voce: 'pre' | 'post'): Locator {
+  return contenitore.getByTestId(`avviso-gettone-${voce}-asilo`);
+}
+
 // --- Allarme "Prezzi o tipi di sezione da completare" (specs/07, issue #397) --
 //
 // STRUTTURA ATTESA (l'implementazione deve rispettarla).

@@ -31,8 +31,10 @@ import {
   ETICHETTA_ABBONAMENTO_PRE,
   ETICHETTE_COSTI,
   MESSAGGIO_IMPORTO_NON_VALIDO,
+  TESTO_AVVISO_GETTONE,
   TESTO_AVVISO_RETTA_VUOTA,
   TITOLI_SEZIONI_SCHEDA,
+  avvisoGettone,
   avvisoRettaVuota,
   creaBambinoDaForm,
   formCosti,
@@ -541,6 +543,50 @@ test.describe('55 — Costi bambino', () => {
     await expect(campo(page, ETICHETTE_COSTI.gettonePreAsilo)).toHaveValue('7,50');
     await expect(campo(page, ETICHETTE_COSTI.gettonePostAsilo)).toHaveValue('8,00');
     expect(await leggiCosti(db!, id)).toMatchObject({ gettone_pre_asilo: 7.5, gettone_post_asilo: 8 });
+  });
+
+  test('COS-13: avviso se il prezzo del gettone supera l\'abbonamento della stessa voce', async ({ page }) => {
+    test.slow();
+    const { id } = await creaEApri(page);
+    const form = formCosti(page);
+    const avviso = (voce: 'pre' | 'post') => avvisoGettone(form, voce);
+    const gettonePre = campo(page, ETICHETTE_COSTI.gettonePreAsilo);
+    const gettonePost = campo(page, ETICHETTE_COSTI.gettonePostAsilo);
+
+    await campo(page, ETICHETTE_COSTI.preAsilo).fill('70');
+    await campo(page, ETICHETTE_COSTI.postAsilo).fill('70');
+
+    // 70,01 contro 70,00: avviso con la scritta, collegata al campo, non solo colore.
+    await gettonePre.fill('70,01');
+    await expect(avviso('pre')).toHaveText(TESTO_AVVISO_GETTONE.pre);
+    await expect(gettonePre).toHaveAccessibleDescription(TESTO_AVVISO_GETTONE.pre);
+    await expect(gettonePre).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(alertApp(page)).toHaveCount(0);
+    // Pre e post sono indipendenti.
+    await expect(avviso('post')).toHaveCount(0);
+    await nessunaViolazioneA11yGrave(page);
+
+    // Prezzi uguali o gettone minore: nessun avviso; si aggiorna mentre scrivo.
+    await gettonePre.fill('70,00');
+    await expect(avviso('pre')).toHaveCount(0);
+    await gettonePre.fill('7');
+    await expect(avviso('pre')).toHaveCount(0);
+    await gettonePre.fill('70,01');
+    await expect(avviso('pre')).toBeVisible();
+
+    // Anche cambiando l'abbonamento (valore non ancora salvato) l'avviso segue il form.
+    await campo(page, ETICHETTE_COSTI.preAsilo).fill('80');
+    await expect(avviso('pre')).toHaveCount(0);
+    await campo(page, ETICHETTE_COSTI.preAsilo).fill('70');
+
+    // Il post, in modo indipendente.
+    await gettonePost.fill('70,01');
+    await expect(avviso('post')).toHaveText(TESTO_AVVISO_GETTONE.post);
+    await expect(gettonePost).toHaveAccessibleDescription(TESTO_AVVISO_GETTONE.post);
+
+    // Non blocca il salvataggio.
+    await salvaCosti(page);
+    await expect.poll(async () => leggiCosti(db!, id)).toMatchObject({ gettone_pre_asilo: 70.01, gettone_post_asilo: 70.01 });
   });
 
   test('modificare i costi già impostati aggiorna i valori salvati', async ({ page }) => {

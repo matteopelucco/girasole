@@ -45,6 +45,8 @@ import {
   ETICHETTE_PREZZI,
   MESSAGGIO_CONCORRENZA,
   MESSAGGIO_IMPORTO_NON_VALIDO,
+  TESTO_AVVISO_GETTONE,
+  avvisoGettone,
   campoPrezzo,
   compilaPrezzi,
   creaBambinoDaForm,
@@ -535,6 +537,45 @@ test.describe('62 — Prezzi', () => {
       } finally {
         await secondo.close();
       }
+    });
+
+    test('PRZ-11: avviso se il gettone costa più dell\'abbonamento della stessa voce', async ({ page }) => {
+      await page.goto(PERCORSO);
+      const sezione = sezionePrezzi(page);
+      const gettonePre = campoPrezzo(page, 'gettone_pre_asilo');
+      const gettonePost = campoPrezzo(page, 'gettone_post_asilo');
+
+      // Valori iniziali (gettoni 7, abbonamenti 70): nessun avviso.
+      await expect(avvisoGettone(sezione, 'pre')).toHaveCount(0);
+      await expect(avvisoGettone(sezione, 'post')).toHaveCount(0);
+
+      await compilaPrezzi(page, { abbonamento_pre_asilo: '70', gettone_pre_asilo: '70,01' });
+      await expect(avvisoGettone(sezione, 'pre')).toHaveText(TESTO_AVVISO_GETTONE.pre);
+      await expect(gettonePre).toHaveAccessibleDescription(TESTO_AVVISO_GETTONE.pre);
+      await expect(gettonePre).not.toHaveAttribute('aria-invalid', 'true');
+      await expect(avvisoGettone(sezione, 'post')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+
+      // Uguali o gettone minore: nessun avviso; si aggiorna mentre scrivo.
+      await gettonePre.fill('70,00');
+      await expect(avvisoGettone(sezione, 'pre')).toHaveCount(0);
+      await gettonePre.fill('70,01');
+      await expect(avvisoGettone(sezione, 'pre')).toBeVisible();
+
+      // Il post, in modo indipendente.
+      await compilaPrezzi(page, { abbonamento_post_asilo: '50', gettone_post_asilo: '50,01' });
+      await expect(avvisoGettone(sezione, 'post')).toHaveText(TESTO_AVVISO_GETTONE.post);
+      await expect(gettonePost).toHaveAccessibleDescription(TESTO_AVVISO_GETTONE.post);
+
+      // Non blocca "Salva prezzi".
+      await salvaPrezzi(page);
+      await expect(sezione.getByText('Prezzi salvati', { exact: true })).toBeVisible();
+      await expect
+        .poll(async () => {
+          const p = await leggiPrezzi(db!);
+          return [p.gettone_pre_asilo, p.gettone_post_asilo];
+        })
+        .toEqual([70.01, 50.01]);
     });
 
     test('PRZ-10: a livello di database la riga è una sola e solo l\'admin la usa', async () => {

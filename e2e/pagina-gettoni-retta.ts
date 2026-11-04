@@ -55,16 +55,24 @@ export function primiGiorniFeriali(mese: string, n: number): string[] {
 export async function impostaCostiGettoni(
   db: SupabaseClient,
   bambino: BambinoFixture,
-  opzioni: { abbonamentoPre?: boolean; abbonamentoPost?: boolean; gettonePre?: number; gettonePost?: number } = {}
+  opzioni: {
+    abbonamentoPre?: boolean;
+    abbonamentoPost?: boolean;
+    gettonePre?: number;
+    gettonePost?: number;
+    // Prezzo dell'abbonamento nella scheda (default 70; 0 = si usa quello di «Prezzi», RET-21).
+    prezzoAbbonamentoPre?: number;
+    prezzoAbbonamentoPost?: number;
+  } = {}
 ): Promise<void> {
   const costi: CostiBambino = {
     prezzo_mensile: 100,
     prezzo_buono_pasto: 0,
     prezzo_marca_da_bollo: 2,
     pre_asilo_richiesto: opzioni.abbonamentoPre ?? false,
-    prezzo_pre_asilo: 70,
+    prezzo_pre_asilo: opzioni.prezzoAbbonamentoPre ?? 70,
     post_asilo_richiesto: opzioni.abbonamentoPost ?? false,
-    prezzo_post_asilo: 70,
+    prezzo_post_asilo: opzioni.prezzoAbbonamentoPost ?? 70,
     gettone_pre_asilo: opzioni.gettonePre ?? 7,
     gettone_post_asilo: opzioni.gettonePost ?? 8,
     email_promemoria: `e2e-gettoni-${bambino.id.slice(0, 8)}@example.com`,
@@ -160,4 +168,64 @@ export async function apriAnteprima(page: Page, bambino: BambinoFixture): Promis
   const popup = page.getByRole('dialog', { name: new RegExp(`Anteprima comunicazione per.*${bambino.cognome}`) });
   await expect(popup).toBeVisible();
   return popup;
+}
+
+// --- Tabella "Rette": voci di sola lettura, totale, avvisi (RET-14..RET-21, issue #414) ---
+//
+// STRUTTURA ATTESA (l'implementazione deve rispettarla), nella riga "da inviare":
+//   * conguaglio pasti come TESTO con `data-testid="conguaglio-pasti"` (es. "-100,00 €"),
+//     e sotto `data-testid="pasti-non-usufruiti"` con "N pasti non usufruiti" (anche
+//     "0 pasti non usufruiti"); nessun campo "Conguaglio pasti mese precedente per ...";
+//   * pre-asilo e post-asilo come TESTO con `data-testid="costo-pre-asilo"` /
+//     `"costo-post-asilo"` (es. "70,00 €"; "0,00 €" se la voce non è richiesta);
+//   * i soli campi compilabili (input non nascosti): gettoni pre, gettoni post,
+//     "Costi extra per <nome> <cognome>" e "Nota costi extra per <nome> <cognome>";
+//   * il totale in `data-testid="totale-riga"` (testo es. "139,00 €"), valido sia per la riga
+//     da inviare (si aggiorna mentre si scrive) sia per quella inviata; nessun
+//     `aria-live`/role status/alert nella riga (nessun annuncio a ogni tasto);
+//   * avviso B sotto il campo dei gettoni: `data-testid="avviso-gettoni-pre-asilo"` /
+//     `"avviso-gettoni-post-asilo"` con il testo TESTO_AVVISO_GETTONI, solo quando
+//     importo > abbonamento di riferimento; il campo ha `aria-describedby` che lo richiama
+//     (descrizione accessibile = quel testo) e non ha aria-invalid. Il colore non si controlla.
+export const TESTO_AVVISO_GETTONI = {
+  pre: "Gettoni oltre il prezzo dell'abbonamento pre-asilo",
+  post: "Gettoni oltre il prezzo dell'abbonamento post-asilo",
+} as const;
+
+export function conguaglioPasti(riga: Locator): Locator {
+  return riga.getByTestId('conguaglio-pasti');
+}
+
+export function pastiNonUsufruiti(riga: Locator): Locator {
+  return riga.getByTestId('pasti-non-usufruiti');
+}
+
+export function costoAsilo(riga: Locator, voce: Voce): Locator {
+  return riga.getByTestId(`costo-${SUFFISSO[voce]}`);
+}
+
+export function totaleRiga(riga: Locator): Locator {
+  return riga.getByTestId('totale-riga');
+}
+
+export function avvisoGettoniRette(riga: Locator, voce: Voce): Locator {
+  return riga.getByTestId(`avviso-gettoni-${SUFFISSO[voce]}`);
+}
+
+export function campoCostiExtra(riga: Locator, bambino: BambinoFixture): Locator {
+  return riga.getByLabel(`Costi extra per ${bambino.nome} ${bambino.cognome}`);
+}
+
+export function campoNotaExtra(riga: Locator, bambino: BambinoFixture): Locator {
+  return riga.getByLabel(`Nota costi extra per ${bambino.nome} ${bambino.cognome}`);
+}
+
+// Pasti "sì" nel mese precedente: i primi `n` giorni feriali (con la presenza, che il pasto richiede).
+export async function inserisciPastiMesePrecedente(db: SupabaseClient, bambino: BambinoFixture, n: number): Promise<void> {
+  const giorni = primiGiorniFeriali(mesePrecedenteRoma(), n);
+  for (const data of giorni) {
+    await inserisciPresenzaConAsilo(db, bambino, data, { pre: false, post: false });
+    const { error } = await db.from('pasti').insert({ bambino_id: bambino.id, data, mangiato: 'si' });
+    if (error) throw new Error(`Inserimento del pasto di prova non riuscito: ${error.message}`);
+  }
 }

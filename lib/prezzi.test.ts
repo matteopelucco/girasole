@@ -59,8 +59,16 @@ import {
   statoGettone,
   gettoneFuoriRetta,
   gettoniMesePrecedente,
+  prezzoAbbonamentoDiRiferimento,
+  avvisoGettoniSuperanoAbbonamento,
+  avvisoGettoneSuperaAbbonamento,
 } from './prezzi';
-import { calcolaRiepilogoRetta } from './comunicazioneRetta';
+import {
+  calcolaRiepilogoRetta,
+  importoDaCampoRetta,
+  pastiNonUsufruiti,
+  riepilogoRigaRetta,
+} from './comunicazioneRetta';
 
 function centesimi(testo: string): number | null {
   const r = parseImporto(testo);
@@ -606,5 +614,143 @@ describe('calcolaRiepilogoRetta con i gettoni', () => {
     const r = calcolaRiepilogoRetta({ ...parametri, preAsiloRichiesto: true, costiExtra: 15, creditoDebito: -5 });
     // 100 + 0 + 0 + 2 + 70 + 0 + 21 + 16 + 15 - 5
     expect(r.totale).toBe(219);
+  });
+});
+
+// --- Avvisi sui gettoni e totale live (issue #414: RET-14, RET-17, RET-19..21, COS-13, PRZ-11) ---
+//
+// API da aggiungere:
+//   lib/prezzi.ts
+//     prezzoAbbonamentoDiRiferimento(scheda: number | null | undefined, prezzi: number | null | undefined): number
+//       scheda se > 0, altrimenti prezzi se > 0, altrimenti 0 (RET-21).
+//     avvisoGettoniSuperanoAbbonamento(args: { importoGettoni: number; abbonamentoAttivo: boolean;
+//       prezzoAbbonamentoScheda: number | null | undefined; prezzoAbbonamentoPrezzi: number | null | undefined }): boolean
+//       B (RET-19/20): importo > riferimento (strettamente); false se importo 0, abbonamento attivo o riferimento 0.
+//     avvisoGettoneSuperaAbbonamento(args: { prezzoGettone: number; prezzoAbbonamento: number }): boolean
+//       A (COS-13/PRZ-11): gettone > abbonamento (strettamente).
+//   lib/comunicazioneRetta.ts
+//     pastiNonUsufruiti(potenziali: number, effettivi: number): number   // max(0, potenziali - effettivi)
+//     importoDaCampoRetta(testo: string): number   // vuoto/non valido/negativo = 0, arrotondato a 2 decimali (come il server)
+//     riepilogoRigaRetta(fissi: Omit<ParametriRiepilogoRetta, 'gettoniPreAsilo' | 'gettoniPostAsilo' | 'costiExtra'>,
+//       campi: { gettoniPreAsilo: string; gettoniPostAsilo: string; costiExtra: string }): RiepilogoRetta
+
+describe('prezzoAbbonamentoDiRiferimento (RET-21)', () => {
+  it('usa il prezzo della scheda se maggiore di 0', () => {
+    expect(prezzoAbbonamentoDiRiferimento(70, 80)).toBe(70);
+  });
+  it('se la scheda è 0 usa quello di Prezzi', () => {
+    expect(prezzoAbbonamentoDiRiferimento(0, 80)).toBe(80);
+  });
+  it('se la scheda manca usa quello di Prezzi', () => {
+    expect(prezzoAbbonamentoDiRiferimento(null, 80)).toBe(80);
+    expect(prezzoAbbonamentoDiRiferimento(undefined, 80)).toBe(80);
+  });
+  it('se mancano o sono 0 entrambi vale 0', () => {
+    expect(prezzoAbbonamentoDiRiferimento(0, 0)).toBe(0);
+    expect(prezzoAbbonamentoDiRiferimento(null, undefined)).toBe(0);
+  });
+});
+
+describe('avvisoGettoniSuperanoAbbonamento (RET-19, RET-20, RET-21)', () => {
+  const base = { importoGettoni: 70.01, abbonamentoAttivo: false, prezzoAbbonamentoScheda: 70, prezzoAbbonamentoPrezzi: 65 };
+  it("avvisa se l'importo è strettamente maggiore del prezzo della scheda", () => {
+    expect(avvisoGettoniSuperanoAbbonamento(base)).toBe(true);
+  });
+  it('nessun avviso con importo uguale (70,00) o minore', () => {
+    expect(avvisoGettoniSuperanoAbbonamento({ ...base, importoGettoni: 70 })).toBe(false);
+    expect(avvisoGettoniSuperanoAbbonamento({ ...base, importoGettoni: 69.99 })).toBe(false);
+  });
+  it('nessun avviso con importo 0', () => {
+    expect(avvisoGettoniSuperanoAbbonamento({ ...base, importoGettoni: 0 })).toBe(false);
+  });
+  it("nessun avviso se l'abbonamento è attivo nel mese", () => {
+    expect(avvisoGettoniSuperanoAbbonamento({ ...base, abbonamentoAttivo: true })).toBe(false);
+  });
+  it('con scheda a 0 si confronta con Prezzi', () => {
+    const args = { ...base, prezzoAbbonamentoScheda: 0, prezzoAbbonamentoPrezzi: 70, importoGettoni: 70.01 };
+    expect(avvisoGettoniSuperanoAbbonamento(args)).toBe(true);
+    expect(avvisoGettoniSuperanoAbbonamento({ ...args, importoGettoni: 70 })).toBe(false);
+  });
+  it('con scheda maggiore di 0 Prezzi non conta', () => {
+    expect(
+      avvisoGettoniSuperanoAbbonamento({ ...base, prezzoAbbonamentoScheda: 100, prezzoAbbonamentoPrezzi: 10, importoGettoni: 90 })
+    ).toBe(false);
+  });
+  it('nessun avviso se il riferimento è assente o 0 per entrambi', () => {
+    expect(avvisoGettoniSuperanoAbbonamento({ ...base, prezzoAbbonamentoScheda: 0, prezzoAbbonamentoPrezzi: 0 })).toBe(false);
+    expect(
+      avvisoGettoniSuperanoAbbonamento({ ...base, prezzoAbbonamentoScheda: null, prezzoAbbonamentoPrezzi: undefined })
+    ).toBe(false);
+  });
+});
+
+describe('avvisoGettoneSuperaAbbonamento (COS-13, PRZ-11)', () => {
+  it('avvisa con gettone 70,01 e abbonamento 70,00', () => {
+    expect(avvisoGettoneSuperaAbbonamento({ prezzoGettone: 70.01, prezzoAbbonamento: 70 })).toBe(true);
+  });
+  it('nessun avviso con prezzi uguali o gettone minore', () => {
+    expect(avvisoGettoneSuperaAbbonamento({ prezzoGettone: 70, prezzoAbbonamento: 70 })).toBe(false);
+    expect(avvisoGettoneSuperaAbbonamento({ prezzoGettone: 7, prezzoAbbonamento: 70 })).toBe(false);
+  });
+});
+
+describe('pastiNonUsufruiti (RET-14)', () => {
+  it('è la differenza tra potenziali ed effettivi', () => {
+    expect(pastiNonUsufruiti(20, 17)).toBe(3);
+  });
+  it('vale 0 se uguali', () => {
+    expect(pastiNonUsufruiti(20, 20)).toBe(0);
+  });
+  it('mai negativo se gli effettivi superano i potenziali', () => {
+    expect(pastiNonUsufruiti(20, 22)).toBe(0);
+  });
+});
+
+describe('importoDaCampoRetta (RET-16)', () => {
+  it('legge un numero valido', () => {
+    expect(importoDaCampoRetta('12.5')).toBe(12.5);
+    expect(importoDaCampoRetta('0')).toBe(0);
+  });
+  it('vuoto, spazi o testo valgono 0', () => {
+    expect(importoDaCampoRetta('')).toBe(0);
+    expect(importoDaCampoRetta('   ')).toBe(0);
+    expect(importoDaCampoRetta('abc')).toBe(0);
+  });
+  it('un valore negativo vale 0', () => {
+    expect(importoDaCampoRetta('-5')).toBe(0);
+  });
+  it('arrotonda al centesimo, come il server', () => {
+    expect(importoDaCampoRetta('1.239')).toBe(1.24);
+  });
+});
+
+describe('riepilogoRigaRetta (RET-17: stessa funzione del server)', () => {
+  const fissi = {
+    prezzoMensile: 200,
+    prezzoBuonoPasto: 5,
+    giorniAperturaMeseCorrente: 20,
+    pastiPotenzialiMesePrecedente: 20,
+    pastiEffettiviMesePrecedente: 17,
+    marcaDaBollo: 2,
+    preAsiloRichiesto: true,
+    prezzoPreAsilo: 70,
+    postAsiloRichiesto: false,
+    prezzoPostAsilo: 70,
+    creditoDebito: -10,
+  };
+  it('coincide con calcolaRiepilogoRetta sugli stessi valori', () => {
+    const campi = { gettoniPreAsilo: '21', gettoniPostAsilo: '16.5', costiExtra: '15' };
+    expect(riepilogoRigaRetta(fissi, campi)).toEqual(
+      calcolaRiepilogoRetta({ ...fissi, gettoniPreAsilo: 21, gettoniPostAsilo: 16.5, costiExtra: 15 })
+    );
+  });
+  it('campi vuoti, non validi o negativi valgono 0', () => {
+    const atteso = calcolaRiepilogoRetta({ ...fissi, gettoniPreAsilo: 0, gettoniPostAsilo: 0, costiExtra: 0 });
+    expect(riepilogoRigaRetta(fissi, { gettoniPreAsilo: '', gettoniPostAsilo: 'abc', costiExtra: '-3' })).toEqual(atteso);
+  });
+  it('il totale segue il valore scritto', () => {
+    const a = riepilogoRigaRetta(fissi, { gettoniPreAsilo: '0', gettoniPostAsilo: '0', costiExtra: '0' });
+    const b = riepilogoRigaRetta(fissi, { gettoniPreAsilo: '0', gettoniPostAsilo: '0', costiExtra: '15' });
+    expect(Math.round((b.totale - a.totale) * 100) / 100).toBe(15);
   });
 });
