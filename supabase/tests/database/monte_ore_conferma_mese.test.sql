@@ -42,7 +42,7 @@ begin
 end;
 $$;
 
-select plan(30);
+select plan(28);
 
 -- Helper (temporanei: spariscono con la transazione) ----------------------
 create function pg_temp.impersona(p_uid uuid) returns void
@@ -302,11 +302,17 @@ select ok(
 );
 
 -- Update/delete di un non admin: nessun errore, ma zero righe toccate.
-select pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
-  $q$update public.monte_ore_movimenti set mese_competenza = '2026-01-01', variazione = 99
-      where id = 'b0000000-0000-0000-0000-000000000001'$q$);
-select pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
-  $q$delete from public.monte_ore_movimenti where id = 'b0000000-0000-0000-0000-000000000001'$q$);
+-- In un blocco `do` (non `select`): il testo restituito da write_as non deve
+-- finire nell'output, dove prove lo leggerebbe come una riga "ok" in più.
+do $$
+begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
+    $q$update public.monte_ore_movimenti set mese_competenza = '2026-01-01', variazione = 99
+        where id = 'b0000000-0000-0000-0000-000000000001'$q$);
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
+    $q$delete from public.monte_ore_movimenti where id = 'b0000000-0000-0000-0000-000000000001'$q$);
+end;
+$$;
 select results_eq(
   $q$select variazione::float8, mese_competenza from public.monte_ore_movimenti
       where id = 'b0000000-0000-0000-0000-000000000001'$q$,
