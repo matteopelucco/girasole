@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireStaff, requireAdmin, assicuraAccessoOreLavoro } from '@/lib/auth';
-import { oggi, giorniSettimana } from '@/lib/date';
+import { oggi, giorniSettimana, meseDaData, primoGiornoMese } from '@/lib/date';
 import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import {
   validaSettimanaOreLavoro,
@@ -17,6 +17,13 @@ import {
   notaMovimentoStraordinarioResiduo,
   segnoVersoMovimentoMonteOre,
 } from '@/lib/monteOre';
+import {
+  notaConfermaMese,
+  nuovaVariazioneConferma,
+  parteNonConfermata,
+  puoConfermareMese,
+} from '@/lib/monteOreMensile';
+import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import { recuperaProfiloOrario } from '@/lib/profiliOrari';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
@@ -347,6 +354,7 @@ export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: 
       utente_id: utenteId,
       tipo: 'straordinario_residuo',
       settimana_inizio: settimanaInizio,
+      mese_competenza: primoGiornoMese(meseDaData(oggi())),
       variazione: settimana.straordinario_residuo,
       nota: notaMovimentoStraordinarioResiduo(settimana.straordinario_residuo),
     });
@@ -364,6 +372,20 @@ export async function decidiStraordinarioResiduo(_stato: EsitoAzione, formData: 
   return { ok: true };
 }
 
+const MESSAGGIO_MESE_GIA_CONFERMATO = 'Mese già confermato';
+const ESPRESSIONE_MESE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// Mese di competenza inviato dal form (AAAA-MM) come data AAAA-MM-01:
+// valido solo se ben formato e non successivo al mese corrente (specs/19,
+// MOR-08/MOR-09). Altrimenti null. Il controllo vero è qui, non nel select.
+function meseCompetenzaDaForm(formData: FormData): string | null {
+  const mese = ((formData.get('mese_competenza') as string) || '').trim();
+  if (!ESPRESSIONE_MESE.test(mese) || mese > meseDaData(oggi())) return null;
+  return primoGiornoMese(mese);
+}
+
+const MESSAGGIO_MESE_NON_VALIDO = 'Scegli un mese di competenza valido (non successivo al mese corrente).';
+
 // Movimento manuale di monte ore (specs/19 - monte-ore.md): solo
 // l'admin può registrarlo, per qualunque utente abilitato, sempre con
 // una nota obbligatoria (non è un dato calcolato, va motivato). `verso`
@@ -378,10 +400,12 @@ export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: F
   const segno = segnoVersoMovimentoMonteOre((formData.get('verso') as string) || '');
   const ore = Number(formData.get('ore'));
   const nota = ((formData.get('nota') as string) || '').trim();
+  const meseCompetenza = meseCompetenzaDaForm(formData);
 
   if (!utenteId) {
     return { ok: false, messaggio: 'Utente non valido.' };
   }
+  if (!meseCompetenza) return { ok: false, messaggio: MESSAGGIO_MESE_NON_VALIDO };
   if (segno === null) {
     return { ok: false, messaggio: 'Scegli se il dipendente ha erogato ore in più o deve ancora erogare ore.' };
   }
@@ -397,6 +421,7 @@ export async function aggiungiMovimentoMonteOre(_stato: EsitoAzione, formData: F
     tipo: 'precarico',
     variazione: segno * ore,
     nota,
+    mese_competenza: meseCompetenza,
   });
   if (error) {
     return { ok: false, messaggio: 'Impossibile registrare il movimento di monte ore.', dettaglio: error.message };
@@ -439,8 +464,10 @@ export async function modificaMovimentoMonteOre(_stato: EsitoAzione, formData: F
   const segno = segnoVersoMovimentoMonteOre((formData.get('verso') as string) || '');
   const ore = Number(formData.get('ore'));
   const nota = ((formData.get('nota') as string) || '').trim();
+  const meseCompetenza = meseCompetenzaDaForm(formData);
 
   if (!id) return { ok: false, messaggio: 'Movimento non valido.' };
+  if (!meseCompetenza) return { ok: false, messaggio: MESSAGGIO_MESE_NON_VALIDO };
   if (segno === null) {
     return { ok: false, messaggio: 'Scegli se il dipendente ha erogato ore in più o deve ancora erogare ore.' };
   }
@@ -453,13 +480,102 @@ export async function modificaMovimentoMonteOre(_stato: EsitoAzione, formData: F
 
   const { data, error } = await supabase
     .from('monte_ore_movimenti')
-    .update({ variazione: segno * ore, nota })
+    .update({ variazione: segno * ore, nota, mese_competenza: meseCompetenza })
     .eq('id', id)
     .select('id');
+  if (error?.code === '23505') {
+    return { ok: false, messaggio: 'Quel mese è già confermato per questa persona: esiste già una conferma di quel mese.' };
+  }
   if (error) {
     return { ok: false, messaggio: 'Impossibile modificare il movimento.', dettaglio: error.message };
   }
   if (!data?.length) return { ok: false, messaggio: 'Movimento non trovato.' };
+
+  revalidatePath('/dashboard/ore-lavoro', 'layout');
+  return { ok: true };
+}
+
+// Conferma della differenza ore di un mese chiuso (specs/19, MOR-01..MOR-07):
+// solo l'admin. Il valore da registrare lo calcola il server qui, ogni volta,
+// dalla differenza del mese e dai movimenti di quel mese: mai un numero
+// inviato dal browser (che può essere vecchio o manomesso). Una sola conferma
+// per persona e mese: se c'è già, la parte non confermata si somma alla sua
+// variazione. Doppio click o due admin: l'indice unico (23505 in inserimento)
+// e il confronto con la variazione letta (in aggiornamento) fanno sì che la
+// richiesta in più non registri nulla e risponda "Mese già confermato".
+export async function confermaMeseMonteOre(_stato: EsitoAzione, formData: FormData): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const utenteId = ((formData.get('utente_id') as string) || '').trim();
+  const mese = ((formData.get('mese') as string) || '').trim();
+  if (!utenteId || !ESPRESSIONE_MESE.test(mese)) return { ok: false, messaggio: 'Mese o utente non validi.' };
+
+  const oggiData = oggi();
+  const meseCorrente = meseDaData(oggiData);
+  // Mese in corso o futuro: mai confermabile (MOR-04).
+  if (mese >= meseCorrente) return { ok: false, messaggio: 'Si può confermare solo un mese già chiuso.' };
+
+  const { data: persona } = await supabase
+    .from('profili')
+    .select('profilo_orario_id')
+    .eq('id', utenteId)
+    .eq('abilitato_ore_lavoro', true)
+    .maybeSingle();
+  if (!persona) return { ok: false, messaggio: 'Utente non valido.' };
+
+  const [profiloOrario, { data: movimenti }, { data: esistente }] = await Promise.all([
+    recuperaProfiloOrario(supabase, persona.profilo_orario_id),
+    supabase.from('monte_ore_movimenti').select('variazione, created_at, mese_competenza').eq('utente_id', utenteId),
+    supabase
+      .from('monte_ore_movimenti')
+      .select('id, variazione')
+      .eq('utente_id', utenteId)
+      .eq('tipo', 'conferma_mese')
+      .eq('mese_competenza', primoGiornoMese(mese))
+      .maybeSingle(),
+  ]);
+  const righe = await calcoloMensilePerUtente(supabase, {
+    utenteId,
+    profiloOrario,
+    oggiData,
+    movimenti: movimenti ?? [],
+  });
+  const riga = righe.find((r) => r.mese === mese);
+
+  if (!riga || !puoConfermareMese(riga, meseCorrente)) {
+    const giaCoperto = Boolean(esistente) || (riga !== undefined && riga.movimenti !== 0);
+    return { ok: true, avviso: giaCoperto ? MESSAGGIO_MESE_GIA_CONFERMATO : 'Niente da confermare' };
+  }
+
+  const variazione = nuovaVariazioneConferma(esistente?.variazione ?? null, parteNonConfermata(riga));
+  const nota = notaConfermaMese(mese, variazione);
+
+  if (!esistente) {
+    const { error } = await supabase.from('monte_ore_movimenti').insert({
+      utente_id: utenteId,
+      tipo: 'conferma_mese',
+      variazione,
+      nota,
+      mese_competenza: primoGiornoMese(mese),
+    });
+    if (error?.code === '23505') {
+      revalidatePath('/dashboard/ore-lavoro', 'layout');
+      return { ok: true, avviso: MESSAGGIO_MESE_GIA_CONFERMATO };
+    }
+    if (error) return { ok: false, messaggio: 'Impossibile confermare il mese.', dettaglio: error.message };
+  } else {
+    const { data, error } = await supabase
+      .from('monte_ore_movimenti')
+      .update({ variazione, nota })
+      .eq('id', esistente.id)
+      .eq('variazione', esistente.variazione)
+      .select('id');
+    if (error) return { ok: false, messaggio: 'Impossibile confermare il mese.', dettaglio: error.message };
+    if (!data?.length) {
+      revalidatePath('/dashboard/ore-lavoro', 'layout');
+      return { ok: true, avviso: MESSAGGIO_MESE_GIA_CONFERMATO };
+    }
+  }
 
   revalidatePath('/dashboard/ore-lavoro', 'layout');
   return { ok: true };
