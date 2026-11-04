@@ -122,7 +122,11 @@ export default async function PagamentiBambinoPage(
               </div>
             </div>
 
-            <TabellaScorrevole>
+            <TabellaScorrevole
+              role="region"
+              tabIndex={0}
+              aria-label={`Importi richiesti a ${bambino.nome} ${bambino.cognome}, scorrevole in orizzontale`}
+            >
               <Tabella separatori>
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}
