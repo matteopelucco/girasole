@@ -167,8 +167,10 @@ export type GettoniVoce = { numero: number; importo: number };
 // Gettoni da addebitare nella retta del mese `meseCorrente`: per ogni voce
 // (pre, post) i giorni del mese PRECEDENTE con presenza in quella voce, esclusi
 // weekend, giorni di chiusura e giorni coperti dall'abbonamento
-// (`copertoDaAbbonamento`), per il prezzo del gettone della voce. Senza riga
-// costi: 0 e 0. Logica pura, nessun I/O.
+// (`copertoDaAbbonamento`), per il prezzo del gettone della voce. Il numero
+// non cambia mai in base al mese corrente; se però la voce ha l'abbonamento
+// nel mese della retta (flag attuale di `costi_bambini`), l'importo vale 0 e il
+// numero resta indicato (RET-13). Senza riga costi: 0 e 0. Logica pura, nessun I/O.
 export function gettoniMesePrecedente(args: {
   meseCorrente: string;
   presenze: { data: string; preAsilo: boolean; postAsilo: boolean }[];
@@ -193,6 +195,8 @@ export function gettoniMesePrecedente(args: {
   const voce = (nome: VocePrePost, flagAttuale: boolean, prezzo: number): GettoniVoce => {
     if (copertoDaAbbonamento({ voce: nome, flagAttuale, rettaDelMese: args.rettaMesePrecedente })) return zero();
     const numero = giorniValidi.filter((p) => (nome === 'pre' ? p.preAsilo : p.postAsilo)).length;
+    // RET-13: con l'abbonamento del mese corrente il gettone non si addebita.
+    if (flagAttuale) return { numero, importo: 0 };
     return { numero, importo: Math.round(numero * prezzo * 100) / 100 };
   };
   return {

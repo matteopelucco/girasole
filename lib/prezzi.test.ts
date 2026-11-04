@@ -467,7 +467,13 @@ describe('gettoniMesePrecedente', () => {
   );
 
   it('RET-13: abbonamento pre attivo con 14 giorni non coperti: numero 14, importo 0', () => {
-    const r = gettoniMesePrecedente({ ...base, presenze: quattordici, costi: { ...costi, preAsiloRichiesto: true } });
+    // Retta di M-1 inviata senza abbonamento pre (costo 0): i 14 giorni non erano coperti.
+    const r = gettoniMesePrecedente({
+      ...base,
+      presenze: quattordici,
+      costi: { ...costi, preAsiloRichiesto: true },
+      rettaMesePrecedente: { costoPreAsilo: 0, costoPostAsilo: 0 },
+    });
     expect(r.pre).toEqual({ numero: 14, importo: 0 });
   });
 
@@ -478,9 +484,20 @@ describe('gettoniMesePrecedente', () => {
 
   it('RET-13: pre e post sono indipendenti (l\'abbonamento di una voce azzera solo quella)', () => {
     const presenze = [p('2026-09-01', true, true), p('2026-09-02', true, true)];
-    const soloPost = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, postAsiloRichiesto: true } });
+    const rettaSenzaAbbonamenti = { costoPreAsilo: 0, costoPostAsilo: 0 };
+    const soloPost = gettoniMesePrecedente({
+      ...base,
+      presenze,
+      costi: { ...costi, postAsiloRichiesto: true },
+      rettaMesePrecedente: rettaSenzaAbbonamenti,
+    });
     expect(soloPost).toEqual({ pre: { numero: 2, importo: 14 }, post: { numero: 2, importo: 0 } });
-    const soloPre = gettoniMesePrecedente({ ...base, presenze, costi: { ...costi, preAsiloRichiesto: true } });
+    const soloPre = gettoniMesePrecedente({
+      ...base,
+      presenze,
+      costi: { ...costi, preAsiloRichiesto: true },
+      rettaMesePrecedente: rettaSenzaAbbonamenti,
+    });
     expect(soloPre).toEqual({ pre: { numero: 2, importo: 0 }, post: { numero: 2, importo: 16 } });
   });
 
