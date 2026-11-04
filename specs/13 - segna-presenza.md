@@ -340,7 +340,8 @@ screen reader) e il significato è nella scritta
   CSS, si ferma dopo un ciclo e non si salva (GET-05, GET-06).
 - Il gettone da addebitare di GET-02 diventa importo nella retta del mese
   successivo ([56](56%20-%20comunicazione-retta-mensile.md), RET-01..RET-08),
-  con la stessa regola di copertura di GET-11.
+  con la stessa regola di copertura di GET-11; se la voce ha l'abbonamento
+  nel mese della retta l'importo vale 0 e il numero resta (RET-13).
 - Poiché maestra e assistente non leggono `costi_bambini`, il sì/no arriva
   da una funzione SQL di sola lettura (con il suo `GRANT` minimo nella
   stessa migration) che, per i bambini visibili al chiamante, restituisce

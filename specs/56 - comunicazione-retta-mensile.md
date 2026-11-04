@@ -296,8 +296,10 @@ quello post-asilo è 8,00 (specs/55)
 Quando apro "Rette" sul mese M (corrente)
 Allora nella sua riga vedo due voci separate: gettoni pre-asilo
 21,00 € (3 gettoni) e gettoni post-asilo 16,00 € (2 gettoni)
-E importo e numero sono calcolati per ogni bambino e per ogni voce:
-giorni non coperti × prezzo del gettone di quella voce
+E il numero è calcolato per ogni bambino e per ogni voce: giorni non
+coperti di M-1 (RET-02); non dipende dall'abbonamento del mese M
+E l'importo è numero × prezzo del gettone di quella voce, salvo RET-13
+(abbonamento della voce nel mese M: importo 0,00 €)
 E se una voce non ha giorni non coperti mostra 0,00 € e 0 gettoni
 
 ## Scenario: un giorno è coperto se l'abbonamento della voce c'era nella retta di quel mese
@@ -311,6 +313,9 @@ E se la retta di M-1 non è stata inviata (o non esiste) vale
 l'abbonamento attuale della voce (`costi_bambini`)
 E pre e post sono valutati separatamente: l'abbonamento di una voce non
 copre l'altra
+E la copertura riguarda il numero dei gettoni (se M-1 era coperto, numero
+e importo sono 0); l'abbonamento del mese M non cambia il numero, azzera
+solo l'importo (RET-13)
 E è la stessa regola di GET-11 ([13](13%20-%20segna-presenza.md)): la
 schermata presenze e la retta non possono mai dire cose diverse
 
@@ -336,6 +341,8 @@ Dato che un bambino ha gettoni pre-asilo 21,00 € e gettoni post-asilo
 Quando guardo il totale (e, per la riga appena modificata a mano,
 quello comunicato all'invio)
 Allora il totale è la somma di tutte le voci già previste più 37,00 €
+E il totale usa gli importi effettivi dei gettoni: una voce con
+abbonamento nel mese (RET-13) vi entra con 0,00 €, non con numero × prezzo
 E se ho modificato a mano un importo prima dell'invio, il totale
 comunicato usa il valore che ho scritto
 
@@ -398,6 +405,29 @@ Dato che una retta è stata inviata, oppure sto rivedendo un mese passato
 Quando guardo la riga di quel bambino
 Allora vedo gettoni pre e post (importo e numero) come registrati
 
+## Scenario: con l'abbonamento del mese corrente i gettoni di quella voce valgono 0
+**ID RET-13**
+Dato che un bambino ha, nel mese precedente M-1, 14 giorni con pre-asilo
+non coperti e il gettone pre-asilo è 7,00 (specs/55)
+E la voce pre-asilo ha l'abbonamento nel mese M della retta
+Quando apro "Rette" sul mese M
+Allora i gettoni pre-asilo mostrano 0,00 € e 14 gettoni: il numero
+resta quello di RET-01, solo l'importo è azzerato
+E l'importo 0,00 € entra nel totale (RET-05)
+E pre e post sono indipendenti: l'abbonamento del pre non azzera il post
+e viceversa
+E senza abbonamento della voce nel mese M l'importo è come in RET-01
+(numero × prezzo)
+E se M-1 era coperto (RET-02) numero e importo sono 0 e 0,00 €
+E l'importo resta modificabile a mano prima dell'invio, anche se
+proposto a 0,00 €
+E la retta inviata registra 0,00 € con il numero, e non cambia più
+(RET-06, anche se poi cambia l'abbonamento)
+E se la retta è annullata e rifatta, l'importo è ricalcolato con
+l'abbonamento di quel momento (RET-08)
+E nell'email `{{gettoni_pre_asilo}}` dà «0,00» e
+`{{numero_gettoni_pre_asilo}}` dà «14» (lo stesso per il post)
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)
@@ -458,7 +488,10 @@ Allora vengo reindirizzato alla dashboard
   chiusure, voci miste): giorni del mese M-1 con `pre_asilo` (o
   `post_asilo`) vero, senza weekend né chiusure, non coperti × gettone
   della voce. Copertura come GET-11: retta di M-1 inviata → coperto se la
-  quota addebitata (pre o post) è > 0, altrimenti flag attuale. Se il
+  quota addebitata (pre o post) è > 0, altrimenti flag attuale. Issue
+  #413 (RET-13): se la voce ha l'abbonamento nel mese M della retta
+  l'importo è 0 e il numero resta quello calcolato; la copertura di M-1
+  azzera numero e importo; nessuna migration. Se il
   bambino non ha riga in `costi_bambini` non è comunicabile e i gettoni
   sono 0. Importo modificabile a mano come il conguaglio (non negativo);
   il numero è di sola lettura, non cambia con l'importo scritto.

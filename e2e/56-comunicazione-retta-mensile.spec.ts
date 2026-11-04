@@ -815,7 +815,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
       await page.goto('/admin/rette');
       const rigaA = rigaRette(page, a);
       await expect(campoGettoni(rigaA, a, 'pre')).toHaveValue('0');
-      await expect(campoGettoni(rigaA, a, 'post')).toHaveValue('16');
+      // Post non coperto in M-1 (quota 0) ma abbonamento post acceso nel mese: numero 2, importo 0 (RET-13).
+      await expect(campoGettoni(rigaA, a, 'post')).toHaveValue('0');
+      await expect(numeroGettoni(rigaA, 'post')).toHaveText('2 gettoni');
       const rigaB = rigaRette(page, b);
       await expect(campoGettoni(rigaB, b, 'pre')).toHaveValue('0');
       await expect(campoGettoni(rigaB, b, 'post')).toHaveValue('16');
@@ -950,6 +952,53 @@ test.describe('56 — Comunicazione retta mensile', () => {
       await expect(campoGettoni(riga, bambino, 'post')).toHaveValue('18');
       await expect(numeroGettoni(riga, 'post')).toHaveText('2 gettoni');
     }, presenze(3, 2));
+  });
+
+  test('RET-13: con l\'abbonamento della voce nel mese i gettoni valgono 0,00 € ma il numero resta', async ({ page }) => {
+    test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
+    const conAbbonamento = await creaBambinoFixture(db);
+    const senza = await creaBambinoFixture(db);
+    try {
+      // Con abbonamento pre nel mese M; la retta di M-1 non lo copriva (quota pre 0): 3 gettoni pre
+      // non coperti, importo azzerato. Il post non ha abbonamento: 2 x 8,00 = 16.
+      await impostaCostiGettoni(db, conAbbonamento, { abbonamentoPre: true });
+      await presenze(3, 2)(conAbbonamento);
+      await inserisciRettaInviata(db, conAbbonamento, mesePrecedenteRoma(), { costoPreAsilo: 0, costoPostAsilo: 0 });
+      // Senza abbonamento: come RET-01.
+      await impostaCostiGettoni(db, senza);
+      await presenze(3, 2)(senza);
+
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, conAbbonamento);
+      await expect(campoGettoni(riga, conAbbonamento, 'pre')).toHaveValue('0');
+      await expect(numeroGettoni(riga, 'pre')).toHaveText('3 gettoni');
+      await expect(campoGettoni(riga, conAbbonamento, 'post')).toHaveValue('16');
+      await expect(numeroGettoni(riga, 'post')).toHaveText('2 gettoni');
+      // 100 retta + 2 marca da bollo + 70 pre-asilo + 0 gettoni pre + 16 gettoni post = 188,00.
+      await expect(riga).toContainText('188,00');
+
+      const rigaSenza = rigaRette(page, senza);
+      await expect(campoGettoni(rigaSenza, senza, 'pre')).toHaveValue('21');
+      await expect(numeroGettoni(rigaSenza, 'pre')).toHaveText('3 gettoni');
+      await nessunaViolazioneA11yGrave(page);
+
+      // Retta inviata: registra 0,00 € con il numero, e non cambia più.
+      await confermaSenzaInviare(page, conAbbonamento);
+      const inviata = rigaRette(page, conAbbonamento);
+      await expect(importoGettoniInviato(inviata, 'pre')).toHaveText('0,00 €');
+      await expect(numeroGettoni(inviata, 'pre')).toHaveText('3 gettoni');
+      await expect(importoGettoniInviato(inviata, 'post')).toHaveText('16,00 €');
+      await expect(inviata).toContainText('188,00');
+
+      // Pagamenti del bambino: 0,00 € con il numero dei gettoni.
+      await page.goto(`/admin/pagamenti-bambino?bambino=${conAbbonamento.id}`);
+      await expect(page.getByRole('cell', { name: /^0,00 €.*3 gettoni$/ })).toBeVisible();
+      await expect(page.getByRole('cell', { name: /^16,00 €.*2 gettoni$/ })).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+    } finally {
+      await eliminaBambinoFixture(db, conAbbonamento.id);
+      await eliminaBambinoFixture(db, senza.id);
+    }
   });
 
   test('RET-09: il modello email contiene le righe dei gettoni dopo la migration (coperto da pgTAP)', async () => {
