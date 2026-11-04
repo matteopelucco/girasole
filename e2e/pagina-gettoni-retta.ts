@@ -213,7 +213,8 @@ export function avvisoGettoniRette(riga: Locator, voce: Voce): Locator {
 }
 
 export function campoCostiExtra(riga: Locator, bambino: BambinoFixture): Locator {
-  return riga.getByLabel(`Costi extra per ${bambino.nome} ${bambino.cognome}`);
+  // exact: senza, «Nota costi extra per …» corrisponde alla stessa etichetta (strict mode).
+  return riga.getByLabel(`Costi extra per ${bambino.nome} ${bambino.cognome}`, { exact: true });
 }
 
 export function campoNotaExtra(riga: Locator, bambino: BambinoFixture): Locator {
