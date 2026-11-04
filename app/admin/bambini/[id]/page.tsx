@@ -259,6 +259,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     etichetta="Prezzo gettone (€)"
                     nomeAccessibile="Prezzo gettone pre-asilo (€)"
                     defaultValue={valoriCosti.gettonePreAsilo}
+                    avvisoGettone={{ voce: 'pre', abbonamento: { name: 'prezzo_pre_asilo', defaultValue: valoriCosti.preAsilo } }}
                     classeCampo="block w-36"
                   />
                 </div>
@@ -292,6 +293,7 @@ export default async function BambinoDettaglioPage(props: { params: Promise<{ id
                     etichetta="Prezzo gettone (€)"
                     nomeAccessibile="Prezzo gettone post-asilo (€)"
                     defaultValue={valoriCosti.gettonePostAsilo}
+                    avvisoGettone={{ voce: 'post', abbonamento: { name: 'prezzo_post_asilo', defaultValue: valoriCosti.postAsilo } }}
                     classeCampo="block w-36"
                   />
                 </div>

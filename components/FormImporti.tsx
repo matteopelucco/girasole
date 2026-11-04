@@ -5,6 +5,7 @@ import { useAnnullaResetForm } from './useAnnullaResetForm';
 import { Avviso } from '@/components/ui/avviso';
 import { Campo } from '@/components/ui/campo';
 import { Etichetta, TestoErrore } from '@/components/ui/etichetta';
+import { avvisoGettoneSuperaAbbonamento, parseImportoOpzionale, TESTO_AVVISO_GETTONE, type VocePrePost } from '@/lib/prezzi';
 import { cn } from '@/lib/utils';
 
 // Form con importi in euro (sezione "Prezzi", specs/62, e scheda Costi del
@@ -26,6 +27,19 @@ export const STATO_IMPORTI_INIZIALE: StatoImporti = { esito: 'iniziale' };
 
 const ContestoImporti = createContext<StatoImporti>(STATO_IMPORTI_INIZIALE);
 
+// Testo scritto in ogni campo del form (nome -> testo), anche non salvato: serve
+// all'avviso sul gettone (COS-13, PRZ-11), che confronta due campi dello stesso
+// form. Un campo non ancora toccato non c'è: vale il suo valore iniziale.
+type ContestoValori = { valori: Record<string, string>; imposta: (nome: string, testo: string) => void };
+const ContestoValoriCampi = createContext<ContestoValori>({ valori: {}, imposta: () => {} });
+
+// Importo di un campo per il confronto dei prezzi: vuoto o non valido vale 0 (nessun
+// avviso; l'errore, se c'è, lo dà il salvataggio).
+function importoPerConfronto(testo: string): number {
+  const risultato = parseImportoOpzionale(testo);
+  return risultato.ok ? risultato.valore : 0;
+}
+
 export function FormImporti({
   action,
   children,
@@ -45,12 +59,18 @@ export function FormImporti({
 }) {
   const [stato, formAction] = useActionState(action, STATO_IMPORTI_INIZIALE);
   const formRef = useRef<HTMLFormElement>(null);
+  const [valori, setValori] = useState<Record<string, string>>({});
+  const contestoValori: ContestoValori = {
+    valori,
+    imposta: (nome, testo) => setValori((attuali) => (attuali[nome] === testo ? attuali : { ...attuali, [nome]: testo })),
+  };
 
   // I valori scritti devono restare dopo un errore, per poterli correggere.
   useAnnullaResetForm(formRef, chiave);
 
   return (
     <ContestoImporti.Provider value={stato}>
+     <ContestoValoriCampi.Provider value={contestoValori}>
       <form key={chiave} ref={formRef} action={formAction} className={className}>
         {children}
         {stato.esito === 'salvato' && messaggioSalvato && (
@@ -65,6 +85,7 @@ export function FormImporti({
           </Avviso>
         )}
       </form>
+     </ContestoValoriCampi.Provider>
     </ContestoImporti.Provider>
   );
 }
@@ -81,6 +102,7 @@ export function CampoImporto({
   className,
   classeCampo,
   avvisoSeVuoto,
+  avvisoGettone,
 }: {
   name: string;
   etichetta: string;
@@ -94,14 +116,29 @@ export function CampoImporto({
   // finché il campo, tolti gli spazi, è vuoto; collegato al campo con
   // `aria-describedby`. Non blocca il salvataggio.
   avvisoSeVuoto?: string;
+  // Solo per i campi del prezzo di un gettone (COS-13, PRZ-11): se il valore
+  // scritto (anche non salvato) è maggiore del prezzo dell'abbonamento della
+  // stessa voce (altro campo dello stesso form, `abbonamento`), compare un
+  // avviso con la scritta e il campo prende un rosso tenue. Non è un errore:
+  // niente `role="alert"`, niente `aria-invalid`, il salvataggio non cambia.
+  avvisoGettone?: { voce: VocePrePost; abbonamento: { name: string; defaultValue: string } };
 }) {
   const [valore, setValore] = useState(defaultValue);
   const stato = useContext(ContestoImporti);
+  const { valori, imposta } = useContext(ContestoValoriCampi);
   const errore = stato.esito === 'errore' ? stato.errori?.[name] : undefined;
   const id = `campo-${name}`;
   const idErrore = `${id}-errore`;
   const idAvviso = `${id}-avviso`;
   const mostraAvviso = Boolean(avvisoSeVuoto) && valore.trim() === '' && !errore;
+  const idAvvisoGettone = `${id}-avviso-gettone`;
+  const mostraAvvisoGettone =
+    avvisoGettone !== undefined &&
+    avvisoGettoneSuperaAbbonamento({
+      prezzoGettone: importoPerConfronto(valore),
+      prezzoAbbonamento: importoPerConfronto(valori[avvisoGettone.abbonamento.name] ?? avvisoGettone.abbonamento.defaultValue),
+    });
+  const idDescrizione = errore ? idErrore : mostraAvviso ? idAvviso : mostraAvvisoGettone ? idAvvisoGettone : undefined;
   return (
     <div className={className}>
       <Etichetta htmlFor={id} className="text-xs font-normal text-stone-600">
@@ -116,10 +153,22 @@ export function CampoImporto({
         defaultValue={defaultValue}
         aria-label={nomeAccessibile}
         aria-invalid={errore ? true : undefined}
-        onChange={(e) => setValore(e.target.value)}
-        aria-describedby={errore ? idErrore : mostraAvviso ? idAvviso : undefined}
-        className={cn('mt-1 w-full', classeCampo)}
+        onChange={(e) => {
+          setValore(e.target.value);
+          imposta(name, e.target.value);
+        }}
+        aria-describedby={idDescrizione}
+        className={cn('mt-1 w-full', classeCampo, mostraAvvisoGettone && 'border-danger-border bg-danger-soft')}
       />
+      {mostraAvvisoGettone && avvisoGettone && (
+        <p
+          id={idAvvisoGettone}
+          data-testid={`avviso-gettone-${avvisoGettone.voce}-asilo`}
+          className="mt-1 text-xs font-medium text-danger-text"
+        >
+          {TESTO_AVVISO_GETTONE[avvisoGettone.voce]}
+        </p>
+      )}
       {mostraAvviso && (
         <p id={idAvviso} data-testid="avviso-retta-vuota" role="status" className="mt-1 text-xs font-medium text-warning-text">
           {avvisoSeVuoto}

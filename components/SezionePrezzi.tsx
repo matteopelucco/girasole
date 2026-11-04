@@ -6,6 +6,15 @@ import { CAMPI_PREZZI, formattaImporto } from '@/lib/prezzi';
 import type { PrezziLetti } from '@/lib/prezziDati';
 import { cn } from '@/lib/utils';
 
+// Avviso sul gettone (PRZ-11): il campo del gettone di una voce si confronta con
+// l'abbonamento della stessa voce, nello stesso form.
+function avvisoGettonePrezzi(colonna: string, letti: PrezziLetti) {
+  const voce = colonna === 'gettone_pre_asilo' ? 'pre' : colonna === 'gettone_post_asilo' ? 'post' : null;
+  if (!voce) return undefined;
+  const abbonamento = voce === 'pre' ? 'abbonamento_pre_asilo' : 'abbonamento_post_asilo';
+  return { voce, abbonamento: { name: abbonamento, defaultValue: formattaImporto(letti.prezzi[abbonamento]) } } as const;
+}
+
 // Sezione "Prezzi" di "Parametri di funzionamento" (specs/62, issue #396): gli
 // otto prezzi predefiniti dell'asilo, usati solo per compilare i costi di un
 // bambino nuovo. Non cambiano mai i bambini esistenti.
@@ -48,6 +57,7 @@ export function SezionePrezzi({
                 name={colonna}
                 etichetta={etichetta}
                 defaultValue={formattaImporto(letti.prezzi[colonna])}
+                avvisoGettone={avvisoGettonePrezzi(colonna, letti)}
               />
             ))}
           </div>
