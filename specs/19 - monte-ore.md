@@ -296,9 +296,9 @@ momento la decisione presa, non più i pulsanti
   `settimanale` e `straordinario_residuo` (solo storico, non più
   generati da nessuna azione). Da ora si registrano solo `precarico` e
   `conferma_mese`.
-- Nuova colonna `mese_competenza` (primo giorno del mese; vuota per i
-  movimenti esistenti, che valgono il mese di `created_at` nel fuso orario
-  dell'app). Un indice unico (`utente_id`, `mese_competenza`) sui soli
+- Nuova colonna `mese_competenza` (primo giorno del mese; la migration
+  la riempie per i movimenti esistenti col mese di `created_at` nel fuso
+  orario dell'app, e il codice usa lo stesso ripiego se manca). Un indice unico (`utente_id`, `mese_competenza`) sui soli
   `conferma_mese` impedisce due conferme per persona e mese anche con
   richieste simultanee; la conferma ha sempre il mese di competenza valorizzato.
 - Arrotondamenti: `variazione` è a 2 decimali (mezze ore e centesimi di

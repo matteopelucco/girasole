@@ -1,4 +1,4 @@
-import { formattaMeseItaliano, meseSuccessivo } from '@/lib/date';
+import { formattaMeseItaliano, mesePrecedente, meseSuccessivo } from '@/lib/date';
 
 // Calcolo completo del monte ore "mese per mese" (specs/19): logica
 // pura, nessun I/O — le query stanno in lib/monteOreMensileDati.ts. Il
@@ -125,4 +125,21 @@ export function calcoloMensileMonteOre({
     });
   }
   return righe;
+}
+
+// Mesi tra cui scegliere la competenza di un movimento (MOR-08/MOR-09), dal
+// più vecchio al mese corrente, mai futuri: gli ultimi `indietro` mesi più
+// quelli già usati da movimenti esistenti, così la modifica non perde mai il
+// valore attuale. Funzione pura.
+export function mesiDiCompetenzaSelezionabili(
+  meseCorrente: string,
+  mesiEsistenti: string[],
+  indietro = 24
+): string[] {
+  let primo = meseCorrente;
+  for (let i = 0; i < indietro; i++) primo = mesePrecedente(primo);
+  for (const m of mesiEsistenti) if (m < primo) primo = m;
+  const mesi: string[] = [];
+  for (let mese = primo; mese <= meseCorrente; mese = meseSuccessivo(mese)) mesi.push(mese);
+  return mesi;
 }

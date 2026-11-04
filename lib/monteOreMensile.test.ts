@@ -3,6 +3,7 @@ import {
   calcoloMensileMonteOre,
   meseDiCompetenza,
   meseDiMovimento,
+  mesiDiCompetenzaSelezionabili,
   notaConfermaMese,
   nuovaVariazioneConferma,
   parteNonConfermata,
@@ -248,3 +249,17 @@ describe('MOR-02, MOR-03: notaConfermaMese', () => {
 // non chiuso (MOR-04, lato server) non si provano in e2e: indice unico
 // parziale e RLS sono in supabase/tests/database/monte_ore_conferma_mese.test.sql;
 // "il valore lo calcola il server una volta sola" e' nelle funzioni pure qui sopra.
+
+describe('MOR-08, MOR-09: mesiDiCompetenzaSelezionabili', () => {
+  it('dal piu\' vecchio al mese corrente, nessun mese futuro', () => {
+    const mesi = mesiDiCompetenzaSelezionabili('2026-11', [], 2);
+    expect(mesi).toEqual(['2026-09', '2026-10', '2026-11']);
+  });
+
+  it('include i mesi gia\' usati dai movimenti anche se piu\' vecchi della finestra', () => {
+    const mesi = mesiDiCompetenzaSelezionabili('2026-11', ['2026-06', '2026-10'], 2);
+    expect(mesi[0]).toBe('2026-06');
+    expect(mesi.at(-1)).toBe('2026-11');
+    expect(mesi).toHaveLength(6);
+  });
+});

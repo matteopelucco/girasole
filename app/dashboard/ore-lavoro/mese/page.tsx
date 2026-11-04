@@ -33,6 +33,7 @@ import { CalcoloMensileMonteOre } from '@/components/CalcoloMensileMonteOre';
 import { calcoloMensilePerUtente } from '@/lib/monteOreMensileDati';
 import {
   aggiungiMovimentoMonteOre,
+  confermaMeseMonteOre,
   eliminaMovimentoMonteOre,
   modificaMovimentoMonteOre,
 } from '../actions';
@@ -89,7 +90,7 @@ export default async function OreLavoroMesePage(
     chiusurePerPeriodo(supabase, inizio, fine),
     supabase
       .from('monte_ore_movimenti')
-      .select('id, tipo, settimana_inizio, variazione, nota, created_at')
+      .select('id, tipo, settimana_inizio, variazione, nota, created_at, mese_competenza')
       .eq('utente_id', persona.id)
       .order('created_at', { ascending: false }),
   ]);
@@ -176,12 +177,18 @@ export default async function OreLavoroMesePage(
           movimenti={movimenti ?? []}
           modalitaAdmin
           utenteId={persona.id}
+          meseCorrente={meseCorrente}
           aggiungiMovimento={aggiungiMovimentoMonteOre}
           modificaMovimento={modificaMovimentoMonteOre}
           eliminaMovimento={eliminaMovimentoMonteOre}
         />
 
-        <CalcoloMensileMonteOre righe={calcoloMensile} />
+        <CalcoloMensileMonteOre
+          righe={calcoloMensile}
+          utenteId={persona.id}
+          meseCorrente={meseCorrente}
+          conferma={confermaMeseMonteOre}
+        />
 
         <Riquadro className="p-3 text-sm">
           <h2 className="font-medium text-stone-800">Settimane del mese</h2>
