@@ -8,115 +8,92 @@ import {
   formattaImporto,
   giorniAperturaMese,
   corpoEmailHtmlRetta,
+  riepilogoRigaRetta,
   sostituisciPlaceholder,
+  type ParametriRiepilogoRetta,
   type RiepilogoRetta,
 } from '@/lib/comunicazioneRetta';
 import { emailsDaCampo } from '@/lib/costiBambino';
-import { meseDaData, oggi, formattaMeseItaliano, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
+import { meseDaData, mesePrecedente, oggi, formattaMeseItaliano, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
 import { destinatarioNotifiche, inviaEmail } from '@/lib/email';
+import { pastiEffettiviPerBambino } from '@/lib/retteDati';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
-// Un importo non negativo (retta, pasti, marca da bollo, pre/post-
-// asilo, extra): un valore vuoto/non numerico/negativo diventa 0,
-// stesso pattern di app/admin/actions.ts (specs/55).
-function importoEuro(valore: FormDataEntryValue | null): number {
-  const numero = Number(valore);
-  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) / 100 : 0;
+// Testo di un campo del modulo: un valore mancante o non testuale (es. un
+// file) vale testo vuoto, cioè 0 per `importoDaCampoRetta`.
+function testoCampo(valore: FormDataEntryValue | null): string {
+  return typeof valore === 'string' ? valore : '';
 }
 
-// Il conguaglio pasti è l'unica voce per natura negativa (un credito
-// verso la famiglia, mai un addebito — specs/56): a differenza di
-// importoEuro sopra, qui un numero negativo è legittimo e va
-// preservato, non azzerato. Solo un valore non finito (vuoto, testo)
-// diventa 0.
-function importoConSegno(valore: FormDataEntryValue | null): number {
-  const numero = Number(valore);
-  return Number.isFinite(numero) ? Math.round(numero * 100) / 100 : 0;
-}
+type SupabaseAdmin = Awaited<ReturnType<typeof requireAdmin>>['supabase'];
 
-// Costo pasti del mese corrente (specs/56, "retta, marca da bollo,
-// costo pasti e credito/debito non sono modificabili dalla tabella"):
-// stessa proiezione mostrata in pagina (giorni di apertura del mese ×
-// prezzo buono pasto), MAI letto dal form — non è più un campo
-// compilabile, quindi il valore effettivamente comunicato è sempre
-// questo. Funzione pura: i giorni di apertura (che richiedono I/O per
-// leggere le chiusure registrate) sono calcolati una sola volta dal
-// chiamante, uguali per ogni bambino dello stesso invio.
-function costoPastiProiettato(giorniApertura: number, prezzoBuonoPasto: number): number {
-  return Math.round(giorniApertura * prezzoBuonoPasto * 100) / 100;
-}
-
-// Giorni di apertura del mese corrente (specs/56): un solo calcolo,
+// Giorni di apertura di un mese (specs/56): un solo calcolo per mese,
 // condiviso da tutti i bambini di uno stesso invio (massivo o singolo)
 // — evita di rileggere le chiusure registrate una volta per bambino.
-async function giorniAperturaMeseCorrente(
-  supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'],
-  meseCorrente: string
-): Promise<number> {
-  const chiusure = await chiusurePerPeriodo(supabase, primoGiornoMese(meseCorrente), ultimoGiornoMese(meseCorrente));
-  return giorniAperturaMese(meseCorrente, chiusure);
+async function giorniAperturaDelMese(supabase: SupabaseAdmin, mese: string): Promise<number> {
+  const chiusure = await chiusurePerPeriodo(supabase, primoGiornoMese(mese), ultimoGiornoMese(mese));
+  return giorniAperturaMese(mese, chiusure);
 }
 
-// Voce di costo di un bambino al momento dell'invio (specs/56, scenario
-// "modificare manualmente una voce di costo prima dell'invio"):
-// conguaglio pasti, pre-asilo e post-asilo sono letti direttamente dai
-// campi del form, MAI ricalcolati qui da presenze — l'admin può averli
-// sovrascritti con una correzione ad-hoc prima di premere "Invia
-// comunicazioni", ed è esattamente quel valore che deve finire
-// nell'email e nel log. Retta, marca da bollo, costo pasti e
-// credito/debito restano invece SEMPRE quelli calcolati/letti dal
-// chiamante (costi_bambini / giorni di apertura / crediti_debiti_bambini):
-// non sono modificabili da questa tabella (retta si cambia solo sulla
-// scheda del bambino, la marca da bollo non è modificabile da nessuna
-// parte essendo un importo fisso per legge, il costo pasti è la
-// proiezione automatica sui giorni di apertura, il credito/debito si
-// corregge dalla scheda del bambino — specs/56, specs/58) e infatti non
-// arrivano nel form. Funzione pura sulla FormData già ricevuta, nessun
-// I/O: la "persistenza" delle eventuali modifiche avviene subito dopo,
-// quando il chiamante scrive la riga in comunicazioni_retta (specs/56,
-// "le modifiche non hanno un salvataggio separato").
+// Dati comuni a tutti i bambini di uno stesso invio, letti dal server.
+type DatiMese = { giorniApertura: number; pastiPotenziali: number };
+
+async function datiMese(supabase: SupabaseAdmin, meseCorrente: string): Promise<DatiMese> {
+  const [giorniApertura, pastiPotenziali] = await Promise.all([
+    giorniAperturaDelMese(supabase, meseCorrente),
+    giorniAperturaDelMese(supabase, mesePrecedente(meseCorrente)),
+  ]);
+  return { giorniApertura, pastiPotenziali };
+}
+
+type CostiPerRiepilogo = {
+  prezzo_mensile: number | string;
+  prezzo_buono_pasto: number | string;
+  prezzo_marca_da_bollo: number | string;
+  pre_asilo_richiesto: boolean;
+  prezzo_pre_asilo: number | string;
+  post_asilo_richiesto: boolean;
+  prezzo_post_asilo: number | string;
+};
+
+// Colonne di `costi_bambini` che servono al riepilogo, lette dal server.
+const COLONNE_COSTI_RIEPILOGO =
+  'prezzo_mensile, prezzo_buono_pasto, prezzo_marca_da_bollo, pre_asilo_richiesto, prezzo_pre_asilo, post_asilo_richiesto, prezzo_post_asilo';
+
+// Riepilogo di un bambino al momento dell'invio (specs/56, RET-18): tutto ciò
+// che non è un campo modificabile (retta, marca da bollo, costo pasti,
+// conguaglio pasti, pre-asilo, post-asilo, credito/debito) è ricalcolato qui
+// dai dati attuali (`costi_bambini`, pasti, chiusure, crediti/debiti), MAI
+// letto dal modulo: un campo nascosto manomesso o un valore vecchio sono
+// ignorati. Dal modulo si leggono solo gettoni pre/post, costi extra e nota
+// (RET-16), con le stesse regole della tabella (`riepilogoRigaRetta`: vuoto,
+// non valido o negativo = 0). Funzione pura sui dati già letti.
 function riepilogoDalForm(
   formData: FormData,
   bambinoId: string,
-  rettaMensile: number,
-  marcaDaBollo: number,
-  costoPasti: number,
+  costi: CostiPerRiepilogo,
+  dati: DatiMese,
+  pastiEffettivi: number,
   creditoDebito: number
 ): RiepilogoRetta {
-  const conguaglioPasti = importoConSegno(formData.get(`conguaglio_pasti_${bambinoId}`));
-  const costoPreAsilo = importoEuro(formData.get(`pre_asilo_${bambinoId}`));
-  const costoPostAsilo = importoEuro(formData.get(`post_asilo_${bambinoId}`));
-  const gettoniPreAsilo = importoEuro(formData.get(`gettoni_pre_asilo_${bambinoId}`));
-  const gettoniPostAsilo = importoEuro(formData.get(`gettoni_post_asilo_${bambinoId}`));
-  const costiExtra = importoEuro(formData.get(`costi_extra_${bambinoId}`));
-  const totale =
-    Math.round(
-      (rettaMensile +
-        costoPasti +
-        conguaglioPasti +
-        marcaDaBollo +
-        costoPreAsilo +
-        costoPostAsilo +
-        gettoniPreAsilo +
-        gettoniPostAsilo +
-        costiExtra +
-        creditoDebito) *
-        100
-    ) / 100;
-
-  return {
-    rettaMensile,
-    costoPasti,
-    conguaglioPasti,
-    marcaDaBollo,
-    costoPreAsilo,
-    costoPostAsilo,
-    costiExtra,
+  const fissi: Omit<ParametriRiepilogoRetta, 'gettoniPreAsilo' | 'gettoniPostAsilo' | 'costiExtra'> = {
+    prezzoMensile: Number(costi.prezzo_mensile),
+    prezzoBuonoPasto: Number(costi.prezzo_buono_pasto),
+    giorniAperturaMeseCorrente: dati.giorniApertura,
+    pastiPotenzialiMesePrecedente: dati.pastiPotenziali,
+    pastiEffettiviMesePrecedente: pastiEffettivi,
+    marcaDaBollo: Number(costi.prezzo_marca_da_bollo),
+    preAsiloRichiesto: costi.pre_asilo_richiesto,
+    prezzoPreAsilo: Number(costi.prezzo_pre_asilo),
+    postAsiloRichiesto: costi.post_asilo_richiesto,
+    prezzoPostAsilo: Number(costi.prezzo_post_asilo),
     creditoDebito,
-    gettoniPreAsilo,
-    gettoniPostAsilo,
-    totale,
   };
+  return riepilogoRigaRetta(fissi, {
+    gettoniPreAsilo: testoCampo(formData.get(`gettoni_pre_asilo_${bambinoId}`)),
+    gettoniPostAsilo: testoCampo(formData.get(`gettoni_post_asilo_${bambinoId}`)),
+    costiExtra: testoCampo(formData.get(`costi_extra_${bambinoId}`)),
+  });
 }
 
 // Numero di gettoni (intero non negativo) arrivato nel campo nascosto del form.
@@ -263,12 +240,10 @@ async function inviaEPersistiComunicazione(
 // comunicazioni con un click": determina da sé chi è ammesso all'invio
 // — bambino attivo, con email configurata (specs/55), non ancora
 // comunicato questo mese — invece di fidarsi di un elenco arrivato dal
-// client. Conguaglio pasti/pre-asilo/post-asilo/costi extra sono quelli
-// presenti nel form in quel momento (riepilogoDalForm sopra), non
-// ricalcolati: sono modificabili in pagina per una correzione ad-hoc, ed
-// è quel valore che va comunicato e registrato. Retta, marca da bollo,
-// costo pasti e credito/debito non sono invece campi del form (specs/56,
-// specs/58): sempre calcolati/letti qui. Il popup di conferma è lato
+// client. Dal form si leggono solo gettoni, costi extra e nota
+// (riepilogoDalForm sopra); conguaglio pasti, pre-asilo, post-asilo, retta,
+// marca da bollo, costo pasti e credito/debito sono sempre ricalcolati/letti
+// qui dal server (specs/56 RET-18, specs/58), mai dal modulo. Il popup di conferma è lato
 // client (components/PulsanteInvio.tsx, prop confermaMessaggio): se
 // l'admin lo annulla, il form non viene nemmeno inviato, questa funzione
 // non parte.
@@ -287,11 +262,11 @@ export async function inviaComunicazioniRetta(
   const bambinoIds = (bambini ?? []).map((b) => b.id);
   if (!bambinoIds.length) return { ok: false, messaggio: 'Nessun bambino attivo.' };
 
-  const [{ data: costi }, { data: giaInviate }, { data: template }, { data: creditiDebiti }, giorniApertura] =
+  const [{ data: costi }, { data: giaInviate }, { data: template }, { data: creditiDebiti }, dati, pastiEffettivi] =
     await Promise.all([
       supabase
         .from('costi_bambini')
-        .select('bambino_id, email_promemoria, prezzo_mensile, prezzo_marca_da_bollo, prezzo_buono_pasto')
+        .select(`bambino_id, email_promemoria, ${COLONNE_COSTI_RIEPILOGO}`)
         .in('bambino_id', bambinoIds),
       supabase.from('comunicazioni_retta').select('bambino_id').eq('mese', meseCorrente).in('bambino_id', bambinoIds),
       supabase.from('impostazioni_email_retta').select('oggetto, corpo').eq('id', true).maybeSingle(),
@@ -304,7 +279,8 @@ export async function inviaComunicazioniRetta(
         .in('bambino_id', bambinoIds)
         .eq('mese_competenza', meseCorrente)
         .is('applicato_il', null),
-      giorniAperturaMeseCorrente(supabase, meseCorrente),
+      datiMese(supabase, meseCorrente),
+      pastiEffettiviPerBambino(supabase, bambinoIds, mesePrecedente(meseCorrente)),
     ]);
 
   const costiPerBambino = new Map((costi ?? []).map((c) => [c.bambino_id, c]));
@@ -334,9 +310,9 @@ export async function inviaComunicazioniRetta(
     const riepilogo = riepilogoDalForm(
       formData,
       bambino.id,
-      Number(costiBambino.prezzo_mensile),
-      Number(costiBambino.prezzo_marca_da_bollo),
-      costoPastiProiettato(giorniApertura, Number(costiBambino.prezzo_buono_pasto)),
+      costiBambino,
+      dati,
+      pastiEffettivi.get(bambino.id) ?? 0,
       creditoDebito?.importo ?? 0
     );
 
@@ -398,12 +374,12 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMai
 
   const meseCorrente = meseDaData(oggi());
 
-  const [{ data: bambino }, { data: costiBambino }, { data: giaInviata }, { data: template }, { data: creditoDebito }, giorniApertura] =
+  const [{ data: bambino }, { data: costiBambino }, { data: giaInviata }, { data: template }, { data: creditoDebito }, dati, pastiEffettivi] =
     await Promise.all([
       supabase.from('bambini').select('id, nome, cognome').eq('id', bambinoId).eq('attiva', true).maybeSingle(),
       supabase
         .from('costi_bambini')
-        .select('email_promemoria, prezzo_mensile, prezzo_marca_da_bollo, prezzo_buono_pasto')
+        .select(`email_promemoria, ${COLONNE_COSTI_RIEPILOGO}`)
         .eq('bambino_id', bambinoId)
         .maybeSingle(),
       supabase
@@ -422,7 +398,8 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMai
         .eq('mese_competenza', meseCorrente)
         .is('applicato_il', null)
         .maybeSingle(),
-      giorniAperturaMeseCorrente(supabase, meseCorrente),
+      datiMese(supabase, meseCorrente),
+      pastiEffettiviPerBambino(supabase, [bambinoId], mesePrecedente(meseCorrente)),
     ]);
 
   if (!bambino || giaInviata || !costiBambino?.email_promemoria) {
@@ -434,9 +411,9 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMai
   const riepilogo = riepilogoDalForm(
     formData,
     bambinoId,
-    Number(costiBambino.prezzo_mensile),
-    Number(costiBambino.prezzo_marca_da_bollo),
-    costoPastiProiettato(giorniApertura, Number(costiBambino.prezzo_buono_pasto)),
+    costiBambino,
+    dati,
+    pastiEffettivi.get(bambinoId) ?? 0,
     creditoDebito ? Number(creditoDebito.importo) : 0
   );
   const inviataDaNome = `${profilo?.nome ?? ''} ${profilo?.cognome ?? ''}`.trim() || user.email || 'Sconosciuto';

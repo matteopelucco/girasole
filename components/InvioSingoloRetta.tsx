@@ -4,25 +4,19 @@ import { useRef, useState } from 'react';
 import { PulsanteInvio } from './PulsanteInvio';
 import { Finestra } from './ui/finestra';
 import { Pulsante } from './ui/pulsante';
-import { formattaImporto, sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
+import { formattaImporto, importoDaCampoRetta, sostituisciPlaceholder } from '@/lib/comunicazioneRetta';
 import { formattaMeseItaliano } from '@/lib/date';
 
 // Suffisso del name di ciascun campo importo MODIFICABILE della riga
 // (vedi app/admin/rette/page.tsx) → placeholder corrispondente nel
-// template (specs/56, `{{...}}`). Retta, marca da bollo, costo pasti e
-// credito/debito non sono qui: non sono campi del form (non
-// modificabili da questa tabella — retta si cambia sulla scheda del
-// bambino, la marca da bollo non è modificabile da nessuna parte
-// essendo un importo fisso per legge, il costo pasti è la proiezione
-// automatica sui giorni di apertura, il credito/debito si corregge
-// dalla scheda del bambino, specs/58), arrivano come prop fisse
-// (rettaMensile/marcaDaBollo/costoPasti/creditoDebito sotto). Condiviso
+// template (specs/56, `{{...}}`). Retta, marca da bollo, costo pasti,
+// conguaglio pasti, pre-asilo, post-asilo e credito/debito non sono qui:
+// non sono campi del form (RET-14..RET-16; il conguaglio e il credito/debito
+// si correggono dalla scheda del bambino, specs/58), arrivano come prop
+// fisse (rettaMensile ... creditoDebito sotto). Condiviso
 // da apriAnteprima sotto: un solo punto che elenca le voci modificabili,
 // non ripetuto due volte.
 const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
-  ['conguaglio_pasti', 'conguaglio_pasti'],
-  ['pre_asilo', 'costo_pre_asilo'],
-  ['post_asilo', 'costo_post_asilo'],
   ['gettoni_pre_asilo', 'gettoni_pre_asilo'],
   ['gettoni_post_asilo', 'gettoni_post_asilo'],
   ['costi_extra', 'costi_extra'],
@@ -38,7 +32,7 @@ const CAMPI_IMPORTO: readonly [suffisso: string, placeholder: string][] = [
 //
 // L'anteprima è calcolata qui, lato client: retta e marca da bollo
 // arrivano come prop fisse (non modificabili da questa tabella),
-// le altre voci sono lette dai valori attuali dei campi della riga (che
+// gettoni e costi extra sono letti dai valori attuali dei campi della riga (che
 // l'admin può aver corretti ad-hoc) tramite il DOM — stesso genere di
 // lettura diretta già usato dal pulsante "Copia" di
 // components/RigaOreLavoro.tsx — invece di un round-trip al server: i
@@ -62,6 +56,9 @@ export function InvioSingoloRetta({
   rettaMensile,
   marcaDaBollo,
   costoPasti,
+  conguaglioPasti,
+  costoPreAsilo,
+  costoPostAsilo,
   creditoDebito,
   notaCreditoDebito,
   oggettoTemplate,
@@ -77,6 +74,9 @@ export function InvioSingoloRetta({
   rettaMensile: number;
   marcaDaBollo: number;
   costoPasti: number;
+  conguaglioPasti: number;
+  costoPreAsilo: number;
+  costoPostAsilo: number;
   creditoDebito: number;
   notaCreditoDebito: string | null;
   oggettoTemplate: string;
@@ -99,13 +99,16 @@ export function InvioSingoloRetta({
       retta_mensile: formattaImporto(rettaMensile),
       marca_da_bollo: formattaImporto(marcaDaBollo),
       costo_pasti: formattaImporto(costoPasti),
+      conguaglio_pasti: formattaImporto(conguaglioPasti),
+      costo_pre_asilo: formattaImporto(costoPreAsilo),
+      costo_post_asilo: formattaImporto(costoPostAsilo),
       credito_debito: formattaImporto(creditoDebito),
       nota_credito_debito: notaCreditoDebito ?? '',
     };
-    let totale = rettaMensile + marcaDaBollo + costoPasti + creditoDebito;
+    let totale = rettaMensile + marcaDaBollo + costoPasti + conguaglioPasti + costoPreAsilo + costoPostAsilo + creditoDebito;
     for (const [suffisso, placeholder] of CAMPI_IMPORTO) {
       const campo = riga.querySelector<HTMLInputElement>(`[name="${suffisso}_${bambinoId}"]`);
-      const valore = campo ? Number(campo.value) || 0 : 0;
+      const valore = campo ? importoDaCampoRetta(campo.value) : 0;
       valori[placeholder] = formattaImporto(valore);
       totale += valore;
     }

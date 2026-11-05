@@ -24,9 +24,10 @@ Allora vedo il nome del mese corrente in intestazione, e una riga per
 ciascun bambino attivo con: nome e cognome (con l'email a cui verrà
 inviata la comunicazione subito sotto, tra parentesi), retta mensile,
 marca da bollo e costo pasti proiettato (testo, in quest'ordine),
-eventuale conguaglio pasti del mese precedente, costo pre-asilo e costo
-post-asilo (modificabili), i gettoni pre-asilo e post-asilo del mese
-precedente (RET-01, modificabili), un campo "Costi extra" (con una
+eventuale conguaglio pasti del mese precedente (testo, con sotto «N pasti
+non usufruiti», RET-14), costo pre-asilo e costo post-asilo (testo,
+RET-15), i gettoni pre-asilo e post-asilo del mese precedente (RET-01,
+importo modificabile), un campo "Costi extra" (con una
 nota facoltativa) da compilare, un eventuale credito/debito "da
 conteggiare" questo mese con la sua nota (specs/58, di sola lettura,
 importo e nota condivisi in un'unica colonna), e il totale calcolato
@@ -54,20 +55,22 @@ invio
 ## Scenario: modificare manualmente una voce di costo prima dell'invio
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
-Quando modifico il valore di conguaglio pasti, pre-asilo, post-asilo o
-dei gettoni pre/post-asilo (importo) —
-non solo i già modificabili costi extra/nota — rispetto a quello
+Quando modifico l'importo dei gettoni pre/post-asilo, i costi extra o la
+loro nota (le sole voci modificabili, RET-16) rispetto a quello
 proposto, e premo "Invia comunicazioni"
 Allora l'email inviata e il log della comunicazione registrano il
 valore che ho scritto io, non quello ricalcolato automaticamente —
 utile per una correzione o uno sconto una tantum che non deriva da
 nessun calcolo
+E conguaglio pasti, pre-asilo e post-asilo non si modificano da qui e
+sono ricalcolati dal server (RET-18)
 
-## Scenario: retta, marca da bollo, costo pasti e credito/debito non sono modificabili dalla tabella
+## Scenario: retta, marca da bollo, costo pasti, conguaglio, pre/post-asilo e credito/debito non sono modificabili dalla tabella
 Dato che sono sulla tabella di revisione del mese corrente, su un
 bambino non ancora comunicato
 Quando guardo le colonne "Retta", "Marca da bollo", "Pasti mese
-corrente" e "Credito/Debito"
+corrente", "Conguaglio pasti mese precedente", pre-asilo, post-asilo e
+"Credito/Debito"
 Allora le vedo come testo, non come campi compilabili: per cambiare il
 prezzo della retta si va sulla scheda del bambino (specs/55); la marca
 da bollo non è modificabile da nessuna parte, è un importo fisso per
@@ -75,7 +78,8 @@ legge; il costo pasti resta la proiezione automatica sui giorni di
 apertura (vedi sotto), non pensata per una correzione ad-hoc da qui —
 per un aggiustamento puntuale (es. un pasto non contabilizzato) c'è
 "Costi extra"; il credito/debito si corregge dalla scheda del bambino
-(specs/58)
+(specs/58); lo stesso vale per il conguaglio (RET-14); pre-asilo e
+post-asilo seguono i costi del bambino (specs/55, RET-15)
 
 ## Scenario: il costo pasti del mese corrente è proiettato sui giorni di apertura
 Dato che il mese corrente ha un certo numero di giorni feriali di
@@ -95,7 +99,7 @@ mangiato in alcuni giorni (i "pasti effettivi": pasti segnati "Sì",
 specs/14)
 Quando guardo la colonna "Conguaglio pasti mese precedente" di quel
 bambino
-Allora l'importo mostrato è negativo, pari a
+Allora l'importo mostrato (come testo, RET-14) è negativo, pari a
 −((pasti potenziali) − (pasti effettivi)) × (prezzo del suo buono pasto)
 — un rimborso per i pasti pagati e non consumati, qualunque ne sia il
 motivo (assenza, malattia, o presente senza pranzo)
@@ -343,8 +347,9 @@ quello comunicato all'invio)
 Allora il totale è la somma di tutte le voci già previste più 37,00 €
 E il totale usa gli importi effettivi dei gettoni: una voce con
 abbonamento nel mese (RET-13) vi entra con 0,00 €, non con numero × prezzo
-E se ho modificato a mano un importo prima dell'invio, il totale
-comunicato usa il valore che ho scritto
+E se ho modificato a mano un importo prima dell'invio (gettoni, costi
+extra), il totale comunicato usa il valore che ho scritto; mentre lo
+modifico il totale in tabella si aggiorna (RET-17)
 
 ## Scenario: i gettoni inviati restano quelli comunicati
 **ID RET-06**
@@ -428,6 +433,87 @@ l'abbonamento di quel momento (RET-08)
 E nell'email `{{gettoni_pre_asilo}}` dà «0,00» e
 `{{numero_gettoni_pre_asilo}}` dà «14» (lo stesso per il post)
 
+## Scenario: il conguaglio pasti è testo e sotto compaiono i pasti non usufruiti
+**ID RET-14**
+Dato che sono sulla tabella del mese corrente, su un bambino da inviare,
+e che nel mese precedente i pasti potenziali sono 20 e quelli effettivi 17
+Quando guardo la colonna del conguaglio pasti
+Allora vedo il conguaglio come testo (non un campo) e sotto «3 pasti non
+usufruiti», nello stesso stile di «N gettoni»
+E N = pasti potenziali − pasti effettivi del mese precedente, minimo 0;
+con 0 compare «0 pasti non usufruiti»
+E il conguaglio non si corregge da qui: serve il credito/debito della
+scheda del bambino (specs/58)
+E le rette già inviate e i mesi passati non mostrano i pasti non
+usufruiti e non cambiano (RET-06): nessun numero registrato
+
+## Scenario: pre-asilo e post-asilo sono testo
+**ID RET-15**
+Dato che sono sulla tabella del mese corrente, su un bambino da inviare
+Quando guardo le colonne pre-asilo e post-asilo
+Allora le vedo come testo, non come campi, con il prezzo dei costi del
+bambino (specs/55) se la voce è richiesta, 0,00 € altrimenti
+
+## Scenario: le sole voci modificabili sono gettoni, costi extra e nota
+**ID RET-16**
+Dato che sono sulla tabella del mese corrente, su un bambino da inviare
+Quando guardo i campi compilabili della riga
+Allora posso modificare solo l'importo dei gettoni pre-asilo, l'importo
+dei gettoni post-asilo, i costi extra e la nota dei costi extra
+E un valore vuoto o scritto male vale 0, e valgono solo valori da 0 in su
+(come fa il server): nessun errore sul campo e nessun valore negativo
+
+## Scenario: il totale della riga si aggiorna mentre modifico i campi
+**ID RET-17**
+Dato che sono sulla tabella del mese corrente, su un bambino da inviare
+Quando cambio l'importo dei gettoni o i costi extra (anche svuotandoli)
+Allora il totale di quella riga si aggiorna subito, senza ricaricare la
+pagina, ed è la somma di tutte le voci (vedi la regola del totale)
+E il calcolo usa la stessa funzione pura del server (`calcolaRiepilogoRetta`)
+E gli screen reader non ricevono un annuncio a ogni tasto
+E all'invio il server ricalcola e il suo totale è quello comunicato
+
+## Scenario: all'invio il server ricalcola conguaglio, pre-asilo e post-asilo
+**ID RET-18**
+Dato che invio una comunicazione (massiva o singola) e che il modulo
+contenga, per manomissione o dati vecchi, valori diversi per conguaglio
+pasti, pre-asilo o post-asilo
+Quando il server la elabora
+Allora email e log registrano conguaglio, pre-asilo e post-asilo
+ricalcolati dai dati attuali (`costi_bambini`, pasti), mai quelli del modulo
+E gettoni, costi extra e nota sono quelli scritti nel modulo
+
+## Scenario: avviso se l'importo dei gettoni supera l'abbonamento della voce
+**ID RET-19**
+Dato che sono sulla tabella del mese corrente, su un bambino da inviare,
+con abbonamento pre-asilo di 70,00 nella scheda del bambino e senza
+abbonamento pre-asilo attivo nel mese
+Quando l'importo dei gettoni pre-asilo nella riga è 70,01 (o più)
+Allora il campo si colora di rosso tenue E compare una breve scritta
+collegata al campo (`aria-describedby`), non solo colore
+E con 70,00 o meno non compare nessun avviso (strettamente maggiore)
+E l'avviso si aggiorna mentre modifico l'importo
+E pre e post sono indipendenti: ciascuno si confronta con il proprio
+abbonamento
+E l'avviso non blocca né cambia l'invio
+
+## Scenario: quando l'avviso sui gettoni non compare
+**ID RET-20**
+Dato che sono sulla tabella di "Rette"
+Quando l'importo dei gettoni della voce è 0, oppure l'abbonamento della
+voce è attivo nel mese (importo 0 per RET-13), oppure la retta è già
+inviata (o il mese è passato)
+Allora non compare nessun avviso e il campo non è colorato
+
+## Scenario: il prezzo di confronto è quello della scheda, o di «Prezzi» se è 0
+**ID RET-21**
+Dato che sto valutando l'avviso di RET-19 per una voce
+Quando il prezzo pre/post-asilo della scheda del bambino
+(`prezzo_pre_asilo`/`prezzo_post_asilo`) è maggiore di 0
+Allora l'abbonamento di riferimento è quello della scheda
+E se il prezzo della scheda è 0, si usa l'abbonamento della stessa voce
+in «Prezzi» (prezzi predefiniti, specs/62)
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando provo ad aprire `/admin/rette` (o `/admin/rette/template`)
@@ -493,7 +579,7 @@ Allora vengo reindirizzato alla dashboard
   l'importo è 0 e il numero resta quello calcolato; la copertura di M-1
   azzera numero e importo; nessuna migration. Se il
   bambino non ha riga in `costi_bambini` non è comunicabile e i gettoni
-  sono 0. Importo modificabile a mano come il conguaglio (non negativo);
+  sono 0. Importo modificabile a mano (da 0 in su, RET-16);
   il numero è di sola lettura, non cambia con l'importo scritto.
 - Colonne dei costi: i gettoni pre e post-asilo (importo e, sotto,
   numero) vengono subito dopo il post-asilo e prima dei costi extra.
@@ -527,7 +613,8 @@ Allora vengo reindirizzato alla dashboard
 - Ordine delle colonne dei costi: retta, marca da bollo, costo pasti
   (intestazione "Pasti mese corrente", per distinguerlo a colpo
   d'occhio dal conguaglio del mese precedente subito dopo), conguaglio
-  pasti, pre-asilo, post-asilo, costi extra, nota, credito/debito,
+  pasti (testo, con sotto «N pasti non usufruiti»), pre-asilo e
+  post-asilo (testo), gettoni, costi extra, nota, credito/debito,
   totale, stato — retta, marca da bollo e costo pasti consecutive in
   testa (tutte e tre testo, non modificabili), per tenere vicine le
   voci non modificabili invece di sparpagliarle tra quelle compilabili.
@@ -537,24 +624,22 @@ Allora vengo reindirizzato alla dashboard
   un'intestazione lunga come "Conguaglio pasti mese precedente", invece
   di farle allargare la colonna a dismisura per stare su una riga sola.
 - Ogni importo in euro della tabella mostra il simbolo "€" accanto al
-  valore (per i campi ancora compilabili — conguaglio pasti, pre-asilo,
-  post-asilo, costi extra — fuori dal campo, mai dentro il valore
+  valore (per i campi ancora compilabili — importo gettoni, costi extra — fuori dal campo, mai dentro il valore
   digitato): retta, marca da bollo, costo pasti, credito/debito e
   totale lo mostrano allo stesso modo, da testo semplice — un dettaglio
   solo visivo, il valore numerico e ciò che viene comunicato non
   cambiano.
-- Conguaglio pasti, pre-asilo e post-asilo di un bambino da comunicare
-  (oltre ai già modificabili costi extra/nota) sono campi compilabili,
-  precompilati con il valore calcolato automaticamente ma
-  sovrascrivibili per applicare una correzione ad-hoc che non deriva da
-  nessun calcolo (es. uno sconto una tantum, la correzione di un
-  errore) — coerente con specs/01 - ux.md, non serve toccare i
-  parametri permanenti del bambino (specs/55) per un aggiustamento
-  valido solo questo mese. Conguaglio pasti resta l'unica voce che può
-  essere negativa (è per natura un credito, mai un addebito); le altre
-  restano vincolate a un numero non negativo, come ovunque nell'app.
-- Retta, marca da bollo, costo pasti e credito/debito (specs/58)
-  restano invece testo, non modificabili da questa tabella: la retta si
+- Le sole voci compilabili di un bambino da comunicare sono: importo dei
+  gettoni pre-asilo, importo dei gettoni post-asilo, costi extra e nota
+  dei costi extra (RET-16). Sono precompilate con il valore calcolato ma
+  sovrascrivibili per una correzione ad-hoc valida solo questo mese
+  (es. uno sconto una tantum; coerente con specs/01 - ux.md). Gli
+  importi compilabili sono da 0 in su: niente negativi. Conguaglio
+  pasti, pre-asilo e post-asilo non sono più campi (issue #414): vedi
+  RET-14 e RET-15.
+- Retta, marca da bollo, costo pasti, conguaglio pasti, pre-asilo,
+  post-asilo e credito/debito (specs/58) sono testo, non modificabili
+  da questa tabella: la retta si
   cambia solo sulla scheda del bambino (specs/55, ha senso solo come
   cambio permanente, non un aggiustamento di un mese); la marca da
   bollo non è modificabile da nessuna parte, essendo un importo fisso
@@ -563,25 +648,28 @@ Allora vengo reindirizzato alla dashboard
   pensata per una correzione ad-hoc da qui — un pasto in più/meno da
   conteggiare passa da "Costi extra"; il credito/debito si corregge
   dalla scheda del bambino (specs/58).
-- Le modifiche a conguaglio pasti/pre-asilo/post-asilo non hanno un
-  salvataggio separato per riga: restano solo nel form finché non si
-  preme "Invia comunicazioni". A quel punto il server usa esattamente i
-  valori presenti nel form in quel momento per queste tre voci (non li
-  ricalcola dai dati vivi di presenze), mentre retta, marca da bollo e
-  costo pasti restano sempre quelli calcolati/letti dal server in quel
-  momento (mai dal form, che non li contiene: retta e marca da bollo da
-  `costi_bambini`, il costo pasti dagli stessi giorni di apertura e
-  prezzo buono pasto mostrati in pagina) — la persistenza avviene
-  quindi come parte dell'invio stesso, non prima: se non si preme
-  "Invia comunicazioni" le modifiche non lasciano traccia (specs/05 -
-  feedback.md, coerente con "l'effetto è la conferma" per il resto
-  dell'app).
-- Il totale mostrato in tabella per un bambino da comunicare resta una
-  stima calcolata al caricamento della pagina (come già per i costi
-  extra): non si aggiorna dal vivo mentre si modificano gli altri
-  campi. Il totale realmente comunicato (somma di tutti i valori nel
-  form al momento dell'invio) è quello visibile dopo l'invio, nella
-  riga "Inviata".
+- Le modifiche a gettoni, costi extra e nota non hanno un salvataggio
+  separato per riga: restano solo nel form finché non si preme "Invia
+  comunicazioni". A quel punto il server usa i valori del form solo per
+  queste voci; retta, marca da bollo, costo pasti, conguaglio pasti,
+  pre-asilo e post-asilo sono SEMPRE calcolati/letti dal server in quel
+  momento, mai dal form (retta, marca da bollo, pre e post da
+  `costi_bambini`; costo pasti e conguaglio da giorni di apertura, pasti
+  e prezzo buono pasto) — RET-18. La persistenza avviene come parte
+  dell'invio stesso: se non si preme "Invia comunicazioni" le modifiche
+  non lasciano traccia (specs/05 - feedback.md).
+- Il totale mostrato in tabella per un bambino da comunicare si
+  aggiorna mentre si modificano i campi (RET-17), con la stessa funzione
+  pura del server (`calcolaRiepilogoRetta`); è una stima: all'invio il
+  server ricalcola ed è la fonte di verità. Il totale realmente
+  comunicato è quello visibile dopo l'invio, nella riga "Inviata".
+- Pasti non usufruiti (RET-14): solo visualizzazione nella tabella delle
+  righe «da inviare»; nessuna migration, nessun numero registrato,
+  nessuna modifica a log, email o rette inviate.
+- Avvisi sui gettoni (issue #414): RET-19, RET-20, RET-21; solo visivi,
+  non bloccano né cambiano l'invio. L'avviso A (prezzo di un gettone >
+  abbonamento) è nella scheda del bambino (COS-13, specs/55) e in
+  «Prezzi» (PRZ-11, specs/62).
 - "Invia comunicazioni" chiede conferma con un popup nativo del browser
   (`window.confirm`, `components/PulsanteInvio.tsx`, prop
   `confermaMessaggio`) prima di inviare — è un invio massivo (potenziale

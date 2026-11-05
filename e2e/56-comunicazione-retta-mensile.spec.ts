@@ -13,19 +13,29 @@ import { modalitaInvioEmail } from '../lib/email';
 import { accediComeAdminDb, creaBambinoFixture, eliminaBambinoFixture, type BambinoFixture } from './fixture-bambino';
 import { inserisciRettaInviata } from './pagina-gettone';
 import {
+  TESTO_AVVISO_GETTONI,
   apriAnteprima,
+  avvisoGettoniRette,
+  campoCostiExtra,
   campoGettoni,
+  campoNotaExtra,
+  conguaglioPasti,
+  costoAsilo,
   importoGettoniInviato,
   impostaCostiGettoni,
   inserisciChiusura,
+  inserisciPastiMesePrecedente,
   inserisciPresenzeMesePrecedente,
   inserisciRettaConGettoni,
   meseCorrenteRoma,
   mesePrecedenteRoma,
   numeroGettoni,
+  pastiNonUsufruiti,
   primiGiorniFeriali,
   rigaRette,
+  totaleRiga,
 } from './pagina-gettoni-retta';
+import { leggiPrezzi } from './fixture-prezzi';
 import {
   emailDisponibile,
   formCreaBambino,
@@ -239,9 +249,10 @@ test.describe('56 — Comunicazione retta mensile', () => {
     expect(pastiPotenziali).toBeGreaterThan(0);
 
     const riga = page.locator('tr', { hasText: cognome });
-    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveValue(
-      String(-pastiPotenziali * 5)
-    );
+    // Dal #414 il conguaglio è testo (RET-14), non un campo.
+    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveCount(0);
+    const atteso = (-pastiPotenziali * 5).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    await expect(conguaglioPasti(riga)).toContainText(atteso);
   });
 
   test("l'email a cui verrà inviata la comunicazione compare sotto il nome del bambino", async ({ page }) => {
@@ -264,9 +275,8 @@ test.describe('56 — Comunicazione retta mensile', () => {
     const riga = page.locator('tr', { hasText: cognome });
     await riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`)).fill('15');
 
-    // Il totale in pagina non ricalcola dal vivo (specs/56): verifichiamo
-    // solo che il campo accetti il valore, l'effetto reale sul totale è
-    // verificato dopo l'invio nel test successivo.
+    // L'aggiornamento dal vivo del totale è in RET-17; l'effetto sul totale
+    // inviato è verificato dopo l'invio nel test successivo.
     await expect(riga.getByLabel(new RegExp(`Costi extra per.*${cognome}`))).toHaveValue('15');
   });
 
@@ -572,11 +582,11 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     await page.goto('/admin/rette');
     const riga = page.locator('tr', { hasText: cognome });
-    // Correzione ad-hoc che esula dal calcolo automatico: il pre-asilo
-    // non è nemmeno richiesto per questo bambino (calcolato a 0), eppure
-    // scrivo un importo — dimostra che il valore scritto viene usato
-    // così com'è, non ricalcolato dai parametri del bambino.
-    await riga.getByLabel(new RegExp(`Pre-asilo per.*${cognome}`)).fill('20');
+    // Correzione ad-hoc che esula dal calcolo automatico: nessun gettone
+    // è dovuto per questo bambino (calcolato a 0), eppure scrivo un
+    // importo — dimostra che il valore scritto viene usato così com'è
+    // (le voci modificabili sono solo gettoni, costi extra e nota, RET-16).
+    await riga.getByLabel(new RegExp(`Gettoni pre-asilo per.*${cognome}`)).fill('20');
 
     page.once('dialog', (dialog) => dialog.accept());
     await clickEAttendiAzione(page, page.getByRole('button', { name: 'Invia comunicazioni' }));
@@ -584,11 +594,11 @@ test.describe('56 — Comunicazione retta mensile', () => {
 
     const rigaInviata = page.locator('tr', { hasText: cognome });
     await expect(rigaInviata.getByText(/Inviata il/)).toBeVisible({ timeout: 20_000 });
-    // 200 retta (fissa) + 2 marca da bollo (fissa) + 20 pre-asilo ad-hoc, 0 pasti/extra.
+    // 200 retta (fissa) + 2 marca da bollo (fissa) + 20 gettoni pre ad-hoc, 0 pasti/extra.
     await expect(rigaInviata).toContainText('222,00');
   });
 
-  test('Retta, Marca da bollo, Costo pasti e Credito/Debito non sono campi modificabili in tabella', async ({
+  test('retta, marca da bollo, costo pasti, conguaglio, pre/post-asilo e credito/debito non sono modificabili dalla tabella', async ({
     page,
   }) => {
     const cognome = await creaBambinoConCosti(page, {
@@ -604,6 +614,10 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga.getByLabel(new RegExp(`Costo pasti per.*${cognome}`))).toHaveCount(0);
     await expect(riga.getByLabel(new RegExp(`Credito/Debito per.*${cognome}`))).toHaveCount(0);
     await expect(riga.getByLabel(new RegExp(`Nota credito/debito per.*${cognome}`))).toHaveCount(0);
+    // Dal #414 anche conguaglio pasti, pre-asilo e post-asilo sono testo (RET-14, RET-15).
+    await expect(riga.getByLabel(new RegExp(`Conguaglio pasti mese precedente per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`^Pre-asilo per.*${cognome}`))).toHaveCount(0);
+    await expect(riga.getByLabel(new RegExp(`^Post-asilo per.*${cognome}`))).toHaveCount(0);
     // Restano comunque visibili come testo, non spariscono dalla riga.
     await expect(riga).toContainText('200,00');
     await expect(riga).toContainText('2,00');
@@ -625,9 +639,9 @@ test.describe('56 — Comunicazione retta mensile', () => {
     await expect(riga).toContainText('2,00 €'); // Marca da bollo
     await expect(riga).toContainText('0,00 €'); // Pasti mese corrente, Credito/Debito (prezzoBuonoPasto 0)
     await expect(riga).toContainText('202,00 €'); // Totale (200 retta + 2 marca da bollo)
-    // Conguaglio pasti/Pre-asilo/Post-asilo/Gettoni pre/Gettoni post/Costi extra:
-    // simbolo fuori dal campo compilabile, uno per ciascuno dei sei campi.
-    await expect(riga.getByText('€', { exact: true })).toHaveCount(6);
+    // Gettoni pre/Gettoni post/Costi extra (conguaglio e pre/post-asilo sono ora testo
+    // con il simbolo nel valore): simbolo fuori dal campo compilabile, uno per ciascuno dei tre campi.
+    await expect(riga.getByText('€', { exact: true })).toHaveCount(3);
   });
 
   test('annullare l\'invio di una comunicazione la rende di nuovo inviabile', async ({ page }) => {
@@ -999,6 +1013,240 @@ test.describe('56 — Comunicazione retta mensile', () => {
       await eliminaBambinoFixture(db, conAbbonamento.id);
       await eliminaBambinoFixture(db, senza.id);
     }
+  });
+
+  // --- Tabella rette: voci di sola lettura, totale live, avvisi (RET-14..RET-21, issue #414) ---
+
+  test('RET-14: il conguaglio pasti è testo e sotto compaiono i pasti non usufruiti', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const testoIntestazione = await page
+        .getByText(/Pasti potenziali del mese precedente \(giorni di apertura\): \d+/)
+        .textContent();
+      const potenziali = Number(testoIntestazione?.match(/apertura\): (\d+)/)?.[1]);
+      expect(potenziali).toBeGreaterThan(2);
+
+      const riga = rigaRette(page, bambino);
+      // Nessun pasto "sì" nel mese precedente: tutti i potenziali sono non usufruiti.
+      await expect(conguaglioPasti(riga)).toBeVisible();
+      await expect(riga.getByLabel(/Conguaglio pasti mese precedente per/)).toHaveCount(0);
+      await expect(pastiNonUsufruiti(riga)).toHaveText(`${potenziali} pasti non usufruiti`);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    // Con 2 pasti "sì": potenziali - 2.
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const testoIntestazione = await page
+        .getByText(/Pasti potenziali del mese precedente \(giorni di apertura\): \d+/)
+        .textContent();
+      const potenziali = Number(testoIntestazione?.match(/apertura\): (\d+)/)?.[1]);
+      await expect(pastiNonUsufruiti(rigaRette(page, bambino))).toHaveText(`${potenziali - 2} pasti non usufruiti`);
+    }, (bambino) => inserisciPastiMesePrecedente(db, bambino, 2));
+  });
+
+  test('RET-14: le rette inviate e i mesi passati non mostrano i pasti non usufruiti', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      await confermaSenzaInviare(page, bambino);
+      await expect(pastiNonUsufruiti(rigaRette(page, bambino))).toHaveCount(0);
+
+      await inserisciRettaConGettoni(db, bambino, mesePrecedenteRoma(), { rettaMensile: 100, totale: 100 });
+      await page.goto(`/admin/rette?mese=${mesePrecedenteRoma()}`);
+      await expect(rigaRette(page, bambino)).toBeVisible();
+      await expect(pastiNonUsufruiti(rigaRette(page, bambino))).toHaveCount(0);
+    });
+  });
+
+  test('RET-15: pre-asilo e post-asilo sono testo con il prezzo dei costi del bambino', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      // Pre richiesto (70,00), post no (0,00).
+      await expect(costoAsilo(riga, 'pre')).toHaveText('70,00 €');
+      await expect(costoAsilo(riga, 'post')).toHaveText('0,00 €');
+      await expect(riga.getByLabel(/^Pre-asilo per/)).toHaveCount(0);
+      await expect(riga.getByLabel(/^Post-asilo per/)).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    }, (bambino) => impostaCostiGettoni(db, bambino, { abbonamentoPre: true }));
+  });
+
+  test('RET-16: le sole voci modificabili sono gettoni, costi extra e nota; vuoto o negativo valgono 0', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      await expect(riga.locator('input:not([type="hidden"])')).toHaveCount(4);
+      await expect(campoGettoni(riga, bambino, 'pre')).toBeVisible();
+      await expect(campoGettoni(riga, bambino, 'post')).toBeVisible();
+      await expect(campoCostiExtra(riga, bambino)).toBeVisible();
+      await expect(campoNotaExtra(riga, bambino)).toBeVisible();
+
+      // 100 retta + 2 marca da bollo = 102,00. Vuoto o negativo valgono 0: nessun errore sul campo.
+      await expect(totaleRiga(riga)).toHaveText('102,00 €');
+      await campoCostiExtra(riga, bambino).fill('');
+      await expect(totaleRiga(riga)).toHaveText('102,00 €');
+      await campoCostiExtra(riga, bambino).fill('-5');
+      await expect(totaleRiga(riga)).toHaveText('102,00 €');
+      await expect(campoCostiExtra(riga, bambino)).not.toHaveAttribute('aria-invalid', 'true');
+      await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toHaveCount(0);
+    });
+  });
+
+  test('RET-17: il totale della riga si aggiorna mentre modifico i campi', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      const totale = totaleRiga(riga);
+      // 100 retta + 2 marca da bollo + 21 + 16 gettoni = 139,00.
+      await expect(totale).toHaveText('139,00 €');
+
+      await campoCostiExtra(riga, bambino).fill('15');
+      await expect(totale).toHaveText('154,00 €');
+      await campoGettoni(riga, bambino, 'pre').fill('10');
+      await expect(totale).toHaveText('143,00 €');
+      // Svuotando i campi vale 0.
+      await campoCostiExtra(riga, bambino).fill('');
+      await campoGettoni(riga, bambino, 'post').fill('');
+      await expect(totale).toHaveText('112,00 €');
+
+      // Nessun annuncio agli screen reader a ogni tasto: nessuna regione live nella riga.
+      await expect(riga.locator('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"]')).toHaveCount(0);
+
+      // All'invio il totale comunicato è quello del server, uguale a quello mostrato.
+      await confermaSenzaInviare(page, bambino);
+      await expect(totaleRiga(rigaRette(page, bambino))).toHaveText('112,00 €');
+      await nessunaViolazioneA11yGrave(page);
+    }, presenze(3, 2));
+  });
+
+  test('RET-18: all\'invio il server ricalcola conguaglio, pre-asilo e post-asilo (modulo manomesso)', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      // Simulo un modulo manomesso: aggiungo i vecchi campi con valori assurdi.
+      await campoCostiExtra(riga, bambino).evaluate((el, id) => {
+        const input = el as HTMLInputElement;
+        const form = input.form ?? document.querySelector('form');
+        for (const [nome, valore] of [
+          ['conguaglio_pasti', '-999'],
+          ['pre_asilo', '1'],
+          ['post_asilo', '500'],
+        ]) {
+          const nascosto = document.createElement('input');
+          nascosto.type = 'hidden';
+          nascosto.name = `${nome}_${id}`;
+          nascosto.value = valore;
+          form?.appendChild(nascosto);
+        }
+      }, bambino.id);
+      // Gettoni, costi extra e nota restano quelli scritti nel modulo.
+      await campoCostiExtra(riga, bambino).fill('5');
+
+      await confermaSenzaInviare(page, bambino);
+      const inviata = rigaRette(page, bambino);
+      // 100 retta + 2 marca da bollo + 70 pre-asilo (scheda) + 0 post + 0 conguaglio + 5 extra = 177,00.
+      await expect(totaleRiga(inviata)).toHaveText('177,00 €');
+      await expect(inviata).not.toContainText('500,00');
+      await expect(inviata).not.toContainText('999');
+    }, (bambino) => impostaCostiGettoni(db, bambino, { abbonamentoPre: true }));
+  });
+
+  test('RET-19: avviso se l\'importo dei gettoni supera l\'abbonamento della voce', async ({ page }) => {
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      const pre = campoGettoni(riga, bambino, 'pre');
+      const post = campoGettoni(riga, bambino, 'post');
+
+      // Abbonamento della scheda 70,00, non attivo nel mese: 70,01 avvisa.
+      await pre.fill('70.01');
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveText(TESTO_AVVISO_GETTONI.pre);
+      await expect(pre).toHaveAccessibleDescription(TESTO_AVVISO_GETTONI.pre);
+      await expect(pre).not.toHaveAttribute('aria-invalid', 'true');
+      // Pre e post sono indipendenti.
+      await expect(avvisoGettoniRette(riga, 'post')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+
+      // Strettamente maggiore: 70,00 non avvisa; si aggiorna mentre scrivo.
+      await pre.fill('70');
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveCount(0);
+      await pre.fill('70.01');
+      await expect(avvisoGettoniRette(riga, 'pre')).toBeVisible();
+      await post.fill('70.01');
+      await expect(avvisoGettoniRette(riga, 'post')).toHaveText(TESTO_AVVISO_GETTONI.post);
+      await expect(post).toHaveAccessibleDescription(TESTO_AVVISO_GETTONI.post);
+
+      // L'avviso non blocca né cambia l'invio.
+      await confermaSenzaInviare(page, bambino);
+      await expect(importoGettoniInviato(rigaRette(page, bambino), 'pre')).toHaveText('70,01 €');
+    });
+  });
+
+  test('RET-20: quando l\'avviso sui gettoni non compare', async ({ page }) => {
+    // Importo 0 e abbonamento attivo nel mese.
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      await expect(campoGettoni(riga, bambino, 'pre')).toHaveValue('0');
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveCount(0);
+      // Abbonamento pre attivo: nessun avviso anche con un importo scritto a mano molto alto.
+      await campoGettoni(riga, bambino, 'pre').fill('99');
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveCount(0);
+      // Il post, senza abbonamento, avvisa: l'esenzione vale solo per la propria voce.
+      await campoGettoni(riga, bambino, 'post').fill('99');
+      await expect(avvisoGettoniRette(riga, 'post')).toBeVisible();
+    }, (bambino) => impostaCostiGettoni(db, bambino, { abbonamentoPre: true }));
+
+    // Retta già inviata e mese passato: nessun avviso, anche con gettoni sopra l'abbonamento.
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      await campoGettoni(rigaRette(page, bambino), bambino, 'pre').fill('99');
+      await expect(avvisoGettoniRette(rigaRette(page, bambino), 'pre')).toBeVisible();
+      await confermaSenzaInviare(page, bambino);
+      await expect(avvisoGettoniRette(rigaRette(page, bambino), 'pre')).toHaveCount(0);
+      await expect(importoGettoniInviato(rigaRette(page, bambino), 'pre')).toHaveText('99,00 €');
+
+      await inserisciRettaConGettoni(db, bambino, mesePrecedenteRoma(), {
+        rettaMensile: 100,
+        gettoniPre: { importo: 99, numero: 5 },
+        totale: 199,
+      });
+      await page.goto(`/admin/rette?mese=${mesePrecedenteRoma()}`);
+      await expect(importoGettoniInviato(rigaRette(page, bambino), 'pre')).toHaveText('99,00 €');
+      await expect(avvisoGettoniRette(rigaRette(page, bambino), 'pre')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+  });
+
+  test('RET-21: il prezzo di confronto è quello della scheda, o di «Prezzi» se la scheda è 0', async ({ page }) => {
+    test.skip(!db, 'richiede E2E_ADMIN_EMAIL/PASSWORD e NEXT_PUBLIC_SUPABASE_URL/ANON_KEY');
+    // Il prezzo di «Prezzi» è condiviso con altri file: lo leggo, non lo cambio.
+    const abbonamentoPrezzi = (await leggiPrezzi(db)).abbonamento_pre_asilo;
+    test.skip(abbonamentoPrezzi <= 0 || abbonamentoPrezzi >= 9999, 'serve un abbonamento pre-asilo in «Prezzi» tra 0 e 9999');
+    const soglia = abbonamentoPrezzi.toFixed(2);
+    const sopra = (abbonamentoPrezzi + 0.01).toFixed(2);
+
+    // Scheda a 0: conta «Prezzi».
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      const pre = campoGettoni(riga, bambino, 'pre');
+      await pre.fill(sopra);
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveText(TESTO_AVVISO_GETTONI.pre);
+      await pre.fill(soglia);
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveCount(0);
+    }, (bambino) => impostaCostiGettoni(db, bambino, { prezzoAbbonamentoPre: 0 }));
+
+    // Scheda maggiore di 0 (30,00): conta la scheda, non «Prezzi».
+    await conBambino(async (bambino) => {
+      await page.goto('/admin/rette');
+      const riga = rigaRette(page, bambino);
+      const pre = campoGettoni(riga, bambino, 'pre');
+      await pre.fill('30.01');
+      await expect(avvisoGettoniRette(riga, 'pre')).toBeVisible();
+      await pre.fill('30');
+      await expect(avvisoGettoniRette(riga, 'pre')).toHaveCount(0);
+    }, (bambino) => impostaCostiGettoni(db, bambino, { prezzoAbbonamentoPre: 30 }));
   });
 
   test('RET-09: il modello email contiene le righe dei gettoni dopo la migration (coperto da pgTAP)', async () => {

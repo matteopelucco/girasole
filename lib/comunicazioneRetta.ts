@@ -118,6 +118,35 @@ export function calcolaRiepilogoRetta(parametri: ParametriRiepilogoRetta): Riepi
   };
 }
 
+// Pasti non usufruiti nel mese precedente (RET-14): potenziali meno
+// effettivi, mai negativo. Funzione pura.
+export function pastiNonUsufruiti(potenziali: number, effettivi: number): number {
+  return Math.max(0, potenziali - effettivi);
+}
+
+// Importo scritto in un campo della riga di «Rette» (RET-16): vuoto, non
+// valido o negativo vale 0; arrotondato al centesimo. Le stesse regole del
+// server, che usa questa funzione per leggere il modulo. Funzione pura.
+export function importoDaCampoRetta(testo: string): number {
+  const numero = Number(testo);
+  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) / 100 : 0;
+}
+
+// Riepilogo della riga mentre si scrivono gettoni e costi extra (RET-17):
+// gli importi fissi arrivano dalla pagina, i tre campi sono il testo scritto.
+// Passa da `calcolaRiepilogoRetta`, la stessa funzione del server. Funzione pura.
+export function riepilogoRigaRetta(
+  fissi: Omit<ParametriRiepilogoRetta, 'gettoniPreAsilo' | 'gettoniPostAsilo' | 'costiExtra'>,
+  campi: { gettoniPreAsilo: string; gettoniPostAsilo: string; costiExtra: string }
+): RiepilogoRetta {
+  return calcolaRiepilogoRetta({
+    ...fissi,
+    gettoniPreAsilo: importoDaCampoRetta(campi.gettoniPreAsilo),
+    gettoniPostAsilo: importoDaCampoRetta(campi.gettoniPostAsilo),
+    costiExtra: importoDaCampoRetta(campi.costiExtra),
+  });
+}
+
 // La differenza tra il totale comunicato e l'importo realmente
 // ricevuto via bonifico (specs/59): positiva se la famiglia ha pagato
 // meno del dovuto (diventerà un debito sulla prossima retta), negativa
