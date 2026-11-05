@@ -447,6 +447,9 @@ confrontare durata e risultati con il job `e2e`, che resta l'unico bloccante.
   blocca il merge.
 - `supabase/config.toml` vale solo per questo stack: i limiti di accesso sono alti
   perché la suite fa centinaia di accessi dallo stesso indirizzo.
+- L'immagine locale dà ancora i privilegi di default che il servizio ospitato ha
+  tolto: il job copia `supabase/ci/privilegi-default-ospitato.sql` come prima
+  migration, solo nel runner. Senza, il locale sarebbe più permissivo del vero.
 - `grant-check` e `rls-check` leggono il DB locale se c'è `SUPABASE_DB_URL_LOCALE`
   (solo indirizzi di questo computer, `scripts/query-db-test.mts`).
 - Entrambi i job scrivono nel riepilogo i tempi per progetto e per file.

@@ -429,8 +429,11 @@ jobs:
 
       # Applica anche migration e seed. Esclusi i servizi che l'app non usa:
       # restano database, accesso (gotrue), API (postgrest, kong) e posta (mailpit).
+      # Prima migration, solo in questo runner: i privilegi di default come sul
+      # servizio ospitato (vedi il commento nel file).
       - name: Avvia Supabase locale
         run: |
+          cp supabase/ci/privilegi-default-ospitato.sql supabase/migrations/0000_privilegi_default_ospitato.sql
           npm install -g supabase@3.0.0
           supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
