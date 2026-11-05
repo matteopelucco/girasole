@@ -2,15 +2,13 @@
 // Girasole — grant-check (A26, issue #28): wrapper I/O per lib/grantCheck.ts.
 //
 // Legge i sorgenti (app/, lib/, components/), interroga
-// information_schema.role_table_grants e column_privileges del DB di TEST via Management API
-// (sola lettura) e fallisce, con il nome della tabella, se manca un GRANT
+// information_schema.role_table_grants e column_privileges del DB di TEST, remoto o
+// locale (scripts/query-db-test.mts, sola lettura) e fallisce, con il nome della tabella, se manca un GRANT
 // richiesto da `authenticated` o `service_role`. Non è testato
 // unitariamente (I/O); la logica pura lo è, in lib/grantCheck.test.ts.
 //
-// Sicurezza: il project ref arriva SOLO da SUPABASE_TEST_PROJECT_REF
-// (variabile di CI del progetto di test), mai hardcoded; il token da
-// SUPABASE_ACCESS_TOKEN (secret di repo, lo stesso del reset A23). Nessuna
-// scrittura sul DB: una sola SELECT su information_schema.
+// Sicurezza: nessuna scrittura sul DB, una sola SELECT su information_schema;
+// come si raggiunge il DB di test è spiegato in scripts/query-db-test.mts.
 //
 // Uso (CI, dopo il reset del DB di test):
 //   node --experimental-strip-types scripts/grant-check.mts
@@ -25,6 +23,7 @@ import {
   type GrantDb,
   type Richiesta,
 } from '../lib/grantCheck.ts';
+import { eseguiQueryDbTest } from './query-db-test.mts';
 
 const CARTELLE = ['app', 'lib', 'components'];
 
@@ -37,13 +36,6 @@ function* fileSorgenti(dir: string): Generator<string> {
       yield p;
     }
   }
-}
-
-const ref = process.env.SUPABASE_TEST_PROJECT_REF;
-const token = process.env.SUPABASE_ACCESS_TOKEN;
-if (!ref || !token) {
-  console.error('Servono SUPABASE_TEST_PROJECT_REF (progetto di TEST) e SUPABASE_ACCESS_TOKEN.');
-  process.exit(2);
 }
 
 const richieste: Richiesta[] = [];
@@ -73,16 +65,7 @@ select grantee, table_name, privilege_type
 from information_schema.column_privileges
 where table_schema = 'public' and grantee in ('authenticated', 'service_role')`;
 
-const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-  method: 'POST',
-  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ query }),
-});
-if (!res.ok) {
-  console.error(`Query grant fallita: HTTP ${res.status} ${await res.text()}`);
-  process.exit(2);
-}
-const righe = (await res.json()) as { grantee: string; table_name: string; privilege_type: string }[];
+const righe = (await eseguiQueryDbTest(query, 'grant')) as { grantee: string; table_name: string; privilege_type: string }[];
 const grant: GrantDb = righe.map((r) => ({
   grantee: r.grantee,
   tabella: r.table_name,
