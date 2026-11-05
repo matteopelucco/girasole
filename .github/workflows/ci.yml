@@ -234,12 +234,13 @@ jobs:
     # Saltato qui, il job non entra nemmeno nella coda del DB.
     if: needs.statico.outputs.serve-e2e == 'true'
     runs-on: ubuntu-latest
-    # Solo esecuzione reale: l'attesa in coda non conta. Portato da 25 a 35
-    # il 4 novembre 2026: con circa 500 test (PR #412) build, reset e
-    # Playwright superavano i 25 minuti e il job veniva annullato senza
-    # test falliti. playwright.config.ts (maxFailures) resta tarato perché il
-    # report arrivi prima di questo limite.
-    timeout-minutes: 35
+    # Solo esecuzione reale: l'attesa in coda non conta. Portato da 25 a 35 il
+    # 4 novembre 2026 e a 50 il 5 novembre: con circa 530 test (PR #418) il
+    # giro Playwright dura 20-31 minuti (più ~5 di preparazione) e il job veniva
+    # annullato allo scadere dei 35, con tutti i test passati.
+    # playwright.config.ts (maxFailures) resta tarato perché il report arrivi
+    # prima di questo limite.
+    timeout-minutes: 50
     concurrency:
       group: db-test-girasole-dev
       cancel-in-progress: false
