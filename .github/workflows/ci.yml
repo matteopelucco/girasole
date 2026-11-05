@@ -43,8 +43,8 @@ name: CI
 # Il tempo in attesa nel gruppo non conta nel `timeout-minutes` del job:
 # per la documentazione di GitHub il timeout vale per il tempo in cui il
 # job "gira", e un job in coda di concurrency è `pending`, non ancora
-# assegnato a un runner. Il timeout di `e2e` (35 min) copre quindi solo
-# l'esecuzione reale (~25 min a novembre 2026, con circa 500 test).
+# assegnato a un runner. Il timeout di `e2e` (50 min) copre quindi solo
+# l'esecuzione reale (~25-35 min a novembre 2026, con circa 530 test).
 # La coda vale solo tra run di CI: una sessione locale di Matteo sullo
 # stesso DB non ne fa parte (compromesso di ADR-0006, invariato).
 #
