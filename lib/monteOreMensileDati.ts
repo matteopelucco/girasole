@@ -1,11 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { chiusurePerPeriodo } from '@/lib/calendarioScolastico';
 import { meseDaData, ultimoGiornoMese, primoGiornoMese, meseSuccessivo } from '@/lib/date';
-import { calcoloMensileMonteOre, meseDiMovimento, type RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
+import { calcoloMensileMonteOre, meseDiCompetenza, type RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
 import { righeMeseOreLavoro, riepilogoMeseOreLavoro, type GiornoSalvatoOreLavoro } from '@/lib/oreLavoroMese';
 import type { ProfiloOrario } from '@/lib/profiliOrari';
 
-export type MovimentoPerCalcolo = { variazione: number | string; created_at: string };
+export type MovimentoPerCalcolo = { variazione: number | string; created_at: string; mese_competenza?: string | null };
 
 // Calcolo completo mese per mese del monte ore di una persona (specs/19):
 // legge tutti i giorni di ore di lavoro salvati e le chiusure del periodo,
@@ -37,7 +37,7 @@ export async function calcoloMensilePerUtente(
 
   const meseCorrente = meseDaData(oggiData);
   const mesiConOre = giorni.length ? [meseDaData(giorni[0].data)] : [];
-  const mesiConMovimenti = movimenti.map((m) => meseDiMovimento(m.created_at));
+  const mesiConMovimenti = movimenti.map((m) => meseDiCompetenza(m));
   const primo = [...mesiConOre, ...mesiConMovimenti].sort()[0];
   if (!primo) return [];
 

@@ -1,5 +1,6 @@
-import { formattaDataItaliana, formattaDataOraItaliana } from '@/lib/date';
+import { formattaDataItaliana, formattaDataOraItaliana, formattaMeseItaliano } from '@/lib/date';
 import { descrizioneSaldoMonteOre, LEGENDA_MONTE_ORE, saldoMonteOreBreve } from '@/lib/monteOre';
+import { meseDiCompetenza, mesiDiCompetenzaSelezionabili } from '@/lib/monteOreMensile';
 import { FormConEsito, type EsitoAzione } from '@/components/FormConEsito';
 import { PulsanteInvio } from '@/components/PulsanteInvio';
 import { Campo } from '@/components/ui/campo';
@@ -12,6 +13,7 @@ type MovimentoMonteOre = {
   variazione: number | string;
   nota: string | null;
   created_at: string;
+  mese_competenza?: string | null;
 };
 
 // Monte ore (specs/19 - monte-ore.md): il saldo è sempre visibile, al
@@ -26,6 +28,7 @@ export function MonteOre({
   movimenti,
   modalitaAdmin,
   utenteId,
+  meseCorrente,
   aggiungiMovimento,
   modificaMovimento,
   eliminaMovimento,
@@ -34,10 +37,17 @@ export function MonteOre({
   movimenti: MovimentoMonteOre[];
   modalitaAdmin: boolean;
   utenteId: string;
+  // Mese corrente (AAAA-MM): ultimo mese di competenza selezionabile e valore preimpostato.
+  meseCorrente: string;
   aggiungiMovimento: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   modificaMovimento: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
   eliminaMovimento: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
 }) {
+  // Mesi di competenza tra cui scegliere (specs/19, MOR-08/MOR-09): mai oltre il mese corrente.
+  const mesiCompetenza = mesiDiCompetenzaSelezionabili(
+    meseCorrente,
+    movimenti.map((m) => meseDiCompetenza(m))
+  );
   return (
     <div className="rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">
       <p>
@@ -73,6 +83,22 @@ export function MonteOre({
                 <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
               </Selezione>
             </label>
+            <label className="text-xs font-medium text-purple-900">
+              Mese di competenza
+              <Selezione
+                name="mese_competenza"
+                aria-label="Mese di competenza"
+                defaultValue={meseCorrente}
+                misura="piccolo"
+                className="mt-1 block"
+              >
+                {mesiCompetenza.map((mese) => (
+                  <option key={mese} value={mese}>
+                    {formattaMeseItaliano(mese)}
+                  </option>
+                ))}
+              </Selezione>
+            </label>
             <label className="min-w-48 flex-1 text-xs font-medium text-purple-900">
               Nota
               <Campo
@@ -97,9 +123,12 @@ export function MonteOre({
                     <strong>{saldoMonteOreBreve(Number(m.variazione))}</strong>
                     {m.tipo === 'precarico'
                       ? ' (manuale)'
-                      : m.settimana_inizio
-                        ? ` (storico, settimana ${formattaDataItaliana(m.settimana_inizio)})`
-                        : ' (storico)'}
+                      : m.tipo === 'conferma_mese'
+                        ? ' (conferma mese)'
+                        : m.settimana_inizio
+                          ? ` (storico, settimana ${formattaDataItaliana(m.settimana_inizio)})`
+                          : ' (storico)'}
+                    {` (competenza ${formattaMeseItaliano(meseDiCompetenza(m))})`}
                     {m.nota ? ` — ${m.nota}` : ''}
                   </span>
                   <details className="w-full">
@@ -130,6 +159,22 @@ export function MonteOre({
                         >
                           <option value="credito">Il dipendente ha erogato ore in più (+)</option>
                           <option value="debito">Il dipendente deve ancora erogare ore (−)</option>
+                        </Selezione>
+                      </label>
+                      <label className="text-xs font-medium text-purple-900">
+                        Competenza
+                        <Selezione
+                          name="mese_competenza"
+                          defaultValue={meseDiCompetenza(m)}
+                          aria-label={`Mese di competenza movimento ${m.id}`}
+                          misura="piccolo"
+                          className="mt-1 block"
+                        >
+                          {mesiCompetenza.map((mese) => (
+                            <option key={mese} value={mese}>
+                              {formattaMeseItaliano(mese)}
+                            </option>
+                          ))}
                         </Selezione>
                       </label>
                       <label className="min-w-48 flex-1 text-xs font-medium text-purple-900">

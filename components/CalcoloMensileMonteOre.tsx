@@ -3,15 +3,28 @@ import { Riquadro } from '@/components/ui/riquadro';
 import { formattaMeseItaliano } from '@/lib/date';
 import { formattaOreConSegno } from '@/lib/oreLavoro';
 import { saldoMonteOreBreve } from '@/lib/monteOre';
-import type { RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
+import { parteNonConfermata, type RigaCalcoloMensileMonteOre } from '@/lib/monteOreMensile';
+import { ConfermaMeseMonteOre } from '@/components/ConfermaMeseMonteOre';
+import type { EsitoAzione } from '@/components/FormConEsito';
 
 // Calcolo completo del monte ore "mese per mese" (specs/19): ore previste,
 // differenza (fatte in più/in meno rispetto al previsto), movimenti
 // registrati dall'admin nel mese e saldo a fine mese. Informativo: il
 // saldo è solo la somma dei movimenti manuali. Visibile al diretto
 // interessato e all'admin, sempre completo (non dipende dalla settimana
-// mostrata). Server Component, nessuno stato.
-export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMonteOre[] }) {
+// mostrata. Solo all'admin, sui mesi chiusi, la riga propone "Conferma"
+// (specs/19, MOR-01): `conferma` è passata solo in quel caso.
+export function CalcoloMensileMonteOre({
+  righe,
+  utenteId,
+  meseCorrente,
+  conferma,
+}: {
+  righe: RigaCalcoloMensileMonteOre[];
+  utenteId?: string;
+  meseCorrente?: string;
+  conferma?: (statoPrecedente: EsitoAzione, formData: FormData) => Promise<EsitoAzione>;
+}) {
   return (
     <Riquadro className="overflow-x-auto p-3">
       <h2 id="calcolo-mensile-titolo" className="mb-2 text-left font-medium text-stone-800">
@@ -47,7 +60,18 @@ export function CalcoloMensileMonteOre({ righe }: { righe: RigaCalcoloMensileMon
                 {formattaMeseItaliano(r.mese)}
               </TabellaTitolo>
               <TabellaCella allinea="destra" className="py-1 pr-3">{r.orePreviste}h</TabellaCella>
-              <TabellaCella allinea="destra" className="py-1 pr-3">{formattaOreConSegno(r.differenza)}h</TabellaCella>
+              <TabellaCella allinea="destra" className="py-1 pr-3">
+                {formattaOreConSegno(r.differenza)}h
+                {conferma && utenteId && meseCorrente && r.mese < meseCorrente && (
+                  <ConfermaMeseMonteOre
+                    utenteId={utenteId}
+                    mese={r.mese}
+                    parte={parteNonConfermata(r)}
+                    haMovimenti={r.movimenti !== 0}
+                    conferma={conferma}
+                  />
+                )}
+              </TabellaCella>
               <TabellaCella allinea="destra" className="py-1 pr-3">{formattaOreConSegno(r.movimenti)}h</TabellaCella>
               <TabellaCella allinea="destra" className="py-1 font-medium">{saldoMonteOreBreve(r.saldo)}</TabellaCella>
             </TabellaRiga>

@@ -49,6 +49,7 @@ import {
   confermaSettimanaOreLavoro,
   riapriSettimanaOreLavoro,
   aggiungiMovimentoMonteOre,
+  confermaMeseMonteOre,
   eliminaMovimentoMonteOre,
   modificaMovimentoMonteOre,
   decidiStraordinarioResiduo,
@@ -152,7 +153,7 @@ export default async function OreLavoroPage(
     // manuale).
     supabase
       .from('monte_ore_movimenti')
-      .select('id, tipo, settimana_inizio, variazione, nota, created_at')
+      .select('id, tipo, settimana_inizio, variazione, nota, created_at, mese_competenza')
       .eq('utente_id', utenteTarget.id)
       .order('created_at', { ascending: false }),
   ]);
@@ -407,12 +408,18 @@ export default async function OreLavoroPage(
           movimenti={movimentiMonteOre ?? []}
           modalitaAdmin={modalitaAdmin}
           utenteId={utenteTarget.id}
+          meseCorrente={meseDaData(oggi())}
           aggiungiMovimento={aggiungiMovimentoMonteOre}
           modificaMovimento={modificaMovimentoMonteOre}
           eliminaMovimento={eliminaMovimentoMonteOre}
         />
 
-        <CalcoloMensileMonteOre righe={calcoloMensile} />
+        <CalcoloMensileMonteOre
+          righe={calcoloMensile}
+          utenteId={utenteTarget.id}
+          meseCorrente={meseDaData(oggi())}
+          conferma={modalitaAdmin ? confermaMeseMonteOre : undefined}
+        />
 
         {confermata && modalitaAdmin && (
           <ConfermaAzione
