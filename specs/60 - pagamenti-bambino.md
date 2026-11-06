@@ -13,9 +13,11 @@ comprensivi dell'eventuale credito/debito
 ([58 - crediti-debiti-bambino.md](58%20-%20crediti-debiti-bambino.md)), salvo
 correzione esplicita: se un invio contiene un errore, l'admin corregge le voci
 del mese con "Modifica importi", lasciando traccia del valore precedente e del
-motivo (issue #421). La
-verifica del bonifico resta in "Rette"
-([59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md)).
+motivo (issue #421). Gli importi si modificano solo da "Modifica importi". In
+più, per ogni mese comunicato, l'admin verifica il bonifico
+([59 - verifica-bonifico-retta.md](59%20-%20verifica-bonifico-retta.md)) e può
+scrivere una nota privata (PAG-16..PAG-22): "Rette" mostra solo lo stato del
+bonifico, con un link "Verifica" che porta alla riga giusta di questa pagina.
 
 ## Scenario: il menu raggruppa "Rette" e "Pagamenti bambino" sotto "Pagamenti"
 Dato che sono autenticato come admin
@@ -100,9 +102,10 @@ l'ultimo raggiungibile: non si naviga oltre)
 Dato che sono sulla pagina "Pagamenti bambino" con un bambino scelto
 Quando guardo la pagina, a finestra chiusa
 Allora non trovo nessun campo da compilare per gli importi né pulsanti di
-invio, annullamento o verifica bonifico: solo il selettore del bambino, le
-frecce degli anni scolastici e i pulsanti "Modifica importi" dei mesi
-comunicati
+invio o annullamento della comunicazione: i soli controlli sono il selettore
+del bambino, le frecce degli anni scolastici e, per ogni mese comunicato, il
+pulsante "Modifica importi", quelli del bonifico (specs/59) e la nota con
+"Salva" (PAG-16..PAG-22)
 
 ## Scenario: il pulsante compare solo sui mesi comunicati
 **ID PAG-02**
@@ -239,6 +242,64 @@ E mentre è aperta il focus resta al suo interno
 E su uno schermo stretto tutte le voci si leggono e si compilano senza scorrere
 in orizzontale, con il pulsante "Salva" raggiungibile
 
+## Scenario: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica
+**ID PAG-16**
+Dato che per il bambino scelto è stata inviata la comunicazione di un mese
+Quando guardo la riga di quel mese
+Allora nella colonna "Bonifico" vedo "Bonifico da verificare" con i
+pulsanti "Bonifico corretto" e "Importo diverso", che si comportano come in
+specs/59 (stessi messaggi, stessa finestra, stessa accessibilità)
+E dopo la verifica vedo lo stato registrato e il pulsante "Annulla verifica"
+E un mese senza comunicazione non ha né stato né pulsanti del bonifico
+
+## Scenario: un mese passato è sempre verificabile
+**ID PAG-17**
+Dato che scelgo un anno scolastico passato con una comunicazione il cui
+bonifico è ancora da verificare
+Quando guardo la riga di quel mese
+Allora trovo "Bonifico corretto" e "Importo diverso" attivi, come per
+qualunque altro mese
+
+## Scenario: il link "Verifica" di "Rette" porta alla riga del mese
+**ID PAG-18**
+Dato che in "Rette" vedo la riga di un bambino con la comunicazione di un mese
+Quando premo il link "Verifica"
+Allora si apre "Pagamenti bambino" su quel bambino e sull'anno scolastico di
+quel mese
+E la riga di quel mese è quella indicata dall'indirizzo (`#mese-AAAA-MM`)
+
+## Scenario: scrivere e salvare una nota per riga
+**ID PAG-19**
+Dato che per il bambino scelto è stata inviata la comunicazione di un mese
+Quando scrivo un testo nel campo "Nota" di quella riga e premo "Salva"
+Allora vedo una conferma visibile ("Nota salvata")
+E ricaricando la pagina la nota è ancora lì
+E un mese senza comunicazione non ha il campo nota
+
+## Scenario: modificare e svuotare la nota
+**ID PAG-20**
+Dato che una riga ha già una nota salvata
+Quando cambio il testo e premo "Salva"
+Allora vale l'ultimo testo, senza storico delle modifiche
+E se svuoto il campo e premo "Salva" la nota viene cancellata e dopo il
+ricaricamento il campo è vuoto
+
+## Scenario: la nota ha un limite di 500 caratteri
+**ID PAG-21**
+Dato che sto scrivendo la nota di una riga
+Quando il testo supera i 500 caratteri
+Allora il campo mostra il conteggio e non permette di scriverne oltre
+E se un testo troppo lungo arriva comunque al server, "Salva" risponde con
+un errore chiaro e la nota già salvata non cambia
+
+## Scenario: la nota resta com'è con "Annulla verifica" e "Importo diverso"
+**ID PAG-22**
+Dato che una riga ha una nota salvata
+Quando verifico il bonifico con "Importo diverso" (con la sua nota del
+bonifico, specs/59) e poi premo "Annulla verifica"
+Allora la nota della riga è identica a prima, e non è mai stata mescolata
+con la nota del bonifico
+
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
 Quando guardo il menu
@@ -251,8 +312,23 @@ vengo respinto e non cambia nulla (controllo sul server e sul DB)
 ## Regole
 - Pagina `/admin/pagamenti-bambino`, Server Component: legge con la sessione
   dell'admin (RLS admin-only su `bambini` e `comunicazioni_retta`), mai con
-  chiavi di servizio. Unica scrittura: "Modifica importi". Solo un profilo
+  chiavi di servizio. Scritture: "Modifica importi", la verifica del
+  bonifico (specs/59) e la nota per riga (azioni di
+  `app/admin/pagamenti-bambino/actions.ts`, ognuna con `requireAdmin` sul server). Solo un profilo
   `admin` può accedervi (`requireAdmin`, come le altre pagine admin).
+- Ogni riga di mese ha l'ancora `id="mese-AAAA-MM"`: il link "Verifica" di
+  "Rette" apre `/admin/pagamenti-bambino?bambino=<id>&anno=<anno di inizio>#mese-AAAA-MM`.
+- Nota per riga: colonna `nota_pagamento` di `comunicazioni_retta`
+  (`supabase/migrations/0073_nota_pagamento_comunicazioni_retta.sql`), testo,
+  vuota di default, massimo 500 caratteri (CHECK nel database e controllo
+  nell'azione `salvaNotaPagamento`, `lib/pagamentiBambino.ts`). Si scrive
+  solo su un mese già comunicato, con "Salva" per riga e conferma visibile.
+  Una nota svuotata cancella il testo (diventa vuota), nessuno storico:
+  vale l'ultimo testo. È separata da `bonifico_nota` (specs/59), che
+  l'azione non tocca mai. È privata: la legge e la scrive solo l'admin (RLS
+  già admin-only su `comunicazioni_retta`, nessuna policy o GRANT nuovi) e non
+  compare mai nell'email ai genitori né nel PDF della retta. "Annulla
+  invio" (specs/56) cancella la riga e quindi anche la nota.
 - Bambino e anno scolastico sono nella query string (`?bambino=<id>&anno=
   <anno di inizio>`, es. `anno=2026` per il 2026/2027): la pagina è
   condivisibile e funziona senza JavaScript (il selettore è un normale
@@ -310,7 +386,7 @@ vengo respinto e non cambia nulla (controllo sul server e sul DB)
   "Pagamenti" non ha una pagina propria, è solo l'intestazione del gruppo
   (`lib/navigazione.ts`).
 - Fuori scope: stimare l'importo di un mese non ancora comunicato (compreso
-  il mese corrente, per cui l'anteprima resta in "Rette"), mostrare lo
-  stato del bonifico, esportazioni, vista aggregata di tutti i bambini, mail
+  il mese corrente, per cui l'anteprima resta in "Rette"), esportazioni, vista aggregata di tutti i bambini, mail
   di rettifica alla famiglia, modificare il numero dei gettoni, creare da qui
   la retta di un mese non comunicato, ricalcolare a catena gli altri mesi.
+  note su mesi non comunicati, storico delle modifiche della nota.
