@@ -129,9 +129,10 @@ della maestra, `5x` amministrazione.
   diverso; un importo diverso genera un credito/debito sulla retta di
   un mese scelto
 - [60 - pagamenti-bambino.md](60%20-%20pagamenti-bambino.md) — voce di menu
-  "Pagamenti bambino" (gruppo "Pagamenti", insieme a "Rette"): vista admin di
-  sola lettura, per bambino, dei mesi dell'anno scolastico (settembre-giugno)
-  con l'importo richiesto con la mail delle rette scomposto nelle sue voci
+  "Pagamenti bambino" (gruppo "Pagamenti", insieme a "Rette"): vista admin, per
+  bambino, dei mesi dell'anno scolastico (settembre-giugno) con l'importo
+  richiesto con la mail delle rette scomposto nelle sue voci, correggibili con
+  "Modifica importi" (con storico, senza nuova mail)
 - [61 - email-pasti-rojac.md](61%20-%20email-pasti-rojac.md) — nel Report mensile,
   l'admin invia a Rojac (con l'asilo in CC) la mail di riepilogo del mese: pasti
   bambini comunicati + pasti insegnanti (2 per ogni giorno di scuola), con
