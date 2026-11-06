@@ -106,6 +106,10 @@ non c'è nessun credito/debito quel mese) — stesso pattern di
 `{{costi_extra}}`/`{{note_costi_extra}}`
 
 ## Regole
+- "Modifica importi" in "Pagamenti bambino" (specs/60, PAG-12) può cambiare
+  `comunicazioni_retta.credito_debito` e la sua nota su una retta già inviata:
+  la riga "conteggiata" sulla scheda resta immutabile con il suo importo, quindi
+  i due valori possono differire e lo storico della retta ne spiega il motivo.
 - Nuova tabella `crediti_debiti_bambini`
   (`supabase/migrations/0041_crediti_debiti_bambini.sql`): un record per
   ogni credito/debito inserito, con `bambino_id`, `mese_competenza`

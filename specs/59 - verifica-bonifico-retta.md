@@ -112,6 +112,11 @@ comunicazione, resta possibile su qualunque mese passato, perché il
 bonifico spesso arriva settimane dopo l'invio
 
 ## Regole
+- Gli importi di una retta si possono modificare (specs/60, PAG-09) solo con
+  bonifico "da verificare": il totale su cui è stata fatta una verifica non
+  cambia mai. Per modificarli va prima annullata la verifica. "Importo atteso"
+  è il totale registrato al momento, quindi quello corretto se la retta è stata
+  modificata (PAG-13).
 - `comunicazioni_retta` (specs/56) guadagna le colonne di verifica
   bonifico
   (`supabase/migrations/0043_bonifico_comunicazione_retta.sql`):

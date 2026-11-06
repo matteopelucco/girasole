@@ -710,11 +710,13 @@ Allora vengo reindirizzato alla dashboard
   [16 - comunicazione-pasti-rojac.md](16%20-%20comunicazione-pasti-rojac.md)):
   registra gli importi effettivamente comunicati (non ricalcolati in
   seguito, anche se il bambino cambia costi dopo l'invio), l'email
-  destinataria, e chi/quando ha inviato. Immutabile nel senso che non si
-  aggiorna mai una riga esistente: per correggerla (vedi "Annulla
-  invio" sotto) la si elimina e se ne crea una nuova al prossimo invio,
-  non la si modifica sul posto (`supabase/migrations/0038_annulla_comunicazione_retta.sql`,
-  unica policy di delete, solo admin).
+  destinataria, e chi/quando ha inviato. Due modi di correggerla: "Annulla
+  invio" (sotto), che la elimina e ne crea una nuova al prossimo invio
+  (`supabase/migrations/0038_annulla_comunicazione_retta.sql`, unica policy
+  di delete, solo admin), oppure "Modifica importi" in "Pagamenti bambino"
+  ([60 - pagamenti-bambino.md](60%20-%20pagamenti-bambino.md), PAG-05), che la
+  aggiorna sul posto lasciando lo storico, su qualunque mese, senza nuova mail
+  e solo con bonifico da verificare. "Rette" mostra i valori aggiornati.
 - Un bambino con un log già presente per il mese corrente è escluso da
   un nuovo invio con lo stesso click "Invia comunicazioni" (per evitare
   doppi invii accidentali); la tabella mostra per lui gli importi già
@@ -763,9 +765,9 @@ Allora vengo reindirizzato alla dashboard
 - Solo un profilo con ruolo `admin` può accedere a `/admin/rette`, alla
   pagina "Modello email" e inviare comunicazioni (`requireAdmin`, stesso
   pattern di [55 - costi-bambino.md](55%20-%20costi-bambino.md)).
-- Fuori scope in questa fase: modificare gli importi di una
-  comunicazione già inviata mantenendola (l'unico modo per correggerla
-  è annullarla e reinviarla, vedi sopra), inviare o annullare una
+- Fuori scope in questa fase: modificare da questa pagina gli importi di
+  una comunicazione già inviata (si fa da "Pagamenti bambino", specs/60),
+  inviare o annullare una
   comunicazione per un mese diverso da quello corrente (navigare a un
   mese passato per *rivederlo* è invece in scope, vedi sopra), allegati
   (es. PDF) alla comunicazione, una vista d'archivio con filtri/ricerca
