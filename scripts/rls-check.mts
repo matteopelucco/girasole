@@ -1,13 +1,12 @@
 #!/usr/bin/env -S node --experimental-strip-types
 // Girasole — RLS-check (issue #131, esteso da #133): wrapper I/O per lib/rlsCheck.ts.
 //
-// Interroga pg_class del DB di TEST via Management API (sola lettura, una
-// sola SELECT) e fallisce se, in `public`, esposti a `authenticated`/`anon`:
+// Interroga pg_class del DB di TEST, remoto o locale (sola lettura, una sola
+// SELECT) e fallisce se, in `public`, esposti a `authenticated`/`anon`:
 //  - una tabella ha la RLS disattivata;
 //  - una vista non ha `security_invoker = true`;
 //  - una vista materializzata o una tabella esterna ha qualunque privilegio.
-// Stessa chiamata e stessi secret del grant-check: il ref arriva SOLO da
-// SUPABASE_TEST_PROJECT_REF, il token da SUPABASE_ACCESS_TOKEN. Nessun accesso
+// Stessa chiamata del grant-check (scripts/query-db-test.mts). Nessun accesso
 // alla produzione.
 //
 // Uso (CI, dopo il reset del DB di test):
@@ -22,24 +21,9 @@ import {
   trovaEspostiSenzaRls,
   trovaSenzaRls,
 } from '../lib/rlsCheck.ts';
+import { eseguiQueryDbTest } from './query-db-test.mts';
 
-const ref = process.env.SUPABASE_TEST_PROJECT_REF;
-const token = process.env.SUPABASE_ACCESS_TOKEN;
-if (!ref || !token) {
-  console.error('Servono SUPABASE_TEST_PROJECT_REF (progetto di TEST) e SUPABASE_ACCESS_TOKEN.');
-  process.exit(2);
-}
-
-const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-  method: 'POST',
-  headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-  body: JSON.stringify({ query: QUERY_RLS }),
-});
-if (!res.ok) {
-  console.error(`Query RLS fallita: HTTP ${res.status} ${await res.text()}`);
-  process.exit(2);
-}
-const normalizzato = normalizzaRighe(await res.json());
+const normalizzato = normalizzaRighe(await eseguiQueryDbTest(QUERY_RLS, 'RLS'));
 if ('errore' in normalizzato) {
   console.error(normalizzato.errore);
   process.exit(2);
