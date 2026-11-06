@@ -7,10 +7,11 @@ import { Avviso } from './ui/avviso';
 import { Campo } from './ui/campo';
 import { Finestra } from './ui/finestra';
 import { Pulsante } from './ui/pulsante';
+import { StatoBonifico } from './StatoBonifico';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
-import { formattaDataOraItaliana } from '@/lib/date';
 
-// Verifica del bonifico di una comunicazione già inviata (specs/59 -
+// Verifica del bonifico di una comunicazione già inviata, nella colonna
+// "Bonifico" di "Pagamenti bambino" (specs/59, specs/60) (specs/59 -
 // verifica-bonifico-retta.md): due azioni ("Bonifico corretto"/
 // "Importo diverso") finché è "da verificare"; una volta marcato, uno
 // stato di sola lettura con un pulsante "Annulla verifica" per tornare
@@ -21,10 +22,9 @@ import { formattaDataOraItaliana } from '@/lib/date';
 // sua scheda.
 //
 // NON usa FormConEsito/<form> (a differenza della prima versione):
-// nella vista del mese corrente, ogni riga di RigaComunicazione vive
-// già dentro il <form> "Invia comunicazioni" che avvolge l'intera
-// tabella (app/admin/rette/page.tsx) — un secondo <form> annidato qui
-// dentro è HTML non valido e il browser lo gestisce spaginando/
+// quando viveva in "Rette", ogni riga stava già dentro il <form> "Invia
+// comunicazioni" che avvolge l'intera tabella — un secondo <form> annidato
+// qui dentro è HTML non valido e il browser lo gestisce spaginando/
 // riposizionando il contenuto in modo imprevedibile (bug osservato in
 // produzione). Le azioni vengono quindi invocate direttamente come
 // funzioni async (una Server Action è chiamabile così, non solo
@@ -52,7 +52,7 @@ export function VerificaBonifico({
 }: {
   // comunicazioneId non è tra le prop: `marcaCorretto`/
   // `marcaImportoErrato`/`resettaVerifica` arrivano già "bindate" a
-  // quell'id dal chiamante (app/admin/rette/page.tsx) — coerente con
+  // quell'id dal chiamante (app/admin/pagamenti-bambino/page.tsx) — coerente con
   // lo stesso pattern già usato per "Annulla invio"/"Invia
   // comunicazione". `bambinoId` invece serve qui per il link di
   // cortesia alla scheda del bambino dopo un annullo di "importo
@@ -102,18 +102,14 @@ export function VerificaBonifico({
   if (stato === 'corretto' || stato === 'importo_errato') {
     return (
       <div className="mt-1">
-        {stato === 'corretto' ? (
-          <p className="text-xs text-emerald-700">
-            Bonifico ricevuto (importo corretto) — verificato da {verificatoDaNome} il{' '}
-            {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
-          </p>
-        ) : (
-          <p className="text-xs text-amber-700">
-            Bonifico ricevuto (importo diverso): {formattaImporto(importoRicevuto ?? 0)} invece di{' '}
-            {formattaImporto(totale)} — {nota} — verificato da {verificatoDaNome} il{' '}
-            {verificatoIl ? formattaDataOraItaliana(verificatoIl) : ''}
-          </p>
-        )}
+        <StatoBonifico
+          stato={stato}
+          totale={totale}
+          importoRicevuto={importoRicevuto}
+          nota={nota}
+          verificatoDaNome={verificatoDaNome}
+          verificatoIl={verificatoIl}
+        />
         <Pulsante
           variante="secondario"
           misura="piccolo"
@@ -185,7 +181,14 @@ export function VerificaBonifico({
         </Avviso>
       )}
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <span className="text-stone-500">Bonifico da verificare</span>
+        <StatoBonifico
+          stato={stato}
+          totale={totale}
+          importoRicevuto={importoRicevuto}
+          nota={nota}
+          verificatoDaNome={verificatoDaNome}
+          verificatoIl={verificatoIl}
+        />
         <Pulsante
           variante="secondario"
           misura="piccolo"

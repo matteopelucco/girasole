@@ -89,7 +89,7 @@ begin
 end;
 $$;
 
-select plan(47);
+select plan(61);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -153,6 +153,29 @@ begin
   end;
   perform set_config('role', v_prev, true);
   return v_state;
+end;
+$$;
+
+-- Note di pagamento (colonna nota_pagamento, specs/60) leggibili da p_uid
+-- (null = anonimo) sulla comunicazione e0..01, concatenate; stringa vuota
+-- se non ne vede nessuna (anche per "permission denied").
+create function pg_temp.note_as(p_uid uuid) returns text
+language plpgsql as $$
+declare
+  v_prev text := current_user;
+  v_note text;
+begin
+  perform pg_temp.impersona(p_uid);
+  begin
+    select coalesce(string_agg(nota_pagamento, '|'), '') into v_note
+      from public.comunicazioni_retta
+     where id = 'e0000000-0000-0000-0000-000000000001'
+       and nota_pagamento is not null;
+  exception when insufficient_privilege then
+    v_note := '';
+  end;
+  perform set_config('role', v_prev, true);
+  return v_note;
 end;
 $$;
 
@@ -433,6 +456,97 @@ select is(
     where id = 'e0000000-0000-0000-0000-000000000001'),
   'corretto',
   'admin: l''update ha effettivamente modificato la riga'
+);
+
+-- ---------------------------------------------------------------------
+-- Nota privata per riga (migration 0073, specs/60 PAG-05..PAG-08)
+-- ---------------------------------------------------------------------
+-- Nessuna policy né GRANT nuovi: la colonna eredita la RLS admin-only e i
+-- privilegi di tabella. Solo l'admin la legge e la scrive.
+select ok(
+  exists (select 1 from information_schema.columns
+           where table_schema = 'public' and table_name = 'comunicazioni_retta'
+             and column_name = 'nota_pagamento' and data_type = 'text'
+             and is_nullable = 'YES'),
+  'nota_pagamento: colonna di testo, vuota ammessa'
+);
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta
+          set nota_pagamento = 'Nota privata pgTAP'
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  'ok',
+  'admin: può scrivere la nota di pagamento'
+);
+select is(pg_temp.note_as('a0000000-0000-0000-0000-000000000001'), 'Nota privata pgTAP',
+  'admin: legge la nota di pagamento');
+select is(pg_temp.note_as('a0000000-0000-0000-0000-000000000002'), '',
+  'maestra: non legge la nota di pagamento');
+select is(pg_temp.note_as('a0000000-0000-0000-0000-000000000003'), '',
+  'assistente: non legge la nota di pagamento');
+select is(pg_temp.note_as('a0000000-0000-0000-0000-000000000004'), '',
+  'genitore: non legge la nota di pagamento, nemmeno quella del proprio figlio');
+select is(pg_temp.note_as(null), '',
+  'anonimo: non legge la nota di pagamento');
+
+do $do$ begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000002',
+    $q$update public.comunicazioni_retta set nota_pagamento = 'manomessa'$q$);
+end $do$;
+select is(
+  (select nota_pagamento from public.comunicazioni_retta where id = 'e0000000-0000-0000-0000-000000000001'),
+  'Nota privata pgTAP',
+  'maestra: non può scrivere la nota di pagamento');
+do $do$ begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000003',
+    $q$update public.comunicazioni_retta set nota_pagamento = 'manomessa'$q$);
+end $do$;
+select is(
+  (select nota_pagamento from public.comunicazioni_retta where id = 'e0000000-0000-0000-0000-000000000001'),
+  'Nota privata pgTAP',
+  'assistente: non può scrivere la nota di pagamento');
+do $do$ begin
+  perform pg_temp.write_as('a0000000-0000-0000-0000-000000000004',
+    $q$update public.comunicazioni_retta set nota_pagamento = 'manomessa'$q$);
+end $do$;
+select is(
+  (select nota_pagamento from public.comunicazioni_retta where id = 'e0000000-0000-0000-0000-000000000001'),
+  'Nota privata pgTAP',
+  'genitore: non può scrivere la nota di pagamento');
+do $do$ begin
+  perform pg_temp.write_as(null,
+    $q$update public.comunicazioni_retta set nota_pagamento = 'manomessa'$q$);
+end $do$;
+select is(
+  (select nota_pagamento from public.comunicazioni_retta where id = 'e0000000-0000-0000-0000-000000000001'),
+  'Nota privata pgTAP',
+  'anonimo: non può scrivere la nota di pagamento');
+
+-- Limite di 500 caratteri (CHECK): 501 respinti con 23514, 500 accettati.
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta
+          set nota_pagamento = repeat('x', 501)
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '23514',
+  'admin: una nota di 501 caratteri è respinta dal database'
+);
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta
+          set nota_pagamento = repeat('x', 500)
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  'ok',
+  'admin: una nota di 500 caratteri è accettata'
+);
+-- Nota svuotata = cancellata (null).
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta
+          set nota_pagamento = null
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  'ok',
+  'admin: può svuotare la nota di pagamento'
 );
 
 -- ---------------------------------------------------------------------

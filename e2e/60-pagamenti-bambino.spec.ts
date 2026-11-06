@@ -14,8 +14,23 @@
 // `?anno=2020`), così non dipendono dalla data in cui gira la suite.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { test, expect, type BambinoFixture } from './fixture-bambino';
-import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione } from './helpers';
-import { inserisciRettaConGettoni } from './pagina-gettoni-retta';
+import {
+  clickEAttendiAzione,
+  hasCredenziali,
+  meseSuccessivoRoma,
+  nessunaViolazioneA11yGrave,
+  statoAutenticazione,
+} from './helpers';
+import { inserisciRettaConGettoni, meseCorrenteRoma, rigaRette } from './pagina-gettoni-retta';
+import {
+  annoScolasticoDi,
+  apriPagamentiBambino,
+  campoNota,
+  inserisciComunicazioneDaVerificare,
+  leggiNotaPagamento,
+  marcaImportoDiverso,
+  rigaMese,
+} from './pagina-pagamenti-bambino';
 
 const PERCORSO = '/admin/pagamenti-bambino';
 const ANNO_FISSO = 2020;
@@ -292,20 +307,164 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(page.getByRole('link', { name: 'Anno scolastico successivo' })).toHaveCount(0);
     });
 
-    test('la pagina è di sola lettura', async ({ page, bambino, adminDb }) => {
+    test('la pagina si modifica solo da «Modifica importi»', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 250, totale: 250 });
 
       await page.goto(urlBambino(bambino));
       await expect(page.getByRole('row', { name: /settembre 2020/ })).toBeVisible();
       const main = page.getByRole('main');
-      // Nessun campo importo/nota né pulsanti di invio, annullo, verifica: solo
-      // il selettore del bambino e il pulsante "Mostra" della selezione.
+      // Nessun campo per gli importi (solo la nota di testo e, sul mese
+      // comunicato, i pulsanti del bonifico e "Salva") né pulsanti di invio o
+      // annullo della comunicazione.
       await expect(main.locator('input:not([type="hidden"])')).toHaveCount(0);
-      await expect(main.locator('textarea')).toHaveCount(0);
+      await expect(main.locator('textarea')).toHaveCount(1);
       await expect(main.locator('select')).toHaveCount(1);
-      await expect(main.getByRole('button')).toHaveCount(1);
-      await expect(main.getByRole('button', { name: 'Mostra' })).toBeVisible();
-      await expect(main.getByRole('button', { name: /Annulla invio|Invia|Segna|Verific/ })).toHaveCount(0);
+      await expect(main.getByRole('button', { name: /Annulla invio|Invia|Segna/ })).toHaveCount(0);
+      const nomi = (await main.getByRole('button').allTextContents()).map((t) => t.trim());
+      // "Modifica importi" (PAG-02, issue #421) è l'unico altro pulsante ammesso.
+      expect(nomi.filter((n) => n !== 'Modifica importi').sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Mostra', 'Salva']);
+    });
+
+    test('PAG-16: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
+
+      await page.goto(urlBambino(bambino));
+      await expect(page.getByRole('columnheader', { name: 'Bonifico', exact: true })).toBeVisible();
+      const riga = rigaMese(page, `${ANNO_FISSO}-09`);
+      await expect(riga.getByText('Bonifico da verificare')).toBeVisible();
+      page.once('dialog', (dialog) => dialog.accept());
+      await riga.getByRole('button', { name: 'Bonifico corretto' }).click();
+      await expect(riga.getByText('Bonifico ricevuto (importo corretto)', { exact: false })).toBeVisible({
+        timeout: 20_000,
+      });
+      await expect(riga.getByRole('button', { name: 'Annulla verifica' })).toBeVisible();
+
+      // Un mese senza comunicazione non ha né stato né pulsanti del bonifico.
+      const rigaVuota = rigaMese(page, `${ANNO_FISSO}-10`);
+      await expect(rigaVuota.getByText('Non ancora comunicata')).toBeVisible();
+      await expect(rigaVuota.getByRole('button')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('PAG-17: un mese passato è sempre verificabile', async ({ page, bambino, adminDb }) => {
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-11`);
+
+      await page.goto(urlBambino(bambino));
+      const riga = rigaMese(page, `${ANNO_FISSO}-11`);
+      await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeEnabled();
+      await expect(riga.getByRole('button', { name: 'Importo diverso' })).toBeEnabled();
+    });
+
+    test('PAG-18: il link "Verifica" di "Rette" porta alla riga del mese', async ({ page, bambino, adminDb }) => {
+      const mese = meseCorrenteRoma();
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, mese);
+
+      await page.goto('/admin/rette');
+      await rigaRette(page, bambino)
+        .getByRole('link', { name: `Verifica il bonifico di ${bambino.nomeCompleto}` })
+        .click();
+      await page.waitForURL(new RegExp(`bambino=${bambino.id}&anno=${annoScolasticoDi(mese)}#mese-${mese}$`));
+      await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2 })).toBeVisible();
+      const riga = rigaMese(page, mese);
+      await expect(riga).toBeVisible();
+      await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
+    });
+
+    test('PAG-19: scrivere e salvare una nota per riga', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
+
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      await campoNota(riga).fill('Pagato in contanti alla segreteria');
+      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      await expect(riga.getByText('Nota salvata')).toBeVisible();
+
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Pagato in contanti alla segreteria');
+      await page.reload();
+      await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveValue('Pagato in contanti alla segreteria');
+
+      // Un mese senza comunicazione non ha il campo nota.
+      await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-10`))).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('PAG-20: modificare e svuotare la nota', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, {
+        nota_pagamento: 'Prima versione',
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(riga)).toHaveValue('Prima versione');
+      await campoNota(riga).fill('Seconda versione');
+      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Seconda versione');
+
+      await campoNota(riga).fill('');
+      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBeNull();
+      await page.reload();
+      await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveValue('');
+    });
+
+    test('PAG-21: la nota ha un limite di 500 caratteri', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, {
+        nota_pagamento: 'Nota di partenza',
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(riga)).toHaveAttribute('maxlength', '500');
+      // Il campo non permette di scrivere oltre il limite.
+      await campoNota(riga).fill('x'.repeat(500));
+      await campoNota(riga).pressSequentially('yyy');
+      await expect(campoNota(riga)).toHaveValue('x'.repeat(500));
+      await expect(riga.getByText(/^500\/500/)).toBeVisible();
+
+      // Un testo troppo lungo che arriva comunque al server è respinto, e la nota già salvata non cambia.
+      await campoNota(riga).evaluate((el) => el.removeAttribute('maxlength'));
+      await campoNota(riga).fill('x'.repeat(501));
+      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      await expect(riga.getByText('al massimo 500 caratteri', { exact: false })).toBeVisible();
+      await expect(riga.getByText('Nota salvata')).toHaveCount(0);
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Nota di partenza');
+    });
+
+    test('PAG-22: la nota resta com\'è con "Annulla verifica" e "Importo diverso"', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, {
+        retta_mensile: 150,
+        nota_pagamento: 'Nota privata della segreteria',
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      await marcaImportoDiverso(page, riga, bambino, '100', 'Nota del bonifico', meseSuccessivoRoma());
+      await expect(campoNota(riga)).toHaveValue('Nota privata della segreteria');
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Nota privata della segreteria');
+
+      page.once('dialog', (dialog) => dialog.accept());
+      await riga.getByRole('button', { name: 'Annulla verifica' }).click();
+      await expect(riga.getByText('Bonifico da verificare')).toBeVisible({ timeout: 20_000 });
+      await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Nota privata della segreteria');
+      await expect(campoNota(riga)).toHaveValue('Nota privata della segreteria');
+      // La nota del bonifico non si è mescolata con quella della riga.
+      await expect(riga.getByText('Nota del bonifico')).toHaveCount(0);
+    });
+
+    test('la pagina con una nota e un bonifico è leggibile su telefono (360 px) + accessibilità', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, { nota_pagamento: 'Nota breve' });
+      await page.setViewportSize({ width: 360, height: 740 });
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(riga)).toHaveValue('Nota breve');
+      await nessunaViolazioneA11yGrave(page);
     });
   });
 
