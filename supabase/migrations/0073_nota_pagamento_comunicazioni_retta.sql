@@ -9,7 +9,8 @@
 -- Vuota di default, al massimo 500 caratteri. Nessuna policy RLS nuova e
 -- nessun GRANT nuovo: select/update restano solo admin (0036, 0046) e i
 -- privilegi di tabella a `authenticated` (0059) coprono già la colonna
--- aggiunta; anon e service_role non hanno privilegi sulla tabella.
+-- aggiunta; `anon` non ha privilegi sulla tabella, mentre `service_role` può
+-- leggerla (0061) e comunque salta la RLS: la nota va letta solo da codice admin.
 
 alter table public.comunicazioni_retta
   add column if not exists nota_pagamento text;
