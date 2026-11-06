@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { NotaPagamento } from '@/components/NotaPagamento';
+import { VerificaBonifico } from '@/components/VerificaBonifico';
 import { Etichetta } from '@/components/ui/etichetta';
 import { Pulsante } from '@/components/ui/pulsante';
 import { Selezione } from '@/components/ui/selezione';
@@ -7,7 +9,7 @@ import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaPiede, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { requireAdmin } from '@/lib/auth';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
-import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, oggi } from '@/lib/date';
+import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, meseSuccessivo, oggi } from '@/lib/date';
 import {
   annoScolasticoDelMese,
   annoScolasticoRichiesto,
@@ -17,19 +19,21 @@ import {
   totaleRichiesto,
   vociComunicazione,
 } from '@/lib/pagamentiBambino';
+import { marcaBonificoCorretto, marcaBonificoImportoErrato, resettaVerificaBonifico, salvaNotaPagamento } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 const COLONNE_COMUNICAZIONE =
-  'mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il';
+  'id, mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il, bonifico_stato, bonifico_importo_ricevuto, bonifico_nota, bonifico_verificato_da_nome, bonifico_verificato_il, nota_pagamento';
 
-// specs/60 - pagamenti-bambino.md: vista di sola lettura, riservata
-// all'admin, degli importi richiesti a un bambino mese per mese lungo un
-// anno scolastico (settembre-giugno). Gli importi sono quelli registrati
-// nella comunicazione retta (`comunicazioni_retta`, specs/56), cioè
-// esattamente quelli della mail: nessun ricalcolo, quindi nessuna
-// duplicazione della logica di `lib/comunicazioneRetta.ts`. Letture con la
-// sessione dell'admin (RLS), nessuna chiave di servizio, nessuna scrittura.
+// specs/60 - pagamenti-bambino.md: vista riservata all'admin degli importi
+// richiesti a un bambino mese per mese lungo un anno scolastico
+// (settembre-giugno). Gli importi sono quelli registrati nella comunicazione
+// retta (`comunicazioni_retta`, specs/56), cioè esattamente quelli della mail:
+// nessun ricalcolo e mai modificabili da qui. Per ogni mese comunicato si
+// verifica il bonifico (specs/59) e si scrive una nota privata (PAG-05..08).
+// Letture e scritture con la sessione dell'admin (RLS), nessuna chiave di
+// servizio.
 export default async function PagamentiBambinoPage(
   props: {
     searchParams: Promise<{ bambino?: string; anno?: string }>;
@@ -63,6 +67,8 @@ export default async function PagamentiBambinoPage(
     : [];
   const comunicazionePerMese = new Map(comunicazioni.map((c) => [c.mese as string, c]));
 
+  const meseCorrente = meseDaData(oggi());
+
   const href = (annoDestinazione: number) =>
     `/admin/pagamenti-bambino?bambino=${encodeURIComponent(bambino?.id ?? '')}&anno=${annoDestinazione}`;
 
@@ -73,7 +79,8 @@ export default async function PagamentiBambinoPage(
           <h1 className="text-lg font-medium">Pagamenti bambino</h1>
           <p className="mt-1 text-sm text-stone-600">
             Importo richiesto mese per mese, scomposto nelle voci che lo compongono: è quello comunicato ai
-            genitori con la mail delle rette (sola lettura).
+            genitori con la mail delle rette (sola lettura). Per ogni mese comunicato puoi verificare il
+            bonifico e scrivere una nota solo per te.
           </p>
         </div>
 
@@ -151,13 +158,23 @@ export default async function PagamentiBambinoPage(
                     <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
                       Inviata
                     </TabellaTitolo>
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
+                      Bonifico
+                    </TabellaTitolo>
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
+                      Nota
+                    </TabellaTitolo>
                   </TabellaRiga>
                 </TabellaIntestazione>
                 <TabellaCorpo separatori>
                   {mesi.map((mese) => {
                     const comunicazione = comunicazionePerMese.get(mese);
                     return (
-                      <TabellaRiga key={mese} className={comunicazione ? 'bg-emerald-50/40' : undefined}>
+                      <TabellaRiga
+                        key={mese}
+                        id={`mese-${mese}`}
+                        className={comunicazione ? 'scroll-mt-4 bg-emerald-50/40' : 'scroll-mt-4'}
+                      >
                         <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-2 font-normal capitalize">
                           {formattaMeseItaliano(mese)}
                         </TabellaTitolo>
@@ -178,10 +195,38 @@ export default async function PagamentiBambinoPage(
                             <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-2 text-xs text-emerald-800">
                               Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
                             </TabellaCella>
+                            <TabellaCella allinea="sinistra" className="px-2 py-2 text-xs">
+                              <VerificaBonifico
+                                bambinoId={bambino.id}
+                                bambinoNome={`${bambino.nome} ${bambino.cognome}`}
+                                totale={Number(comunicazione.totale)}
+                                stato={comunicazione.bonifico_stato}
+                                importoRicevuto={
+                                  comunicazione.bonifico_importo_ricevuto !== null
+                                    ? Number(comunicazione.bonifico_importo_ricevuto)
+                                    : null
+                                }
+                                nota={comunicazione.bonifico_nota}
+                                verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
+                                verificatoIl={comunicazione.bonifico_verificato_il}
+                                meseSuggerito={meseSuccessivo(mese)}
+                                meseMinimo={meseCorrente}
+                                marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
+                                marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
+                                resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
+                              />
+                            </TabellaCella>
+                            <TabellaCella allinea="sinistra" className="px-2 py-2">
+                              <NotaPagamento
+                                notaIniziale={comunicazione.nota_pagamento}
+                                nomeCampo={`Nota per ${bambino.nome} ${bambino.cognome}, ${formattaMeseItaliano(mese)}`}
+                                salva={salvaNotaPagamento.bind(null, comunicazione.id)}
+                              />
+                            </TabellaCella>
                           </>
                         ) : (
                           <TabellaCella allinea="sinistra"
-                            colSpan={ETICHETTE_VOCI.length + 2}
+                            colSpan={ETICHETTE_VOCI.length + 4}
                             className="px-2 py-2 text-xs text-stone-500"
                           >
                             Non ancora comunicata
@@ -203,7 +248,7 @@ export default async function PagamentiBambinoPage(
                       <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-2 text-base font-bold text-stone-900">
                         {formattaImporto(totaleRichiesto(comunicazioni))} €
                       </TabellaCella>
-                      <TabellaCella />
+                      <TabellaCella colSpan={3} />
                     </TabellaRiga>
                   </TabellaPiede>
                 )}

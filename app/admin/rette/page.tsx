@@ -15,6 +15,7 @@ import {
   primoGiornoMese,
   ultimoGiornoMese,
 } from '@/lib/date';
+import { hrefVerificaBonifico } from '@/lib/pagamentiBambino';
 import { gettoniMesePrecedente } from '@/lib/prezzi';
 import { leggiPrezzi } from '@/lib/prezziDati';
 import { pastiEffettiviPerBambino } from '@/lib/retteDati';
@@ -23,14 +24,11 @@ import { Pulsante } from '@/components/ui/pulsante';
 import { StatoVuoto } from '@/components/ui/stato-vuoto';
 import { Tabella, TabellaCella, TabellaCorpo, TabellaIntestazione, TabellaRiga, TabellaScorrevole, TabellaTitolo } from '@/components/ui/tabella';
 import { RigaRettaDaInviare } from '@/components/RigaRettaDaInviare';
-import { VerificaBonifico } from '@/components/VerificaBonifico';
+import { StatoBonifico } from '@/components/StatoBonifico';
 import {
   annullaComunicazioneRetta,
   inviaComunicazioneRettaSingola,
   inviaComunicazioniRetta,
-  marcaBonificoCorretto,
-  marcaBonificoImportoErrato,
-  resettaVerificaBonifico,
 } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -78,21 +76,19 @@ function CellaGettoniInviati({ importo, numero, voce }: { importo: number; numer
 // vista del mese corrente sia in quella di revisione di un mese passato
 // — solo "Annulla invio" cambia (mai disponibile per un mese passato, né
 // per un bonifico già verificato — specs/59), fattorizzata qui per non
-// duplicare le celle tra le due viste (CLAUDE.md, jscpd). La verifica
-// del bonifico (specs/59) resta invece disponibile in entrambe le viste,
-// finché è "da verificare".
+// duplicare le celle tra le due viste (CLAUDE.md, jscpd). Il bonifico (specs/59)
+// qui è solo in lettura, con il link "Verifica" alla riga giusta di
+// "Pagamenti bambino", dove si verifica o si annulla la verifica.
 function RigaComunicazione({
   bambino,
   comunicazione,
   mostraAnnullaInvio,
   mese,
-  meseReale,
 }: {
   bambino: { id: string; nome: string; cognome: string };
   comunicazione: ComunicazioneRettaRiga;
   mostraAnnullaInvio: boolean;
   mese: string;
-  meseReale: string;
 }) {
   return (
     <TabellaRiga className="bg-emerald-50/40">
@@ -150,21 +146,23 @@ function RigaComunicazione({
             </PulsanteInvio>
           )}
         </div>
-        <VerificaBonifico
-          bambinoId={bambino.id}
-          bambinoNome={`${bambino.nome} ${bambino.cognome}`}
-          totale={Number(comunicazione.totale)}
-          stato={comunicazione.bonifico_stato}
-          importoRicevuto={comunicazione.bonifico_importo_ricevuto !== null ? Number(comunicazione.bonifico_importo_ricevuto) : null}
-          nota={comunicazione.bonifico_nota}
-          verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
-          verificatoIl={comunicazione.bonifico_verificato_il}
-          meseSuggerito={meseSuccessivo(comunicazione.mese)}
-          meseMinimo={meseReale}
-          marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
-          marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
-          resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
-        />
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <StatoBonifico
+            stato={comunicazione.bonifico_stato}
+            totale={Number(comunicazione.totale)}
+            importoRicevuto={comunicazione.bonifico_importo_ricevuto !== null ? Number(comunicazione.bonifico_importo_ricevuto) : null}
+            nota={comunicazione.bonifico_nota}
+            verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
+            verificatoIl={comunicazione.bonifico_verificato_il}
+          />
+          <Link
+            href={hrefVerificaBonifico(bambino.id, comunicazione.mese)}
+            aria-label={`Verifica il bonifico di ${bambino.nome} ${bambino.cognome}`}
+            className="text-xs underline"
+          >
+            Verifica
+          </Link>
+        </div>
       </TabellaCella>
     </TabellaRiga>
   );
@@ -373,7 +371,6 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
             comunicazione={comunicazione}
             mostraAnnullaInvio
             mese={meseVisualizzato}
-            meseReale={meseReale}
           />
         );
       }
@@ -520,7 +517,6 @@ export default async function RettePage(props: { searchParams: Promise<{ mese?: 
                 comunicazione={comunicazione}
                 mostraAnnullaInvio={false}
                 mese={meseVisualizzato}
-                meseReale={meseReale}
               />
             ))}
           />
