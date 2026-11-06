@@ -447,6 +447,8 @@ confrontare durata e risultati con il job `e2e`, che resta l'unico bloccante.
   blocca il merge.
 - `supabase/config.toml` vale solo per questo stack: i limiti di accesso sono alti
   perché la suite fa centinaia di accessi dallo stesso indirizzo.
+  Mai `supabase config push` verso test o produzione: porterebbe quei limiti
+  sul servizio vero.
 - L'immagine locale dà ancora i privilegi di default che il servizio ospitato ha
   tolto: il job copia `supabase/ci/privilegi-default-ospitato.sql` come prima
   migration, solo nel runner. Senza, il locale sarebbe più permissivo del vero.

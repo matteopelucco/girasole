@@ -11,6 +11,8 @@ describe('urlDbLocaleValido', () => {
     expect(urlDbLocaleValido('postgresql://db.abcdefgh.supabase.co:5432/postgres')).toBe(false);
     expect(urlDbLocaleValido('postgresql://aws-0-eu.pooler.supabase.com:6543/postgres')).toBe(false);
     expect(urlDbLocaleValido('postgresql://127.0.0.1.esempio.it:5432/postgres')).toBe(false);
+    expect(urlDbLocaleValido('postgresql://127.0.0.1:5432/postgres?host=db.esempio.it')).toBe(false);
+    expect(urlDbLocaleValido('postgresql://127.0.0.1:5432/postgres?hostaddr=10.0.0.1')).toBe(false);
   });
 
   it('rifiuta valori non validi e altri protocolli', () => {

@@ -196,6 +196,8 @@ password_requirements = ""
 [auth.rate_limit]
 # Valori alti: questo file vale solo per lo stack locale (job `e2e-locale`, issue
 # #419), dove la suite e2e fa centinaia di accessi dallo stesso indirizzo.
+# MAI `supabase config push` verso test o produzione con questi valori: la
+# sezione [auth] andrebbe sul servizio vero.
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 1000
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
