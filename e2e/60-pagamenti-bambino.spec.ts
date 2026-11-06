@@ -307,7 +307,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(page.getByRole('link', { name: 'Anno scolastico successivo' })).toHaveCount(0);
     });
 
-    test('gli importi sono di sola lettura', async ({ page, bambino, adminDb }) => {
+    test('la pagina si modifica solo da «Modifica importi»', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 250, totale: 250 });
 
       await page.goto(urlBambino(bambino));
@@ -321,10 +321,11 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(main.locator('select')).toHaveCount(1);
       await expect(main.getByRole('button', { name: /Annulla invio|Invia|Segna/ })).toHaveCount(0);
       const nomi = (await main.getByRole('button').allTextContents()).map((t) => t.trim());
-      expect(nomi.sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Mostra', 'Salva']);
+      // "Modifica importi" (PAG-02, issue #421) è l'unico altro pulsante ammesso.
+      expect(nomi.filter((n) => n !== 'Modifica importi').sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Mostra', 'Salva']);
     });
 
-    test('PAG-02: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica', async ({
+    test('PAG-16: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica', async ({
       page,
       bambino,
       adminDb,
@@ -349,7 +350,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('PAG-03: un mese passato è sempre verificabile', async ({ page, bambino, adminDb }) => {
+    test('PAG-17: un mese passato è sempre verificabile', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-11`);
 
       await page.goto(urlBambino(bambino));
@@ -358,7 +359,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(riga.getByRole('button', { name: 'Importo diverso' })).toBeEnabled();
     });
 
-    test('PAG-04: il link "Verifica" di "Rette" porta alla riga del mese', async ({ page, bambino, adminDb }) => {
+    test('PAG-18: il link "Verifica" di "Rette" porta alla riga del mese', async ({ page, bambino, adminDb }) => {
       const mese = meseCorrenteRoma();
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, mese);
 
@@ -373,7 +374,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
     });
 
-    test('PAG-05: scrivere e salvare una nota per riga', async ({ page, bambino, adminDb }) => {
+    test('PAG-19: scrivere e salvare una nota per riga', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
 
       const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
@@ -390,7 +391,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await nessunaViolazioneA11yGrave(page);
     });
 
-    test('PAG-06: modificare e svuotare la nota', async ({ page, bambino, adminDb }) => {
+    test('PAG-20: modificare e svuotare la nota', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, {
         nota_pagamento: 'Prima versione',
       });
@@ -408,7 +409,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveValue('');
     });
 
-    test('PAG-07: la nota ha un limite di 500 caratteri', async ({ page, bambino, adminDb }) => {
+    test('PAG-21: la nota ha un limite di 500 caratteri', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, {
         nota_pagamento: 'Nota di partenza',
       });
@@ -430,7 +431,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Nota di partenza');
     });
 
-    test('PAG-08: la nota resta com\'è con "Annulla verifica" e "Importo diverso"', async ({
+    test('PAG-22: la nota resta com\'è con "Annulla verifica" e "Importo diverso"', async ({
       page,
       bambino,
       adminDb,

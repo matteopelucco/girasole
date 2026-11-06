@@ -1,4 +1,4 @@
-// Helper e2e per "Pagamenti bambino" (specs/60 PAG-02..PAG-08) e per la verifica
+// Helper e2e per "Pagamenti bambino" (specs/60 PAG-16..PAG-22) e per la verifica
 // del bonifico che vi si fa (specs/59; issue #417).
 //
 // Attesi dall'implementazione (nomi da rispettare):
