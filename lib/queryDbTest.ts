@@ -7,8 +7,9 @@ const HOST_LOCALI = new Set(['127.0.0.1', 'localhost']);
 // questa strada non può mai portare i controlli verso un database remoto.
 export function urlDbLocaleValido(url: string): boolean {
   try {
-    const { protocol, hostname } = new URL(url);
-    return (protocol === 'postgres:' || protocol === 'postgresql:') && HOST_LOCALI.has(hostname);
+    const { protocol, hostname, search } = new URL(url);
+    // Niente parametri: `?host=`, `hostaddr=` o `service=` farebbero collegare psql altrove.
+    return (protocol === 'postgres:' || protocol === 'postgresql:') && HOST_LOCALI.has(hostname) && search === '';
   } catch {
     return false;
   }
