@@ -435,7 +435,19 @@ jobs:
         run: |
           cp supabase/ci/privilegi-default-ospitato.sql supabase/migrations/0000_privilegi_default_ospitato.sql
           npm install -g supabase@3.0.0
-          supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          # Fino a 3 tentativi: lo scaricamento delle immagini può essere
+          # rifiutato per un limite temporaneo del registro e lasciare container
+          # a metà (porta già in uso al giro dopo), quindi si ripulisce e si riprova.
+          for tentativo in 1 2 3; do
+            if supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              exit 0
+            fi
+            echo "::warning::Avvio di Supabase locale fallito (tentativo $tentativo di 3)"
+            supabase stop --no-backup || true
+            docker rm -f $(docker ps -aq --filter "name=supabase_") 2>/dev/null || true
+            sleep $((tentativo * 20))
+          done
+          exit 1
 
       # Indirizzo e chiavi dimostrative dello stack locale (non sono segreti);
       # le password degli account di test si generano a ogni giro.
