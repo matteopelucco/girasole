@@ -4,6 +4,9 @@ import {
   annoScolasticoRichiesto,
   etichettaAnnoScolastico,
   mesiAnnoScolastico,
+  NOTA_PAGAMENTO_MAX,
+  normalizzaNotaPagamento,
+  hrefVerificaBonifico,
   totaleRichiesto,
   vociComunicazione,
   type ComunicazioneImporti,
@@ -118,5 +121,38 @@ describe('totaleRichiesto', () => {
 
   it('è 0 senza comunicazioni', () => {
     expect(totaleRichiesto([])).toBe(0);
+  });
+});
+
+describe('normalizzaNotaPagamento', () => {
+  it('il limite è 500 caratteri', () => {
+    expect(NOTA_PAGAMENTO_MAX).toBe(500);
+  });
+
+  it('toglie gli spazi ai bordi e tiene il testo', () => {
+    expect(normalizzaNotaPagamento('  Pagato in contanti  ')).toEqual({ ok: true, valore: 'Pagato in contanti' });
+  });
+
+  it('una nota vuota o di soli spazi cancella il testo (null)', () => {
+    expect(normalizzaNotaPagamento('')).toEqual({ ok: true, valore: null });
+    expect(normalizzaNotaPagamento('   \t ')).toEqual({ ok: true, valore: null });
+    expect(normalizzaNotaPagamento(null)).toEqual({ ok: true, valore: null });
+  });
+
+  it('accetta 500 caratteri e rifiuta 501, contando i caratteri veri (non le unità UTF-16)', () => {
+    expect(normalizzaNotaPagamento('x'.repeat(500)).ok).toBe(true);
+    const troppo = normalizzaNotaPagamento('x'.repeat(501));
+    expect(troppo.ok).toBe(false);
+    if (!troppo.ok) expect(troppo.messaggio).toContain('500');
+    // 500 emoji = 1000 unità UTF-16, ma 500 caratteri per il database.
+    expect(normalizzaNotaPagamento('😀'.repeat(500)).ok).toBe(true);
+    expect(normalizzaNotaPagamento('😀'.repeat(501)).ok).toBe(false);
+  });
+});
+
+describe('hrefVerificaBonifico', () => {
+  it('apre il bambino, sull\'anno scolastico del mese, ancorato alla riga del mese', () => {
+    expect(hrefVerificaBonifico('b-1', '2026-10')).toBe('/admin/pagamenti-bambino?bambino=b-1&anno=2026#mese-2026-10');
+    expect(hrefVerificaBonifico('b-1', '2027-03')).toBe('/admin/pagamenti-bambino?bambino=b-1&anno=2026#mese-2027-03');
   });
 });

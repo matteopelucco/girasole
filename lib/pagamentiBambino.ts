@@ -115,3 +115,27 @@ export function vociComunicazione(c: ComunicazioneImporti): VoceImporto[] {
 export function totaleRichiesto(comunicazioni: Pick<ComunicazioneImporti, 'totale'>[]): number {
   return arrotonda(comunicazioni.reduce((somma, c) => somma + Number(c.totale), 0));
 }
+
+// Nota privata per riga (specs/60, PAG-05..PAG-08): lunghezza massima, uguale
+// al CHECK della colonna `nota_pagamento` (migration 0073).
+export const NOTA_PAGAMENTO_MAX = 500;
+
+export type EsitoNotaPagamento = { ok: true; valore: string | null } | { ok: false; messaggio: string };
+
+// Pulisce e controlla il testo di una nota: spazi ai bordi tolti, testo vuoto
+// = nota cancellata (null), oltre il limite = errore. I caratteri si contano
+// come li conta Postgres (`char_length`), cioè per punti di codice.
+export function normalizzaNotaPagamento(testo: string | null | undefined): EsitoNotaPagamento {
+  const pulito = (testo ?? '').trim();
+  if (pulito === '') return { ok: true, valore: null };
+  if ([...pulito].length > NOTA_PAGAMENTO_MAX) {
+    return { ok: false, messaggio: `La nota può essere lunga al massimo ${NOTA_PAGAMENTO_MAX} caratteri.` };
+  }
+  return { ok: true, valore: pulito };
+}
+
+// Indirizzo della riga di un mese in "Pagamenti bambino" (link "Verifica" di
+// "Rette", PAG-04): bambino, anno scolastico del mese e ancora della riga.
+export function hrefVerificaBonifico(bambinoId: string, mese: string): string {
+  return `/admin/pagamenti-bambino?bambino=${encodeURIComponent(bambinoId)}&anno=${annoScolasticoDelMese(mese)}#mese-${mese}`;
+}
