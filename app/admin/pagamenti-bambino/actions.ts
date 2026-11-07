@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { calcolaDifferenzaBonifico, formattaImporto } from '@/lib/comunicazioneRetta';
 import { formattaMeseItaliano, meseDaData, oggi } from '@/lib/date';
-import { normalizzaNotaPagamento } from '@/lib/pagamentiBambino';
+import { normalizzaNotaPagamento, type ComunicazioneImporti } from '@/lib/pagamentiBambino';
+import { validaModificaImporti, valoriDaComunicazione, VOCI_MODIFICABILI, type ChiaveVoce } from '@/lib/modificaImporti';
 import type { EsitoAzione } from '@/components/FormConEsito';
 
 // Azioni di "Pagamenti bambino" (specs/59 verifica del bonifico, specs/60 nota
@@ -255,6 +256,83 @@ export async function salvaNotaPagamento(
     return { ok: false, messaggio: 'Impossibile salvare la nota.', dettaglio: error.message };
   }
   if (!data || data.length === 0) return { ok: false, messaggio: 'Comunicazione non trovata.' };
+
+  revalidaPagine();
+  return { ok: true };
+}
+
+const COLONNE_IMPORTI =
+  'retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, bonifico_stato';
+
+// specs/60, PAG-05..PAG-09 (issue #421): corregge le voci di una retta già
+// inviata. Il server ricontrolla tutto (admin, dati, bonifico): quello che
+// mostra la finestra è solo comodità. La scrittura vera (voci, totale
+// ricalcolato come somma, storico) è un'unica funzione del DB, tutto o niente,
+// che rifiuta anche se nel frattempo il bonifico è stato verificato. Nessuna
+// mail parte, e il numero dei gettoni non si tocca.
+export async function modificaImportiComunicazione(
+  comunicazioneId: string,
+  _stato: EsitoAzione,
+  formData: FormData
+): Promise<EsitoAzione> {
+  const { supabase } = await requireAdmin();
+
+  const { data: attuale } = await supabase
+    .from('comunicazioni_retta')
+    .select(COLONNE_IMPORTI)
+    .eq('id', comunicazioneId)
+    .maybeSingle();
+  if (!attuale) return { ok: false, messaggio: 'Comunicazione non trovata.' };
+  if (attuale.bonifico_stato !== 'in_attesa') {
+    return {
+      ok: false,
+      messaggio: 'Il bonifico di questo mese è già stato verificato: annulla prima la verifica per modificare gli importi.',
+    };
+  }
+
+  const testo = (nome: string) => {
+    const valore = formData.get(nome);
+    return typeof valore === 'string' ? valore : '';
+  };
+  const scritti = {} as Record<ChiaveVoce, string>;
+  for (const voce of VOCI_MODIFICABILI) scritti[voce.chiave] = testo(voce.chiave);
+
+  const esito = validaModificaImporti(
+    scritti,
+    { note_costi_extra: testo('note_costi_extra'), nota_credito_debito: testo('nota_credito_debito') },
+    testo('motivo'),
+    valoriDaComunicazione(attuale as unknown as ComunicazioneImporti)
+  );
+  if (!esito.ok) return { ok: false, messaggio: esito.messaggio };
+
+  const { importi, note } = esito;
+  const { error } = await supabase.rpc('modifica_importi_comunicazione_retta', {
+    p_comunicazione_id: comunicazioneId,
+    p_motivo: esito.motivo,
+    p_retta_mensile: importi.retta_mensile,
+    p_marca_da_bollo: importi.marca_da_bollo,
+    p_costo_pasti: importi.costo_pasti,
+    p_conguaglio_pasti: importi.conguaglio_pasti,
+    p_costo_pre_asilo: importi.costo_pre_asilo,
+    p_costo_post_asilo: importi.costo_post_asilo,
+    p_gettoni_pre_asilo: importi.gettoni_pre_asilo,
+    p_gettoni_post_asilo: importi.gettoni_post_asilo,
+    p_costi_extra: importi.costi_extra,
+    p_credito_debito: importi.credito_debito,
+    p_note_costi_extra: note.note_costi_extra,
+    p_nota_credito_debito: note.nota_credito_debito,
+  });
+  if (error) {
+    // 55000: il bonifico è stato verificato dopo l'apertura della finestra.
+    if (error.code === '55000') {
+      return {
+        ok: false,
+        messaggio: 'Il bonifico di questo mese è stato appena verificato: annulla prima la verifica per modificare gli importi.',
+      };
+    }
+    if (error.code === '22023') return { ok: false, messaggio: error.message };
+    return { ok: false, messaggio: 'Impossibile salvare la modifica degli importi.', dettaglio: error.message };
+  }
 
   revalidaPagine();
   return { ok: true };

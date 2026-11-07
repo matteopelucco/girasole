@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { NavHeader } from '@/components/NavHeader';
+import { ModificaImporti } from '@/components/ModificaImporti';
 import { NotaPagamento } from '@/components/NotaPagamento';
+import { StoricoModifiche } from '@/components/StoricoModifiche';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
 import { Etichetta } from '@/components/ui/etichetta';
 import { Pulsante } from '@/components/ui/pulsante';
@@ -19,19 +21,27 @@ import {
   totaleRichiesto,
   vociComunicazione,
 } from '@/lib/pagamentiBambino';
-import { marcaBonificoCorretto, marcaBonificoImportoErrato, resettaVerificaBonifico, salvaNotaPagamento } from './actions';
+import { valoriDaComunicazione, type ModificaStorico } from '@/lib/modificaImporti';
+import {
+  marcaBonificoCorretto,
+  marcaBonificoImportoErrato,
+  modificaImportiComunicazione,
+  resettaVerificaBonifico,
+  salvaNotaPagamento,
+} from './actions';
 
 export const dynamic = 'force-dynamic';
 
 const COLONNE_COMUNICAZIONE =
-  'id, mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il, bonifico_stato, bonifico_importo_ricevuto, bonifico_nota, bonifico_verificato_da_nome, bonifico_verificato_il, nota_pagamento';
+  'id, mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il, bonifico_stato, bonifico_importo_ricevuto, bonifico_nota, bonifico_verificato_da_nome, bonifico_verificato_il, nota_pagamento, modificata_il, modificata_da_nome, totale_mail';
 
 // specs/60 - pagamenti-bambino.md: vista riservata all'admin degli importi
 // richiesti a un bambino mese per mese lungo un anno scolastico
 // (settembre-giugno). Gli importi sono quelli registrati nella comunicazione
 // retta (`comunicazioni_retta`, specs/56), cioè esattamente quelli della mail:
-// nessun ricalcolo e mai modificabili da qui. Per ogni mese comunicato si
-// verifica il bonifico (specs/59) e si scrive una nota privata (PAG-05..08).
+// nessun ricalcolo; si cambiano solo con "Modifica importi" (#421, con storico).
+// Per ogni mese comunicato si verifica il bonifico (specs/59) e si scrive una
+// nota privata (PAG-16..22).
 // Letture e scritture con la sessione dell'admin (RLS), nessuna chiave di
 // servizio.
 export default async function PagamentiBambinoPage(
@@ -67,6 +77,24 @@ export default async function PagamentiBambinoPage(
     : [];
   const comunicazionePerMese = new Map(comunicazioni.map((c) => [c.mese as string, c]));
 
+  // Storico delle modifiche degli importi (PAG-08), dalla più recente.
+  const storicoPerComunicazione = new Map<string, ModificaStorico[]>();
+  if (comunicazioni.length > 0) {
+    const { data: storico } = await supabase
+      .from('modifiche_comunicazioni_retta')
+      .select('id, comunicazione_id, modificata_il, modificata_da_nome, motivo, totale_prima, totale_dopo, modifiche')
+      .in(
+        'comunicazione_id',
+        comunicazioni.map((c) => c.id)
+      )
+      .order('modificata_il', { ascending: false });
+    for (const riga of storico ?? []) {
+      const elenco = storicoPerComunicazione.get(riga.comunicazione_id) ?? [];
+      elenco.push(riga as ModificaStorico);
+      storicoPerComunicazione.set(riga.comunicazione_id, elenco);
+    }
+  }
+
   const meseCorrente = meseDaData(oggi());
 
   const href = (annoDestinazione: number) =>
@@ -79,7 +107,7 @@ export default async function PagamentiBambinoPage(
           <h1 className="text-lg font-medium">Pagamenti bambino</h1>
           <p className="mt-1 text-sm text-stone-600">
             Importo richiesto mese per mese, scomposto nelle voci che lo compongono: è quello comunicato ai
-            genitori con la mail delle rette (sola lettura). Per ogni mese comunicato puoi verificare il
+            genitori con la mail delle rette (correggibile con «Modifica importi»). Per ogni mese comunicato puoi verificare il
             bonifico e scrivere una nota solo per te.
           </p>
         </div>
@@ -194,6 +222,29 @@ export default async function PagamentiBambinoPage(
                             </TabellaCella>
                             <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-2 text-xs text-emerald-800">
                               Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
+                              {comunicazione.modificata_il && (
+                                <>
+                                  <div className="text-amber-800">
+                                    Modificata il {formattaDataOraItaliana(comunicazione.modificata_il)} da{' '}
+                                    {comunicazione.modificata_da_nome}
+                                  </div>
+                                  <div className="text-stone-600">
+                                    Totale della mail: {formattaImporto(Number(comunicazione.totale_mail))} €
+                                  </div>
+                                </>
+                              )}
+                              <ModificaImporti
+                                bambinoNome={`${bambino.nome} ${bambino.cognome}`}
+                                meseEtichetta={formattaMeseItaliano(mese)}
+                                attuali={valoriDaComunicazione(comunicazione)}
+                                gettoni={{
+                                  pre: comunicazione.numero_gettoni_pre_asilo ?? 0,
+                                  post: comunicazione.numero_gettoni_post_asilo ?? 0,
+                                }}
+                                bloccata={comunicazione.bonifico_stato !== 'in_attesa'}
+                                salva={modificaImportiComunicazione.bind(null, comunicazione.id)}
+                              />
+                              <StoricoModifiche modifiche={storicoPerComunicazione.get(comunicazione.id) ?? []} />
                             </TabellaCella>
                             <TabellaCella allinea="sinistra" className="px-2 py-2 text-xs">
                               <VerificaBonifico
