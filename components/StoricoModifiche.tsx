@@ -11,11 +11,11 @@ export function StoricoModifiche({ modifiche }: { modifiche: ModificaStorico[] }
   return (
     <details className="mt-1 whitespace-normal">
       <summary className="cursor-pointer text-xs font-medium text-stone-700 underline">Storico modifiche</summary>
-      <ol className="mt-1 max-w-72 space-y-2">
+      <ol className="mt-1 space-y-2">
         {modifiche.map((m) => (
           <li key={m.id} className="rounded-base border border-stone-200 bg-white p-2 text-xs text-stone-700">
             <p className="font-medium">
-              {formattaDataOraItaliana(m.modificata_il)} — {m.modificata_da_nome}
+              {formattaDataOraItaliana(m.modificata_il).replace('_', ' alle ')} — {m.modificata_da_nome}
             </p>
             <p>Motivo: {m.motivo}</p>
             <ul className="mt-1 space-y-0.5">

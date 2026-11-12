@@ -20,7 +20,8 @@ export function StatoBonifico({
   verificatoDaNome: string | null;
   verificatoIl: string | null;
 }) {
-  const quando = verificatoIl ? formattaDataOraItaliana(verificatoIl) : '';
+  // "gg/mm/aaaa alle hh:mm" (il formato base usa "_", pensato per i log).
+  const quando = verificatoIl ? formattaDataOraItaliana(verificatoIl).replace('_', ' alle ') : '';
   if (stato === 'in_attesa') return <span className="text-stone-500">Bonifico da verificare</span>;
   if (stato === 'corretto') {
     return (

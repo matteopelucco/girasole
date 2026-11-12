@@ -242,13 +242,14 @@ E mentre è aperta il focus resta al suo interno
 E su uno schermo stretto tutte le voci si leggono e si compilano senza scorrere
 in orizzontale, con il pulsante "Salva" raggiungibile
 
-## Scenario: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica
+## Scenario: un mese comunicato ha la colonna "Pagamento" con le azioni di verifica
 **ID PAG-16**
 Dato che per il bambino scelto è stata inviata la comunicazione di un mese
 Quando guardo la riga di quel mese
-Allora nella colonna "Bonifico" vedo "Bonifico da verificare" con i
+Allora nella colonna "Pagamento" vedo "Bonifico da verificare" con i
 pulsanti "Bonifico corretto" e "Importo diverso", che si comportano come in
 specs/59 (stessi messaggi, stessa finestra, stessa accessibilità)
+E nella stessa colonna, sotto, c'è la nota della riga (PAG-19)
 E dopo la verifica vedo lo stato registrato e il pulsante "Annulla verifica"
 E un mese senza comunicazione non ha né stato né pulsanti del bonifico
 
@@ -299,6 +300,18 @@ Quando verifico il bonifico con "Importo diverso" (con la sua nota del
 bonifico, specs/59) e poi premo "Annulla verifica"
 Allora la nota della riga è identica a prima, e non è mai stata mescolata
 con la nota del bonifico
+
+## Scenario: su un desktop largo la tabella sta nella pagina
+**ID PAG-23**
+Dato che per il bambino scelto sono stati comunicati più mesi, anche con
+note lunghe
+Quando apro la pagina su uno schermo largo 1440 o 1920 pixel
+Allora la tabella e la pagina non scorrono in orizzontale
+E nessuna colonna, nessun pulsante e in particolare "Salva" della nota
+risultano tagliati
+E le voci a zero sono meno evidenti di quelle con un importo
+E su uno schermo stretto (360 pixel) la tabella scorre dentro il suo riquadro e
+la pagina resta accessibile
 
 ## Scenario: accesso negato a chi non è admin
 Dato che sono autenticato come maestra, assistente o genitore
@@ -379,7 +392,8 @@ vengo respinto e non cambia nulla (controllo sul server e sul DB)
   modifiche contemporanee: vince l'ultima e lo storico le mostra entrambe.
 - Il totale della mail è il totale "prima" della modifica più vecchia.
 - Il pulsante e lo storico stanno nella colonna "Inviata", per non aggiungere
-  una colonna a una tabella che già scorre in orizzontale. La finestra usa
+  una colonna alla tabella. Bonifico e nota stanno insieme nella colonna
+  "Pagamento"; data e ora di invio vanno su due righe (nessun "_"). La finestra usa
   `components/ui/finestra.tsx`, come "Importo diverso" (specs/59).
 - Il testo introduttivo della pagina non dice più "sola lettura".
 - "Rette" resta raggiungibile da `/admin/rette` e da "Pagamenti › Rette";
