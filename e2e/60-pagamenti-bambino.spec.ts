@@ -788,7 +788,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(pulsanteSalvaModifica(finestra)).toBeInViewport();
     });
 
-    test('PAG-16: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica', async ({
+    test('PAG-16: un mese comunicato ha la colonna "Pagamento" con le azioni di verifica', async ({
       page,
       bambino,
       adminDb,
@@ -796,7 +796,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
 
       await page.goto(urlBambino(bambino));
-      await expect(page.getByRole('columnheader', { name: 'Bonifico', exact: true })).toBeVisible();
+      await expect(page.getByRole('columnheader', { name: 'Pagamento', exact: true })).toBeVisible();
       const riga = rigaMese(page, `${ANNO_FISSO}-09`);
       await expect(riga.getByText('Bonifico da verificare')).toBeVisible();
       page.once('dialog', (dialog) => dialog.accept());
@@ -810,6 +810,71 @@ test.describe('60 — Pagamenti bambino', () => {
       const rigaVuota = rigaMese(page, `${ANNO_FISSO}-10`);
       await expect(rigaVuota.getByText('Non ancora comunicata')).toBeVisible();
       await expect(rigaVuota.getByRole('button')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    for (const larghezza of [1440, 1920]) {
+      test(`PAG-23: a ${larghezza} px la tabella sta nella pagina, senza scroll orizzontale né «Salva» tagliato`, async ({
+        page,
+        bambino,
+        adminDb,
+      }) => {
+        await page.setViewportSize({ width: larghezza, height: 1000 });
+        // Dieci mesi comunicati, con importi grandi e note lunghe.
+        for (const [i, mese] of MESI_ANNO_SCOLASTICO.entries()) {
+          const numeroMese = i < 4 ? 9 + i : i - 3;
+          const anno = i < 4 ? ANNO_FISSO : ANNO_FISSO + 1;
+          await inserisciComunicazione(adminDb!, bambino, `${anno}-${String(numeroMese).padStart(2, '0')}`, {
+            retta_mensile: 480.5,
+            marca_da_bollo: 2,
+            costo_pasti: 166,
+            conguaglio_pasti: -11,
+            costo_pre_asilo: 130,
+            costo_post_asilo: 120,
+            costi_extra: 35,
+            note_costi_extra: `Gita di ${mese} con una descrizione piuttosto lunga`,
+            credito_debito: -25,
+            nota_credito_debito: 'Rimborso di una differenza dei mesi passati',
+            totale: 917.5,
+          });
+        }
+        await page.goto(urlBambino(bambino));
+        await expect(rigaMese(page, `${ANNO_FISSO}-09`)).toBeVisible();
+
+        const misure = await page.evaluate(() => {
+          const tabella = document.querySelector('table')!;
+          const contenitore = tabella.parentElement!;
+          return {
+            paginaScroll: document.documentElement.scrollWidth,
+            paginaLarga: document.documentElement.clientWidth,
+            contenitoreScroll: contenitore.scrollWidth,
+            contenitoreLarga: contenitore.clientWidth,
+            tabellaScroll: tabella.scrollWidth,
+            tabellaLarga: tabella.clientWidth,
+          };
+        });
+        expect(misure.paginaScroll).toBeLessThanOrEqual(misure.paginaLarga);
+        expect(misure.contenitoreScroll).toBeLessThanOrEqual(misure.contenitoreLarga);
+        expect(misure.tabellaScroll).toBeLessThanOrEqual(misure.tabellaLarga);
+
+        // «Salva» della nota è interamente nella finestra, in ogni riga.
+        const salva = page.getByRole('button', { name: 'Salva', exact: true });
+        await expect(salva).toHaveCount(10);
+        for (let i = 0; i < 10; i++) {
+          const riquadro = await salva.nth(i).boundingBox();
+          expect(riquadro).not.toBeNull();
+          expect(riquadro!.x).toBeGreaterThanOrEqual(0);
+          expect(riquadro!.x + riquadro!.width).toBeLessThanOrEqual(larghezza);
+        }
+        await nessunaViolazioneA11yGrave(page);
+      });
+    }
+
+    test('PAG-23: su telefono (360 px) la pagina resta accessibile', async ({ page, bambino, adminDb }) => {
+      await page.setViewportSize({ width: 360, height: 800 });
+      await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 250, totale: 250 });
+      await page.goto(urlBambino(bambino));
+      await expect(rigaMese(page, `${ANNO_FISSO}-09`)).toBeVisible();
       await nessunaViolazioneA11yGrave(page);
     });
 
