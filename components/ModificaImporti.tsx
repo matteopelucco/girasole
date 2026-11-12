@@ -62,7 +62,7 @@ export function ModificaImporti({
         Modifica importi
       </Pulsante>
       {bloccata && (
-        <p id={idSpiegazione} className="mt-1 max-w-48 whitespace-normal text-xs text-stone-500">
+        <p id={idSpiegazione} className="mt-1 whitespace-normal text-xs text-stone-500">
           Il bonifico è già verificato: per modificare gli importi annulla prima la verifica.
         </p>
       )}
