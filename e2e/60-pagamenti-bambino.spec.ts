@@ -20,16 +20,28 @@ import {
   meseSuccessivoRoma,
   nessunaViolazioneA11yGrave,
   statoAutenticazione,
+  verificaFocusTrattenuto,
 } from './helpers';
 import { inserisciRettaConGettoni, meseCorrenteRoma, rigaRette } from './pagina-gettoni-retta';
 import {
   annoScolasticoDi,
+  apriModificaImporti,
   apriPagamentiBambino,
+  bottoneModificaImporti,
+  campoMotivo,
   campoNota,
+  campoVoce,
+  finestraImportoDiverso,
+  inserisciComunicazioneConVoci,
   inserisciComunicazioneDaVerificare,
+  leggiComunicazione,
   leggiNotaPagamento,
+  leggiStorico,
   marcaImportoDiverso,
+  modificaViaFunzione,
+  pulsanteSalvaModifica,
   rigaMese,
+  type VociRiga,
 } from './pagina-pagamenti-bambino';
 
 const PERCORSO = '/admin/pagamenti-bambino';
@@ -321,8 +333,459 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(main.locator('select')).toHaveCount(1);
       await expect(main.getByRole('button', { name: /Annulla invio|Invia|Segna/ })).toHaveCount(0);
       const nomi = (await main.getByRole('button').allTextContents()).map((t) => t.trim());
-      // "Modifica importi" (PAG-02, issue #421) è l'unico altro pulsante ammesso.
-      expect(nomi.filter((n) => n !== 'Modifica importi').sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Mostra', 'Salva']);
+      // A finestra chiusa i soli pulsanti sono quelli del selettore, del bonifico, della nota
+      // e «Modifica importi» (PAG-02, issue #421): nessun campo per gli importi.
+      expect(nomi.sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Modifica importi', 'Mostra', 'Salva']);
+      await expect(main.getByRole('dialog')).toHaveCount(0);
+    });
+
+    // --- Modifica importi (issue #421, PAG-02..PAG-15) -----------------------
+
+    // Mese comunicato di partenza, con le cifre di specs/60:
+    // 250 + 2 + 108 + 70 - 20 = 410.
+    const MESE_MOD = `${ANNO_FISSO}-09`;
+    const ETICHETTA_MESE_MOD = 'settembre 2020';
+    const VOCI_BASE: VociRiga = {
+      retta_mensile: 250,
+      marca_da_bollo: 2,
+      costo_pasti: 108,
+      costo_pre_asilo: 70,
+      credito_debito: -20,
+      nota_credito_debito: 'Rimborso di prova',
+      totale: 410,
+    };
+
+    test('PAG-02: il pulsante compare solo sui mesi comunicati', async ({ page, bambino, adminDb }) => {
+      await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+
+      await page.goto(urlBambino(bambino));
+      await expect(bottoneModificaImporti(rigaMese(page, MESE_MOD))).toBeVisible();
+      await expect(bottoneModificaImporti(rigaMese(page, `${ANNO_FISSO}-10`))).toHaveCount(0);
+
+      // Anche sui mesi di un anno scolastico passato (2020/2021) e sui bambini non più attivi.
+      const { error } = await adminDb!.from('bambini').update({ attiva: false }).eq('id', bambino.id);
+      expect(error).toBeNull();
+      await page.reload();
+      await expect(bottoneModificaImporti(rigaMese(page, MESE_MOD))).toBeEnabled();
+    });
+
+    test('PAG-03: la finestra propone tutte le voci con i valori attuali', async ({ page, bambino, adminDb }) => {
+      await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, {
+        ...VOCI_BASE,
+        conguaglio_pasti: -11,
+        gettoni_pre_asilo: 21,
+        numero_gettoni_pre_asilo: 3,
+        gettoni_post_asilo: 16,
+        numero_gettoni_post_asilo: 2,
+        costi_extra: 15,
+        note_costi_extra: 'Gita di prova',
+        totale: 451,
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+
+      await expect(
+        finestra.getByRole('heading', { name: new RegExp(`${bambino.nomeCompleto}.*settembre 2020`) })
+      ).toBeVisible();
+      const attesi: Record<string, string> = {
+        'Retta mensile': '250,00',
+        'Marca da bollo': '2,00',
+        Pasti: '108,00',
+        'Conguaglio pasti': '-11,00',
+        'Pre-asilo': '70,00',
+        'Post-asilo': '0,00',
+        'Gettoni pre-asilo': '21,00',
+        'Gettoni post-asilo': '16,00',
+        'Costi extra': '15,00',
+        'Credito/Debito': '-20,00',
+      };
+      for (const [voce, valore] of Object.entries(attesi)) {
+        await expect(campoVoce(finestra, voce)).toHaveValue(valore);
+      }
+      await expect(finestra.getByLabel('Nota costi extra')).toHaveValue('Gita di prova');
+      await expect(finestra.getByLabel('Nota credito/debito')).toHaveValue('Rimborso di prova');
+      // Il numero dei gettoni è solo testo, non un campo.
+      await expect(finestra.getByText('3 gettoni')).toBeVisible();
+      await expect(finestra.getByText('2 gettoni')).toBeVisible();
+      await expect(finestra.getByLabel(/numero.*gettoni/i)).toHaveCount(0);
+      await expect(campoMotivo(finestra)).toHaveValue('');
+      await expect(finestra.getByText('non invia nessuna mail alla famiglia')).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('PAG-04: il totale si aggiorna mentre scrivo', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await expect(finestra.getByText('Totale: 410,00 €')).toBeVisible();
+
+      await campoVoce(finestra, 'Pasti').fill('100');
+      await expect(finestra.getByText('Totale: 402,00 €')).toBeVisible();
+      // Un conguaglio negativo riduce il totale.
+      await campoVoce(finestra, 'Conguaglio pasti').fill('-10');
+      await expect(finestra.getByText('Totale: 392,00 €')).toBeVisible();
+
+      // Il totale non è un campo e non si è salvato nulla.
+      await expect(finestra.getByRole('textbox', { name: /^Totale/ })).toHaveCount(0);
+      expect((await leggiComunicazione(adminDb!, id)).totale).toBe(410);
+    });
+
+    test('PAG-05: salvare la modifica aggiorna il mese senza inviare mail', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      const prima = await leggiComunicazione(adminDb!, id);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await campoVoce(finestra, 'Pasti').fill('100');
+      await campoMotivo(finestra).fill('Pasti contati male');
+      await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+
+      await expect(finestra).toBeHidden();
+      await expect(riga.getByRole('cell', { name: '100,00 €', exact: true })).toBeVisible();
+      await expect(riga.getByRole('cell', { name: '402,00 €', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('row', { name: /Totale richiesto/ }).getByRole('cell', { name: '402,00 €', exact: true })
+      ).toBeVisible();
+
+      // Il totale è ricalcolato dal server come somma delle voci; invio e destinatario non cambiano.
+      await expect.poll(async () => (await leggiComunicazione(adminDb!, id)).totale).toBe(402);
+      const dopo = await leggiComunicazione(adminDb!, id);
+      expect(dopo.costo_pasti).toBe(100);
+      expect(dopo.inviata_il).toBe(prima.inviata_il);
+      expect(dopo.inviata_da_nome).toBe(prima.inviata_da_nome);
+      expect(dopo.email_destinatario).toBe(prima.email_destinatario);
+      await expect(riga.getByText(/Inviata il/)).toBeVisible();
+    });
+
+    test('PAG-06: dati non validi non salvano nulla', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+
+      const casi: { voce: string; originale: string; scritto: string; motivo: string; messaggio: RegExp }[] = [
+        { voce: 'Pasti', originale: '108,00', scritto: '100', motivo: '', messaggio: /Scrivi il motivo/ },
+        { voce: 'Pasti', originale: '108,00', scritto: 'abc', motivo: 'Prova', messaggio: /Pasti: scrivi un importo/ },
+        { voce: 'Pasti', originale: '108,00', scritto: '1,234', motivo: 'Prova', messaggio: /Pasti: scrivi un importo/ },
+        { voce: 'Retta mensile', originale: '250,00', scritto: '1000000', motivo: 'Prova', messaggio: /troppo grande/ },
+        { voce: 'Retta mensile', originale: '250,00', scritto: '-5', motivo: 'Prova', messaggio: /non può essere negativo/ },
+        { voce: 'Costi extra', originale: '0,00', scritto: '-5', motivo: 'Prova', messaggio: /non può essere negativo/ },
+        { voce: 'Pasti', originale: '108,00', scritto: '108,00', motivo: 'Prova', messaggio: /nessun valore/ },
+      ];
+      for (const caso of casi) {
+        await campoVoce(finestra, caso.voce).fill(caso.scritto);
+        await campoMotivo(finestra).fill(caso.motivo);
+        await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+        // La finestra resta aperta con i dati scritti e spiega cosa correggere.
+        await expect(finestra.getByRole('alert').filter({ hasText: caso.messaggio })).toBeVisible();
+        await expect(campoVoce(finestra, caso.voce)).toHaveValue(caso.scritto);
+        await campoVoce(finestra, caso.voce).fill(caso.originale);
+      }
+
+      const dopo = await leggiComunicazione(adminDb!, id);
+      expect(dopo.totale).toBe(410);
+      expect(dopo.modificata_il).toBeNull();
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(0);
+    });
+
+    test('PAG-07: un mese modificato mostra che è stato corretto', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      await modificaViaFunzione(adminDb!, id, 'Prima correzione', { retta_mensile: 250, costo_pasti: 100 });
+      await modificaViaFunzione(adminDb!, id, 'Seconda correzione', { retta_mensile: 250, costo_pasti: 90 });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      await expect(riga.getByText(/Inviata il/)).toBeVisible();
+      await expect(riga.getByText(/Modificata il .* da /)).toBeVisible();
+      // Il totale della mail è quello originale, anche dopo più modifiche.
+      await expect(riga.getByText('Totale della mail: 410,00 €')).toBeVisible();
+      await expect(riga.getByRole('cell', { name: '392,00 €', exact: true })).toBeVisible();
+    });
+
+    test('PAG-08: lo storico delle modifiche resta consultabile', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      await modificaViaFunzione(adminDb!, id, 'Prima correzione', { retta_mensile: 250, costo_pasti: 100 });
+      await modificaViaFunzione(adminDb!, id, 'Seconda correzione', {
+        retta_mensile: 250,
+        costo_pasti: 100,
+        credito_debito: -50,
+      });
+      await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, { retta_mensile: 100, totale: 100 });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      await riga.getByText('Storico modifiche').click();
+      const voci = riga.getByRole('listitem').filter({ hasText: 'Motivo:' });
+      await expect(voci).toHaveCount(2);
+      // Dalla più recente.
+      await expect(voci.nth(0)).toContainText('Motivo: Seconda correzione');
+      await expect(voci.nth(0)).toContainText('Credito/Debito: -20,00 € → -50,00 €');
+      await expect(voci.nth(0)).toContainText('Totale: 402,00 € → 372,00 €');
+      await expect(voci.nth(0)).not.toContainText('Pasti:');
+      await expect(voci.nth(1)).toContainText('Motivo: Prima correzione');
+      await expect(voci.nth(1)).toContainText('Pasti: 108,00 € → 100,00 €');
+      await expect(voci.nth(1)).toContainText('Totale: 410,00 € → 402,00 €');
+      await expect(voci.nth(1)).not.toContainText('Retta mensile:');
+      await expect(voci.nth(0)).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+      await nessunaViolazioneA11yGrave(page);
+
+      // Un mese mai modificato non mostra "Storico modifiche".
+      await expect(rigaMese(page, `${ANNO_FISSO}-10`).getByText('Storico modifiche')).toHaveCount(0);
+
+      // Dall'app lo storico non si cancella né si cambia.
+      await adminDb!.from('modifiche_comunicazioni_retta').delete().eq('comunicazione_id', id);
+      await adminDb!.from('modifiche_comunicazioni_retta').update({ motivo: 'Cambiato' }).eq('comunicazione_id', id);
+      const storico = await leggiStorico(adminDb!, id);
+      expect(storico.map((r) => r.motivo)).toEqual(['Seconda correzione', 'Prima correzione']);
+    });
+
+    test('PAG-09: con il bonifico verificato non si modifica', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, {
+        ...VOCI_BASE,
+        bonifico_stato: 'corretto',
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      await expect(bottoneModificaImporti(riga)).toBeDisabled();
+      await expect(riga.getByText('annulla prima la verifica', { exact: false })).toBeVisible();
+
+      // Dopo "Annulla verifica" il pulsante torna attivo.
+      page.once('dialog', (dialog) => dialog.accept());
+      await riga.getByRole('button', { name: 'Annulla verifica' }).click();
+      await expect(bottoneModificaImporti(riga)).toBeEnabled({ timeout: 20_000 });
+      expect((await leggiComunicazione(adminDb!, id)).totale).toBe(410);
+    });
+
+    test('PAG-09: la richiesta arrivata al server dopo una verifica fatta altrove è rifiutata', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      // Nel frattempo il bonifico viene verificato in un'altra scheda.
+      const { error } = await adminDb!
+        .from('comunicazioni_retta')
+        .update({ bonifico_stato: 'corretto', bonifico_importo_ricevuto: 410 })
+        .eq('id', id);
+      expect(error).toBeNull();
+
+      await campoVoce(finestra, 'Pasti').fill('100');
+      await campoMotivo(finestra).fill('Pasti contati male');
+      await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+      await expect(finestra.getByRole('alert').filter({ hasText: /bonifico.*verificato/ })).toBeVisible();
+
+      const dopo = await leggiComunicazione(adminDb!, id);
+      expect(dopo.totale).toBe(410);
+      expect(dopo.costo_pasti).toBe(108);
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(0);
+    });
+
+    test('PAG-10: togliere o aggiungere pre/post-asilo avvisa delle conseguenze', async ({ page, bambino, adminDb }) => {
+      await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      const idSuccessiva = await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, VOCI_BASE);
+      const successivaPrima = await leggiComunicazione(adminDb!, idSuccessiva);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const avviso = finestra.getByText('non risultano più coperti', { exact: false });
+      await expect(avviso).toHaveCount(0);
+
+      // Da importo a zero: avviso. Restando maggiore di zero: nessun avviso.
+      await campoVoce(finestra, 'Pre-asilo').fill('60');
+      await expect(avviso).toHaveCount(0);
+      await campoVoce(finestra, 'Pre-asilo').fill('0,00');
+      await expect(avviso).toBeVisible();
+      await expect(avviso).toContainText('Pre-asilo');
+      await expect(avviso).toContainText('retta successiva');
+      await campoVoce(finestra, 'Pre-asilo').fill('70');
+      await expect(avviso).toHaveCount(0);
+
+      // Da zero a un importo, per il post-asilo.
+      await campoVoce(finestra, 'Post-asilo').fill('30');
+      await expect(avviso).toBeVisible();
+      await expect(avviso).toContainText('Post-asilo');
+      await campoVoce(finestra, 'Post-asilo').fill('0');
+      await expect(avviso).toHaveCount(0);
+
+      // Salvando il pre-asilo a zero, una retta successiva già inviata non cambia.
+      await campoVoce(finestra, 'Pre-asilo').fill('0');
+      await campoMotivo(finestra).fill('Pre-asilo non richiesto');
+      await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+      await expect(finestra).toBeHidden();
+      expect(await leggiComunicazione(adminDb!, idSuccessiva)).toEqual(successivaPrima);
+    });
+
+    test('PAG-11: gli altri mesi non vengono ricalcolati', async ({ page, bambino, adminDb }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      const idOttobre = await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, {
+        ...VOCI_BASE,
+        conguaglio_pasti: -7,
+        totale: 403,
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await campoVoce(finestra, 'Pasti').fill('100');
+      await campoMotivo(finestra).fill('Pasti contati male');
+      await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+      await expect.poll(async () => (await leggiComunicazione(adminDb!, id)).totale).toBe(402);
+
+      const ottobre = await leggiComunicazione(adminDb!, idOttobre);
+      expect(ottobre.costo_pasti).toBe(108);
+      expect(ottobre.conguaglio_pasti).toBe(-7);
+      expect(ottobre.totale).toBe(403);
+      expect(ottobre.modificata_il).toBeNull();
+      await expect(
+        rigaMese(page, `${ANNO_FISSO}-10`).getByRole('cell', { name: '403,00 €', exact: true })
+      ).toBeVisible();
+    });
+
+    test('PAG-12: il credito/debito cambia solo nella retta', async ({ page, bambino, adminDb }) => {
+      const { error } = await adminDb!.from('crediti_debiti_bambini').insert({
+        bambino_id: bambino.id,
+        mese_competenza: MESE_MOD,
+        importo: 185,
+        nota: 'Differenza di prova',
+        origine: 'manuale',
+        creato_da_nome: 'E2E',
+        applicato_il: new Date().toISOString(),
+      });
+      expect(error).toBeNull();
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, {
+        retta_mensile: 100,
+        credito_debito: 185,
+        totale: 285,
+      });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await campoVoce(finestra, 'Credito/Debito').fill('150');
+      await campoMotivo(finestra).fill('Il debito reale era 150');
+      await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
+      await expect.poll(async () => (await leggiComunicazione(adminDb!, id)).totale).toBe(250);
+      expect((await leggiComunicazione(adminDb!, id)).credito_debito).toBe(150);
+
+      // La scheda del bambino non cambia: resta "conteggiato" con 185,00 €.
+      const { data: credito } = await adminDb!
+        .from('crediti_debiti_bambini')
+        .select('importo, applicato_il')
+        .eq('bambino_id', bambino.id)
+        .single();
+      expect(credito?.importo).toBe(185);
+      expect(credito?.applicato_il).not.toBeNull();
+      await page.goto(`/admin/bambini/${bambino.id}`);
+      await expect(page.getByText('Conteggiato nella retta di settembre 2020')).toBeVisible();
+      await expect(page.getByText('185,00', { exact: false }).first()).toBeVisible();
+      expect((await leggiStorico(adminDb!, id))[0].motivo).toBe('Il debito reale era 150');
+    });
+
+    test('PAG-13: anche «Rette» mostra gli importi corretti', async ({ page, bambino, adminDb }) => {
+      const mese = meseCorrenteRoma();
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, mese, VOCI_BASE);
+      await modificaViaFunzione(adminDb!, id, 'Pasti contati male', { retta_mensile: 250, costo_pasti: 100 });
+
+      await page.goto('/admin/rette');
+      await expect(rigaRette(page, bambino).getByTestId('totale-riga')).toHaveText('402,00 €');
+
+      // L'importo atteso del bonifico è il nuovo totale.
+      await page.goto(`${PERCORSO}?bambino=${bambino.id}&anno=${annoScolasticoDi(mese)}`);
+      await rigaMese(page, mese).getByRole('button', { name: 'Importo diverso' }).click();
+      await expect(finestraImportoDiverso(page, bambino).getByText('Importo atteso: 402,00')).toBeVisible();
+    });
+
+    test("PAG-14: annullare l'invio di una retta modificata", async ({ page, bambino, adminDb }) => {
+      const mese = meseCorrenteRoma();
+      const { error } = await adminDb!.from('crediti_debiti_bambini').insert({
+        bambino_id: bambino.id,
+        mese_competenza: mese,
+        importo: 185,
+        nota: 'Differenza di prova',
+        origine: 'manuale',
+        creato_da_nome: 'E2E',
+        applicato_il: new Date().toISOString(),
+      });
+      expect(error).toBeNull();
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, mese, {
+        retta_mensile: 100,
+        credito_debito: 185,
+        totale: 285,
+      });
+      await modificaViaFunzione(adminDb!, id, 'Il debito reale era 150', { retta_mensile: 100, credito_debito: 150 });
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(1);
+
+      await page.goto('/admin/rette');
+      await clickEAttendiAzione(page, rigaRette(page, bambino).getByRole('button', { name: 'Annulla invio' }));
+
+      // La retta e il suo storico spariscono.
+      await expect
+        .poll(async () => (await adminDb!.from('comunicazioni_retta').select('id').eq('id', id)).data?.length)
+        .toBe(0);
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(0);
+      // Il credito/debito torna "da conteggiare" con l'importo della scheda, non quello corretto.
+      await expect
+        .poll(async () => {
+          const { data } = await adminDb!
+            .from('crediti_debiti_bambini')
+            .select('importo, applicato_il')
+            .eq('bambino_id', bambino.id)
+            .single();
+          return { importo: data?.importo, applicato_il: data?.applicato_il };
+        })
+        .toEqual({ importo: 185, applicato_il: null });
+    });
+
+    test('PAG-15: la finestra si chiude con Esc o «Annulla» senza salvare, e tiene il focus', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const pulsante = bottoneModificaImporti(riga);
+
+      // Esc: chiude, il focus torna sul pulsante, nulla è salvato.
+      let finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await verificaFocusTrattenuto(page, finestra);
+      await campoVoce(finestra, 'Pasti').fill('100');
+      await campoMotivo(finestra).fill('Prova');
+      await page.keyboard.press('Escape');
+      await expect(finestra).toBeHidden();
+      await expect(pulsante).toBeFocused();
+
+      // «Annulla»: stessa cosa, e alla riapertura i valori sono quelli registrati.
+      finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      await expect(campoVoce(finestra, 'Pasti')).toHaveValue('108,00');
+      await expect(campoMotivo(finestra)).toHaveValue('');
+      await finestra.getByRole('button', { name: 'Annulla', exact: true }).click();
+      await expect(finestra).toBeHidden();
+      await expect(pulsante).toBeFocused();
+
+      expect((await leggiComunicazione(adminDb!, id)).totale).toBe(410);
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(0);
+    });
+
+    test('PAG-15: su telefono (360 px) la finestra si legge e si compila senza scorrere in orizzontale', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
+      await page.setViewportSize({ width: 360, height: 740 });
+
+      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const senzaScorrimentoOrizzontale = await finestra.evaluate((el) => el.scrollWidth <= el.clientWidth);
+      expect(senzaScorrimentoOrizzontale).toBe(true);
+      await expect(campoVoce(finestra, 'Credito/Debito')).toBeVisible();
+      await nessunaViolazioneA11yGrave(page);
+
+      // «Salva» è raggiungibile (si scorre solo in verticale dentro la finestra).
+      await pulsanteSalvaModifica(finestra).scrollIntoViewIfNeeded();
+      await expect(pulsanteSalvaModifica(finestra)).toBeInViewport();
     });
 
     test('PAG-16: un mese comunicato ha la colonna "Bonifico" con le azioni di verifica', async ({
