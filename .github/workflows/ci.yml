@@ -60,6 +60,12 @@ name: CI
 #     DB. Il gruppo è unico per tutto il repo: nessun altro workflow deve
 #     usare lo stesso nome, o cancellerebbe/accoderebbe questi job.
 #
+# Issue #419 — prova di Supabase locale: il job `e2e-locale` fa gli stessi
+# controlli di `e2e` contro una copia di Supabase accesa nel runner (Docker),
+# che nasce e muore con il job. Non ha segreti, non entra nella coda del DB e
+# NON fa parte di `verifica`: durante la prova non può bloccare nessuna PR
+# (`continue-on-error`) e non tocca `girasole_dev` né la produzione.
+#
 # Issue #98 — PR "non codice" (solo docs/**, specs/**, CLAUDE.md, README.md,
 # CHANGELOG.md, o un bump puro di versione in package.json/package-lock.json):
 # il workflow parte SEMPRE e il check obbligatorio `verifica` c'è SEMPRE
@@ -372,6 +378,11 @@ jobs:
         continue-on-error: true
         run: node --no-warnings --experimental-strip-types scripts/riepilogo-skip-e2e.mts >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Riepilogo dei tempi dei test e2e (job summary)
+        if: always()
+        continue-on-error: true
+        run: node --no-warnings --experimental-strip-types scripts/riepilogo-tempi-e2e.mts >> "$GITHUB_STEP_SUMMARY"
+
       - name: Carica il report HTML di Playwright (anche se i test falliscono)
         # always(): anche a job scaduto per timeout si prova a caricare
         # quel che c'è (issue #70).
@@ -385,6 +396,126 @@ jobs:
   # Check obbligatorio del ruleset di main ("CI / verifica"): NON
   # rinominare questo job né dargli un `name:`, o il ruleset aspetterebbe
   # per sempre un check che non arriva più.
+  # Prova non bloccante (issue #419): vedi il commento in testa al file.
+  e2e-locale:
+    needs: statico
+    if: needs.statico.outputs.serve-e2e == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 50
+    env:
+      EMAIL_DRY_RUN: '1'
+      CRON_SECRET: ci-e2e-cron-secret
+      ROJAC_EMAIL_DESTINATARIO: rojac-e2e@example.com
+      E2E_ADMIN_EMAIL: e2e-admin@example.com
+      E2E_MAESTRA_EMAIL: e2e-maestra@example.com
+      E2E_ASSISTENTE_EMAIL: e2e-assistente@example.com
+      E2E_GENITORE_EMAIL: e2e-genitore@example.com
+      E2E_MAESTRA_SENZA_SEZIONE_EMAIL: e2e-maestra-senza-sezione@example.com
+      E2E_UTENTE_DA_PROMUOVERE_EMAIL: e2e-da-promuovere@example.com
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installa le dipendenze
+        run: npm ci
+
+      - name: Installa Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+
+      # Applica anche migration e seed. Esclusi i servizi che l'app non usa:
+      # restano database, accesso (gotrue), API (postgrest, kong) e posta (mailpit).
+      # Prima migration, solo in questo runner: i privilegi di default come sul
+      # servizio ospitato (vedi il commento nel file).
+      - name: Avvia Supabase locale
+        run: |
+          cp supabase/ci/privilegi-default-ospitato.sql supabase/migrations/0000_privilegi_default_ospitato.sql
+          npm install -g supabase@3.0.0
+          # Fino a 3 tentativi: lo scaricamento delle immagini può essere
+          # rifiutato per un limite temporaneo del registro e lasciare container
+          # a metà (porta già in uso al giro dopo), quindi si ripulisce e si riprova.
+          for tentativo in 1 2 3; do
+            if supabase start -x realtime,storage-api,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; then
+              exit 0
+            fi
+            echo "::warning::Avvio di Supabase locale fallito (tentativo $tentativo di 3)"
+            supabase stop --no-backup || true
+            docker rm -f $(docker ps -aq --filter "name=supabase_") 2>/dev/null || true
+            sleep $((tentativo * 20))
+          done
+          exit 1
+
+      # Indirizzo e chiavi dimostrative dello stack locale (non sono segreti);
+      # le password degli account di test si generano a ogni giro.
+      - name: Prepara l'ambiente locale
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          leggi() { grep -E "^$1=" "$RUNNER_TEMP/supabase.env" | head -n 1 | cut -d= -f2- | tr -d '"'; }
+          API_URL="$(leggi API_URL)"
+          ANON_KEY="$(leggi ANON_KEY)"
+          SERVICE_ROLE_KEY="$(leggi SERVICE_ROLE_KEY)"
+          DB_URL="$(leggi DB_URL)"
+          if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_ROLE_KEY" ] || [ -z "$DB_URL" ]; then
+            echo "::error::Valori mancanti da supabase status. Nomi disponibili:"
+            cut -d= -f1 "$RUNNER_TEMP/supabase.env"
+            exit 1
+          fi
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) ;;
+            *) echo "::error::L'API di Supabase non è locale."; exit 1 ;;
+          esac
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "SUPABASE_DB_URL_LOCALE=$DB_URL"
+          } >> "$GITHUB_ENV"
+          for ruolo in ADMIN MAESTRA ASSISTENTE GENITORE MAESTRA_SENZA_SEZIONE; do
+            password="$(openssl rand -hex 24)"
+            echo "::add-mask::$password"
+            echo "E2E_${ruolo}_PASSWORD=$password" >> "$GITHUB_ENV"
+          done
+
+      - name: Build di produzione per la e2e (next build)
+        run: npm run build
+
+      - name: Test pgTAP sulle policy RLS
+        run: supabase test db
+
+      - name: Grant-check
+        run: node --no-warnings --experimental-strip-types scripts/grant-check.mts
+
+      - name: RLS-check
+        run: node --no-warnings --experimental-strip-types scripts/rls-check.mts
+
+      - name: Crea gli account di test E2E_*
+        run: node scripts/crea-utenti-e2e.mjs
+
+      - name: Test end-to-end (Playwright)
+        run: npm run test:e2e
+
+      - name: Riepilogo dei test e2e saltati (job summary)
+        if: always()
+        continue-on-error: true
+        run: node --no-warnings --experimental-strip-types scripts/riepilogo-skip-e2e.mts >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Riepilogo dei tempi dei test e2e (job summary)
+        if: always()
+        continue-on-error: true
+        run: node --no-warnings --experimental-strip-types scripts/riepilogo-tempi-e2e.mts >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Carica il report HTML di Playwright (anche se i test falliscono)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-locale
+          path: playwright-report/
+          retention-days: 14
+
   verifica:
     needs: [statico, e2e]
     if: always()

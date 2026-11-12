@@ -433,6 +433,33 @@ finché non risulta tutto verde.
 - Non eseguire `supabase test db --remote=<ref-test>` a mano: in CI gira nel job `e2e`, step "6a", subito dopo il reset del DB di test (stesso `--remote=<ref>`, mai la produzione).
 - Esito: lo step è rosso se un `ok`/`is` fallisce; nel log del job le righe `not ok N - descrizione` con `Failed test` indicano quale asserzione e perché (atteso/ottenuto). Riga finale `Result: PASS`/`FAIL`.
 
+### Prova di Supabase locale in CI (issue #419)
+
+Il job `e2e-locale` di `.github/workflows/ci.yml` esegue pgTAP, grant-check,
+RLS-check e l'intera suite Playwright contro una copia di Supabase accesa nel
+runner con `supabase start` (Docker), che sparisce a fine job. Serve a
+confrontare durata e risultati con il job `e2e`, che resta l'unico bloccante.
+
+- Non usa segreti né variabili del repository: indirizzo e chiavi sono quelli
+  dimostrativi dello stack locale, le password degli account di test si generano
+  a ogni giro. Non tocca `girasole_dev` né la produzione.
+- Non entra nella coda del DB e non fa parte di `verifica`: un suo rosso non
+  blocca il merge.
+- `supabase/config.toml` vale solo per questo stack: i limiti di accesso sono alti
+  perché la suite fa centinaia di accessi dallo stesso indirizzo.
+  Mai `supabase config push` verso test o produzione: porterebbe quei limiti
+  sul servizio vero.
+- L'immagine locale dà ancora i privilegi di default che il servizio ospitato ha
+  tolto: il job copia `supabase/ci/privilegi-default-ospitato.sql` come prima
+  migration, solo nel runner. Senza, il locale sarebbe più permissivo del vero.
+- `grant-check` e `rls-check` leggono il DB locale se c'è `SUPABASE_DB_URL_LOCALE`
+  (solo indirizzi di questo computer, `scripts/query-db-test.mts`).
+- Entrambi i job scrivono nel riepilogo i tempi per progetto e per file.
+
+Criterio per passare (decisione di Matteo): nessun test che passa sul remoto e
+fallisce in locale per differenze di ambiente, 5 giri verdi di seguito, giro più
+corto di quello attuale. Il passaggio richiede un nuovo ADR al posto di 0006 e 0008.
+
 ## Repo pubblico — regole di sicurezza (non negoziabili)
 Questo repository è pubblico su GitHub: chiunque legga il codice, anche in
 cronologia commit passata, anche dopo un'eventuale rimozione.
