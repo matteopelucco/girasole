@@ -82,6 +82,14 @@ Contesto operativo per Claude Code su questo progetto.
   Controllo automatico: `npm run check:grant-migrazioni` (parte di
   `npm run lint`, quindi nella CI statica (non nel pre-push); vedi «Grant-migrazioni-check»
   più avanti).
+- **`comunicazioni_retta`: UPDATE per colonna (issue #427, migration 0075)**:
+  `authenticated` non ha UPDATE di tabella, solo sulle colonne che l'app scrive
+  (verifica del bonifico e `nota_pagamento`). Importi, totale e colonne della
+  modifica si cambiano solo con `modifica_importi_comunicazione_retta` (security
+  definer), che scrive lo storico. Una **nuova colonna aggiornabile dall'app**
+  richiede quindi un `grant update (colonna)` in una migration nuova; il test
+  pgTAP `comunicazioni_retta.test.sql` elenca le colonne ammesse e fallisce se
+  cambiano.
 
 ## Workflow
 - Trunk-based development, commit atomici. Messaggi **in inglese**, formato
