@@ -745,9 +745,10 @@ Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
   quindi un job-gate che passi anche quando il fumo non parte, o spostare il
   giro dentro `ci.yml` aspettando il deploy. Decisione da rivedere con
   Matteo: non è in scope della #267.
-- **Limiti da conoscere**: (a) `deployment_status` parte solo da un workflow
-  presente su `main`: la prima run reale arriva **dopo il merge** della PR
-  che lo introduce; (b) il fumo resetta il DB con le migration della propria PR, ma due
+- **Limiti da conoscere**: (a) `deployment_status` esegue il workflow del commit del deploy, non di
+  `main`: una PR che modifica il workflow lo esegue già su di sé, anche con i
+  secret (solo chi ha scrittura sul repo; per i fork contano la protezione di
+  Vercel e la guardia); (b) il fumo resetta il DB con le migration della propria PR, ma due
   PR diverse usano lo stesso DB: se l'anteprima di una PR gira dopo il reset
   fatto per un'altra PR con una migration diversa, può trovare lo schema
   dell'altra (rosso da rilanciare); (c) il nome dell'ambiente `Preview` è quello che

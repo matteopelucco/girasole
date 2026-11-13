@@ -36,9 +36,16 @@ Decisioni di Matteo (issue #419):
    dopo il reset, lo fa il fumo stesso, con la `service_role`. Per non esporre
    quei segreti a codice di una PR, gli step privilegiati (installazione della
    CLI, reset, creazione account) usano lo script del ramo principale con
-   `npm ci --ignore-scripts`; le migration e il seed sono quelli della PR
-   (solo SQL sul DB di test); il codice della PR (`npm ci`, Playwright) gira
-   dopo, solo con i quattro account di test.
+   `npm ci --ignore-scripts`; le migration e il seed sono quelli della PR,
+   copiati nella cartella `supabase` del ramo principale (la CLI non legge
+   `config.toml` della PR; solo SQL sul DB di test); il codice della PR
+   (`npm ci`, Playwright) gira dopo, solo con i quattro account di test.
+   Limite: `deployment_status` esegue il workflow del commit dell'anteprima, quindi
+   una PR che modifica `anteprima-fumo.yml` lo esegue con i secret. Per chi ha
+   scrittura sul repo non è un rischio nuovo; per i fork contano la protezione di
+   Vercel e la guardia. Possibile miglioramento, da decidere (Matteo): un accesso
+   più ristretto al DB di test (`--db-url` con un segreto dedicato) al posto del
+   token Supabase.
 4. **Dependabot e PR esterne**: fuori ambito. Il comportamento di `ci.yml`
    non cambia (l'e2e non parte su Dependabot, come prima). Il job locale non
    usa segreti, quindi in futuro non è un ostacolo tecnico a farlo girare
@@ -73,8 +80,9 @@ repository). Nessun altro workflow lo tocca.
   da un fumo (la coda vale solo tra run di CI).
 - `scripts/grant-check.mts` e `scripts/rls-check.mts` mantengono anche la strada
   verso il progetto di test (Management API), oggi non usata dalla CI.
-- Il nuovo workflow del fumo parte solo dal ramo `main` (`deployment_status`): la
-  prima prova reale arriva dopo il merge. Dopo il merge va verificato un giro
-  del fumo prima di chiudere la issue.
+- Il fumo gira anche sulla PR che lo modifica (`deployment_status` usa il
+  workflow del commit dell'anteprima): il primo giro reale con questa versione
+  si vede già sulla PR. Dopo il merge va comunque verificato un giro prima di
+  chiudere la issue.
 - Azioni fuori dal repository (Matteo): vedi la PR. Non vengono toccate da
   questa decisione né da questa PR.

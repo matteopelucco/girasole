@@ -38,9 +38,12 @@ name: Anteprima fumo
 #            privilegiati stanno solo negli step che usano codice del ramo
 #            principale, mai in quelli che eseguono codice della PR.
 #
-# `deployment_status` parte solo se il file del workflow esiste sul ramo
-# `main`: il primo giro reale con questa versione arriva dopo il merge della
-# PR che la introduce, non sulla PR stessa.
+# `deployment_status` esegue il workflow del COMMIT dell'anteprima (non quello
+# di `main`): una PR che modifica questo file lo esegue con i secret. Quindi la
+# separazione tra codice di `main` e codice della PR, qui sotto, difende da
+# dipendenze, test e fixture della PR ma NON da una PR che cambia questo file:
+# per chi ha scrittura sul repo non è un rischio nuovo; per i fork conta la
+# protezione di Vercel (nessun deploy di anteprima non autorizzato) e la guardia.
 #
 # Chi lavora a mano su `girasole_dev` può essere azzerato da un fumo: la coda
 # vale solo tra run di CI.
@@ -67,9 +70,9 @@ jobs:
     outputs:
       url: ${{ steps.guardia.outputs.url }}
     steps:
-      # La logica della guardia viene sempre dal ramo principale, non dal
-      # commit dell'anteprima: una PR non può modificare le regole con cui
-      # viene giudicata.
+      # La logica della guardia (script e libreria) viene dal ramo principale,
+      # non dal commit dell'anteprima: una PR non può modificare i controlli
+      # con cui viene giudicata (può però modificare questo file: vedi in alto).
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -137,7 +140,8 @@ jobs:
       # dipendenze si installano senza script (`--ignore-scripts`): una PR non
       # può far girare codice suo con quei secret. Le migration e il seed
       # della PR invece sì, perché sono lo schema da provare (solo SQL, sul DB
-      # di test).
+      # di test): si copiano nella cartella `supabase` del ramo principale, così
+      # la CLI non legge `config.toml` né altri file della PR con il token.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -162,7 +166,17 @@ jobs:
       # `--yes` salta la conferma, che in CI non ha nessuno a cui chiederla.
       - name: Reset del DB di test (Supabase CLI)
         id: reset-db
-        run: supabase db reset --remote="$SUPABASE_TEST_PROJECT_REF" --yes
+        working-directory: principale
+        run: |
+          if [ -z "$SUPABASE_TEST_PROJECT_REF" ]; then
+            echo "::error::La variabile SUPABASE_TEST_PROJECT_REF è vuota: reset non eseguito."
+            exit 1
+          fi
+          # Solo migration e seed della PR dentro la cartella di `main`.
+          rm -rf supabase/migrations
+          cp -r ../supabase/migrations supabase/migrations
+          cp ../supabase/seed.sql supabase/seed.sql
+          supabase db reset --remote="$SUPABASE_TEST_PROJECT_REF" --yes
         env:
           SUPABASE_TEST_PROJECT_REF: ${{ vars.SUPABASE_TEST_PROJECT_REF }}
           # Token di accesso personale Supabase (Management API), non la
