@@ -194,7 +194,7 @@ password_requirements = ""
 # rp_origins = ["http://127.0.0.1:3000"]
 
 [auth.rate_limit]
-# Valori alti: questo file vale solo per lo stack locale (job `e2e-locale`, issue
+# Valori alti: questo file vale solo per lo stack locale (job `e2e`, issue
 # #419), dove la suite e2e fa centinaia di accessi dallo stesso indirizzo.
 # MAI `supabase config push` verso test o produzione con questi valori: la
 # sezione [auth] andrebbe sul servizio vero.

@@ -1,6 +1,6 @@
 // Girasole — una SELECT di controllo sul database di test, per grant-check e
 // RLS-check (issue #419). Due strade, scelte dall'ambiente:
-//  - SUPABASE_DB_URL_LOCALE: il database locale del job `e2e-locale`, con psql,
+//  - SUPABASE_DB_URL_LOCALE: il database locale del job `e2e`, con psql,
 //    in una transazione di sola lettura. Sono accettati solo indirizzi di
 //    questo computer (lib/queryDbTest.ts);
 //  - altrimenti il progetto di TEST via Management API: il ref arriva SOLO da
