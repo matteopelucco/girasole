@@ -1,6 +1,6 @@
 # ADR-0008 — Le e2e di CI usano il DB di test una alla volta (coda globale)
 
-- Stato: Accettata
+- Stato: Superata da [ADR-0012](0012-e2e-su-supabase-locale-in-ci.md) (l'e2e gira su Supabase locale: niente coda globale; il fumo ha un gruppo di coda proprio)
 - Data: 2026-09-29 (issue #105)
 
 ## Contesto

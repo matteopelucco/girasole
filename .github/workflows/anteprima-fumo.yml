@@ -27,24 +27,26 @@ name: Anteprima fumo
 #            una PR dello stesso repository (nessun fork). Logica e motivi
 #            dei rifiuti sono nei test unit di quel modulo. Se rifiuta, il
 #            run diventa rosso con un messaggio chiaro e `fumo` non parte.
-#   fumo     usa i secret E2E_*. Parte solo dopo `guardia`, nello stesso
-#            gruppo di concorrenza `db-test-girasole-dev` dell'e2e di
-#            `ci.yml` (ADR-0008): un solo job alla volta sul DB di test,
-#            `cancel-in-progress: false` e `queue: max` come là, quindi non
-#            interrompe né fa saltare l'e2e di nessuna PR e aspetta in coda
-#            se ne sta girando una.
+#   fumo     Parte solo dopo `guardia`. Dal passaggio dell'e2e a Supabase
+#            locale (ADR-0012) è l'UNICO job che azzera il DB di test remoto
+#            (`girasole_dev`): fa il reset con la Supabase CLI, ricrea gli
+#            account E2E_* con la service_role e poi esegue il giro (le
+#            variabili "Preview" di Vercel devono puntare a questo DB). Sta nel
+#            proprio gruppo di coda `db-test-remoto-fumo` (un solo giro alla
+#            volta, `cancel-in-progress: false`, `queue: max`): il reset dura
+#            2-3 minuti e non si sovrappone a nessun altro reset. I secret
+#            privilegiati stanno solo negli step che usano codice del ramo
+#            principale, mai in quelli che eseguono codice della PR.
 #
-# `deployment_status` parte solo se il file del workflow esiste sul ramo
-# `main`: il primo giro reale arriva dopo il merge di questa PR, non sulla
-# PR stessa.
+# `deployment_status` esegue il workflow del COMMIT dell'anteprima (non quello
+# di `main`): una PR che modifica questo file lo esegue con i secret. Quindi la
+# separazione tra codice di `main` e codice della PR, qui sotto, difende da
+# dipendenze, test e fixture della PR ma NON da una PR che cambia questo file:
+# per chi ha scrittura sul repo non è un rischio nuovo; per i fork conta la
+# protezione di Vercel (nessun deploy di anteprima non autorizzato) e la guardia.
 #
-# Gli account E2E_* non vengono ricreati qui: li ricrea la CI e2e
-# (`scripts/crea-utenti-e2e.mjs`) dopo ogni reset del DB di test, e servono
-# la service_role key, che questo workflow non riceve. Dalla issue #406 la
-# CI li ricrea anche quando la sua e2e si ferma dopo il reset (test pgTAP
-# rossi, run annullato da un nuovo push): prima il DB restava senza account
-# e il fumo successivo cadeva con "Login rifiutato". Se il login fallisce
-# perché gli account non ci sono, il test lo dice a chiare lettere.
+# Chi lavora a mano su `girasole_dev` può essere azzerato da un fumo: la coda
+# vale solo tra run di CI.
 
 on:
   deployment_status:
@@ -68,9 +70,9 @@ jobs:
     outputs:
       url: ${{ steps.guardia.outputs.url }}
     steps:
-      # La logica della guardia viene sempre dal ramo principale, non dal
-      # commit dell'anteprima: una PR non può modificare le regole con cui
-      # viene giudicata.
+      # La logica della guardia (script e libreria) viene dal ramo principale,
+      # non dal commit dell'anteprima: una PR non può modificare i controlli
+      # con cui viene giudicata (può però modificare questo file: vedi in alto).
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -109,30 +111,104 @@ jobs:
   fumo:
     needs: guardia
     runs-on: ubuntu-latest
-    # Esecuzione reale (pochi minuti); l'attesa in coda non conta.
-    timeout-minutes: 15
+    # Esecuzione reale: reset del DB di test (~2-3 minuti) e giro di fumo.
+    # L'attesa in coda non conta.
+    timeout-minutes: 20
     permissions:
       contents: read
-    # Stesso gruppo e stesse regole del job `e2e` di ci.yml (ADR-0008): il
-    # nome è unico per tutto il repo, non cambiarlo da una parte sola.
+    # Gruppo di coda PROPRIO del fumo (ADR-0012, che precisa ADR-0009): il job
+    # azzera il DB di test remoto, quindi due fumo non devono mai
+    # sovrapporsi. Nessun altro job usa questo DB né questo nome: l'e2e di
+    # `ci.yml` gira su un Supabase locale e non ha più coda. Il nome è unico
+    # per tutto il repo.
     concurrency:
-      group: db-test-girasole-dev
+      group: db-test-remoto-fumo
       cancel-in-progress: false
       queue: max
     steps:
       # Il commit dell'anteprima (come fa ci.yml con la PR): i test di fumo
-      # stanno al passo con l'app che provano. La guardia ha già verificato
-      # che il commit venga da una PR di questo repository.
+      # stanno al passo con l'app che provano e le migration al passo con lo
+      # schema da provare. La guardia ha già verificato che il commit venga da
+      # una PR di questo repository.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
+
+      # Il codice che vede i secret privilegiati (token Supabase, service_role)
+      # viene dal ramo principale, non dal commit della PR, e le sue
+      # dipendenze si installano senza script (`--ignore-scripts`): una PR non
+      # può far girare codice suo con quei secret. Le migration e il seed
+      # della PR invece sì, perché sono lo schema da provare (solo SQL, sul DB
+      # di test): si copiano nella cartella `supabase` del ramo principale, così
+      # la CLI non legge `config.toml` né altri file della PR con il token.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: principale
           persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: principale/package-lock.json
 
+      # Versione fissa: una CLI nuova potrebbe togliere flag e rompere il
+      # giro all'improvviso. Si aggiorna a mano, con una PR dedicata.
+      - name: Installa la Supabase CLI
+        working-directory: principale
+        run: npm install -g supabase@3.0.0
+
+      # Come faceva il job e2e di ci.yml prima di ADR-0012: riapplica le
+      # migration e il seed della PR sul DB di test remoto. `--remote=<ref>`
+      # indica il progetto di TEST (senza, la CLI 3 lavora sul DB locale);
+      # `--yes` salta la conferma, che in CI non ha nessuno a cui chiederla.
+      - name: Reset del DB di test (Supabase CLI)
+        id: reset-db
+        working-directory: principale
+        run: |
+          if [ -z "$SUPABASE_TEST_PROJECT_REF" ]; then
+            echo "::error::La variabile SUPABASE_TEST_PROJECT_REF è vuota: reset non eseguito."
+            exit 1
+          fi
+          # Solo migration e seed della PR dentro la cartella di `main`.
+          rm -rf supabase/migrations
+          cp -r ../supabase/migrations supabase/migrations
+          cp ../supabase/seed.sql supabase/seed.sql
+          supabase db reset --remote="$SUPABASE_TEST_PROJECT_REF" --yes
+        env:
+          SUPABASE_TEST_PROJECT_REF: ${{ vars.SUPABASE_TEST_PROJECT_REF }}
+          # Token di accesso personale Supabase (Management API), non la
+          # password del database: letto automaticamente dalla CLI.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Dipendenze dello script account (senza script di installazione)
+        working-directory: principale
+        run: npm ci --ignore-scripts
+
+      # Il reset azzera anche `auth.users`: gli account E2E_* si ricreano con
+      # la Admin API (service_role). Gira anche se il reset fallisce a metà o
+      # il run viene annullato (issue #406): il DB di test non resta mai senza
+      # account. Lo script è ripetibile (crea o aggiorna).
+      - name: Ricrea gli account di test E2E_* (Admin API, A24)
+        if: always() && steps.reset-db.outcome != 'skipped'
+        run: node principale/scripts/crea-utenti-e2e.mjs
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
+          E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+          E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}
+          E2E_MAESTRA_PASSWORD: ${{ secrets.E2E_MAESTRA_PASSWORD }}
+          E2E_ASSISTENTE_EMAIL: ${{ secrets.E2E_ASSISTENTE_EMAIL }}
+          E2E_ASSISTENTE_PASSWORD: ${{ secrets.E2E_ASSISTENTE_PASSWORD }}
+          E2E_GENITORE_EMAIL: ${{ secrets.E2E_GENITORE_EMAIL }}
+          E2E_GENITORE_PASSWORD: ${{ secrets.E2E_GENITORE_PASSWORD }}
+
+      # Da qui in poi gira codice del commit della PR: solo con i quattro
+      # account di test, mai token Supabase né service_role (nessun secret a
+      # livello di job, solo nello step del giro).
       - name: Installa le dipendenze
         run: npm ci
 
@@ -145,8 +221,6 @@ jobs:
           # Indirizzo già validato dal job `guardia`; la configurazione
           # Playwright lo ricontrolla con la stessa logica.
           ANTEPRIMA_URL: ${{ needs.guardia.outputs.url }}
-          # Solo i quattro account di test. Nessuna service_role key, nessun
-          # accesso diretto al DB: l'app in anteprima parla con il DB di test.
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           E2E_MAESTRA_EMAIL: ${{ secrets.E2E_MAESTRA_EMAIL }}

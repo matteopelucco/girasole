@@ -20,9 +20,10 @@ nuovo che lo riferisce).
 | [0003](0003-effetto-e-la-conferma.md) | "L'effetto è la conferma": niente notifiche di successo aggiuntive | Accettata |
 | [0004](0004-unit-test-solo-funzioni-pure.md) | Unit test (Vitest) ammessi solo su funzioni pure, senza I/O | Accettata |
 | [0005](0005-niente-automazioni-verso-la-produzione.md) | Niente link permanenti né automazioni CLI/CI verso il progetto Supabase di produzione | Accettata |
-| [0006](0006-db-di-test-condiviso-reset-ad-ogni-ci.md) | DB di test condiviso tra CI e sviluppo locale, resettato ad ogni run di CI | Accettata |
+| [0006](0006-db-di-test-condiviso-reset-ad-ogni-ci.md) | DB di test condiviso tra CI e sviluppo locale, resettato ad ogni run di CI | Superata da ADR-0012 |
 | [0007](0007-versione-app-derivata-a-build-time.md) | `VERSIONE_APP`/`DATA_BUILD` derivate a build-time, non scritte a mano | Accettata |
-| [0008](0008-coda-globale-e2e-db-di-test.md) | Le e2e di CI usano il DB di test una alla volta (coda globale) | Accettata |
-| [0009](0009-giro-di-fumo-sull-anteprima-vercel.md) | Giro di fumo sull'anteprima di Vercel: workflow a parte, non bloccante | Accettata |
+| [0008](0008-coda-globale-e2e-db-di-test.md) | Le e2e di CI usano il DB di test una alla volta (coda globale) | Superata da ADR-0012 |
+| [0009](0009-giro-di-fumo-sull-anteprima-vercel.md) | Giro di fumo sull'anteprima di Vercel: workflow a parte, non bloccante | Accettata (precisata da ADR-0012) |
 | [0010](0010-next-16-proxy-e-eslint-cli.md) | Next 16: `proxy.ts` al posto di `middleware.ts`, ESLint senza `next lint` | Accettata |
 | [0011](0011-libreria-componenti-shadcn.md) | Libreria di componenti: shadcn/ui, copiata in `components/ui/` | Accettata |
+| [0012](0012-e2e-su-supabase-locale-in-ci.md) | e2e su Supabase locale in CI: niente più DB di test condiviso né coda per l'e2e | Accettata |

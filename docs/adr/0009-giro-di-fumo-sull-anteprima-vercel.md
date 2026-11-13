@@ -1,6 +1,6 @@
 # ADR-0009 — Giro di fumo sull'anteprima di Vercel: workflow a parte, non bloccante
 
-- Stato: Accettata
+- Stato: Accettata (precisata da [ADR-0012](0012-e2e-su-supabase-locale-in-ci.md): il fumo ora resetta lui il DB di test remoto, in un gruppo di coda proprio, e ricrea gli account)
 - Data: 2026-10-11 (issue #267)
 
 ## Contesto

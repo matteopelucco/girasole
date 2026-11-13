@@ -96,8 +96,8 @@ parallelo:
 
 **`ci.yml`** (unico workflow di verifica, A12), passi sempre nello stesso
 ordine dal più veloce al più lento, divisi in due job — `statico` (1-5) ed
-`e2e` (reset del DB di test e Playwright, in coda globale tra le PR: issue
-#105, ADR-0008) — più il job `verifica`, il gate che ne riassume l'esito
+`e2e` (Supabase locale nel runner e Playwright, senza coda: issue
+#419, ADR-0012) — più il job `verifica`, il gate che ne riassume l'esito
 (dettagli in `docs/sviluppo-dettagli.md`):
 1. `tsc --noEmit` — type-check
 2. `eslint .` — ESLint (`npm run lint`)
