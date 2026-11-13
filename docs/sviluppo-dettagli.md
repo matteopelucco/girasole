@@ -33,9 +33,9 @@ Contesto operativo per Claude Code su questo progetto.
   produzione. **Anche l'applicazione di una migration non passa più dal SQL
   Editor** (A22): in locale si usa `supabase db push --remote=<ref-test>`
   (esplicito e incrementale, mai un `supabase link` implicito su cui contare
-  a occhi chiusi); in test l'applicazione avviene tramite il reset completo
-  di CI (A23, `supabase db reset --remote=<ref-test>`, prima della
-  suite e2e — vedi sotto); in produzione resta manuale e deliberato, solo
+  a occhi chiusi); in CI le migration si applicano da zero allo stack Supabase locale
+  del runner (job `e2e`, ADR-0012) e, nel giro di fumo, con
+  `supabase db reset --remote=<ref-test>` sul DB di test remoto — vedi sotto; in produzione resta manuale e deliberato, solo
   Matteo, con `supabase db push --remote=<ref-produzione>` esplicito
   sul singolo comando dopo il merge — mai un link permanente verso il ref
   di produzione, mai un'automazione CI/agente verso la produzione.
@@ -430,21 +430,21 @@ finché non risulta tutto verde.
 - pgTAP sul progetto di test è già installato nello schema `extensions`, che non è nel `search_path` della connessione di `pg_prove`: senza rimedio `plan()`/`is()`/`finish()` danno "function plan(integer) does not exist".
   Per questo ogni file, dopo `create extension if not exists pgtap with schema extensions`, legge dal catalogo lo schema di pgTAP e fa `set local search_path` (blocco `do` in testa a `profili_orari.test.sql`): copialo così com'è.
   Il login role temporaneo della CLI remota può non ereditare USAGE su quello schema: il file prova `set local role postgres` e stampa un `DIAG[...]` (ruolo, search_path, schema, USAGE, funzioni `plan`) nel log, utile se `plan()` non si risolve.
-- Non eseguire `supabase test db --remote=<ref-test>` a mano: in CI gira nel job `e2e`, step "6a", subito dopo il reset del DB di test (stesso `--remote=<ref>`, mai la produzione).
+- In CI i test pgTAP girano nel job `e2e`, contro il Supabase locale del runner (`supabase test db`, senza `--remote`), subito dopo la build. Non lanciare `supabase test db --remote=<ref>` a mano su test o produzione.
 - Esito: lo step è rosso se un `ok`/`is` fallisce; nel log del job le righe `not ok N - descrizione` con `Failed test` indicano quale asserzione e perché (atteso/ottenuto). Riga finale `Result: PASS`/`FAIL`.
 
-### Prova di Supabase locale in CI (issue #419)
+### e2e su Supabase locale in CI (issue #419, ADR-0012)
 
-Il job `e2e-locale` di `.github/workflows/ci.yml` esegue pgTAP, grant-check,
-RLS-check e l'intera suite Playwright contro una copia di Supabase accesa nel
-runner con `supabase start` (Docker), che sparisce a fine job. Serve a
-confrontare durata e risultati con il job `e2e`, che resta l'unico bloccante.
+Il job `e2e` di `.github/workflows/ci.yml` esegue pgTAP, grant-check, RLS-check e
+l'intera suite Playwright contro una copia di Supabase accesa nel runner con
+`supabase start` (Docker), che sparisce a fine job. È il job bloccante: entra in
+`verifica` (il check del ruleset, `CI / verifica`, non cambia). Giro tipico
+~10 minuti (era ~30 sul DB remoto condiviso); timeout 25 minuti.
 
 - Non usa segreti né variabili del repository: indirizzo e chiavi sono quelli
   dimostrativi dello stack locale, le password degli account di test si generano
-  a ogni giro. Non tocca `girasole_dev` né la produzione.
-- Non entra nella coda del DB e non fa parte di `verifica`: un suo rosso non
-  blocca il merge.
+  a ogni giro. Non tocca nessun progetto Supabase vero.
+- Nessuna coda: ogni run ha il suo database, le PR girano in parallelo.
 - `supabase/config.toml` vale solo per questo stack: i limiti di accesso sono alti
   perché la suite fa centinaia di accessi dallo stesso indirizzo.
   Mai `supabase config push` verso test o produzione: porterebbe quei limiti
@@ -452,13 +452,15 @@ confrontare durata e risultati con il job `e2e`, che resta l'unico bloccante.
 - L'immagine locale dà ancora i privilegi di default che il servizio ospitato ha
   tolto: il job copia `supabase/ci/privilegi-default-ospitato.sql` come prima
   migration, solo nel runner. Senza, il locale sarebbe più permissivo del vero.
+- L'avvio ha fino a 3 tentativi con pulizia dei container: il registro Docker può
+  rifiutare lo scaricamento delle immagini per un limite temporaneo. Un rosso in
+  `Avvia Supabase locale` è quasi sempre questo: "Re-run failed jobs".
 - `grant-check` e `rls-check` leggono il DB locale se c'è `SUPABASE_DB_URL_LOCALE`
-  (solo indirizzi di questo computer, `scripts/query-db-test.mts`).
-- Entrambi i job scrivono nel riepilogo i tempi per progetto e per file.
-
-Criterio per passare (decisione di Matteo): nessun test che passa sul remoto e
-fallisce in locale per differenze di ambiente, 5 giri verdi di seguito, giro più
-corto di quello attuale. Il passaggio richiede un nuovo ADR al posto di 0006 e 0008.
+  (solo indirizzi di questo computer, `scripts/query-db-test.mts`). Senza, leggono
+  il progetto di test via Management API (uso a mano; la CI non lo usa più).
+- Il job scrive nel riepilogo i tempi per progetto e per file.
+- Dependabot e PR esterne: l'e2e non parte, come prima. Il job non usa segreti, ma
+  farlo girare anche per loro è una decisione separata.
 
 ## Repo pubblico — regole di sicurezza (non negoziabili)
 Questo repository è pubblico su GitHub: chiunque legga il codice, anche in
@@ -478,16 +480,17 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
 - Su ogni PR gira un unico workflow GitHub Actions
   (`.github/workflows/ci.yml`, gratuito su repo pubblici) con un passo di
   classificazione seguito da sette passi: tsc → lint → jscpd → vitest →
-  **`next build`** (job `statico`) → reset del DB di test → e2e (job
-  `e2e`), più il job `verifica` che fa da gate (vedi "Coda del DB"
-  sotto). I primi quattro
+  **`next build`** (job `statico`) → e2e su Supabase locale (job
+  `e2e`), più il job `verifica` che fa da gate (vedi "e2e su Supabase locale"
+  sopra). I primi quattro
   non richiedono secret e falliscono in secondi; la build di produzione è
   l'unico passo che intercetta un import lato server trascinato in un
   componente client (dalla A15 lo intercetta anche il pre-push hook in
   locale, salvo skip esplicito o `.env.local` incompleta — vedi sopra); la
-  suite e2e usa le variabili configurate come "Repository secrets" in
-  GitHub — mai hardcoded nel workflow. Anche in CI devono puntare a un
-  progetto Supabase di test, mai a quello di produzione.
+  suite e2e gira su un Supabase locale del runner, senza segreti; i
+  "Repository secrets" di GitHub servono solo alla build di `statico` (chiavi
+  pubbliche del progetto di test) e al giro di fumo — mai hardcoded nel
+  workflow. Nessun job della CI di PR punta a un progetto Supabase remoto.
 - **PR "non codice" saltano gli step pesanti (issue #98)**: `ci.yml`
   NON usa `paths`/`paths-ignore` (renderebbe il check obbligatorio del
   ruleset di `main` "non eseguito" invece che "verde" su queste PR,
@@ -499,8 +502,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   `is-non-codice-ci`. Se true (solo `docs/**`, `specs/**`, `CLAUDE.md`,
   `README.md`, `CHANGELOG.md`, o un bump puro del campo `version` in
   `package.json`/`package-lock.json`), la build (passo 5) resta `skipped`
-  nel log e il job `e2e` (passi 6-8) non parte, quindi la PR non occupa
-  la coda del DB — tsc/lint/jscpd/vitest (economici, pochi secondi in
+  nel log e il job `e2e` non parte, quindi la PR non avvia Supabase locale — tsc/lint/jscpd/vitest (economici, pochi secondi in
   totale) restano SEMPRE attivi, anche su queste PR. Stessa
   logica riusata in `.github/workflows/claude-board.yml`: il job `review`
   fa la stessa classificazione (con un'allow-list più stretta, che
@@ -515,27 +517,25 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   workflow (lo shebang del file conta solo eseguendolo direttamente). Nel
   dubbio è codice: se gli SHA mancano o `git diff` fallisce, lo step non
   fallisce e la PR è classificata "codice" (CI completa, review eseguita).
-- **Il reset del DB di test prima della e2e (A23)** usa il Supabase CLI
-  (`supabase db reset --remote=<ref-test>`, ref letto dalla
-  repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret): riapplica
-  tutte le migration da zero e poi lancia `supabase/seed.sql`, così ogni
-  run parte da schema e seed noti. Il DB di test (`girasole_dev`) è
-  condiviso tra CI e sviluppo locale di Matteo, non un progetto isolato:
-  Matteo ha accettato esplicitamente che questo step cancelli e ricrei
-  anche i suoi eventuali dati inseriti a mano in locale ad ogni run di CI
-  (vedi `docs/programma-attivita.md`, voci A22/A23). Richiede il
-  repository secret `SUPABASE_ACCESS_TOKEN` (token di accesso personale
-  Supabase, non la password del database): se manca, questo passo fallisce
-  — va creato da Matteo su
-  https://supabase.com/dashboard/account/tokens e aggiunto con
-  `gh secret set SUPABASE_ACCESS_TOKEN`.
-- **Grant-check (A26, issue #28)**: passo 6b del job `e2e`, subito dopo il
-  reset. `scripts/grant-check.mts` (logica pura in `lib/grantCheck.ts`)
+- **Il reset del DB di test remoto (A23) oggi lo fa solo il giro di fumo**
+  (ADR-0012, che supera ADR-0006): `supabase db reset --remote=<ref-test>`
+  (ref dalla repository variable `SUPABASE_TEST_PROJECT_REF`, non un secret)
+  riapplica le migration della PR e lancia `supabase/seed.sql`; poi
+  `scripts/crea-utenti-e2e.mjs` ricrea gli account `E2E_*` (il reset azzera
+  `auth.users`). Richiede i secret `SUPABASE_ACCESS_TOKEN` (token personale
+  Supabase, non la password del database), `SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_SUPABASE_URL` e i quattro `E2E_<RUOLO>_EMAIL/PASSWORD`.
+  Il progetto di test (`girasole_dev`) non è più condiviso con la CI delle PR:
+  lo usa Matteo a mano in sviluppo, e il fumo lo azzera. Vedi "Giro di fumo
+  sull'anteprima di Vercel". La CI delle PR non lo tocca.
+- **Grant-check (A26, issue #28)**: passo del job `e2e`, dopo la build e il
+  pgTAP. `scripts/grant-check.mts` (logica pura in `lib/grantCheck.ts`)
   estrae dal codice le tabelle usate per ruolo (`authenticated` per i client
   utente, `service_role` per i client da `createAdminClient()`) e il
   privilegio (select/insert/update/delete/upsert), poi legge
-  `information_schema.role_table_grants` sul DB di test via Management API
-  (sola SELECT; ref da `SUPABASE_TEST_PROJECT_REF`, token da
+  `information_schema.role_table_grants` sul DB locale del runner (sola SELECT,
+  `SUPABASE_DB_URL_LOCALE`); a mano può leggere il progetto di test via
+  Management API (ref da `SUPABASE_TEST_PROJECT_REF`, token da
   `SUPABASE_ACCESS_TOKEN`, mai la produzione). Fallisce con
   "GRANT mancante: <privilegio> su public.<tabella> per <ruolo>". I grant
   vivono nelle migration (non nel seed). Limiti dell'euristica: statica, non
@@ -552,7 +552,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   authenticated` fa l'opposto, per gli helper generici usati solo con la
   sessione utente. Se non estrae nessuna richiesta, esce con
   codice 2 (parser rotto). Localmente: stesso comando con le due
-  variabili impostate sul progetto di test.
+  variabili impostate sul progetto di test (o con `SUPABASE_DB_URL_LOCALE`).
 - **Grant-migrazioni-check (issue #359)**: complemento statico del
   grant-check, senza DB né secret. Il grant-check legge il DB di test, dove i
   privilegi di default di Supabase possono nascondere un `GRANT` mai scritto
@@ -569,13 +569,13 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   non concesso nelle migration. Limiti: euristica sul testo SQL, non copre
   `anon`, i `GRANT` fuori dalle migration (vietati) né la RLS; un `GRANT` di
   colonna conta come privilegio di tabella. È agganciato a `npm run lint`.
-  **Cosa non simula**: la CI non può togliere i privilegi di default del
-  progetto di test condiviso senza modificarne la configurazione; la garanzia
-  che il `db reset` regga senza default è questo controllo statico, più il
-  grant-check e le e2e reali dopo il reset.
-- **RLS-check (issue #131)**: passo 6c del job `e2e`, subito dopo il
-  grant-check, stessa Management API e stessi secret (nessuno nuovo, ref solo
-  da `SUPABASE_TEST_PROJECT_REF`, mai la produzione, sola SELECT).
+  **Cosa non simula**: lo stack locale della CI ha i privilegi di default come
+  il servizio ospitato solo grazie al file `supabase/ci/privilegi-default-ospitato.sql`;
+  la garanzia che le migration reggano senza default è questo controllo
+  statico, più il grant-check e le e2e sul DB appena migrato.
+- **RLS-check (issue #131)**: passo del job `e2e`, subito dopo il
+  grant-check, stessa lettura del DB locale (a mano, stessa Management API e
+  stessi secret del grant-check; mai la produzione, sola SELECT).
   `scripts/rls-check.mts` (logica pura in `lib/rlsCheck.ts`) legge `pg_class`
   e fallisce se una tabella di `public` con privilegi per `authenticated` o
   `anon` ha `relrowsecurity = false`: il grant-check non lo vede. Il
@@ -614,7 +614,7 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
     `SECURITY DEFINER` esposte via RPC (es. `puo_richiedere_reset_password`)
     restano fuori;
   - privilegi TRUNCATE, REFERENCES e TRIGGER esclusi;
-  - gira solo sul DB di test resettato: non vede la produzione (es.
+  - gira solo sul DB locale della CI: non vede la produzione (es.
     modifiche fatte dal pannello).
 - **Service-role-check (issue #214, ADR-0002)**: `npm run check:service-role`
   (`scripts/service-role-check.mts`, logica pura in `lib/serviceRoleCheck.ts`)
@@ -625,30 +625,22 @@ cronologia commit passata, anche dopo un'eventuale rimozione.
   `statico`, in `npm run analyze` e, come passo a sé, nel pre-push): nessun
   DB, rete o secret. Per ammettere un'eccezione: nuova voce in `FILE_AMMESSI`
   con motivazione + aggiornamento di ADR-0002, con review umana.
-- **Coda del DB di test (issue #105, ADR-0008)**: `ci.yml` ha tre job,
-  `statico` (passi 0-5) → `e2e` (passi 6-8) → `verifica`. Solo `e2e`
-  usa il DB, e sta in un gruppo di concorrenza globale
-  (`db-test-girasole-dev`, `cancel-in-progress: false`, `queue: max`):
-  una e2e alla volta tra tutte le PR, le altre aspettano in ordine di
-  arrivo (fino a 100 in attesa; senza `queue: max` GitHub ne terrebbe
-  una sola e la terza cancellerebbe la seconda). I passi statici restano
-  paralleli tra PR. `e2e` ricompila l'app (serve a `next start`) e non
-  parte sulle PR "non codice" né su quelle di Dependabot.
-  - Il check obbligatorio del ruleset di `main` resta `CI / verifica`:
-    il job `verifica` gira sempre e passa solo se `statico` è verde e
-    `e2e` è verde o saltato di proposito. Non rinominarlo.
-  - Un nuovo push sulla stessa PR cancella ancora l'intero run
-    precedente (gruppo per PR a livello di workflow), compreso il suo
-    `e2e` in coda o in corso.
-  - L'attesa in coda non conta nel `timeout-minutes` del job `e2e` (25
-    min, solo esecuzione). Con più PR aperte la CI dura di più: ~11 min
-    per ogni e2e davanti in coda.
-  - Se un `e2e` viene cancellato mentre aspetta (coda piena, annullo a
-    mano) e non c'è un run più recente per la PR, `verifica` resta
-    rosso: "Re-run failed jobs" dalla pagina del run, oppure
-    `gh run rerun <run-id> --failed`.
-  - La coda vale solo tra run di CI: una sessione locale sullo stesso DB
-    può ancora sovrapporsi (ADR-0006).
+- **Niente coda per l'e2e (ADR-0012, supera ADR-0008)**: `ci.yml` ha tre job,
+  `statico` (passi 0-5) → `e2e` (Supabase locale, pgTAP, controlli, Playwright)
+  → `verifica`. Il gruppo di coda globale `db-test-girasole-dev` non esiste più:
+  ogni run ha il proprio database. I passi statici e l'e2e restano paralleli tra
+  PR. `e2e` ricompila l'app (serve a `next start`) e non parte sulle PR "non
+  codice" né su quelle di Dependabot.
+  - Il check obbligatorio del ruleset di `main` resta `CI / verifica`: il job
+    `verifica` gira sempre e passa solo se `statico` è verde e `e2e` è verde o
+    saltato di proposito. Non rinominarlo.
+  - Un nuovo push sulla stessa PR cancella ancora l'intero run precedente
+    (gruppo per PR a livello di workflow), compreso il suo `e2e`.
+  - Se un `e2e` viene cancellato (annullo a mano) e non c'è un run più recente
+    per la PR, `verifica` resta rosso: "Re-run failed jobs" dalla pagina del
+    run, oppure `gh run rerun <run-id> --failed`.
+  - L'unica coda rimasta è quella del giro di fumo (`db-test-remoto-fumo`),
+    che azzera il DB di test remoto: vedi sotto.
 
   ## Versioning
   - `VERSIONE_APP` e `DATA_BUILD` (`lib/versione.ts`, mostrate nel footer)
@@ -706,25 +698,27 @@ Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
   dell'anteprima. La stessa verifica sull'indirizzo gira anche in
   `playwright.anteprima.config.ts`: un giro lanciato a mano contro la
   produzione o `localhost` si ferma subito.
-- **Coda del DB**: il job `fumo` sta nel gruppo `db-test-girasole-dev`
-  (`cancel-in-progress: false`, `queue: max`), lo stesso del job `e2e` di
-  `ci.yml` (ADR-0008): non interrompe né fa cancellare nessuna e2e, e
-  aspetta se ne sta girando una. Solo `fumo` entra nella coda: `guardia`
-  no. Non reimposta il DB.
-- **Secret**: solo gli otto `E2E_<RUOLO>_EMAIL/PASSWORD` di admin, maestra,
-  assistente, genitore. Niente `service_role`, niente token Supabase. Gli
-  account li ricrea la CI e2e dopo ogni reset del DB (`scripts/crea-utenti-e2e.mjs`):
-  il giro di fumo **non** li ricrea (servirebbe la `service_role`). Se il
-  login è rifiutato, il test dice di controllare che l'anteprima punti al DB
-  di test e che la CI e2e abbia girato dopo l'ultimo reset. Gli account
-  esistono solo nel DB di test: contro un'anteprima che puntasse per errore
-  al DB di produzione, il login fallirebbe.
+- **Coda del DB**: il job `fumo` sta nel proprio gruppo `db-test-remoto-fumo`
+  (`cancel-in-progress: false`, `queue: max`), che non condivide con nessun
+  altro job (ADR-0012): azzera il DB di test remoto, quindi due fumo non si
+  sovrappongono mai, e il reset dura 2-3 minuti. L'e2e di `ci.yml` gira su un
+  Supabase locale e non ha coda. Solo `fumo` entra nel gruppo: `guardia` no.
+- **Secret e reset (ADR-0012)**: il giro di fumo azzera il DB di test con la
+  Supabase CLI e ricrea gli account con la `service_role`: secret
+  `SUPABASE_ACCESS_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `NEXT_PUBLIC_SUPABASE_URL`, variabile `SUPABASE_TEST_PROJECT_REF` e gli otto
+  `E2E_<RUOLO>_EMAIL/PASSWORD` di admin, maestra, assistente, genitore. I secret
+  privilegiati stanno solo negli step che eseguono codice del ramo principale
+  (secondo checkout, `npm ci --ignore-scripts`); il codice del commit della PR
+  (`npm ci`, Playwright) gira dopo, con i soli account di test. Se il login è
+  rifiutato, il test dice di controllare che l'anteprima punti al DB di test.
+  Gli account esistono solo nel DB di test: contro un'anteprima che puntasse per
+  errore al DB di produzione, il login fallirebbe.
 - **Dati di prova**: avvisi `Fumo anteprima <ruolo> ...`, cancellati a fine
   test (anche se il test fallisce). A inizio test ogni ruolo cancella anche
   i propri residui di un giro precedente (solo quelli con il proprio ruolo
   nel nome: i test girano in parallelo). Se un worker muore a metà, l'avviso
-  orfano è innocuo e lo azzera il reset del DB di test della prossima CI
-  (ADR-0006).
+  orfano è innocuo e lo azzera il reset del prossimo giro di fumo (ADR-0012).
 - **Cosa conta come errore**: dopo "Pubblica avviso" il test cerca solo
   `role="alert"` dentro il form e popup bloccanti (`alertdialog`). La
   dashboard mostra anche riquadri di prodotto con `role="alert"` (rette non
@@ -753,10 +747,10 @@ Motivazioni in [ADR-0009](adr/0009-giro-di-fumo-sull-anteprima-vercel.md).
   Matteo: non è in scope della #267.
 - **Limiti da conoscere**: (a) `deployment_status` parte solo da un workflow
   presente su `main`: la prima run reale arriva **dopo il merge** della PR
-  che lo introduce; (b) se la run del fumo parte prima della CI e2e della
-  stessa PR e la PR contiene una migration, l'anteprima può parlare con uno
-  schema del DB di test ancora vecchio: un rosso in quel caso va riletto
-  dopo l'e2e (rilancio); (c) il nome dell'ambiente `Preview` è quello che
+  che lo introduce; (b) il fumo resetta il DB con le migration della propria PR, ma due
+  PR diverse usano lo stesso DB: se l'anteprima di una PR gira dopo il reset
+  fatto per un'altra PR con una migration diversa, può trovare lo schema
+  dell'altra (rosso da rilanciare); (c) il nome dell'ambiente `Preview` è quello che
   Vercel dà alle anteprime (con più progetti diventa `Preview – <progetto>`,
   accettato): se alla prima run non parte nulla, controllare il nome
   dell'ambiente nella tab Deployments del repo; (d) le variabili d'ambiente
@@ -783,10 +777,10 @@ solo `e2e/`) e **non fa parte della CI** né di `npx playwright test`: sta in
   da solo, o si riusa quello acceso: usare lo **stesso tipo di server** per
   riferimento e confronto); DB di test. Il primo giro a freddo può cadere nel
   login mentre Next compila: rilanciare.
-- **Mai durante una e2e sul DB di test condiviso**: prima controllare
-  `gh run list --status in_progress` (e che nessuna e2e locale sia in corso).
-  Il giro non scrive nulla, ma il login crea sessioni e un reset del DB a metà
-  darebbe foto false.
+- **Mai durante un giro di fumo sul DB di test**: prima controllare
+  `gh run list --workflow "Anteprima fumo" --status in_progress` (e che nessuna
+  e2e locale sia in corso). Il giro non scrive nulla, ma il login crea sessioni e
+  un reset del DB a metà darebbe foto false.
 - **Immagini**: la cartella `confronto-visivo/` è in `.gitignore`, non si
   committa. Contengono solo i dati del DB di test (mai dati reali).
 - **Rumore da tenere presente**: il piè di pagina (versione e data di build) è

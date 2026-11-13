@@ -23,7 +23,7 @@ sia su Vercel sia su Supabase (da ottobre 2026, prima free tier).
   `components/icone.tsx`). Guida in `docs/sviluppo-dettagli.md`, ADR 0011.
 - Schema: file numerati in `supabase/migrations/`, mai dashboard.
   Applicazione: in locale `supabase db push --remote=<ref-test>`, in
-  test il reset di CI, in **produzione solo Matteo, a mano**, con
+  CI lo stack Supabase locale del runner (e il giro di fumo resetta il DB di test remoto), in **produzione solo Matteo, a mano**, con
   `--remote=<ref>` esplicito (senza `--remote` la CLI 3 lavora in locale), subito dopo il merge di una PR con migration
   (prima `--dry-run`, mai dal SQL Editor: vedi `docs/sviluppo-dettagli.md`).
   Mai link permanenti né automazioni verso la produzione.
@@ -71,8 +71,8 @@ lascia "per ora").
 **e2e**: `specs/NN - nome.md` ↔ `e2e/NN-nome.spec.ts`, un test per ogni
 `## Scenario:`, aggiornato subito quando cambia la spec. Nessuno scenario
 scoperto né test orfano. Credenziali da
-`E2E_<RUOLO>_EMAIL/PASSWORD` (ambiente); DB = progetto test, mai
-produzione. Controllo a11y con axe-core su ogni pagina toccata.
+`E2E_<RUOLO>_EMAIL/PASSWORD` (ambiente); DB = Supabase locale
+(CI) o progetto test, mai produzione. Controllo a11y con axe-core su ogni pagina toccata.
 Regole anti-flaky: salvataggi con `clickEAttendiAzione`; valori calcolati
 dal server con `expect.poll`; mai `waitForTimeout`; dati propri via
 fixture, selettori in `e2e/pagina-*.ts`.
@@ -87,6 +87,7 @@ fixture, selettori in `e2e/pagina-*.ts`.
   committata, solo env non versionata.
 - Mai dati reali di bambini/genitori, nemmeno fixture.
 - PR esterne revisionare prima del merge (push a `main` = deploy prod).
-- CI: tsc → lint → jscpd → vitest → build → DB reset → e2e. Secret solo
-  Repository secrets, verso progetto test. Dettagli in
+- CI: tsc → lint → jscpd → vitest → build → e2e su Supabase locale
+  (ADR 0012). Secret solo Repository secrets (solo giro di fumo), verso
+  progetto test. Dettagli in
   `docs/sviluppo-dettagli.md`.
