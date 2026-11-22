@@ -2,12 +2,13 @@
 -- (issue #182, sotto-issue "c" di #29; specs/56 - comunicazione-retta-mensile.md,
 -- specs/59 - verifica-bonifico-retta.md, specs/03 - utenti-e-ruoli.md).
 --
--- Comportamento fissato (migration 0036, 0038, 0046; privilegi 0059): la tabella è "solo
+-- Comportamento fissato (migration 0036, 0038, 0046; privilegi 0059, 0075): la tabella è "solo
 -- admin" su tutte e quattro le operazioni.
 --   SELECT  0036  comunicazioni_retta_admin_select
 --   INSERT  0036  comunicazioni_retta_admin_insert
 --   DELETE  0038  comunicazioni_retta_admin_delete (annullo invio, specs/56)
---   UPDATE  0046  comunicazioni_retta_admin_update (verifica bonifico, specs/59)
+--   UPDATE  0046  comunicazioni_retta_admin_update (verifica bonifico, specs/59);
+--           0075: privilegio solo sulle colonne del bonifico e della nota (#427)
 -- Maestra, assistente, genitore (anche del bambino interessato) e anonimo
 -- non leggono né scrivono nulla. Il log contiene importi e l'email dei
 -- genitori: la fuga di una SELECT sarebbe una violazione di privacy.
@@ -89,7 +90,7 @@ begin
 end;
 $$;
 
-select plan(61);
+select plan(73);
 
 -- ---------------------------------------------------------------------
 -- Helper (temporanei: spariscono con la transazione)
@@ -312,8 +313,21 @@ select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'SE
   'authenticated: ha SELECT (richiesto dalla policy admin_select)');
 select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'INSERT'),
   'authenticated: ha INSERT (richiesto dalla policy admin_insert)');
-select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'UPDATE'),
-  'authenticated: ha UPDATE (richiesto dalla policy admin_update, 0046)');
+-- UPDATE solo per colonna (migration 0075, issue #427): niente privilegio di
+-- tabella, solo le colonne che l'app scrive (verifica bonifico, nota). Importi,
+-- totale e colonne della modifica si cambiano solo dalla funzione
+-- modifica_importi_comunicazione_retta (security definer), che lascia lo storico.
+select ok(not has_table_privilege('authenticated', 'public.comunicazioni_retta', 'UPDATE'),
+  'authenticated: nessun UPDATE a livello di tabella (0075)');
+select is(
+  (select coalesce(array_agg(a.attname::text order by a.attname), '{}')
+     from pg_attribute a
+    where a.attrelid = 'public.comunicazioni_retta'::regclass
+      and a.attnum > 0 and not a.attisdropped
+      and has_column_privilege('authenticated', 'public.comunicazioni_retta', a.attname, 'UPDATE')),
+  array['bonifico_importo_ricevuto', 'bonifico_nota', 'bonifico_stato', 'bonifico_verificato_da',
+        'bonifico_verificato_da_nome', 'bonifico_verificato_il', 'nota_pagamento']::text[],
+  'authenticated: UPDATE solo sulle 7 colonne del bonifico e della nota (0075)');
 select ok(has_table_privilege('authenticated', 'public.comunicazioni_retta', 'DELETE'),
   'authenticated: ha DELETE (richiesto dalla policy admin_delete, 0038)');
 select ok(not has_table_privilege('authenticated', 'public.comunicazioni_retta', 'TRUNCATE'),
@@ -461,8 +475,8 @@ select is(
 -- ---------------------------------------------------------------------
 -- Nota privata per riga (migration 0073, specs/60 PAG-05..PAG-08)
 -- ---------------------------------------------------------------------
--- Nessuna policy né GRANT nuovi: la colonna eredita la RLS admin-only e i
--- privilegi di tabella. Solo l'admin la legge e la scrive.
+-- Nessuna policy nuova: la colonna eredita la RLS admin-only (dal 0075 il
+-- suo UPDATE è un grant di colonna). Solo l'admin la legge e la scrive.
 select ok(
   exists (select 1 from information_schema.columns
            where table_schema = 'public' and table_name = 'comunicazioni_retta'
@@ -548,6 +562,77 @@ select is(
   'ok',
   'admin: può svuotare la nota di pagamento'
 );
+
+-- ---------------------------------------------------------------------
+-- UPDATE per colonna (migration 0075, issue #427)
+-- ---------------------------------------------------------------------
+-- L'admin non può cambiare importi, totale e colonne della modifica con un
+-- UPDATE diretto (permission denied, 42501): solo la funzione, con storico.
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set totale = 1
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: non può aggiornare totale con un UPDATE diretto');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set retta_mensile = 1
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: non può aggiornare retta_mensile con un UPDATE diretto');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set modificata_il = now()
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: non può aggiornare modificata_il con un UPDATE diretto');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set modificata_da_nome = 'Falso'
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: non può aggiornare modificata_da_nome con un UPDATE diretto');
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set totale_mail = 1
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: non può aggiornare totale_mail con un UPDATE diretto');
+-- Un UPDATE che mescola colonne permesse e vietate fallisce per intero.
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta set nota_pagamento = 'mista', totale = 1
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  '42501', 'admin: un UPDATE misto (nota + totale) è respinto');
+select ok(
+  (select totale = 120 and nota_pagamento is null and modificata_il is null
+     from public.comunicazioni_retta where id = 'e0000000-0000-0000-0000-000000000001'),
+  'admin: gli UPDATE respinti non hanno cambiato nulla');
+-- Tutte le colonne del bonifico, come fa l'app (verifica bonifico).
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    $q$update public.comunicazioni_retta
+          set bonifico_stato = 'importo_errato',
+              bonifico_importo_ricevuto = 100,
+              bonifico_nota = 'Nota bonifico pgTAP',
+              bonifico_verificato_da = 'a0000000-0000-0000-0000-000000000001',
+              bonifico_verificato_da_nome = 'pgTAP',
+              bonifico_verificato_il = now()
+        where id = 'e0000000-0000-0000-0000-000000000001'$q$),
+  'ok', 'admin: può aggiornare tutte le colonne della verifica del bonifico');
+-- La funzione di modifica importi gira come proprietario: funziona per
+-- l'admin anche senza UPDATE di tabella (C3 inserita sopra, bonifico in attesa).
+select is(
+  pg_temp.write_as('a0000000-0000-0000-0000-000000000001',
+    format($q$select public.modifica_importi_comunicazione_retta(
+                %L, 'Correzione pgTAP', 90, 0, 20, 0, 0, 0, 0, 0, 0, 0, null, null)$q$,
+          (select id from public.comunicazioni_retta
+            where bambino_id = 'c0000000-0000-0000-0000-000000000003'))),
+  'ok', 'admin: modifica_importi_comunicazione_retta funziona (security definer)');
+select is(
+  (select totale from public.comunicazioni_retta
+    where bambino_id = 'c0000000-0000-0000-0000-000000000003'),
+  110::numeric,
+  'modifica_importi_comunicazione_retta: il totale è stato ricalcolato');
+select ok(
+  (select modificata_il is not null and modificata_da_nome is not null and totale_mail = 120
+     from public.comunicazioni_retta where bambino_id = 'c0000000-0000-0000-0000-000000000003'),
+  'modifica_importi_comunicazione_retta: ha scritto modificata_il, modificata_da_nome, totale_mail');
 
 -- ---------------------------------------------------------------------
 -- DELETE: solo l'admin (annullo invio, specs/56)
