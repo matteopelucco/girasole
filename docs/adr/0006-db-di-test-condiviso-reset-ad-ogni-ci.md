@@ -1,6 +1,6 @@
 # ADR-0006 — DB di test condiviso tra CI e sviluppo locale, resettato ad ogni run di CI
 
-- Stato: Accettata
+- Stato: Superata da [ADR-0012](0012-e2e-su-supabase-locale-in-ci.md) (la CI delle PR non usa più il DB di test condiviso; lo azzera solo il giro di fumo)
 - Data: 2026-09-24 (A22/A23)
 
 ## Contesto

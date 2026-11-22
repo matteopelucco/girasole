@@ -117,15 +117,12 @@ best practice** e scrivilo nella PR: non bloccare il lavoro.
 
 - **Due progetti Supabase separati: test e produzione.** Mai dati di
   produzione in test, mai il contrario.
-- **Il DB di test è unico e condiviso** tra CI e sviluppo locale, e la CI lo
-  **resetta a ogni run** (`supabase db reset`: ricrea schema da zero + seed).
-  Accetto che questo cancelli i miei dati locali di prova. Niente secondo
-  progetto "solo CI" finché non serve. (ADR 0006)
-- **Una sola e2e alla volta sul DB di test**: il job e2e della CI sta in un
-  gruppo di concorrenza globale, `cancel-in-progress: false`, `queue: max`.
-  Chi lancia e2e **in locale** sullo stesso DB deve prima controllare che non ci
-  sia una CI e2e in corso (`gh run list --status in_progress`), altrimenti la
-  fa diventare rossa. (ADR 0008)
+- **L'e2e della CI gira su un Supabase locale** acceso nel runner (`supabase
+  start`, Docker), che nasce e muore con il job: niente segreti, niente coda,
+  PR diverse in parallelo, giro ~10 minuti. Il DB di test remoto resta per
+  provare l'app a mano e per il giro di fumo sull'anteprima, che lo resetta in
+  un proprio gruppo di coda; chi lavora a mano su quel DB sa che un fumo lo può
+  azzerare. (ADR 0012, che supera 0006 e 0008)
 - **Migration**: solo file numerati in `supabase/migrations/`, mai modifiche dal
   dashboard o dal SQL Editor. Una migration già applicata **non si modifica**:
   se ne scrive una nuova. Ogni migration apre con un'intestazione standard che
@@ -235,7 +232,8 @@ il CHECK.
   nessun `console.error`, nessun 5xx, axe senza violazioni gravi. Ha un job
   `guardia` (logica pura, senza secret) che rifiuta tutto ciò che non è
   un'anteprima della PR di questo repo (mai produzione, mai fork). Il job che
-  usa il DB sta nello stesso gruppo di concorrenza dell'e2e. (ADR 0009)
+  resetta il DB di test remoto in un gruppo di concorrenza tutto suo
+  (ADR 0009, ADR 0012).
 - **Confronto visivo locale** (opzionale, per revisioni grafiche): foto delle
   pagine prima/dopo, fuori dalla CI, immagini in `.gitignore`.
 
@@ -358,18 +356,15 @@ statico ──► e2e ──► verifica
   **0. classifica la PR** → `next typegen` + `tsc` → lint → jscpd → vitest →
   `next build` (saltata sulle PR "non codice"; con le `NEXT_PUBLIC_*` del
   progetto di test).
-- **`e2e`** (`needs: statico`, parte solo se serve; timeout ~25 min, solo
-  esecuzione): build di produzione (serve a `next start`) → Chromium → **reset
-  DB di test** (`supabase db reset --remote=
-  ${{ vars.SUPABASE_TEST_PROJECT_REF }} --yes`, token in
-  `SUPABASE_ACCESS_TOKEN`) → pgTAP (`supabase test db`) → grant-check →
-  rls-check → ricreazione degli account `E2E_*` con la Admin API (il reset
-  azzera `auth.users`) → Playwright → riepilogo dei test saltati con motivo nel
+- **`e2e`** (`needs: statico`, parte solo se serve; timeout 25 min, giro
+  tipico ~10): Chromium → **avvio di Supabase locale** (`supabase start`,
+  migration e seed compresi) → build di produzione (serve a `next start`) →
+  pgTAP (`supabase test db`) → grant-check → rls-check → creazione degli
+  account `E2E_*` con la Admin API (password generate a ogni giro) →
+  Playwright → riepilogo dei test saltati con motivo nel
   job summary (informativo, mai bloccante) → upload del report HTML come
-  artifact (`if: always()`, 14 giorni). Gruppo di concorrenza globale
-  `db-test-<progetto>` con `cancel-in-progress: false` e `queue: max` (senza
-  `queue: max` GitHub tiene un solo job in attesa e il terzo cancella il
-  secondo).
+  artifact (`if: always()`, 14 giorni). Nessuna coda: ogni run ha il proprio
+  database.
 - **`verifica`** (gate finale, pochi secondi, `if: always()`, non fa checkout né
   install): fallisce se `statico` non è verde, o se `e2e` doveva girare e non è
   verde (fallito **o cancellato**); passa se `e2e` è saltato di proposito.
@@ -387,17 +382,16 @@ statico ──► e2e ──► verifica
   espone un output; build ed e2e si saltano con `if:` sugli step e sul job.
   Nel dubbio una PR è **codice**. tsc/lint/jscpd/vitest girano sempre.
 - **Dependabot**: il job `e2e` non parte quando l'attore è `dependabot[bot]`,
-  perché quelle run vedono solo lo store di secret "Dependabot", dove
-  **deliberatamente non si copiano** `SUPABASE_ACCESS_TOKEN`,
-  `SUPABASE_SERVICE_ROLE_KEY` né `E2E_*` (un postinstall malevolo di una
-  dipendenza aggiornata automaticamente li leggerebbe prima di ogni revisione
-  umana). Se un bump tocca codice sensibile (es. `@supabase/ssr`) si rifà la PR
+  decisione presa quando il job usava segreti (quelle run vedono solo lo store
+  "Dependabot", dove **deliberatamente non si copiano** token e chiavi
+  Supabase). Il job locale non ne usa, ma il comportamento è invariato: farlo
+  girare anche su Dependabot e PR esterne è una decisione separata. Se un bump tocca codice sensibile (es. `@supabase/ssr`) si rifà la PR
   da un branch umano per avere la CI completa.
 - **Permessi minimi** (`permissions: contents: read` di default, scritture solo
   sul job che le richiede). **Mai interpolare valori controllati dall'utente
   dentro `run:`**: passarli come variabili d'ambiente. Azioni ufficiali con
   versione fissata. Ogni job ha `timeout-minutes`. Nessun secret hardcoded.
-- Se un e2e viene cancellato in coda e non c'è un run più recente: "Re-run
+- Se un e2e viene cancellato (annullo a mano) e non c'è un run più recente: "Re-run
   failed jobs" o `gh run rerun <id> --failed`.
 - Quando una CI è rossa, **si guardano prima i log e gli screenshot** (il report
   HTML è un artifact) e si distingue una regressione della PR da un flaky o da un
@@ -508,9 +502,9 @@ build` passino su un clone pulito.
 **Fase C — Documenti**
 `CLAUDE.md` essenziale (stack, convenzioni, specs, workflow, test-first, regole
 repo pubblico), `docs/sviluppo-dettagli.md` con il "perché" delle sezioni 2-6,
-ADR iniziali (almeno: DB di test condiviso con reset a ogni CI, niente
-automazioni verso la produzione, unit test solo su funzioni pure, coda globale
-e2e, versione derivata a build-time, libreria componenti), `README.md`.
+ADR iniziali (almeno: e2e su Supabase locale in CI, niente
+automazioni verso la produzione, unit test solo su funzioni pure, e2e su
+Supabase locale in CI, versione derivata a build-time, libreria componenti), `README.md`.
 
 **Fase D — GitHub**
 Workflow `ci.yml`, `claude-board.yml`, `release.yml`, `promemoria-migration.yml`,
