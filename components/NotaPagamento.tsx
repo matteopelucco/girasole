@@ -39,7 +39,7 @@ export function NotaPagamento({
   }
 
   return (
-    <div className="flex min-w-56 flex-col gap-1">
+    <div className="flex w-full min-w-0 flex-col gap-1">
       <TestoLungo
         value={testo}
         onChange={(e) => {
@@ -51,23 +51,27 @@ export function NotaPagamento({
         misura="piccolo"
         aria-label={nomeCampo}
         aria-describedby={idAiuto}
-        className="w-full"
+        className="w-full resize-y"
       />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <Pulsante
           variante="secondario"
           misura="piccolo"
           disabled={pending}
           aria-busy={pending}
           onClick={conferma}
+          className="shrink-0"
         >
           {pending ? 'Attendere…' : 'Salva'}
         </Pulsante>
-        <span id={idAiuto} className="text-xs text-stone-500">
-          {[...testo].length}/{NOTA_PAGAMENTO_MAX} · solo per te, non va ai genitori
+        <span id={idAiuto} className="flex min-w-0 flex-col text-xs leading-tight text-stone-500">
+          <span className="whitespace-nowrap tabular-nums">
+            {[...testo].length}/{NOTA_PAGAMENTO_MAX}
+          </span>
+          <span>solo per te, non va ai genitori</span>
         </span>
         {salvata && (
-          <span role="status" className="text-xs font-medium text-emerald-800">
+          <span role="status" className="ml-auto whitespace-nowrap text-xs font-medium text-emerald-800">
             Nota salvata
           </span>
         )}

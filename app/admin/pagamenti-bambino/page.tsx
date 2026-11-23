@@ -32,6 +32,21 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// Data e ora di un istante su due righe ("gg/mm/aaaa" e "hh:mm"): il formato
+// base le separa con "_", pensato per i log.
+function dataEOra(istante: string): { data: string; ora: string } {
+  const [data, ora] = formattaDataOraItaliana(istante).split('_');
+  return { data, ora };
+}
+
+// Larghezze delle colonne delle voci (predefinita: w-16); le tre con note o con
+// intestazioni lunghe sono un po' più larghe.
+const LARGHEZZE_COLONNE: Record<string, string> = {
+  'Conguaglio pasti': 'w-[4.5rem]',
+  'Costi extra': 'w-[5.5rem]',
+  'Credito/Debito': 'w-[5.5rem]',
+};
+
 const COLONNE_COMUNICAZIONE =
   'id, mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il, bonifico_stato, bonifico_importo_ricevuto, bonifico_nota, bonifico_verificato_da_nome, bonifico_verificato_il, nota_pagamento, modificata_il, modificata_da_nome, totale_mail';
 
@@ -102,7 +117,7 @@ export default async function PagamentiBambinoPage(
 
   return (
     <NavHeader nome={profilo?.nome || user.email || ''} ruolo={profilo?.ruolo ?? null}>
-      <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+      <main className="mx-auto max-w-[100rem] space-y-6 px-4 py-8">
         <div>
           <h1 className="text-lg font-medium">Pagamenti bambino</h1>
           <p className="mt-1 text-sm text-stone-600">
@@ -162,35 +177,43 @@ export default async function PagamentiBambinoPage(
               tabIndex={0}
               aria-label={`Importi richiesti a ${bambino.nome} ${bambino.cognome}, scorrevole in orizzontale`}
             >
-              <Tabella separatori>
+              {/* Layout fisso: a 1440 px e oltre le colonne stanno nella pagina; sotto la tabella
+                  scorre dentro il suo riquadro (min-w). */}
+              <Tabella separatori className="min-w-[70rem] table-fixed">
+                <colgroup>
+                  <col className="w-20" />
+                  {ETICHETTE_VOCI.map((etichetta) => (
+                    <col key={etichetta} className={LARGHEZZE_COLONNE[etichetta] ?? "w-16"} />
+                  ))}
+                  <col className="w-[5.25rem]" />
+                  <col className="w-[6.5rem]" />
+                  <col />
+                </colgroup>
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}
                 </caption>
                 <TabellaIntestazione>
                   <TabellaRiga>
-                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-1.5 py-1.5 align-bottom font-medium text-stone-700">
                       Mese
                     </TabellaTitolo>
                     {ETICHETTE_VOCI.map((etichetta) => (
                       <TabellaTitolo allinea="destra"
                         key={etichetta}
                         scope="col"
-                        className="max-w-26 px-2 py-1.5 font-medium text-stone-700"
+                        className="break-words px-1 py-1.5 align-bottom text-xs font-medium leading-tight text-stone-700"
                       >
                         {etichetta}
                       </TabellaTitolo>
                     ))}
-                    <TabellaTitolo allinea="destra" scope="col" className="px-2 py-1.5 text-base font-semibold text-stone-900">
+                    <TabellaTitolo allinea="destra" scope="col" className="px-1.5 py-1.5 align-bottom text-sm font-semibold text-stone-900">
                       Totale
                     </TabellaTitolo>
-                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-1.5 py-1.5 align-bottom font-medium text-stone-700">
                       Inviata
                     </TabellaTitolo>
-                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
-                      Bonifico
-                    </TabellaTitolo>
-                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 font-medium text-stone-700">
-                      Nota
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-1.5 py-1.5 align-bottom font-medium text-stone-700">
+                      Pagamento
                     </TabellaTitolo>
                   </TabellaRiga>
                 </TabellaIntestazione>
@@ -203,32 +226,50 @@ export default async function PagamentiBambinoPage(
                         id={`mese-${mese}`}
                         className={comunicazione ? 'scroll-mt-4 bg-emerald-50/40' : 'scroll-mt-4'}
                       >
-                        <TabellaTitolo allinea="sinistra" scope="row" className="whitespace-nowrap px-2 py-2 font-normal capitalize">
+                        <TabellaTitolo allinea="sinistra" scope="row" className="px-1.5 py-2 align-top font-normal capitalize">
                           {formattaMeseItaliano(mese)}
                         </TabellaTitolo>
                         {comunicazione ? (
                           <>
                             {vociComunicazione(comunicazione).map((voce) => (
-                              <TabellaCella allinea="destra" key={voce.etichetta} className="px-2 py-2">
-                                <div className="whitespace-nowrap">{formattaImporto(voce.importo)} €</div>
+                              <TabellaCella
+                                allinea="destra"
+                                key={voce.etichetta}
+                                className="px-1 py-2 align-top text-xs tabular-nums"
+                              >
+                                {/* Le voci a zero sono più discrete (grigio), il testo resta. */}
+                                <div
+                                  className={
+                                    voce.importo === 0
+                                      ? 'whitespace-nowrap text-stone-500'
+                                      : 'whitespace-nowrap font-medium text-stone-900'
+                                  }
+                                >
+                                  {formattaImporto(voce.importo)} €
+                                </div>
                                 {voce.numeroGettoni !== undefined && (
-                                  <div className="whitespace-nowrap text-xs text-stone-500">{voce.numeroGettoni} gettoni</div>
+                                  <div className="whitespace-nowrap text-stone-500">{voce.numeroGettoni} gettoni</div>
                                 )}
-                                {voce.nota && <div className="text-left text-xs text-stone-500">{voce.nota}</div>}
+                                {voce.nota && <div className="mt-0.5 hyphens-auto break-words text-left text-stone-500">{voce.nota}</div>}
                               </TabellaCella>
                             ))}
-                            <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-2 text-base font-bold text-stone-900">
+                            <TabellaCella allinea="destra" className="whitespace-nowrap px-1.5 py-2 align-top text-sm font-bold tabular-nums text-stone-900">
                               {formattaImporto(Number(comunicazione.totale))} €
                             </TabellaCella>
-                            <TabellaCella allinea="sinistra" className="whitespace-nowrap px-2 py-2 text-xs text-emerald-800">
-                              Inviata il {formattaDataOraItaliana(comunicazione.inviata_il)}
+                            <TabellaCella allinea="sinistra" className="px-1.5 py-2 align-top text-xs text-emerald-800">
+                              <div>
+                                Inviata il {dataEOra(comunicazione.inviata_il).data}
+                                <span className="block">alle {dataEOra(comunicazione.inviata_il).ora}</span>
+                              </div>
                               {comunicazione.modificata_il && (
                                 <>
-                                  <div className="text-amber-800">
-                                    Modificata il {formattaDataOraItaliana(comunicazione.modificata_il)} da{' '}
-                                    {comunicazione.modificata_da_nome}
+                                  <div className="mt-1 text-amber-800">
+                                    Modificata il {dataEOra(comunicazione.modificata_il).data}
+                                    <span className="block">
+                                      alle {dataEOra(comunicazione.modificata_il).ora} da {comunicazione.modificata_da_nome}
+                                    </span>
                                   </div>
-                                  <div className="text-stone-600">
+                                  <div className="mt-1 text-stone-600">
                                     Totale della mail: {formattaImporto(Number(comunicazione.totale_mail))} €
                                   </div>
                                 </>
@@ -246,7 +287,7 @@ export default async function PagamentiBambinoPage(
                               />
                               <StoricoModifiche modifiche={storicoPerComunicazione.get(comunicazione.id) ?? []} />
                             </TabellaCella>
-                            <TabellaCella allinea="sinistra" className="px-2 py-2 text-xs">
+                            <TabellaCella allinea="sinistra" className="px-1.5 py-2 align-top text-xs">
                               <VerificaBonifico
                                 bambinoId={bambino.id}
                                 bambinoNome={`${bambino.nome} ${bambino.cognome}`}
@@ -266,19 +307,19 @@ export default async function PagamentiBambinoPage(
                                 marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
                                 resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
                               />
-                            </TabellaCella>
-                            <TabellaCella allinea="sinistra" className="px-2 py-2">
-                              <NotaPagamento
-                                notaIniziale={comunicazione.nota_pagamento}
-                                nomeCampo={`Nota per ${bambino.nome} ${bambino.cognome}, ${formattaMeseItaliano(mese)}`}
-                                salva={salvaNotaPagamento.bind(null, comunicazione.id)}
-                              />
+                              <div className="mt-2 border-t border-stone-200 pt-2">
+                                <NotaPagamento
+                                  notaIniziale={comunicazione.nota_pagamento}
+                                  nomeCampo={`Nota per ${bambino.nome} ${bambino.cognome}, ${formattaMeseItaliano(mese)}`}
+                                  salva={salvaNotaPagamento.bind(null, comunicazione.id)}
+                                />
+                              </div>
                             </TabellaCella>
                           </>
                         ) : (
                           <TabellaCella allinea="sinistra"
-                            colSpan={ETICHETTE_VOCI.length + 4}
-                            className="px-2 py-2 text-xs text-stone-500"
+                            colSpan={ETICHETTE_VOCI.length + 3}
+                            className="px-1.5 py-2 text-xs text-stone-500"
                           >
                             Non ancora comunicata
                           </TabellaCella>
@@ -299,7 +340,7 @@ export default async function PagamentiBambinoPage(
                       <TabellaCella allinea="destra" className="whitespace-nowrap px-2 py-2 text-base font-bold text-stone-900">
                         {formattaImporto(totaleRichiesto(comunicazioni))} €
                       </TabellaCella>
-                      <TabellaCella colSpan={3} />
+                      <TabellaCella colSpan={2} />
                     </TabellaRiga>
                   </TabellaPiede>
                 )}

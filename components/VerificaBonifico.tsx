@@ -180,15 +180,15 @@ export function VerificaBonifico({
           </Link>
         </Avviso>
       )}
+      <StatoBonifico
+        stato={stato}
+        totale={totale}
+        importoRicevuto={importoRicevuto}
+        nota={nota}
+        verificatoDaNome={verificatoDaNome}
+        verificatoIl={verificatoIl}
+      />
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <StatoBonifico
-          stato={stato}
-          totale={totale}
-          importoRicevuto={importoRicevuto}
-          nota={nota}
-          verificatoDaNome={verificatoDaNome}
-          verificatoIl={verificatoIl}
-        />
         <Pulsante
           variante="secondario"
           misura="piccolo"
