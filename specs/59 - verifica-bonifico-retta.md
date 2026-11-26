@@ -14,16 +14,16 @@ aggiunta come credito o debito (specs/58) sulla retta di un mese scelto
 dall'admin (di norma la prossima). Una verifica presa per errore (click
 sbagliato) può essere annullata, riportando il bonifico "da
 verificare". La verifica si fa nella pagina "Pagamenti bambino"
-([60 - pagamenti-bambino.md](60%20-%20pagamenti-bambino.md)), una riga
-per ogni mese comunicato; in "Rette" resta solo lo stato, in sola
-lettura, con un link "Verifica" alla riga giusta. Si basa su
+([60 - pagamenti-bambino.md](60%20-%20pagamenti-bambino.md)), nella
+finestra "Gestisci" di ogni mese comunicato; in "Rette" resta solo lo
+stato, in sola lettura, con un link "Verifica" alla riga giusta. Si basa su
 [56 - comunicazione-retta-mensile.md](56%20-%20comunicazione-retta-mensile.md)
 e [58 - crediti-debiti-bambino.md](58%20-%20crediti-debiti-bambino.md).
 
 ## Scenario: una comunicazione appena inviata è in attesa di verifica
 Dato che ho appena inviato (o sto rivedendo) una comunicazione retta
-Quando guardo la sua riga in "Pagamenti bambino"
-Allora vedo, nella colonna "Bonifico", lo stato "Bonifico da verificare"
+Quando apro "Gestisci" sulla sua riga in "Pagamenti bambino"
+Allora vedo, nella sezione "Bonifico", lo stato "Bonifico da verificare"
 con due azioni: "Bonifico corretto" e "Importo diverso"
 
 ## Scenario: in "Rette" lo stato del bonifico è in sola lettura con un link "Verifica"
@@ -34,6 +34,7 @@ Allora vedo lo stato del bonifico ("Bonifico da verificare", oppure
 dei pulsanti "Bonifico corretto", "Importo diverso", "Annulla verifica"
 E vedo un link "Verifica" che apre "Pagamenti bambino" su quel bambino,
 sull'anno scolastico di quel mese, già posizionato sulla riga del mese
+e con la sua finestra "Gestisci" aperta
 
 ## Scenario: marcare un bonifico come corretto
 Dato che sono su una comunicazione con bonifico da verificare in
@@ -92,7 +93,7 @@ Allora vedo un errore e non viene registrato nulla
 ## Scenario: un bonifico già verificato mostra solo lo stato e "Annulla verifica"
 Dato che il bonifico di una comunicazione è già stato marcato (corretto
 o con importo diverso)
-Quando guardo la sua riga in "Pagamenti bambino"
+Quando apro "Gestisci" sulla sua riga in "Pagamenti bambino"
 Allora vedo lo stato registrato, senza più le azioni "Bonifico
 corretto"/"Importo diverso" — al loro posto un solo pulsante "Annulla
 verifica"
@@ -120,7 +121,8 @@ finché non lo corregge a mano, vedi Regole)
 ## Scenario: verificare il bonifico anche su un mese passato
 Dato che in "Pagamenti bambino" guardo un mese passato, comunicato
 tempo fa
-Quando guardo una comunicazione con bonifico ancora da verificare
+Quando apro "Gestisci" su una comunicazione con bonifico ancora da
+verificare
 Allora trovo comunque "Bonifico corretto"/"Importo diverso" attivi —
 verificare un bonifico non è "inviare" né "annullare" una
 comunicazione, resta possibile su qualunque mese passato, perché il
@@ -176,7 +178,7 @@ bonifico spesso arriva settimane dopo l'invio
   `marcaBonificoImportoErrato`, `resettaVerificaBonifico`) vivono in
   `app/admin/pagamenti-bambino/actions.ts` e il componente è
   `components/VerificaBonifico.tsx`, usato da "Pagamenti bambino"
-  (colonna "Bonifico" di ogni mese comunicato). "Rette" mostra solo lo
+  (finestra "Gestisci" di ogni mese comunicato). "Rette" mostra solo lo
   stato (sola lettura) e il link "Verifica"; "Annulla invio" (specs/56)
   resta in "Rette", solo con il bonifico "da verificare". La nota privata
   per riga di "Pagamenti bambino" (specs/60) è un'altra cosa:
