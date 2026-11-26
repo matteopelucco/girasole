@@ -25,12 +25,17 @@ import {
 import { inserisciRettaConGettoni, meseCorrenteRoma, rigaRette } from './pagina-gettoni-retta';
 import {
   annoScolasticoDi,
+  apriGestione,
+  apriGestioneMese,
   apriModificaImporti,
   apriPagamentiBambino,
+  bottoneGestisci,
   bottoneModificaImporti,
   campoMotivo,
   campoNota,
   campoVoce,
+  cellaStato,
+  finestraGestione,
   finestraImportoDiverso,
   inserisciComunicazioneConVoci,
   inserisciComunicazioneDaVerificare,
@@ -204,7 +209,7 @@ test.describe('60 — Pagamenti bambino', () => {
       }
       await expect(riga.getByText('Gita di prova')).toBeVisible();
       await expect(riga.getByText('Rimborso di prova')).toBeVisible();
-      await expect(riga.getByText(/Inviata il/)).toBeVisible();
+      await expect(cellaStato(riga)).toContainText(/Inviata il \d{2}\/\d{2}\/\d{4}/);
 
       for (const colonna of [
         'Retta mensile',
@@ -218,6 +223,7 @@ test.describe('60 — Pagamenti bambino', () => {
         'Costi extra',
         'Credito/Debito',
         'Totale',
+        'Stato',
       ]) {
         await expect(page.getByRole('columnheader', { name: colonna, exact: true })).toBeVisible();
       }
@@ -319,24 +325,183 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(page.getByRole('link', { name: 'Anno scolastico successivo' })).toHaveCount(0);
     });
 
-    test('la pagina si modifica solo da «Modifica importi»', async ({ page, bambino, adminDb }) => {
+    test('PAG-24: la tabella è da consultare, le azioni stanno in «Gestisci»', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 250, totale: 250 });
+      await inserisciComunicazione(adminDb!, bambino, `${ANNO_FISSO}-10`, { retta_mensile: 250, totale: 250 });
 
       await page.goto(urlBambino(bambino));
       await expect(page.getByRole('row', { name: /settembre 2020/ })).toBeVisible();
       const main = page.getByRole('main');
-      // Nessun campo per gli importi (solo la nota di testo e, sul mese
-      // comunicato, i pulsanti del bonifico e "Salva") né pulsanti di invio o
-      // annullo della comunicazione.
+      // Nessun campo, nessuna nota da scrivere, nessun pulsante di modifica, bonifico, invio o annullo.
       await expect(main.locator('input:not([type="hidden"])')).toHaveCount(0);
-      await expect(main.locator('textarea')).toHaveCount(1);
+      await expect(main.locator('textarea')).toHaveCount(0);
       await expect(main.locator('select')).toHaveCount(1);
-      await expect(main.getByRole('button', { name: /Annulla invio|Invia|Segna/ })).toHaveCount(0);
+      // A finestra chiusa i soli pulsanti sono "Mostra" e un "Gestisci" per mese comunicato.
       const nomi = (await main.getByRole('button').allTextContents()).map((t) => t.trim());
-      // A finestra chiusa i soli pulsanti sono quelli del selettore, del bonifico, della nota
-      // e «Modifica importi» (PAG-02, issue #421): nessun campo per gli importi.
-      expect(nomi.sort()).toEqual(['Bonifico corretto', 'Importo diverso', 'Modifica importi', 'Mostra', 'Salva']);
+      expect(nomi.sort()).toEqual(['Gestisci', 'Gestisci', 'Mostra']);
+      await expect(bottoneGestisci(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveAccessibleName('Gestisci settembre 2020');
       await expect(main.getByRole('dialog')).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('PAG-25: ogni mese comunicato ha uno stato del pagamento', async ({ page, bambino, adminDb }) => {
+      // Settembre: da verificare, con nota privata.
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, { nota_pagamento: 'Nota breve' });
+      // Ottobre: modificato dopo l'invio, poi bonifico corretto.
+      const idOttobre = await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, {
+        retta_mensile: 100,
+        totale: 100,
+      });
+      await modificaViaFunzione(adminDb!, idOttobre, 'Correzione di prova', { retta_mensile: 90 });
+      const { error } = await adminDb!
+        .from('comunicazioni_retta')
+        .update({ bonifico_stato: 'corretto', bonifico_importo_ricevuto: 90 })
+        .eq('id', idOttobre);
+      expect(error).toBeNull();
+      // Novembre: bonifico con importo diverso.
+      await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-11`, {
+        retta_mensile: 100,
+        totale: 100,
+        bonifico_stato: 'importo_errato',
+      });
+
+      await page.goto(urlBambino(bambino));
+      const settembre = cellaStato(rigaMese(page, `${ANNO_FISSO}-09`));
+      await expect(settembre).toContainText(/Inviata il \d{2}\/\d{2}\/\d{4}/);
+      await expect(settembre.getByText('Da verificare', { exact: true })).toBeVisible();
+      await expect(settembre.getByText('Nota', { exact: true })).toBeVisible();
+
+      const ottobre = cellaStato(rigaMese(page, `${ANNO_FISSO}-10`));
+      await expect(ottobre).toContainText(/Modificata il \d{2}\/\d{2}\/\d{4}/);
+      await expect(ottobre).not.toContainText('Inviata il');
+      await expect(ottobre.getByText('Pagato', { exact: true })).toBeVisible();
+      await expect(ottobre.getByText('Nota', { exact: true })).toHaveCount(0);
+
+      const novembre = cellaStato(rigaMese(page, `${ANNO_FISSO}-11`));
+      await expect(novembre.getByText('Pagato, importo diverso', { exact: true })).toBeVisible();
+
+      // Un mese non comunicato: solo "Non ancora comunicata", niente stato né "Gestisci".
+      const dicembre = rigaMese(page, `${ANNO_FISSO}-12`);
+      await expect(dicembre.getByText('Non ancora comunicata')).toBeVisible();
+      await expect(cellaStato(dicembre)).toHaveCount(0);
+      await expect(bottoneGestisci(dicembre)).toHaveCount(0);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test('PAG-26: «Gestisci» apre la finestra con tutte le azioni del mese', async ({ page, bambino, adminDb }) => {
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, { retta_mensile: 250 });
+
+      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      let finestra = await apriGestione(page, riga, bambino, `${ANNO_FISSO}-09`);
+      await expect(finestra.getByText('Totale del mese: 250,00 €')).toBeVisible();
+      await expect(finestra.getByText(/Inviata il \d{2}\/\d{2}\/\d{4} alle \d{2}:\d{2}/)).toBeVisible();
+      const sezioni = (await finestra.getByRole('heading', { level: 3 }).allTextContents()).map((t) => t.trim());
+      expect(sezioni).toEqual(['Importi', 'Comunicazione', 'Bonifico', 'Nota']);
+      await expect(bottoneModificaImporti(finestra)).toBeVisible();
+      await expect(finestra.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
+      await expect(campoNota(finestra)).toBeVisible();
+      await verificaFocusTrattenuto(page, finestra);
+      await nessunaViolazioneA11yGrave(page);
+
+      // Dopo un'azione la finestra resta aperta, con i dati aggiornati anche nella riga.
+      await campoNota(finestra).fill('Pagherà a fine mese');
+      await clickEAttendiAzione(page, finestra.getByRole('button', { name: 'Salva', exact: true }));
+      await expect(finestra.getByText('Nota salvata')).toBeVisible();
+      await expect(cellaStato(riga).getByText('Nota', { exact: true })).toBeVisible();
+      await expect(finestra).toBeVisible();
+
+      // Esc chiude e il focus torna su "Gestisci".
+      await page.keyboard.press('Escape');
+      await expect(finestra).toBeHidden();
+      await expect(bottoneGestisci(riga)).toBeFocused();
+
+      // Anche "Chiudi".
+      finestra = await apriGestione(page, riga, bambino, `${ANNO_FISSO}-09`);
+      await finestra.getByRole('button', { name: 'Chiudi', exact: true }).click();
+      await expect(finestra).toBeHidden();
+      await expect(bottoneGestisci(riga)).toBeFocused();
+    });
+
+    test('PAG-26: su telefono (360 px) la finestra «Gestisci» si legge senza scorrere in orizzontale', async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, { nota_pagamento: 'Nota breve' });
+      await page.setViewportSize({ width: 360, height: 740 });
+      const { finestra } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(finestra)).toHaveValue('Nota breve');
+      expect(await finestra.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      await nessunaViolazioneA11yGrave(page);
+    });
+
+    test("PAG-27: annullare l'invio dalla finestra, solo per il mese corrente", async ({ page, bambino, adminDb }) => {
+      const mese = meseCorrenteRoma();
+      const { error } = await adminDb!.from('crediti_debiti_bambini').insert({
+        bambino_id: bambino.id,
+        mese_competenza: mese,
+        importo: 185,
+        nota: 'Differenza di prova',
+        origine: 'manuale',
+        creato_da_nome: 'E2E',
+        applicato_il: new Date().toISOString(),
+      });
+      expect(error).toBeNull();
+      const id = await inserisciComunicazioneConVoci(adminDb!, bambino, mese, {
+        retta_mensile: 100,
+        credito_debito: 185,
+        totale: 285,
+      });
+      await modificaViaFunzione(adminDb!, id, 'Il debito reale era 150', { retta_mensile: 100, credito_debito: 150 });
+
+      const { riga, finestra } = await apriGestioneMese(page, bambino, mese);
+      // Prima di annullare: il nuovo invio si fa da "Rette".
+      await expect(finestra.getByRole('link', { name: 'Rette' })).toHaveAttribute('href', '/admin/rette');
+      page.once('dialog', (dialog) => dialog.accept());
+      await clickEAttendiAzione(page, finestra.getByRole('button', { name: 'Annulla invio' }));
+
+      // La retta e il suo storico spariscono, il credito/debito torna "da conteggiare".
+      await expect
+        .poll(async () => (await adminDb!.from('comunicazioni_retta').select('id').eq('id', id)).data?.length)
+        .toBe(0);
+      expect(await leggiStorico(adminDb!, id)).toHaveLength(0);
+      await expect
+        .poll(async () => {
+          const { data } = await adminDb!
+            .from('crediti_debiti_bambini')
+            .select('importo, applicato_il')
+            .eq('bambino_id', bambino.id)
+            .single();
+          return { importo: data?.importo, applicato_il: data?.applicato_il };
+        })
+        .toEqual({ importo: 185, applicato_il: null });
+      await expect(riga.getByText('Non ancora comunicata')).toBeVisible();
+      await expect(bottoneGestisci(riga)).toHaveCount(0);
+    });
+
+    test("PAG-27: su un mese passato o con il bonifico verificato l'invio non si annulla", async ({
+      page,
+      bambino,
+      adminDb,
+    }) => {
+      // Mese passato, bonifico da verificare.
+      await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
+      let { finestra } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(finestra.getByRole('button', { name: 'Annulla invio' })).toHaveCount(0);
+      await expect(finestra.getByText("L'invio si annulla solo nel mese corrente", { exact: false })).toBeVisible();
+
+      // Mese corrente, bonifico già verificato.
+      const mese = meseCorrenteRoma();
+      await inserisciComunicazioneConVoci(adminDb!, bambino, mese, {
+        retta_mensile: 100,
+        totale: 100,
+        bonifico_stato: 'corretto',
+      });
+      ({ finestra } = await apriGestioneMese(page, bambino, mese));
+      await expect(finestra.getByRole('button', { name: 'Annulla invio' })).toHaveCount(0);
+      await expect(
+        finestra.getByText("Il bonifico è già verificato: l'invio non si può più annullare", { exact: false })
+      ).toBeVisible();
     });
 
     // --- Modifica importi (issue #421, PAG-02..PAG-15) -----------------------
@@ -358,15 +523,18 @@ test.describe('60 — Pagamenti bambino', () => {
     test('PAG-02: il pulsante compare solo sui mesi comunicati', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
 
-      await page.goto(urlBambino(bambino));
-      await expect(bottoneModificaImporti(rigaMese(page, MESE_MOD))).toBeVisible();
-      await expect(bottoneModificaImporti(rigaMese(page, `${ANNO_FISSO}-10`))).toHaveCount(0);
+      const { finestra } = await apriGestioneMese(page, bambino, MESE_MOD);
+      await expect(bottoneModificaImporti(finestra)).toBeVisible();
+      const ottobre = rigaMese(page, `${ANNO_FISSO}-10`);
+      await expect(bottoneGestisci(ottobre)).toHaveCount(0);
+      await expect(bottoneModificaImporti(ottobre)).toHaveCount(0);
 
       // Anche sui mesi di un anno scolastico passato (2020/2021) e sui bambini non più attivi.
       const { error } = await adminDb!.from('bambini').update({ attiva: false }).eq('id', bambino.id);
       expect(error).toBeNull();
       await page.reload();
-      await expect(bottoneModificaImporti(rigaMese(page, MESE_MOD))).toBeEnabled();
+      const gestione = await apriGestione(page, rigaMese(page, MESE_MOD), bambino, MESE_MOD);
+      await expect(bottoneModificaImporti(gestione)).toBeEnabled();
     });
 
     test('PAG-03: la finestra propone tutte le voci con i valori attuali', async ({ page, bambino, adminDb }) => {
@@ -382,8 +550,8 @@ test.describe('60 — Pagamenti bambino', () => {
         totale: 451,
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
 
       await expect(
         finestra.getByRole('heading', { name: new RegExp(`${bambino.nomeCompleto}.*settembre 2020`) })
@@ -417,8 +585,8 @@ test.describe('60 — Pagamenti bambino', () => {
     test('PAG-04: il totale si aggiorna mentre scrivo', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await expect(finestra.getByText('Totale: 410,00 €')).toBeVisible();
 
       await campoVoce(finestra, 'Pasti').fill('100');
@@ -436,13 +604,16 @@ test.describe('60 — Pagamenti bambino', () => {
       const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
       const prima = await leggiComunicazione(adminDb!, id);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { riga, finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await campoVoce(finestra, 'Pasti').fill('100');
       await campoMotivo(finestra).fill('Pasti contati male');
       await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
 
       await expect(finestra).toBeHidden();
+      // "Gestisci" resta aperta, con il nuovo totale.
+      await expect(gestione).toBeVisible();
+      await expect(gestione.getByText('Totale del mese: 402,00 €')).toBeVisible();
       await expect(riga.getByRole('cell', { name: '100,00 €', exact: true })).toBeVisible();
       await expect(riga.getByRole('cell', { name: '402,00 €', exact: true })).toBeVisible();
       await expect(
@@ -456,14 +627,15 @@ test.describe('60 — Pagamenti bambino', () => {
       expect(dopo.inviata_il).toBe(prima.inviata_il);
       expect(dopo.inviata_da_nome).toBe(prima.inviata_da_nome);
       expect(dopo.email_destinatario).toBe(prima.email_destinatario);
-      await expect(riga.getByText(/Inviata il/)).toBeVisible();
+      await expect(cellaStato(riga)).toContainText('Modificata il');
+      await expect(gestione.getByText(/Inviata il/)).toBeVisible();
     });
 
     test('PAG-06: dati non validi non salvano nulla', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
 
       const casi: { voce: string; originale: string; scritto: string; motivo: string; messaggio: RegExp }[] = [
         { voce: 'Pasti', originale: '108,00', scritto: '100', motivo: '', messaggio: /Scrivi il motivo/ },
@@ -496,11 +668,14 @@ test.describe('60 — Pagamenti bambino', () => {
       await modificaViaFunzione(adminDb!, id, 'Seconda correzione', { retta_mensile: 250, costo_pasti: 90 });
 
       const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      await expect(riga.getByText(/Inviata il/)).toBeVisible();
-      await expect(riga.getByText(/Modificata il .* da /)).toBeVisible();
-      // Il totale della mail è quello originale, anche dopo più modifiche.
-      await expect(riga.getByText('Totale della mail: 410,00 €')).toBeVisible();
+      await expect(cellaStato(riga)).toContainText(/Modificata il \d{2}\/\d{2}\/\d{4}/);
       await expect(riga.getByRole('cell', { name: '392,00 €', exact: true })).toBeVisible();
+
+      const gestione = await apriGestione(page, riga, bambino, MESE_MOD);
+      await expect(gestione.getByText(/Inviata il/)).toBeVisible();
+      await expect(gestione.getByText(/Modificata il .* da /)).toBeVisible();
+      // Il totale della mail è quello originale, anche dopo più modifiche.
+      await expect(gestione.getByText('Totale della mail: 410,00 €')).toBeVisible();
     });
 
     test('PAG-08: lo storico delle modifiche resta consultabile', async ({ page, bambino, adminDb }) => {
@@ -513,9 +688,9 @@ test.describe('60 — Pagamenti bambino', () => {
       });
       await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, { retta_mensile: 100, totale: 100 });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      await riga.getByText('Storico modifiche').click();
-      const voci = riga.getByRole('listitem').filter({ hasText: 'Motivo:' });
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      await gestione.getByText('Storico modifiche').click();
+      const voci = gestione.getByRole('listitem').filter({ hasText: 'Motivo:' });
       await expect(voci).toHaveCount(2);
       // Dalla più recente.
       await expect(voci.nth(0)).toContainText('Motivo: Seconda correzione');
@@ -530,7 +705,10 @@ test.describe('60 — Pagamenti bambino', () => {
       await nessunaViolazioneA11yGrave(page);
 
       // Un mese mai modificato non mostra "Storico modifiche".
-      await expect(rigaMese(page, `${ANNO_FISSO}-10`).getByText('Storico modifiche')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      const ottobre = await apriGestione(page, rigaMese(page, `${ANNO_FISSO}-10`), bambino, `${ANNO_FISSO}-10`);
+      await expect(bottoneModificaImporti(ottobre)).toBeVisible();
+      await expect(ottobre.getByText('Storico modifiche')).toHaveCount(0);
 
       // Dall'app lo storico non si cancella né si cambia.
       await adminDb!.from('modifiche_comunicazioni_retta').delete().eq('comunicazione_id', id);
@@ -545,14 +723,14 @@ test.describe('60 — Pagamenti bambino', () => {
         bonifico_stato: 'corretto',
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      await expect(bottoneModificaImporti(riga)).toBeDisabled();
-      await expect(riga.getByText('annulla prima la verifica', { exact: false })).toBeVisible();
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      await expect(bottoneModificaImporti(gestione)).toBeDisabled();
+      await expect(gestione.getByText('annulla prima la verifica', { exact: false })).toBeVisible();
 
       // Dopo "Annulla verifica" il pulsante torna attivo.
       page.once('dialog', (dialog) => dialog.accept());
-      await riga.getByRole('button', { name: 'Annulla verifica' }).click();
-      await expect(bottoneModificaImporti(riga)).toBeEnabled({ timeout: 20_000 });
+      await gestione.getByRole('button', { name: 'Annulla verifica' }).click();
+      await expect(bottoneModificaImporti(gestione)).toBeEnabled({ timeout: 20_000 });
       expect((await leggiComunicazione(adminDb!, id)).totale).toBe(410);
     });
 
@@ -563,8 +741,8 @@ test.describe('60 — Pagamenti bambino', () => {
     }) => {
       const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       // Nel frattempo il bonifico viene verificato in un'altra scheda.
       const { error } = await adminDb!
         .from('comunicazioni_retta')
@@ -588,8 +766,8 @@ test.describe('60 — Pagamenti bambino', () => {
       const idSuccessiva = await inserisciComunicazioneConVoci(adminDb!, bambino, `${ANNO_FISSO}-10`, VOCI_BASE);
       const successivaPrima = await leggiComunicazione(adminDb!, idSuccessiva);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       const avviso = finestra.getByText('non risultano più coperti', { exact: false });
       await expect(avviso).toHaveCount(0);
 
@@ -626,8 +804,8 @@ test.describe('60 — Pagamenti bambino', () => {
         totale: 403,
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await campoVoce(finestra, 'Pasti').fill('100');
       await campoMotivo(finestra).fill('Pasti contati male');
       await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
@@ -660,8 +838,8 @@ test.describe('60 — Pagamenti bambino', () => {
         totale: 285,
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await campoVoce(finestra, 'Credito/Debito').fill('150');
       await campoMotivo(finestra).fill('Il debito reale era 150');
       await clickEAttendiAzione(page, pulsanteSalvaModifica(finestra));
@@ -691,8 +869,8 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(rigaRette(page, bambino).getByTestId('totale-riga')).toHaveText('402,00 €');
 
       // L'importo atteso del bonifico è il nuovo totale.
-      await page.goto(`${PERCORSO}?bambino=${bambino.id}&anno=${annoScolasticoDi(mese)}`);
-      await rigaMese(page, mese).getByRole('button', { name: 'Importo diverso' }).click();
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, mese);
+      await gestione.getByRole('button', { name: 'Importo diverso' }).click();
       await expect(finestraImportoDiverso(page, bambino).getByText('Importo atteso: 402,00')).toBeVisible();
     });
 
@@ -744,24 +922,26 @@ test.describe('60 — Pagamenti bambino', () => {
     }) => {
       const id = await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const pulsante = bottoneModificaImporti(riga);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const pulsante = bottoneModificaImporti(gestione);
 
-      // Esc: chiude, il focus torna sul pulsante, nulla è salvato.
-      let finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      // Esc: chiude, "Gestisci" resta aperta, il focus torna sul pulsante, nulla è salvato.
+      let finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await verificaFocusTrattenuto(page, finestra);
       await campoVoce(finestra, 'Pasti').fill('100');
       await campoMotivo(finestra).fill('Prova');
       await page.keyboard.press('Escape');
       await expect(finestra).toBeHidden();
+      await expect(gestione).toBeVisible();
       await expect(pulsante).toBeFocused();
 
       // «Annulla»: stessa cosa, e alla riapertura i valori sono quelli registrati.
-      finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       await expect(campoVoce(finestra, 'Pasti')).toHaveValue('108,00');
       await expect(campoMotivo(finestra)).toHaveValue('');
       await finestra.getByRole('button', { name: 'Annulla', exact: true }).click();
       await expect(finestra).toBeHidden();
+      await expect(gestione).toBeVisible();
       await expect(pulsante).toBeFocused();
 
       expect((await leggiComunicazione(adminDb!, id)).totale).toBe(410);
@@ -776,8 +956,8 @@ test.describe('60 — Pagamenti bambino', () => {
       await inserisciComunicazioneConVoci(adminDb!, bambino, MESE_MOD, VOCI_BASE);
       await page.setViewportSize({ width: 360, height: 740 });
 
-      const riga = await apriPagamentiBambino(page, bambino, MESE_MOD);
-      const finestra = await apriModificaImporti(page, riga, bambino, ETICHETTA_MESE_MOD);
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, MESE_MOD);
+      const finestra = await apriModificaImporti(page, gestione, bambino, ETICHETTA_MESE_MOD);
       const senzaScorrimentoOrizzontale = await finestra.evaluate((el) => el.scrollWidth <= el.clientWidth);
       expect(senzaScorrimentoOrizzontale).toBe(true);
       await expect(campoVoce(finestra, 'Credito/Debito')).toBeVisible();
@@ -788,23 +968,24 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(pulsanteSalvaModifica(finestra)).toBeInViewport();
     });
 
-    test('PAG-16: un mese comunicato ha la colonna "Pagamento" con le azioni di verifica', async ({
+    test('PAG-16: la finestra «Gestisci» ha la sezione "Bonifico" con le azioni di verifica', async ({
       page,
       bambino,
       adminDb,
     }) => {
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
 
-      await page.goto(urlBambino(bambino));
-      await expect(page.getByRole('columnheader', { name: 'Pagamento', exact: true })).toBeVisible();
-      const riga = rigaMese(page, `${ANNO_FISSO}-09`);
-      await expect(riga.getByText('Bonifico da verificare')).toBeVisible();
+      const { riga, finestra: gestione } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(gestione.getByRole('heading', { name: 'Bonifico', level: 3 })).toBeVisible();
+      await expect(gestione.getByText('Bonifico da verificare')).toBeVisible();
       page.once('dialog', (dialog) => dialog.accept());
-      await riga.getByRole('button', { name: 'Bonifico corretto' }).click();
-      await expect(riga.getByText('Bonifico ricevuto (importo corretto)', { exact: false })).toBeVisible({
+      await gestione.getByRole('button', { name: 'Bonifico corretto' }).click();
+      await expect(gestione.getByText('Bonifico ricevuto (importo corretto)', { exact: false })).toBeVisible({
         timeout: 20_000,
       });
-      await expect(riga.getByRole('button', { name: 'Annulla verifica' })).toBeVisible();
+      await expect(gestione.getByRole('button', { name: 'Annulla verifica' })).toBeVisible();
+      await expect(cellaStato(riga).getByText('Pagato', { exact: true })).toBeVisible();
+      await page.keyboard.press('Escape');
 
       // Un mese senza comunicazione non ha né stato né pulsanti del bonifico.
       const rigaVuota = rigaMese(page, `${ANNO_FISSO}-10`);
@@ -857,14 +1038,20 @@ test.describe('60 — Pagamenti bambino', () => {
         expect(misure.contenitoreScroll).toBeLessThanOrEqual(misure.contenitoreLarga);
         expect(misure.tabellaScroll).toBeLessThanOrEqual(misure.tabellaLarga);
 
-        // «Salva» della nota è interamente nella finestra, in ogni riga.
-        const salva = page.getByRole('button', { name: 'Salva', exact: true });
-        await expect(salva).toHaveCount(10);
+        // «Gestisci» è interamente nella finestra del browser, in ogni riga.
+        const gestisci = page.getByRole('button', { name: /^Gestisci/ });
+        await expect(gestisci).toHaveCount(10);
         for (let i = 0; i < 10; i++) {
-          const riquadro = await salva.nth(i).boundingBox();
+          const riquadro = await gestisci.nth(i).boundingBox();
           expect(riquadro).not.toBeNull();
           expect(riquadro!.x).toBeGreaterThanOrEqual(0);
           expect(riquadro!.x + riquadro!.width).toBeLessThanOrEqual(larghezza);
+        }
+        // Le righe restano basse anche con le note lunghe (circa quattro righe di testo).
+        for (const altezza of await page
+          .locator('tr[id^="mese-"]')
+          .evaluateAll((righe) => righe.map((r) => r.getBoundingClientRect().height))) {
+          expect(altezza).toBeLessThanOrEqual(100);
         }
         await nessunaViolazioneA11yGrave(page);
       });
@@ -881,10 +1068,9 @@ test.describe('60 — Pagamenti bambino', () => {
     test('PAG-17: un mese passato è sempre verificabile', async ({ page, bambino, adminDb }) => {
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-11`);
 
-      await page.goto(urlBambino(bambino));
-      const riga = rigaMese(page, `${ANNO_FISSO}-11`);
-      await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeEnabled();
-      await expect(riga.getByRole('button', { name: 'Importo diverso' })).toBeEnabled();
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-11`);
+      await expect(gestione.getByRole('button', { name: 'Bonifico corretto' })).toBeEnabled();
+      await expect(gestione.getByRole('button', { name: 'Importo diverso' })).toBeEnabled();
     });
 
     test('PAG-18: il link "Verifica" di "Rette" porta alla riga del mese', async ({ page, bambino, adminDb }) => {
@@ -896,23 +1082,27 @@ test.describe('60 — Pagamenti bambino', () => {
         .getByRole('link', { name: `Verifica il bonifico di ${bambino.nomeCompleto}` })
         .click();
       await page.waitForURL(new RegExp(`bambino=${bambino.id}&anno=${annoScolasticoDi(mese)}#mese-${mese}$`));
-      await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2 })).toBeVisible();
-      const riga = rigaMese(page, mese);
-      await expect(riga).toBeVisible();
-      await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2, exact: true })).toBeVisible();
+      await expect(rigaMese(page, mese)).toBeVisible();
+      // La finestra "Gestisci" di quel mese è già aperta, pronta per la verifica.
+      const gestione = finestraGestione(page, bambino, mese);
+      await expect(gestione).toBeVisible();
+      await expect(gestione.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
     });
 
     test('PAG-19: scrivere e salvare una nota per riga', async ({ page, bambino, adminDb }) => {
       const id = await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`);
 
-      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
-      await campoNota(riga).fill('Pagato in contanti alla segreteria');
-      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
-      await expect(riga.getByText('Nota salvata')).toBeVisible();
+      const { riga, finestra: gestione } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(gestione.getByRole('heading', { name: 'Nota', level: 3 })).toBeVisible();
+      await campoNota(gestione).fill('Pagato in contanti alla segreteria');
+      await clickEAttendiAzione(page, gestione.getByRole('button', { name: 'Salva', exact: true }));
+      await expect(gestione.getByText('Nota salvata')).toBeVisible();
+      await expect(cellaStato(riga).getByText('Nota', { exact: true })).toBeVisible();
 
       await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Pagato in contanti alla segreteria');
-      await page.reload();
-      await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveValue('Pagato in contanti alla segreteria');
+      const { finestra: dopo } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(dopo)).toHaveValue('Pagato in contanti alla segreteria');
 
       // Un mese senza comunicazione non ha il campo nota.
       await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-10`))).toHaveCount(0);
@@ -924,17 +1114,18 @@ test.describe('60 — Pagamenti bambino', () => {
         nota_pagamento: 'Prima versione',
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
-      await expect(campoNota(riga)).toHaveValue('Prima versione');
-      await campoNota(riga).fill('Seconda versione');
-      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      const { finestra: gestione } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(gestione)).toHaveValue('Prima versione');
+      await campoNota(gestione).fill('Seconda versione');
+      await clickEAttendiAzione(page, gestione.getByRole('button', { name: 'Salva', exact: true }));
       await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Seconda versione');
 
-      await campoNota(riga).fill('');
-      await clickEAttendiAzione(page, riga.getByRole('button', { name: 'Salva', exact: true }));
+      await campoNota(gestione).fill('');
+      await clickEAttendiAzione(page, gestione.getByRole('button', { name: 'Salva', exact: true }));
       await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBeNull();
-      await page.reload();
-      await expect(campoNota(rigaMese(page, `${ANNO_FISSO}-09`))).toHaveValue('');
+      const { riga, finestra: dopo } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
+      await expect(campoNota(dopo)).toHaveValue('');
+      await expect(cellaStato(riga).getByText('Nota', { exact: true })).toHaveCount(0);
     });
 
     test('PAG-21: la nota ha un limite di 500 caratteri', async ({ page, bambino, adminDb }) => {
@@ -942,7 +1133,7 @@ test.describe('60 — Pagamenti bambino', () => {
         nota_pagamento: 'Nota di partenza',
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      const { finestra: riga } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
       await expect(campoNota(riga)).toHaveAttribute('maxlength', '500');
       // Il campo non permette di scrivere oltre il limite.
       await campoNota(riga).fill('x'.repeat(500));
@@ -969,7 +1160,7 @@ test.describe('60 — Pagamenti bambino', () => {
         nota_pagamento: 'Nota privata della segreteria',
       });
 
-      const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
+      const { finestra: riga } = await apriGestioneMese(page, bambino, `${ANNO_FISSO}-09`);
       await marcaImportoDiverso(page, riga, bambino, '100', 'Nota del bonifico', meseSuccessivoRoma());
       await expect(campoNota(riga)).toHaveValue('Nota privata della segreteria');
       await expect.poll(() => leggiNotaPagamento(adminDb!, id)).toBe('Nota privata della segreteria');
@@ -981,6 +1172,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await expect(campoNota(riga)).toHaveValue('Nota privata della segreteria');
       // La nota del bonifico non si è mescolata con quella della riga.
       await expect(riga.getByText('Nota del bonifico')).toHaveCount(0);
+      await expect(campoNota(riga)).not.toHaveValue(/Nota del bonifico/);
     });
 
     test('la pagina con una nota e un bonifico è leggibile su telefono (360 px) + accessibilità', async ({
@@ -991,7 +1183,7 @@ test.describe('60 — Pagamenti bambino', () => {
       await inserisciComunicazioneDaVerificare(adminDb!, bambino, `${ANNO_FISSO}-09`, { nota_pagamento: 'Nota breve' });
       await page.setViewportSize({ width: 360, height: 740 });
       const riga = await apriPagamentiBambino(page, bambino, `${ANNO_FISSO}-09`);
-      await expect(campoNota(riga)).toHaveValue('Nota breve');
+      await expect(cellaStato(riga).getByText('Nota', { exact: true })).toBeAttached();
       await nessunaViolazioneA11yGrave(page);
     });
   });

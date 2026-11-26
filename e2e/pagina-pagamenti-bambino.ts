@@ -1,11 +1,16 @@
 // Helper e2e per "Pagamenti bambino" (specs/60 PAG-16..PAG-22) e per la verifica
 // del bonifico che vi si fa (specs/59; issue #417).
 //
-// Attesi dall'implementazione (nomi da rispettare):
-//   * ogni riga di mese è `tr#mese-AAAA-MM`;
-//   * colonna "Bonifico": stato (testo) e pulsanti "Bonifico corretto",
+// Attesi dall'implementazione (nomi da rispettare; issue #435, PAG-24..PAG-27):
+//   * ogni riga di mese è `tr#mese-AAAA-MM`; la cella "Stato" ha
+//     `data-testid="stato-pagamento"`; un mese comunicato ha il pulsante
+//     "Gestisci" (nome accessibile `Gestisci <mese anno>`);
+//   * "Gestisci" apre la finestra `Pagamento di <nome> <cognome>, <mese anno>`
+//     (scritta nel DOM dentro la riga) con le sezioni "Importi",
+//     "Comunicazione", "Bonifico" e "Nota", e il pulsante "Chiudi";
+//   * sezione "Bonifico": stato (testo) e pulsanti "Bonifico corretto",
 //     "Importo diverso", "Annulla verifica", finestra `Importo bonifico diverso per <nome> <cognome>`;
-//   * colonna "Nota": campo con nome `Nota per <nome> <cognome>, <mese anno>`,
+//   * sezione "Nota": campo con nome `Nota per <nome> <cognome>, <mese anno>`,
 //     pulsante "Salva", conferma "Nota salvata";
 //   * in "Rette" ogni riga inviata ha lo stato del bonifico in sola lettura e
 //     un link "Verifica il bonifico di <nome> <cognome>" (testo visibile "Verifica").
@@ -76,24 +81,77 @@ export function rigaMese(page: Page, mese: string): Locator {
   return page.locator(`tr#mese-${mese}`);
 }
 
-export function campoNota(riga: Locator): Locator {
-  return riga.getByRole('textbox', { name: /^Nota per / });
+export function campoNota(contenitore: Locator): Locator {
+  return contenitore.getByRole('textbox', { name: /^Nota per / });
+}
+
+// Cella "Stato" della riga di un mese (PAG-25).
+export function cellaStato(riga: Locator): Locator {
+  return riga.getByTestId('stato-pagamento');
+}
+
+const NOMI_MESI = [
+  'gennaio',
+  'febbraio',
+  'marzo',
+  'aprile',
+  'maggio',
+  'giugno',
+  'luglio',
+  'agosto',
+  'settembre',
+  'ottobre',
+  'novembre',
+  'dicembre',
+];
+
+// "2020-09" -> "settembre 2020".
+export function etichettaMese(mese: string): string {
+  const [anno, m] = mese.split('-').map(Number);
+  return `${NOMI_MESI[m - 1]} ${anno}`;
+}
+
+export function bottoneGestisci(riga: Locator): Locator {
+  return riga.getByRole('button', { name: /^Gestisci/ });
+}
+
+export function finestraGestione(page: Page, bambino: BambinoFixture, mese: string): Locator {
+  return page.getByRole('dialog', { name: `Pagamento di ${bambino.nomeCompleto}, ${etichettaMese(mese)}` });
+}
+
+// Apre la finestra "Gestisci" del mese dalla sua riga e la ritorna (PAG-26).
+export async function apriGestione(page: Page, riga: Locator, bambino: BambinoFixture, mese: string): Promise<Locator> {
+  await bottoneGestisci(riga).click();
+  const finestra = finestraGestione(page, bambino, mese);
+  await expect(finestra).toBeVisible();
+  return finestra;
+}
+
+// Apre la pagina sul mese e la sua finestra "Gestisci".
+export async function apriGestioneMese(
+  page: Page,
+  bambino: BambinoFixture,
+  mese: string
+): Promise<{ riga: Locator; finestra: Locator }> {
+  const riga = await apriPagamentiBambino(page, bambino, mese);
+  const finestra = await apriGestione(page, riga, bambino, mese);
+  return { riga, finestra };
 }
 
 export function finestraImportoDiverso(page: Page, bambino: BambinoFixture): Locator {
   return page.getByRole('dialog', { name: `Importo bonifico diverso per ${bambino.nomeCompleto}` });
 }
 
-// Marca il bonifico come "importo diverso" dalla riga del mese.
+// Marca il bonifico come "importo diverso" dalla finestra "Gestisci" del mese.
 export async function marcaImportoDiverso(
   page: Page,
-  riga: Locator,
+  gestione: Locator,
   bambino: BambinoFixture,
   importoRicevuto: string,
   nota: string,
   meseCompetenza?: string
 ): Promise<void> {
-  await riga.getByRole('button', { name: 'Importo diverso' }).click();
+  await gestione.getByRole('button', { name: 'Importo diverso' }).click();
   const popup = finestraImportoDiverso(page, bambino);
   await expect(popup).toBeVisible();
   await popup.getByLabel('Importo ricevuto (€)').fill(importoRicevuto);
@@ -101,13 +159,13 @@ export async function marcaImportoDiverso(
   // Per un mese passato il mese proposto sarebbe già trascorso: se ne sceglie uno valido.
   if (meseCompetenza) await popup.getByLabel('Mese su cui conteggiare la differenza').fill(meseCompetenza);
   await popup.getByRole('button', { name: 'Conferma' }).click();
-  await expect(riga.getByRole('button', { name: 'Annulla verifica' })).toBeVisible({ timeout: 20_000 });
+  await expect(gestione.getByRole('button', { name: 'Annulla verifica' })).toBeVisible({ timeout: 20_000 });
 }
 
 // --- "Modifica importi" (specs/60 PAG-02..PAG-15; issue #421) -----------------
 //
 // Attesi dall'implementazione (nomi da rispettare):
-//   * nella colonna "Inviata" di ogni mese comunicato: pulsante "Modifica importi"
+//   * nella finestra "Gestisci" di ogni mese comunicato: pulsante "Modifica importi"
 //     (disattivato col bonifico verificato, con la spiegazione accanto), "Storico
 //     modifiche" (solo se il mese è stato modificato) e, se modificato,
 //     "Modificata il … da …" e "Totale della mail: X €";
@@ -213,8 +271,8 @@ export async function modificaViaFunzione(
   if (error) throw new Error(`Modifica via funzione non riuscita: ${error.message}`);
 }
 
-export function bottoneModificaImporti(riga: Locator): Locator {
-  return riga.getByRole('button', { name: 'Modifica importi' });
+export function bottoneModificaImporti(gestione: Locator): Locator {
+  return gestione.getByRole('button', { name: 'Modifica importi' });
 }
 
 export function finestraModificaImporti(page: Page, bambino: BambinoFixture, meseEtichetta: string): Locator {
@@ -233,14 +291,14 @@ export function pulsanteSalvaModifica(finestra: Locator): Locator {
   return finestra.getByRole('button', { name: 'Salva', exact: true });
 }
 
-// Apre la finestra "Modifica importi" della riga del mese e la ritorna.
+// Apre la finestra "Modifica importi" dalla finestra "Gestisci" del mese e la ritorna.
 export async function apriModificaImporti(
   page: Page,
-  riga: Locator,
+  gestione: Locator,
   bambino: BambinoFixture,
   meseEtichetta: string
 ): Promise<Locator> {
-  await bottoneModificaImporti(riga).click();
+  await bottoneModificaImporti(gestione).click();
   const finestra = finestraModificaImporti(page, bambino, meseEtichetta);
   await expect(finestra).toBeVisible();
   return finestra;

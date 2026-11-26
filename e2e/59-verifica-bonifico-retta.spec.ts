@@ -1,7 +1,8 @@
 // Requisito: specs/59 - verifica-bonifico-retta.md
 //
-// La verifica del bonifico si fa in "Pagamenti bambino" (issue #417); in "Rette"
-// resta lo stato in sola lettura con il link "Verifica". Ogni test usa il suo
+// La verifica del bonifico si fa in "Pagamenti bambino" (issue #417), nella
+// finestra "Gestisci" del mese (issue #435); in "Rette" resta lo stato in sola
+// lettura con il link "Verifica". Ogni test usa il suo
 // bambino fixture (e2e/fixture-bambino.ts) e inserisce direttamente nel DB di
 // test la comunicazione già inviata (login admin con la chiave anon, RLS come
 // l'app): niente email, quindi nessun test si salta per Resend. La comunicazione
@@ -12,7 +13,8 @@ import { test, expect, type BambinoFixture } from './fixture-bambino';
 import { hasCredenziali, nessunaViolazioneA11yGrave, statoAutenticazione, verificaFocusTrattenuto } from './helpers';
 import { meseCorrenteRoma, rigaRette } from './pagina-gettoni-retta';
 import {
-  apriPagamentiBambino,
+  apriGestioneMese,
+  finestraGestione,
   finestraImportoDiverso,
   inserisciComunicazioneDaVerificare,
   marcaImportoDiverso,
@@ -29,7 +31,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
   test('una comunicazione appena inviata è in attesa di verifica + accessibilità', async ({ page, bambino, adminDb }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE);
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
 
     await expect(riga.getByText('Bonifico da verificare')).toBeVisible();
     await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeVisible();
@@ -58,12 +60,14 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
     await riga.getByRole('link', { name: `Verifica il bonifico di ${bambino.nomeCompleto}` }).click();
     await page.waitForURL(new RegExp(`${bambino.id}.*#mese-${MESE}`));
-    await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: bambino.nomeCompleto, level: 2, exact: true })).toBeVisible();
+    // La finestra "Gestisci" del mese è già aperta.
+    await expect(finestraGestione(page, bambino, MESE).getByText('Bonifico da verificare')).toBeVisible();
   });
 
   test('marcare un bonifico come corretto', async ({ page, bambino, adminDb }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE, { retta_mensile: 120 });
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     page.once('dialog', (dialog) => dialog.accept());
     await riga.getByRole('button', { name: 'Bonifico corretto' }).click();
 
@@ -79,7 +83,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
   test('marcare un bonifico con importo diverso genera un credito/debito', async ({ page, bambino, adminDb }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE, { retta_mensile: 130, totale: 132 });
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     await marcaImportoDiverso(page, riga, bambino, '100', 'Bonifico incompleto, il resto arriverà il mese prossimo');
 
     await expect(riga.getByText('Bonifico ricevuto (importo diverso)', { exact: false })).toBeVisible();
@@ -95,7 +99,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
 
   test('la nota è obbligatoria per un importo diverso', async ({ page, bambino, adminDb }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE);
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     await riga.getByRole('button', { name: 'Importo diverso' }).click();
 
     const popup = finestraImportoDiverso(page, bambino);
@@ -111,7 +115,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   // trattenuto e focus restituito sulla finestra "Importo diverso".
   async function apriImportoDiverso(page: Page, bambino: BambinoFixture, adminDb: SupabaseClient) {
     await inserisciComunicazioneDaVerificare(adminDb, bambino, MESE);
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     const apri = riga.getByRole('button', { name: 'Importo diverso' });
     await apri.click();
     const popup = finestraImportoDiverso(page, bambino);
@@ -123,6 +127,8 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     const { riga, popup } = await apriImportoDiverso(page, bambino, adminDb!);
     await page.keyboard.press('Escape');
     await expect(popup).toHaveCount(0);
+    // Si chiude solo "Importo diverso": "Gestisci" resta aperta.
+    await expect(riga).toBeVisible();
     await expect(riga.getByText('Bonifico da verificare')).toBeVisible();
   });
 
@@ -150,7 +156,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     adminDb,
   }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE);
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     page.once('dialog', (dialog) => dialog.accept());
     await riga.getByRole('button', { name: 'Bonifico corretto' }).click();
     await expect(riga.getByText('Bonifico ricevuto (importo corretto)', { exact: false })).toBeVisible({
@@ -175,7 +181,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     adminDb,
   }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE);
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     page.once('dialog', (dialog) => dialog.accept());
     await riga.getByRole('button', { name: 'Bonifico corretto' }).click();
     await expect(riga.getByRole('button', { name: 'Annulla verifica' })).toBeVisible({ timeout: 20_000 });
@@ -195,7 +201,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     adminDb,
   }) => {
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, MESE, { retta_mensile: 170 });
-    const riga = await apriPagamentiBambino(page, bambino, MESE);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, MESE);
     await marcaImportoDiverso(page, riga, bambino, '150', 'Bonifico incompleto E2E annullo');
 
     page.once('dialog', (dialog) => dialog.accept());
@@ -212,7 +218,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
   test('verificare il bonifico anche su un mese passato', async ({ page, bambino, adminDb }) => {
     const mesePassato = '2019-11';
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, mesePassato);
-    const riga = await apriPagamentiBambino(page, bambino, mesePassato);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, mesePassato);
 
     await expect(riga.getByRole('button', { name: 'Bonifico corretto' })).toBeEnabled();
     await expect(riga.getByRole('button', { name: 'Importo diverso' })).toBeEnabled();
@@ -231,7 +237,7 @@ test.describe('59 — Verifica del bonifico di una retta', () => {
     const mese = '2019-11';
     await inserisciComunicazioneDaVerificare(adminDb!, bambino, mese);
     await page.setViewportSize({ width: 360, height: 740 });
-    const riga = await apriPagamentiBambino(page, bambino, mese);
+    const { finestra: riga } = await apriGestioneMese(page, bambino, mese);
     await nessunaViolazioneA11yGrave(page);
 
     await riga.getByRole('button', { name: 'Importo diverso' }).click();
