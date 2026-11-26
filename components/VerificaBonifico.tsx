@@ -10,8 +10,8 @@ import { Pulsante } from './ui/pulsante';
 import { StatoBonifico } from './StatoBonifico';
 import { formattaImporto } from '@/lib/comunicazioneRetta';
 
-// Verifica del bonifico di una comunicazione già inviata, nella colonna
-// "Bonifico" di "Pagamenti bambino" (specs/59, specs/60) (specs/59 -
+// Verifica del bonifico di una comunicazione già inviata, nella sezione
+// "Bonifico" della finestra "Gestisci" di "Pagamenti bambino" (specs/59, specs/60) (specs/59 -
 // verifica-bonifico-retta.md): due azioni ("Bonifico corretto"/
 // "Importo diverso") finché è "da verificare"; una volta marcato, uno
 // stato di sola lettura con un pulsante "Annulla verifica" per tornare

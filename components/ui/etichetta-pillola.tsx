@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 // (`rounded-full px-2 py-0.5 text-xs font-semibold`), cambia solo il tono.
 //
 // - `tono="neutro"`: indicatore non legato a un esito (token `neutral`).
+// - `successo`, `attenzione`: esito positivo o da guardare (token `success` e
+//   `warning`), es. lo stato del bonifico in "Pagamenti bambino" (specs/60).
 // - `assente`, `malattia`, `inconsistenza`: tinte di oggi (`stone`, `rose`,
 //   `orange`), fuori dai token di proposito: la issue #350 ha portato i
 //   pulsanti di stato su `pulsante-stato.tsx` senza cambiarne i colori e ha
@@ -17,6 +19,8 @@ const etichettaPillolaVariants = cva('rounded-full px-2 py-0.5 text-xs font-semi
   variants: {
     tono: {
       neutro: 'bg-neutral-soft text-neutral-text',
+      successo: 'bg-success-soft text-success-text',
+      attenzione: 'bg-warning-soft text-warning-text',
       assente: 'bg-stone-200 text-stone-800',
       malattia: 'bg-rose-100 text-rose-800',
       inconsistenza: 'bg-orange-100 text-orange-800',

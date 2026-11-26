@@ -13,6 +13,7 @@ import {
   type RiepilogoRetta,
 } from '@/lib/comunicazioneRetta';
 import { emailsDaCampo } from '@/lib/costiBambino';
+import { annullaInvioPossibile } from '@/lib/pagamentiBambino';
 import { meseDaData, mesePrecedente, oggi, formattaMeseItaliano, primoGiornoMese, ultimoGiornoMese } from '@/lib/date';
 import { destinatarioNotifiche, inviaEmail } from '@/lib/email';
 import { pastiEffettiviPerBambino } from '@/lib/retteDati';
@@ -458,6 +459,10 @@ export async function inviaComunicazioneRettaSingola(bambinoId: string, inviaMai
 // credito/debito": un eventuale credito/debito applicato a questa
 // comunicazione (stesso bambino, stesso mese di competenza) torna "da
 // conteggiare" — no-op sicuro se non ce n'era nessuno.
+//
+// La usa anche la finestra "Gestisci" di "Pagamenti bambino" (specs/60,
+// PAG-27): stesse condizioni (`annullaInvioPossibile`: mese corrente e bonifico
+// da verificare), ricontrollate qui, e aggiornamento di entrambe le pagine.
 export async function annullaComunicazioneRetta(bambinoId: string, mese: string, _formData: FormData) {
   const { supabase } = await requireAdmin();
 
@@ -467,7 +472,7 @@ export async function annullaComunicazioneRetta(bambinoId: string, mese: string,
     .eq('bambino_id', bambinoId)
     .eq('mese', mese)
     .maybeSingle();
-  if (!comunicazione || comunicazione.bonifico_stato !== 'in_attesa') return;
+  if (!comunicazione || !annullaInvioPossibile(mese, meseDaData(oggi()), comunicazione.bonifico_stato).possibile) return;
 
   await supabase.from('comunicazioni_retta').delete().eq('id', comunicazione.id);
   await supabase
@@ -478,4 +483,5 @@ export async function annullaComunicazioneRetta(bambinoId: string, mese: string,
     .not('applicato_il', 'is', null);
 
   revalidatePath('/admin/rette');
+  revalidatePath('/admin/pagamenti-bambino');
 }

@@ -20,7 +20,7 @@ import {
   type NoteVoci,
 } from '@/lib/modificaImporti';
 
-// "Modifica importi" di un mese già comunicato, nella colonna "Inviata" di
+// "Modifica importi" di un mese già comunicato, nella finestra "Gestisci" di
 // "Pagamenti bambino" (specs/60, PAG-02..PAG-10, PAG-15; issue #421): un
 // pulsante che apre una finestra con tutte le voci, il motivo obbligatorio e il
 // totale che si aggiorna mentre si scrive. Il totale mostrato è solo

@@ -139,3 +139,54 @@ export function normalizzaNotaPagamento(testo: string | null | undefined): Esito
 export function hrefVerificaBonifico(bambinoId: string, mese: string): string {
   return `/admin/pagamenti-bambino?bambino=${encodeURIComponent(bambinoId)}&anno=${annoScolasticoDelMese(mese)}#mese-${mese}`;
 }
+
+// --- Stato del pagamento per riga e "Annulla invio" (specs/60, PAG-25, PAG-27; issue #435) ---
+
+export type StatoBonificoRetta = 'in_attesa' | 'corretto' | 'importo_errato';
+
+export type StatoPagamento = {
+  // Comunicazione: data d'invio o, se gli importi sono stati corretti, quella dell'ultima modifica.
+  comunicazione: { testo: 'Inviata il' | 'Modificata il'; istante: string };
+  bonifico: {
+    etichetta: 'Da verificare' | 'Pagato' | 'Pagato, importo diverso';
+    tono: 'neutro' | 'successo' | 'attenzione';
+  };
+  // C'è una nota privata (con del testo).
+  conNota: boolean;
+};
+
+const BONIFICO_IN_BREVE: Record<StatoBonificoRetta, StatoPagamento['bonifico']> = {
+  in_attesa: { etichetta: 'Da verificare', tono: 'neutro' },
+  corretto: { etichetta: 'Pagato', tono: 'successo' },
+  importo_errato: { etichetta: 'Pagato, importo diverso', tono: 'attenzione' },
+};
+
+// Riassunto della colonna "Stato" di un mese comunicato.
+export function statoPagamento(c: {
+  inviata_il: string;
+  modificata_il: string | null;
+  bonifico_stato: StatoBonificoRetta;
+  nota_pagamento: string | null;
+}): StatoPagamento {
+  return {
+    comunicazione: c.modificata_il
+      ? { testo: 'Modificata il', istante: c.modificata_il }
+      : { testo: 'Inviata il', istante: c.inviata_il },
+    bonifico: BONIFICO_IN_BREVE[c.bonifico_stato],
+    conNota: (c.nota_pagamento ?? '').trim() !== '',
+  };
+}
+
+// "Annulla invio" (specs/56, specs/60 PAG-27): solo per il mese corrente e con
+// il bonifico ancora da verificare. Vale per la pagina e per il server.
+export function annullaInvioPossibile(
+  mese: string,
+  meseCorrente: string,
+  bonificoStato: StatoBonificoRetta
+): { possibile: true } | { possibile: false; motivo: string } {
+  if (mese !== meseCorrente) return { possibile: false, motivo: "L'invio si annulla solo nel mese corrente." };
+  if (bonificoStato !== 'in_attesa') {
+    return { possibile: false, motivo: "Il bonifico è già verificato: l'invio non si può più annullare." };
+  }
+  return { possibile: true };
+}

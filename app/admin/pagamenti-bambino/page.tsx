@@ -1,10 +1,15 @@
 import Link from 'next/link';
+import { Fragment, type ReactNode } from 'react';
 import { NavHeader } from '@/components/NavHeader';
+import { AnnullaInvioRetta } from '@/components/AnnullaInvioRetta';
+import { GestionePagamento } from '@/components/GestionePagamento';
+import { IconaNota } from '@/components/icone';
 import { ModificaImporti } from '@/components/ModificaImporti';
 import { NotaPagamento } from '@/components/NotaPagamento';
 import { StoricoModifiche } from '@/components/StoricoModifiche';
 import { VerificaBonifico } from '@/components/VerificaBonifico';
 import { Etichetta } from '@/components/ui/etichetta';
+import { EtichettaPillola } from '@/components/ui/etichetta-pillola';
 import { Pulsante } from '@/components/ui/pulsante';
 import { Selezione } from '@/components/ui/selezione';
 import { StatoVuoto } from '@/components/ui/stato-vuoto';
@@ -15,13 +20,16 @@ import { formattaDataOraItaliana, formattaMeseItaliano, meseDaData, meseSuccessi
 import {
   annoScolasticoDelMese,
   annoScolasticoRichiesto,
+  annullaInvioPossibile,
   ETICHETTE_VOCI,
   etichettaAnnoScolastico,
   mesiAnnoScolastico,
+  statoPagamento,
   totaleRichiesto,
   vociComunicazione,
 } from '@/lib/pagamentiBambino';
 import { valoriDaComunicazione, type ModificaStorico } from '@/lib/modificaImporti';
+import { annullaComunicazioneRetta } from '@/app/admin/rette/actions';
 import {
   marcaBonificoCorretto,
   marcaBonificoImportoErrato,
@@ -32,31 +40,44 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-// Data e ora di un istante su due righe ("gg/mm/aaaa" e "hh:mm"): il formato
-// base le separa con "_", pensato per i log.
+// Data e ora di un istante ("gg/mm/aaaa" e "hh:mm"): il formato base le
+// separa con "_", pensato per i log.
 function dataEOra(istante: string): { data: string; ora: string } {
   const [data, ora] = formattaDataOraItaliana(istante).split('_');
   return { data, ora };
 }
 
-// Larghezze delle colonne delle voci (predefinita: w-16); le tre con note o con
-// intestazioni lunghe sono un po' più larghe.
+// Larghezze delle colonne delle voci (predefinita: w-[4.25rem]); le tre con
+// note o con intestazioni lunghe sono un po' più larghe. "Stato" prende lo
+// spazio che resta.
 const LARGHEZZE_COLONNE: Record<string, string> = {
-  'Conguaglio pasti': 'w-[4.5rem]',
-  'Costi extra': 'w-[5.5rem]',
-  'Credito/Debito': 'w-[5.5rem]',
+  'Conguaglio pasti': 'w-[4.75rem]',
+  'Costi extra': 'w-[5rem]',
+  'Credito/Debito': 'w-[5rem]',
 };
 
 const COLONNE_COMUNICAZIONE =
   'id, mese, retta_mensile, marca_da_bollo, costo_pasti, conguaglio_pasti, costo_pre_asilo, costo_post_asilo, gettoni_pre_asilo, numero_gettoni_pre_asilo, gettoni_post_asilo, numero_gettoni_post_asilo, costi_extra, note_costi_extra, credito_debito, nota_credito_debito, totale, inviata_il, bonifico_stato, bonifico_importo_ricevuto, bonifico_nota, bonifico_verificato_da_nome, bonifico_verificato_il, nota_pagamento, modificata_il, modificata_da_nome, totale_mail';
+
+// Una sezione della finestra "Gestisci", con il suo titolo.
+function Sezione({ titolo, children }: { titolo: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2 border-t border-stone-200 pt-3">
+      <h3 className="text-sm font-semibold text-stone-900">{titolo}</h3>
+      {children}
+    </section>
+  );
+}
 
 // specs/60 - pagamenti-bambino.md: vista riservata all'admin degli importi
 // richiesti a un bambino mese per mese lungo un anno scolastico
 // (settembre-giugno). Gli importi sono quelli registrati nella comunicazione
 // retta (`comunicazioni_retta`, specs/56), cioè esattamente quelli della mail:
 // nessun ricalcolo; si cambiano solo con "Modifica importi" (#421, con storico).
-// Per ogni mese comunicato si verifica il bonifico (specs/59) e si scrive una
-// nota privata (PAG-16..22).
+// La tabella è solo da consultare: voci, totale e uno "Stato" per riga
+// (PAG-25). Tutte le azioni del mese (importi, annullo dell'invio, verifica del
+// bonifico di specs/59, nota privata) stanno nella finestra "Gestisci"
+// (PAG-24, PAG-26, PAG-27; issue #435).
 // Letture e scritture con la sessione dell'admin (RLS), nessuna chiave di
 // servizio.
 export default async function PagamentiBambinoPage(
@@ -121,9 +142,9 @@ export default async function PagamentiBambinoPage(
         <div>
           <h1 className="text-lg font-medium">Pagamenti bambino</h1>
           <p className="mt-1 text-sm text-stone-600">
-            Importo richiesto mese per mese, scomposto nelle voci che lo compongono: è quello comunicato ai
-            genitori con la mail delle rette (correggibile con «Modifica importi»). Per ogni mese comunicato puoi verificare il
-            bonifico e scrivere una nota solo per te.
+            Importo richiesto mese per mese, scomposto nelle voci che lo compongono: è quello comunicato ai genitori
+            con la mail delle rette. Lo «Stato» riassume invio e bonifico; con «Gestisci» correggi gli importi,
+            verifichi il bonifico, annulli l&apos;invio del mese corrente e scrivi una nota solo per te.
           </p>
         </div>
 
@@ -181,13 +202,13 @@ export default async function PagamentiBambinoPage(
                   scorre dentro il suo riquadro (min-w). */}
               <Tabella separatori className="min-w-[70rem] table-fixed">
                 <colgroup>
-                  <col className="w-20" />
+                  <col className="w-[5.5rem]" />
                   {ETICHETTE_VOCI.map((etichetta) => (
-                    <col key={etichetta} className={LARGHEZZE_COLONNE[etichetta] ?? "w-16"} />
+                    <col key={etichetta} className={LARGHEZZE_COLONNE[etichetta] ?? 'w-[4.25rem]'} />
                   ))}
-                  <col className="w-[5.25rem]" />
-                  <col className="w-[6.5rem]" />
+                  <col className="w-[5.5rem]" />
                   <col />
+                  <col className="w-[6rem]" />
                 </colgroup>
                 <caption className="sr-only">
                   Importi richiesti a {bambino.nome} {bambino.cognome}, anno scolastico {etichettaAnnoScolastico(anno)}
@@ -203,23 +224,39 @@ export default async function PagamentiBambinoPage(
                         scope="col"
                         className="break-words px-1 py-1.5 align-bottom text-xs font-medium leading-tight text-stone-700"
                       >
-                        {etichetta}
+                        {/* "Credito/Debito" va a capo dopo la barra, non a metà parola. */}
+                        {etichetta.split('/').map((parte, i) => (
+                          <Fragment key={parte}>
+                            {i > 0 && (
+                              <>
+                                /<wbr />
+                              </>
+                            )}
+                            {parte}
+                          </Fragment>
+                        ))}
                       </TabellaTitolo>
                     ))}
                     <TabellaTitolo allinea="destra" scope="col" className="px-1.5 py-1.5 align-bottom text-sm font-semibold text-stone-900">
                       Totale
                     </TabellaTitolo>
-                    <TabellaTitolo allinea="sinistra" scope="col" className="px-1.5 py-1.5 align-bottom font-medium text-stone-700">
-                      Inviata
+                    <TabellaTitolo allinea="sinistra" scope="col" className="px-2 py-1.5 align-bottom font-medium text-stone-700">
+                      Stato
                     </TabellaTitolo>
                     <TabellaTitolo allinea="sinistra" scope="col" className="px-1.5 py-1.5 align-bottom font-medium text-stone-700">
-                      Pagamento
+                      Azioni
                     </TabellaTitolo>
                   </TabellaRiga>
                 </TabellaIntestazione>
                 <TabellaCorpo separatori>
                   {mesi.map((mese) => {
                     const comunicazione = comunicazionePerMese.get(mese);
+                    const meseEtichetta = formattaMeseItaliano(mese);
+                    const bambinoNome = `${bambino.nome} ${bambino.cognome}`;
+                    const stato = comunicazione ? statoPagamento(comunicazione) : null;
+                    const annullo = comunicazione
+                      ? annullaInvioPossibile(mese, meseCorrente, comunicazione.bonifico_stato)
+                      : null;
                     return (
                       <TabellaRiga
                         key={mese}
@@ -227,9 +264,9 @@ export default async function PagamentiBambinoPage(
                         className={comunicazione ? 'scroll-mt-4 bg-emerald-50/40' : 'scroll-mt-4'}
                       >
                         <TabellaTitolo allinea="sinistra" scope="row" className="px-1.5 py-2 align-top font-normal capitalize">
-                          {formattaMeseItaliano(mese)}
+                          {meseEtichetta}
                         </TabellaTitolo>
-                        {comunicazione ? (
+                        {comunicazione && stato && annullo ? (
                           <>
                             {vociComunicazione(comunicazione).map((voce) => (
                               <TabellaCella
@@ -250,70 +287,124 @@ export default async function PagamentiBambinoPage(
                                 {voce.numeroGettoni !== undefined && (
                                   <div className="whitespace-nowrap text-stone-500">{voce.numeroGettoni} gettoni</div>
                                 )}
-                                {voce.nota && <div className="mt-0.5 hyphens-auto break-words text-left text-stone-500">{voce.nota}</div>}
+                                {/* Note al massimo su due righe: il testo intero passandoci sopra e in
+                                    "Modifica importi" (PAG-23). */}
+                                {voce.nota && (
+                                  <div
+                                    title={voce.nota}
+                                    className="mt-0.5 line-clamp-2 hyphens-auto break-words text-left text-stone-500"
+                                  >
+                                    {voce.nota}
+                                  </div>
+                                )}
                               </TabellaCella>
                             ))}
                             <TabellaCella allinea="destra" className="whitespace-nowrap px-1.5 py-2 align-top text-sm font-bold tabular-nums text-stone-900">
                               {formattaImporto(Number(comunicazione.totale))} €
                             </TabellaCella>
-                            <TabellaCella allinea="sinistra" className="px-1.5 py-2 align-top text-xs text-emerald-800">
-                              <div>
-                                Inviata il {dataEOra(comunicazione.inviata_il).data}
-                                <span className="block">alle {dataEOra(comunicazione.inviata_il).ora}</span>
-                              </div>
-                              {comunicazione.modificata_il && (
-                                <>
-                                  <div className="mt-1 text-amber-800">
-                                    Modificata il {dataEOra(comunicazione.modificata_il).data}
-                                    <span className="block">
-                                      alle {dataEOra(comunicazione.modificata_il).ora} da {comunicazione.modificata_da_nome}
-                                    </span>
-                                  </div>
-                                  <div className="mt-1 text-stone-600">
-                                    Totale della mail: {formattaImporto(Number(comunicazione.totale_mail))} €
-                                  </div>
-                                </>
-                              )}
-                              <ModificaImporti
-                                bambinoNome={`${bambino.nome} ${bambino.cognome}`}
-                                meseEtichetta={formattaMeseItaliano(mese)}
-                                attuali={valoriDaComunicazione(comunicazione)}
-                                gettoni={{
-                                  pre: comunicazione.numero_gettoni_pre_asilo ?? 0,
-                                  post: comunicazione.numero_gettoni_post_asilo ?? 0,
-                                }}
-                                bloccata={comunicazione.bonifico_stato !== 'in_attesa'}
-                                salva={modificaImportiComunicazione.bind(null, comunicazione.id)}
-                              />
-                              <StoricoModifiche modifiche={storicoPerComunicazione.get(comunicazione.id) ?? []} />
-                            </TabellaCella>
-                            <TabellaCella allinea="sinistra" className="px-1.5 py-2 align-top text-xs">
-                              <VerificaBonifico
-                                bambinoId={bambino.id}
-                                bambinoNome={`${bambino.nome} ${bambino.cognome}`}
-                                totale={Number(comunicazione.totale)}
-                                stato={comunicazione.bonifico_stato}
-                                importoRicevuto={
-                                  comunicazione.bonifico_importo_ricevuto !== null
-                                    ? Number(comunicazione.bonifico_importo_ricevuto)
-                                    : null
+                            <TabellaCella
+                              allinea="sinistra"
+                              data-testid="stato-pagamento"
+                              className="px-2 py-2 align-top text-xs"
+                            >
+                              <div
+                                className={
+                                  stato.comunicazione.testo === 'Modificata il' ? 'text-amber-800' : 'text-emerald-800'
                                 }
-                                nota={comunicazione.bonifico_nota}
-                                verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
-                                verificatoIl={comunicazione.bonifico_verificato_il}
-                                meseSuggerito={meseSuccessivo(mese)}
-                                meseMinimo={meseCorrente}
-                                marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
-                                marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
-                                resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
-                              />
-                              <div className="mt-2 border-t border-stone-200 pt-2">
-                                <NotaPagamento
-                                  notaIniziale={comunicazione.nota_pagamento}
-                                  nomeCampo={`Nota per ${bambino.nome} ${bambino.cognome}, ${formattaMeseItaliano(mese)}`}
-                                  salva={salvaNotaPagamento.bind(null, comunicazione.id)}
-                                />
+                              >
+                                {stato.comunicazione.testo} {dataEOra(stato.comunicazione.istante).data}
                               </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-1">
+                                <EtichettaPillola tono={stato.bonifico.tono}>{stato.bonifico.etichetta}</EtichettaPillola>
+                                {stato.conNota && (
+                                  <EtichettaPillola tono="neutro" className="inline-flex items-center gap-1">
+                                    <IconaNota className="h-3 w-3" />
+                                    Nota
+                                  </EtichettaPillola>
+                                )}
+                              </div>
+                            </TabellaCella>
+                            <TabellaCella allinea="sinistra" className="px-1.5 py-2 align-top">
+                              <GestionePagamento mese={mese} meseEtichetta={meseEtichetta} bambinoNome={bambinoNome}>
+                                <div className="space-y-0.5">
+                                  <p className="font-semibold text-stone-900">
+                                    Totale del mese: {formattaImporto(Number(comunicazione.totale))} €
+                                  </p>
+                                  <p className="text-xs text-emerald-800">
+                                    Inviata il {dataEOra(comunicazione.inviata_il).data} alle{' '}
+                                    {dataEOra(comunicazione.inviata_il).ora}
+                                  </p>
+                                  {comunicazione.modificata_il && (
+                                    <>
+                                      <p className="text-xs text-amber-800">
+                                        Modificata il {dataEOra(comunicazione.modificata_il).data} alle{' '}
+                                        {dataEOra(comunicazione.modificata_il).ora} da {comunicazione.modificata_da_nome}
+                                      </p>
+                                      <p className="text-xs text-stone-600">
+                                        Totale della mail: {formattaImporto(Number(comunicazione.totale_mail))} €
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+
+                                <Sezione titolo="Importi">
+                                  <ModificaImporti
+                                    bambinoNome={bambinoNome}
+                                    meseEtichetta={meseEtichetta}
+                                    attuali={valoriDaComunicazione(comunicazione)}
+                                    gettoni={{
+                                      pre: comunicazione.numero_gettoni_pre_asilo ?? 0,
+                                      post: comunicazione.numero_gettoni_post_asilo ?? 0,
+                                    }}
+                                    bloccata={comunicazione.bonifico_stato !== 'in_attesa'}
+                                    salva={modificaImportiComunicazione.bind(null, comunicazione.id)}
+                                  />
+                                  <StoricoModifiche modifiche={storicoPerComunicazione.get(comunicazione.id) ?? []} />
+                                </Sezione>
+
+                                <Sezione titolo="Comunicazione">
+                                  {annullo.possibile ? (
+                                    <AnnullaInvioRetta
+                                      descrizione={`${bambinoNome}, ${meseEtichetta}`}
+                                      annulla={annullaComunicazioneRetta.bind(null, bambino.id, mese)}
+                                    />
+                                  ) : (
+                                    <p className="text-xs text-stone-600">{annullo.motivo}</p>
+                                  )}
+                                </Sezione>
+
+                                <Sezione titolo="Bonifico">
+                                  <div className="text-xs">
+                                    <VerificaBonifico
+                                      bambinoId={bambino.id}
+                                      bambinoNome={bambinoNome}
+                                      totale={Number(comunicazione.totale)}
+                                      stato={comunicazione.bonifico_stato}
+                                      importoRicevuto={
+                                        comunicazione.bonifico_importo_ricevuto !== null
+                                          ? Number(comunicazione.bonifico_importo_ricevuto)
+                                          : null
+                                      }
+                                      nota={comunicazione.bonifico_nota}
+                                      verificatoDaNome={comunicazione.bonifico_verificato_da_nome}
+                                      verificatoIl={comunicazione.bonifico_verificato_il}
+                                      meseSuggerito={meseSuccessivo(mese)}
+                                      meseMinimo={meseCorrente}
+                                      marcaCorretto={marcaBonificoCorretto.bind(null, comunicazione.id)}
+                                      marcaImportoErrato={marcaBonificoImportoErrato.bind(null, comunicazione.id, bambino.id)}
+                                      resettaVerifica={resettaVerificaBonifico.bind(null, comunicazione.id)}
+                                    />
+                                  </div>
+                                </Sezione>
+
+                                <Sezione titolo="Nota">
+                                  <NotaPagamento
+                                    notaIniziale={comunicazione.nota_pagamento}
+                                    nomeCampo={`Nota per ${bambinoNome}, ${meseEtichetta}`}
+                                    salva={salvaNotaPagamento.bind(null, comunicazione.id)}
+                                  />
+                                </Sezione>
+                              </GestionePagamento>
                             </TabellaCella>
                           </>
                         ) : (

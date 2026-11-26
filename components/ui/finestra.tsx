@@ -125,7 +125,11 @@ export function Finestra({
       aria-label={nome}
       aria-labelledby={nome ? undefined : idTitolo}
       aria-describedby={descrizione ? idDescrizione : undefined}
-      onClose={() => {
+      onClose={(evento) => {
+        // React fa risalire l'evento `close` di una finestra aperta dentro
+        // questa (es. "Modifica importi" dentro "Gestisci", specs/60): si
+        // chiude solo quella.
+        if (evento.target !== evento.currentTarget) return;
         ripristinaFocus();
         onChiudi?.();
       }}
