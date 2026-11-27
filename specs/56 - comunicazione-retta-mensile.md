@@ -735,7 +735,10 @@ Allora vengo reindirizzato alla dashboard
   comunicazione è ancora "da verificare" (specs/59): una volta marcato
   (corretto o con importo diverso), annullare l'invio cancellerebbe
   anche la registrazione di un pagamento reale già avvenuto, quindi il
-  pulsante sparisce. In "Rette" lo stato del bonifico è solo in lettura,
+  pulsante sparisce. Lo stesso "Annulla invio", con le stesse condizioni
+  (mese corrente e bonifico "da verificare", ricontrollate dal server), c'è
+  anche nella finestra "Gestisci" di "Pagamenti bambino" (specs/60, PAG-27).
+  In "Rette" lo stato del bonifico è solo in lettura,
   con un link "Verifica" alla riga giusta di "Pagamenti bambino" (specs/59,
   specs/60), dove si verifica o si annulla la verifica.
 - Il template della mail (`impostazioni_email_retta`, riga singola —

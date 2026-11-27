@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   annoScolasticoDelMese,
   annoScolasticoRichiesto,
+  annullaInvioPossibile,
   etichettaAnnoScolastico,
   mesiAnnoScolastico,
   NOTA_PAGAMENTO_MAX,
   normalizzaNotaPagamento,
   hrefVerificaBonifico,
+  statoPagamento,
   totaleRichiesto,
   vociComunicazione,
   type ComunicazioneImporti,
@@ -154,5 +156,65 @@ describe('hrefVerificaBonifico', () => {
   it('apre il bambino, sull\'anno scolastico del mese, ancorato alla riga del mese', () => {
     expect(hrefVerificaBonifico('b-1', '2026-10')).toBe('/admin/pagamenti-bambino?bambino=b-1&anno=2026#mese-2026-10');
     expect(hrefVerificaBonifico('b-1', '2027-03')).toBe('/admin/pagamenti-bambino?bambino=b-1&anno=2026#mese-2027-03');
+  });
+});
+
+describe('statoPagamento', () => {
+  const inviata = {
+    inviata_il: '2026-09-16T20:24:00Z',
+    modificata_il: null,
+    bonifico_stato: 'in_attesa' as const,
+    nota_pagamento: null,
+  };
+
+  it("una retta solo inviata mostra la data d'invio e il bonifico da verificare", () => {
+    expect(statoPagamento(inviata)).toEqual({
+      comunicazione: { testo: 'Inviata il', istante: '2026-09-16T20:24:00Z' },
+      bonifico: { etichetta: 'Da verificare', tono: 'neutro' },
+      conNota: false,
+    });
+  });
+
+  it("una retta modificata mostra la data dell'ultima modifica al posto di quella d'invio", () => {
+    expect(statoPagamento({ ...inviata, modificata_il: '2026-10-03T08:00:00Z' }).comunicazione).toEqual({
+      testo: 'Modificata il',
+      istante: '2026-10-03T08:00:00Z',
+    });
+  });
+
+  it('il bonifico corretto è "Pagato", quello con importo diverso "Pagato, importo diverso"', () => {
+    expect(statoPagamento({ ...inviata, bonifico_stato: 'corretto' }).bonifico).toEqual({
+      etichetta: 'Pagato',
+      tono: 'successo',
+    });
+    expect(statoPagamento({ ...inviata, bonifico_stato: 'importo_errato' }).bonifico).toEqual({
+      etichetta: 'Pagato, importo diverso',
+      tono: 'attenzione',
+    });
+  });
+
+  it('segnala la nota privata solo se ha del testo', () => {
+    expect(statoPagamento({ ...inviata, nota_pagamento: 'Pagherà a fine mese' }).conNota).toBe(true);
+    expect(statoPagamento({ ...inviata, nota_pagamento: '   ' }).conNota).toBe(false);
+  });
+});
+
+describe('annullaInvioPossibile', () => {
+  it('si annulla solo nel mese corrente con il bonifico da verificare', () => {
+    expect(annullaInvioPossibile('2026-11', '2026-11', 'in_attesa')).toEqual({ possibile: true });
+  });
+
+  it('un mese passato non si annulla', () => {
+    const esito = annullaInvioPossibile('2026-10', '2026-11', 'in_attesa');
+    expect(esito.possibile).toBe(false);
+    if (!esito.possibile) expect(esito.motivo).toContain('solo nel mese corrente');
+  });
+
+  it('con il bonifico verificato non si annulla', () => {
+    for (const stato of ['corretto', 'importo_errato'] as const) {
+      const esito = annullaInvioPossibile('2026-11', '2026-11', stato);
+      expect(esito.possibile).toBe(false);
+      if (!esito.possibile) expect(esito.motivo).toContain('già verificato');
+    }
   });
 });

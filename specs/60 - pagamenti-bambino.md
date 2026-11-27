@@ -19,6 +19,12 @@ più, per ogni mese comunicato, l'admin verifica il bonifico
 scrivere una nota privata (PAG-16..PAG-22): "Rette" mostra solo lo stato del
 bonifico, con un link "Verifica" che porta alla riga giusta di questa pagina.
 
+La pagina separa la consultazione dalle azioni (PAG-24..PAG-27): la tabella è
+una panoramica veloce, con le voci fino al "Totale" e uno "Stato" per riga che
+riassume comunicazione e bonifico; tutte le azioni del mese (modifica degli
+importi e storico, annullo dell'invio, verifica del bonifico, nota privata)
+stanno in una finestra che si apre dal pulsante "Gestisci" della riga.
+
 ## Scenario: il menu raggruppa "Rette" e "Pagamenti bambino" sotto "Pagamenti"
 Dato che sono autenticato come admin
 Quando guardo il menu laterale
@@ -53,8 +59,10 @@ gettoni pre-asilo e gettoni post-asilo (PAG-01), costi extra e
 credito/debito, ciascuna in euro con la virgola (es.
 "250,00 €")
 E vedo le note di costi extra e credito/debito, se presenti, sotto il
-rispettivo importo
-E vedo la data/ora di invio della comunicazione
+rispettivo importo (al massimo due righe: il testo intero si legge passandoci
+sopra col mouse e nella finestra "Modifica importi")
+E nella colonna "Stato" vedo la data di invio della comunicazione ("Inviata
+il gg/mm/aaaa")
 
 ## Scenario: il totale di ogni mese è ben visibile ed è quello della mail
 Dato che per il bambino scelto è stata inviata la comunicazione di un mese
@@ -98,29 +106,74 @@ mesi da settembre a giugno
 E premendo "→" torno a quello successivo (l'anno scolastico di riferimento è
 l'ultimo raggiungibile: non si naviga oltre)
 
-## Scenario: la pagina si modifica solo da «Modifica importi»
+## Scenario: la tabella è da consultare, le azioni stanno in «Gestisci»
+**ID PAG-24**
 Dato che sono sulla pagina "Pagamenti bambino" con un bambino scelto
 Quando guardo la pagina, a finestra chiusa
-Allora non trovo nessun campo da compilare per gli importi né pulsanti di
-invio o annullamento della comunicazione: i soli controlli sono il selettore
-del bambino, le frecce degli anni scolastici e, per ogni mese comunicato, il
-pulsante "Modifica importi", quelli del bonifico (specs/59) e la nota con
-"Salva" (PAG-16..PAG-22)
+Allora nella tabella non trovo nessun campo da compilare, nessuna nota da
+scrivere e nessun pulsante di modifica, di verifica del bonifico, di invio o
+di annullamento della comunicazione
+E i soli controlli della pagina sono il selettore del bambino con "Mostra",
+le frecce degli anni scolastici e, per ogni mese comunicato, il pulsante
+"Gestisci"
+
+## Scenario: ogni mese comunicato ha uno stato del pagamento
+**ID PAG-25**
+Dato che per il bambino scelto sono stati comunicati alcuni mesi
+Quando guardo la colonna "Stato" di ogni riga
+Allora leggo in breve la comunicazione: "Inviata il gg/mm/aaaa", oppure
+"Modificata il gg/mm/aaaa" se gli importi sono stati corretti dopo l'invio
+E leggo lo stato del bonifico: "Da verificare", "Pagato" (bonifico corretto)
+oppure "Pagato, importo diverso"
+E se il mese ha una nota privata vedo l'indicazione "Nota"
+E un mese non comunicato mostra solo "Non ancora comunicata", senza stato del
+bonifico e senza "Gestisci"
+
+## Scenario: «Gestisci» apre la finestra con tutte le azioni del mese
+**ID PAG-26**
+Dato che sono sulla riga di un mese comunicato
+Quando premo "Gestisci"
+Allora si apre la finestra "Pagamento di <bambino>, <mese>" con, in ordine:
+il riepilogo (totale, data e ora di invio e, se modificata, data, autore e
+"Totale della mail"), la sezione "Importi" ("Modifica importi" e "Storico
+modifiche"), la sezione "Comunicazione" ("Annulla invio", PAG-27), la sezione
+"Bonifico" (stato e azioni di specs/59) e la sezione "Nota" (nota privata con
+"Salva")
+E dopo un'azione (importi salvati, bonifico verificato, nota salvata) la
+finestra resta aperta e mostra i dati aggiornati, come la riga della tabella
+E con Esc o "Chiudi" la finestra si chiude e il focus torna su "Gestisci";
+mentre è aperta il focus resta al suo interno
+E su uno schermo stretto (360 pixel) si legge senza scorrere in orizzontale
+
+## Scenario: annullare l'invio dalla finestra, solo per il mese corrente
+**ID PAG-27**
+Dato che la retta del mese corrente è stata inviata e il suo bonifico è da
+verificare
+Quando apro "Gestisci" su quel mese, premo "Annulla invio" e confermo
+Allora la retta viene cancellata come con "Annulla invio" in "Rette"
+(specs/56): sparisce con il suo storico, un credito/debito conteggiato torna
+"da conteggiare" e non parte nessuna mail
+E la riga torna "Non ancora comunicata"
+E prima di annullare la finestra spiega che la nuova mail si invia da
+"Rette", con un link alla pagina
+E su un mese passato, o con il bonifico già verificato, "Annulla invio" non
+c'è e la finestra spiega perché
 
 ## Scenario: il pulsante compare solo sui mesi comunicati
 **ID PAG-02**
 Dato che ho scelto un bambino con settembre comunicato e ottobre non ancora
 comunicato
 Quando guardo la tabella
-Allora sulla riga di settembre, nella colonna "Inviata", vedo il pulsante
-"Modifica importi"
-E sulla riga di ottobre non lo vedo
-E lo vedo anche sui mesi degli anni scolastici passati e sui bambini non più
+Allora sulla riga di settembre vedo il pulsante "Gestisci", e nella sua
+finestra il pulsante "Modifica importi"
+E sulla riga di ottobre non vedo nessuno dei due
+E li vedo anche sui mesi degli anni scolastici passati e sui bambini non più
 attivi
 
 ## Scenario: la finestra propone tutte le voci con i valori attuali
 **ID PAG-03**
-Dato che sono sulla riga di un mese comunicato, con bonifico da verificare
+Dato che ho aperto "Gestisci" su un mese comunicato, con bonifico da
+verificare
 Quando premo "Modifica importi"
 Allora si apre una finestra con il nome del bambino e il mese nel titolo
 E vedo un campo con l'importo attuale per retta mensile, marca da bollo,
@@ -144,7 +197,8 @@ E un conguaglio o un credito negativi riducono il totale
 **ID PAG-05**
 Dato che ho cambiato una o più voci e scritto il motivo
 Quando premo "Salva"
-Allora la finestra si chiude e la riga mostra le voci nuove
+Allora la finestra "Modifica importi" si chiude, quella di "Gestisci" resta
+aperta con il nuovo totale e la riga mostra le voci nuove
 E il totale della riga è ricalcolato dal server come somma delle voci
 E il "Totale richiesto" dell'anno è aggiornato
 E la data "Inviata il" non cambia
@@ -164,15 +218,16 @@ E gli importi registrati non cambiano e nello storico non compare nulla
 **ID PAG-07**
 Dato che il mese di settembre è stato modificato da 410,00 € a 402,00 €
 Quando guardo la sua riga
-Allora sotto "Inviata il …" leggo "Modificata il … da …"
-E leggo "Totale della mail: 410,00 €"
+Allora nella colonna "Stato" leggo "Modificata il …"
 E la colonna "Totale" mostra 402,00 €
+E aprendo "Gestisci" leggo, sotto "Inviata il …", "Modificata il … da …" e
+"Totale della mail: 410,00 €"
 E con più modifiche vedo la data dell'ultima e il totale della mail originale
 
 ## Scenario: lo storico delle modifiche resta consultabile
 **ID PAG-08**
 Dato che un mese è stato modificato due volte
-Quando apro "Storico modifiche" sulla sua riga
+Quando apro "Storico modifiche" nella finestra "Gestisci" di quel mese
 Allora vedo le due modifiche, dalla più recente, ciascuna con data, chi l'ha
 fatta, motivo e le sole voci cambiate con valore prima e dopo, compreso il
 totale
@@ -182,7 +237,7 @@ E un mese mai modificato non mostra "Storico modifiche"
 ## Scenario: con il bonifico verificato non si modifica
 **ID PAG-09**
 Dato che il bonifico di un mese è "corretto" o "importo diverso" (specs/59)
-Quando guardo la sua riga
+Quando apro "Gestisci" su quel mese
 Allora il pulsante "Modifica importi" è disattivato e vedo la spiegazione:
 prima va annullata la verifica del bonifico
 E se la richiesta arriva comunque al server (per esempio perché la verifica è
@@ -237,27 +292,29 @@ E il nuovo invio ricalcola tutti gli importi
 **ID PAG-15**
 Dato che ho aperto la finestra con "Modifica importi"
 Quando premo Esc o "Annulla"
-Allora la finestra si chiude senza salvare e il focus torna sul pulsante
+Allora la finestra si chiude senza salvare, "Gestisci" resta aperta e il focus
+torna sul pulsante "Modifica importi"
 E mentre è aperta il focus resta al suo interno
 E su uno schermo stretto tutte le voci si leggono e si compilano senza scorrere
 in orizzontale, con il pulsante "Salva" raggiungibile
 
-## Scenario: un mese comunicato ha la colonna "Pagamento" con le azioni di verifica
+## Scenario: la finestra «Gestisci» ha la sezione "Bonifico" con le azioni di verifica
 **ID PAG-16**
 Dato che per il bambino scelto è stata inviata la comunicazione di un mese
-Quando guardo la riga di quel mese
-Allora nella colonna "Pagamento" vedo "Bonifico da verificare" con i
+Quando apro "Gestisci" su quel mese
+Allora nella sezione "Bonifico" vedo "Bonifico da verificare" con i
 pulsanti "Bonifico corretto" e "Importo diverso", che si comportano come in
 specs/59 (stessi messaggi, stessa finestra, stessa accessibilità)
-E nella stessa colonna, sotto, c'è la nota della riga (PAG-19)
-E dopo la verifica vedo lo stato registrato e il pulsante "Annulla verifica"
-E un mese senza comunicazione non ha né stato né pulsanti del bonifico
+E sotto c'è la sezione "Nota" (PAG-19)
+E dopo la verifica vedo lo stato registrato e il pulsante "Annulla verifica",
+e nella riga lo stato diventa "Pagato"
+E un mese senza comunicazione non ha né stato del bonifico né pulsanti
 
 ## Scenario: un mese passato è sempre verificabile
 **ID PAG-17**
 Dato che scelgo un anno scolastico passato con una comunicazione il cui
 bonifico è ancora da verificare
-Quando guardo la riga di quel mese
+Quando apro "Gestisci" su quel mese
 Allora trovo "Bonifico corretto" e "Importo diverso" attivi, come per
 qualunque altro mese
 
@@ -268,13 +325,16 @@ Quando premo il link "Verifica"
 Allora si apre "Pagamenti bambino" su quel bambino e sull'anno scolastico di
 quel mese
 E la riga di quel mese è quella indicata dall'indirizzo (`#mese-AAAA-MM`)
+E la finestra "Gestisci" di quel mese è già aperta, pronta per la verifica
 
 ## Scenario: scrivere e salvare una nota per riga
 **ID PAG-19**
 Dato che per il bambino scelto è stata inviata la comunicazione di un mese
-Quando scrivo un testo nel campo "Nota" di quella riga e premo "Salva"
+Quando scrivo un testo nel campo "Nota" della finestra "Gestisci" di quel
+mese e premo "Salva"
 Allora vedo una conferma visibile ("Nota salvata")
 E ricaricando la pagina la nota è ancora lì
+E nella riga compare l'indicazione "Nota"
 E un mese senza comunicazione non ha il campo nota
 
 ## Scenario: modificare e svuotare la nota
@@ -307,8 +367,9 @@ Dato che per il bambino scelto sono stati comunicati più mesi, anche con
 note lunghe
 Quando apro la pagina su uno schermo largo 1440 o 1920 pixel
 Allora la tabella e la pagina non scorrono in orizzontale
-E nessuna colonna, nessun pulsante e in particolare "Salva" della nota
-risultano tagliati
+E nessuna colonna e nessun pulsante "Gestisci" risultano tagliati
+E le righe restano basse (al massimo circa quattro righe di testo), anche
+con le note lunghe
 E le voci a zero sono meno evidenti di quelle con un importo
 E su uno schermo stretto (360 pixel) la tabella scorre dentro il suo riquadro e
 la pagina resta accessibile
@@ -327,7 +388,8 @@ vengo respinto e non cambia nulla (controllo sul server e sul DB)
   dell'admin (RLS admin-only su `bambini` e `comunicazioni_retta`), mai con
   chiavi di servizio. Scritture: "Modifica importi", la verifica del
   bonifico (specs/59) e la nota per riga (azioni di
-  `app/admin/pagamenti-bambino/actions.ts`, ognuna con `requireAdmin` sul server). Solo un profilo
+  `app/admin/pagamenti-bambino/actions.ts`, ognuna con `requireAdmin` sul server),
+  più "Annulla invio" (azione di `app/admin/rette/actions.ts`, specs/56). Solo un profilo
   `admin` può accedervi (`requireAdmin`, come le altre pagine admin).
 - Ogni riga di mese ha l'ancora `id="mese-AAAA-MM"`: il link "Verifica" di
   "Rette" apre `/admin/pagamenti-bambino?bambino=<id>&anno=<anno di inizio>#mese-AAAA-MM`.
@@ -391,15 +453,33 @@ vengo respinto e non cambia nulla (controllo sul server e sul DB)
   scrittura, non solo quando si è aperta la pagina. Niente blocco per due
   modifiche contemporanee: vince l'ultima e lo storico le mostra entrambe.
 - Il totale della mail è il totale "prima" della modifica più vecchia.
-- Il pulsante e lo storico stanno nella colonna "Inviata", per non aggiungere
-  una colonna alla tabella. Bonifico e nota stanno insieme nella colonna
-  "Pagamento"; data e ora di invio vanno su due righe (nessun "_"). La finestra usa
-  `components/ui/finestra.tsx`, come "Importo diverso" (specs/59).
+- Tabella (PAG-24, PAG-25): colonne "Mese", le dieci voci, "Totale", "Stato"
+  e "Azioni". Lo "Stato" è calcolato da `statoPagamento` (`lib/pagamentiBambino.ts`)
+  a partire da `inviata_il`, `modificata_il`, `bonifico_stato` e
+  `nota_pagamento`: la comunicazione ("Inviata il …" o, se modificata,
+  "Modificata il …", con la data dell'ultima modifica) e il bonifico ("Da
+  verificare", "Pagato", "Pagato, importo diverso"), più "Nota" se c'è una
+  nota privata. Le note delle voci si fermano a due righe (testo intero
+  nell'attributo `title`).
+- "Gestisci" (PAG-26) apre una finestra (`components/ui/finestra.tsx`) che
+  raccoglie `ModificaImporti`, `StoricoModifiche`, l'annullo dell'invio,
+  `VerificaBonifico` e `NotaPagamento`. Le finestre "Modifica importi" e
+  "Importo diverso" si aprono sopra a questa; chiudendole, "Gestisci" resta
+  aperta. Se l'indirizzo punta alla riga di un mese comunicato
+  (`#mese-AAAA-MM`, il link "Verifica" di "Rette"), la sua finestra si apre da
+  sola al caricamento.
+- "Annulla invio" dalla finestra (PAG-27) è la stessa azione di "Rette"
+  (`annullaComunicazioneRetta`, specs/56), con le stesse condizioni: solo
+  per il mese corrente e con il bonifico "da verificare". Il server le
+  ricontrolla entrambe: una richiesta per un mese passato o con il bonifico
+  verificato non cambia nulla. Prima di annullare chiede conferma. Dopo
+  l'annullo aggiorna sia "Rette" sia "Pagamenti bambino".
 - Il testo introduttivo della pagina non dice più "sola lettura".
 - "Rette" resta raggiungibile da `/admin/rette` e da "Pagamenti › Rette";
   "Pagamenti" non ha una pagina propria, è solo l'intestazione del gruppo
   (`lib/navigazione.ts`).
-- Fuori scope: stimare l'importo di un mese non ancora comunicato (compreso
+- Fuori scope: reinviare da qui la stessa mail (il nuovo invio, dopo l'annullo,
+  si fa da "Rette"), stimare l'importo di un mese non ancora comunicato (compreso
   il mese corrente, per cui l'anteprima resta in "Rette"), esportazioni, vista aggregata di tutti i bambini, mail
   di rettifica alla famiglia, modificare il numero dei gettoni, creare da qui
   la retta di un mese non comunicato, ricalcolare a catena gli altri mesi.
